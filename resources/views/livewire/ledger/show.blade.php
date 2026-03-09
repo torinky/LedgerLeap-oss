@@ -360,6 +360,7 @@
                 <div wire:loading.remove wire:target="{{ $tabNavTargets }},displayLevel">
                     <livewire:ledger.related-ledgers
                         :ledgerId="$ledgerRecord->id"
+                        :displayLevel="$displayLevel"
                         wire:key="related-ledgers-{{ $ledgerRecord->id }}"
                         lazy />
                 </div>

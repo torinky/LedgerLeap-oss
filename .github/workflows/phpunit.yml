@@ -5,8 +5,18 @@ on:
     branches:
       - 'main'
       - 'develop'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
   workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   DB_USERNAME: sail
@@ -17,8 +27,8 @@ env:
   MAIL_FROM_ADDRESS: info@example.com
 
 # ───────────────────────────────────────────────
-# 共通セットアップをコンポジット化できないため
-# 各ジョブで同じステップを繰り返す（vendorキャッシュで高速化）
+# 共通セットアップは .github/actions/laravel-test-setup/action.yml に集約
+# 各ジョブは uses: ./.github/actions/laravel-test-setup で呼び出す（Sprint 3）
 # ───────────────────────────────────────────────
 jobs:
 
@@ -47,100 +57,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Laravel Test Setup
+        uses: ./.github/actions/laravel-test-setup
         with:
-          php-version: '8.4'
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
-          tools: composer:v2
-
-      - name: Cache Vendor
-        id: cache-vendor
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        if: steps.cache-vendor.outputs.cache-hit != 'true'
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-node-
-
-      - name: Install Frontend Dependencies
-        run: npm ci
-
-      - name: Build Frontend Assets
-        run: npm run build
-
-      - name: Laravel Setting
-        run: |
-          cp .env.example .env
-          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
-          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
-          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
-          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
-          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
-          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
-          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
-          php artisan optimize:clear
-          php artisan config:clear
-          php artisan view:clear
-          php artisan route:clear
-          chmod -R 777 storage bootstrap/cache
-
-      - name: Generate key
-        run: php artisan key:generate --env=testing
-
-      - name: Grant database privileges
-        env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          mysql -h 127.0.0.1 -u root --force <<EOF
-            CREATE DATABASE IF NOT EXISTS ledgerleap_test;
-            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
-            GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
-            FLUSH PRIVILEGES;
-          EOF
-
-      - name: Migrate database
-        run: php artisan migrate --force
-
-      - name: Setup test tenant
-        # テスト用テナントを事前作成してテナントDBをマイグレーション済みにしておく
-        # → テスト内で migrate:fresh / tenants:migrate を実行せずに済む（高速化）
-        run: |
-          php artisan tinker --no-interaction <<'PHP'
-          $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
-          tenancy()->initialize($t);
-          \Artisan::call('tenants:migrate', ['--force' => true]);
-          echo "Tenant ready: " . $t->id . PHP_EOL;
-          PHP
-
-      - name: Restore wnjpn.db from split zips
-        # wnjpn.db (194MB) は .gitignore で除外されているため、
-        # リポジトリに分割コミットされた zip を結合して復元する
-        run: |
-          cat database/wordnet_data/wnjpn.db.zip.aa \
-              database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
-          unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
+          db_password: ${{ secrets.DB_PASSWORD }}
 
       - name: Run Unit Tests
         # external グループ（外部コンテナ依存）は除外する
         # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external,database-migrations --display-errors
+        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors
 
   # ── ② Feature テスト（DB必須・時間がかかる） ────────────────
   feature:
@@ -167,103 +93,23 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Laravel Test Setup
+        uses: ./.github/actions/laravel-test-setup
         with:
-          php-version: '8.4'
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
-          tools: composer:v2
-
-      - name: Cache Vendor
-        id: cache-vendor
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        if: steps.cache-vendor.outputs.cache-hit != 'true'
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-node-
-
-      - name: Install Frontend Dependencies
-        run: npm ci
-
-      - name: Build Frontend Assets
-        run: npm run build
-
-      - name: Laravel Setting
-        run: |
-          cp .env.example .env
-          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
-          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
-          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
-          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
-          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
-          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
-          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
-          php artisan optimize:clear
-          php artisan config:clear
-          php artisan view:clear
-          php artisan route:clear
-          chmod -R 777 storage bootstrap/cache
-
-      - name: Generate key
-        run: php artisan key:generate --env=testing
-
-      - name: Grant database privileges
-        env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          mysql -h 127.0.0.1 -u root --force <<EOF
-            CREATE DATABASE IF NOT EXISTS ledgerleap_test;
-            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
-            GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
-            FLUSH PRIVILEGES;
-          EOF
-
-      - name: Migrate database
-        run: php artisan migrate --force
-
-      - name: Setup test tenant
-        run: |
-          php artisan tinker --no-interaction <<'PHP'
-          $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
-          tenancy()->initialize($t);
-          \Artisan::call('tenants:migrate', ['--force' => true]);
-          echo "Tenant ready: " . $t->id . PHP_EOL;
-          PHP
-
-      - name: Restore wnjpn.db from split zips
-        run: |
-          cat database/wordnet_data/wnjpn.db.zip.aa \
-              database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
-          unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
+          db_password: ${{ secrets.DB_PASSWORD }}
 
       - name: Run Feature Tests
         # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
         # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外し、専用ジョブで実行する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external,database-migrations --display-errors
+        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external --exclude-group=database-migrations --display-errors
 
   # ── ③ DatabaseMigrations テスト（migrate:fresh が必要なテスト群） ──────
   #
-  # 実行対象:
-  #   - FolderTest          (マルチテナント境界の検証)
-  #   - LedgerControllerTest (API + 権限 + テナント統合)
-  #   - LedgerFullTextSearchTest (Mroonga 全文検索 - トランザクションロールバック不可)
+  # 実行対象（`#[Group('database-migrations')]` を付与したテストのみ）:
+  #   - FolderTest                    (マルチテナント境界の検証)
+  #   - SearchApiTest                 (Mroonga 検索API統合)
+  #   - LedgerFullTextSearchTest      (Mroonga 全文検索 - トランザクションロールバック不可)
   #   - SearchControllerAdditionalTest (全文検索コントローラ)
   #
   # なぜ分離するか:
@@ -295,90 +141,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Setup PHP
-        uses: shivammathur/setup-php@v2
+      - name: Laravel Test Setup
+        uses: ./.github/actions/laravel-test-setup
         with:
-          php-version: '8.4'
-          extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
-          tools: composer:v2
-
-      - name: Cache Vendor
-        id: cache-vendor
-        uses: actions/cache@v4
-        with:
-          path: vendor
-          key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
-          restore-keys: ${{ runner.os }}-composer-
-
-      - name: Install Composer dependencies
-        if: steps.cache-vendor.outputs.cache-hit != 'true'
-        run: composer install --no-interaction --prefer-dist --optimize-autoloader
-
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
-      - name: Cache npm
-        uses: actions/cache@v4
-        with:
-          path: ~/.npm
-          key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
-          restore-keys: ${{ runner.os }}-node-
-
-      - name: Install Frontend Dependencies
-        run: npm ci
-
-      - name: Build Frontend Assets
-        run: npm run build
-
-      - name: Laravel Setting
-        run: |
-          cp .env.example .env
-          sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
-          sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
-          sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
-          sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
-          sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
-          sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
-          sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
-          php artisan optimize:clear
-          php artisan config:clear
-          php artisan view:clear
-          php artisan route:clear
-          chmod -R 777 storage bootstrap/cache
-
-      - name: Generate key
-        run: php artisan key:generate --env=testing
-
-      - name: Grant database privileges
-        env:
-          MYSQL_PWD: ${{ secrets.DB_PASSWORD }}
-        run: |
-          mysql -h 127.0.0.1 -u root --force <<EOF
-            CREATE DATABASE IF NOT EXISTS ledgerleap_test;
-            GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';
-            GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';
-            FLUSH PRIVILEGES;
-          EOF
-
-      - name: Migrate database
-        run: php artisan migrate --force
-
-      - name: Setup test tenant
-        run: |
-          php artisan tinker --no-interaction <<'PHP'
-          $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
-          tenancy()->initialize($t);
-          \Artisan::call('tenants:migrate', ['--force' => true]);
-          echo "Tenant ready: " . $t->id . PHP_EOL;
-          PHP
-
-      - name: Restore wnjpn.db from split zips
-        run: |
-          cat database/wordnet_data/wnjpn.db.zip.aa \
-              database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
-          unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
+          db_password: ${{ secrets.DB_PASSWORD }}
 
       - name: Run DB Migrations Tests
         # DatabaseMigrations を使うテストのみ実行する

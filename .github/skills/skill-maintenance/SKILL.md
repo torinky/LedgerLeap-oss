@@ -1,81 +1,54 @@
 ---
 name: skill-maintenance
-description: Creates or updates LedgerLeap Agent Skills (SKILL.md files). Use after completing any sprint, bug fix, or investigation when new patterns should be captured, or when creating a new skill from scratch.
-compatibility: LedgerLeap (.github/skills/ directory, agentskills.io open standard)
+description: Maintains LedgerLeap AI operating assets across prompts, skills, instructions, issue templates, runbooks, and AGENTS. Use when a bug fix, sprint, or investigation proves a new reusable pattern, disproves an old rule, or reveals a missing workflow.
+compatibility: LedgerLeap (.github/prompts, .github/skills, .github/instructions, .github/ISSUE_TEMPLATE, docs/runbooks, AGENTS.md)
 ---
 
 # skill-maintenance
 
-## When to Run
+## Decision Tree
 
-After every sprint/task completion, check:
-- New error pattern encountered and solved → add to appropriate `references/*.md`
-- New workaround proven in practice → update relevant SKILL.md decision tree
-- Existing instruction found wrong or incomplete → fix it
-- New recurring workflow emerged → consider a new skill
-
-**Do not skip this step.** Stale skills mislead future work more than no skills at all.
-
-## Structure Rules (agentskills.io standard)
-
-```
-.github/skills/<skill-name>/
-├── SKILL.md          ← required; body ≤80 lines; decision tables + reference links
-└── references/
-    └── *.md          ← loaded on demand; each file ≤120 lines; one topic per file
+```text
+A new learning was proven?
+├─ Short repo-wide fact or invariant? → .github/copilot-instructions.md
+├─ Path-specific codegen rule? → .github/instructions/*.instructions.md
+├─ On-demand workflow or slash entry? → .github/prompts/*.prompt.md
+├─ Reusable decision tree / diagnosis / capability? → .github/skills/<name>/SKILL.md
+├─ Long examples or deep procedure? → .github/skills/<name>/references/*.md
+├─ Missing structured human input? → .github/ISSUE_TEMPLATE/*
+├─ Repeatable human/AI operating sequence? → docs/runbooks/*
+└─ Agent-wide routing or discovery rule? → AGENTS.md
 ```
 
-### SKILL.md frontmatter (required fields)
+## Core Rules
 
-```yaml
----
-name: skill-name
-description: <what it does>. Use when <specific trigger conditions>.
-compatibility: LedgerLeap (...)
----
-```
+- Treat `.github` as one system; never update only the skill and stop.
+- Prompts are the primary JetBrains entrypoints; skills are reusable deep knowledge behind them.
+- Keep `.github/copilot-instructions.md` short and repo-wide only.
+- Keep one source of truth per rule; replace duplicates with links.
+- If a prompt and skill cover the same domain, make them cross-reference each other.
+- If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
 
-**description rules**: Third-person voice. Include WHAT and WHEN. Include class/error names.
+## Maintenance Loop
 
-## SKILL.md Body Rules
+1. Collect newly proven facts, failure patterns, workarounds, and missing workflows.
+2. Classify each item with the routing table.
+3. Update the primary file first.
+4. Sync neighbors: prompt ↔ skill ↔ instructions ↔ AGENTS ↔ issue template ↔ runbook.
+5. Remove stale or conflicting text immediately.
+6. Validate links, line budgets, discovery, and slash entrypoints.
 
-| Rule | Rationale |
-|---|---|
-| ≤80 lines | Loaded entirely on activation — every token competes with context |
-| Decision tree first | Agent needs to reach the right branch fast |
-| Comparison table second | Concise alternative enumeration |
-| Reference links last | `See [references/foo.md](references/foo.md) for details` |
-| No time-sensitive info | Use "since Issue #N" instead of "as of 2026-02" |
-| English preferred | Agent processes English constraints with highest accuracy |
-| Checklist at bottom | Compact format; max 6–8 items |
+## Sync Neighbors Checklist
 
-## Adding to an Existing Skill
+- [ ] Updated `copilot-instructions.md` only if the fact is global and short
+- [ ] Updated prompt if the workflow should be user-invocable
+- [ ] Updated skill if the pattern should auto-load or be reusable
+- [ ] Updated `references/*.md` for long examples or detailed steps
+- [ ] Updated `AGENTS.md` if routing/discovery changed
+- [ ] Updated issue template or runbook if intake/ops flow changed
+- [ ] Added a stable command recipe when repeated CI investigation friction was observed
 
-1. Read the current SKILL.md body — identify which section the new knowledge belongs to
-2. If it fits in ≤3 lines → add inline to SKILL.md
-3. If it requires code examples or multi-step procedure → add to `references/*.md`
-4. If adding to references, add a one-line link in SKILL.md pointing to it
-5. Keep SKILL.md body under 80 lines — move overflow to references
-
-## Creating a New Skill
-
-1. Identify the recurring workflow (at least 2 occurrences justify a skill)
-2. Name it: `verb-noun` or `noun-noun` pattern, lowercase hyphenated
-   - **No subdirectories** — `name` must equal the directory name (agentskills.io spec).
-     Grouping via `skills/category/skill-name/` breaks this and may not be discovered.
-     Use the `Category` column in the Inventory table instead (see `references/workflow.md`).
-3. Write description: run the "does X / Use when Y" test
-4. Write the body: start with decision tree or classification table
-5. Move all code examples to `references/`
-6. Add trigger row to `copilot-instructions.md` Skills table
-
-## Updating copilot-instructions.md
-
-`copilot-instructions.md` is sent with **every** request — keep it ≤50 lines.
-
-- Add skill trigger only if it cannot be auto-discovered from description alone
-- Remove triggers for deleted/merged skills immediately
-- Never add implementation details — they belong in skills
-
-See [references/workflow.md](references/workflow.md) for end-of-sprint checklist and quality gate.
-See [references/skill-inventory.md](references/skill-inventory.md) for Anti-Patterns, Skill Inventory, and Reference Docs.
+See [routing](./references/routing.md) for the authoritative destination matrix.
+See [workflow](./references/workflow.md) for the quality gate and commit flow.
+See [jetbrains-copilot-support](./references/jetbrains-copilot-support.md) for JetBrains/Copilot support notes.
+See [skill-inventory](./references/skill-inventory.md) for inventory and anti-patterns.

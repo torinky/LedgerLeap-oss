@@ -14,7 +14,6 @@ use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -22,6 +21,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * Show コンポーネントの未カバーメソッドに対する追加テスト
@@ -32,7 +32,7 @@ use Tests\TestCase;
 #[CoversClass(Show::class)]
 class ShowAdditionalTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $fakeQueue = false;
 
@@ -49,9 +49,8 @@ class ShowAdditionalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->tenant = Tenant::factory()->create();
-        tenancy()->initialize($this->tenant);
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
 
         $this->user = User::factory()->create();
         $inspectorRole = Role::create(['name' => 'inspector_show_add']);

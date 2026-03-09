@@ -8,21 +8,22 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class ActivityHistoryDisplayTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $tenancy = true;
 
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
         fake()->unique(true); // Reset Faker's unique state
 
         // 既存のログをクリア

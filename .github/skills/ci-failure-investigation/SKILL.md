@@ -1,40 +1,79 @@
 ---
 name: ci-failure-investigation
 description: Investigates GitHub Actions CI failures for LedgerLeap — fetches logs, classifies failure patterns, and guides to the correct fix skill. Use when CI fails, tests timeout, or pass locally but fail in CI.
-compatibility: LedgerLeap (requires gh CLI)
+compatibility: LedgerLeap (requires gh CLI; prefer gh api --jq over python helpers)
 ---
 
 # ci-failure-investigation
 
+## Step 0 — Preflight
+
+```bash
+gh auth status
+```
+
+- Prefer **plain-text `gh run list`** first. It is more reliable than starting with `--json`.
+- Prefer **`gh api ... --jq`** over `gh run view --json ... | python3 -c ...`.
+- On macOS, if a `python3` helper unexpectedly shows an **Xcode license** prompt, stop using Python for this task and switch to `gh api --jq`.
+- Avoid nested shell quoting. Use one `gh` command per line and add filtering in a second step.
+
 ## Step 1 — Identify the failing run/job
 
 ```bash
-gh run list --repo torinky/LedgerLeap --limit 5 \
-  --json databaseId,status,conclusion,displayTitle
+gh run list --repo torinky/LedgerLeap --limit 10
+
+gh run list --repo torinky/LedgerLeap \
+  --workflow "Laravel CI (PHPUnit / Pest)" \
+  --branch develop \
+  --limit 5
+
+gh run list --repo torinky/LedgerLeap \
+  --workflow "Parallel Tests Canary (Sprint 4)" \
+  --branch develop \
+  --limit 5
 ```
 
-## Step 2 — Get job IDs
+If you already know the commit SHA:
 
 ```bash
-gh run view {RUN_ID} --repo torinky/LedgerLeap \
-  --json jobs | python3 -c "
-import sys, json
-for j in json.load(sys.stdin)['jobs']:
-    print(j['name'], j['databaseId'], j['conclusion'])
-    for s in j['steps']:
-        if s['conclusion'] not in ('success',''):
-            print('  FAIL:', s['name'])
-"
+gh run list --repo torinky/LedgerLeap --commit {SHA} --limit 10
 ```
 
-## Step 3 — Fetch log (use gh api — gh run view --log fails mid-run)
+## Step 2 — Get job IDs and conclusions
 
 ```bash
-gh api /repos/torinky/LedgerLeap/actions/jobs/{JOB_ID}/logs 2>&1 \
-  | grep -E "FAIL|Exception|timeout|SQLSTATE|Error" | head -40
+gh api repos/torinky/LedgerLeap/actions/runs/{RUN_ID}/jobs \
+  --jq '.jobs[] | [.name, .databaseId, .conclusion] | @tsv'
 ```
 
-## Step 4 — Classify & route to fix skill
+To see failed steps only:
+
+```bash
+gh api repos/torinky/LedgerLeap/actions/runs/{RUN_ID}/jobs \
+  --jq '.jobs[] | {name, failedSteps: [.steps[] | select(.conclusion != null and .conclusion != "success") | .name]}'
+```
+
+## Step 3 — Fetch log (prefer `gh api`)
+
+```bash
+gh api /repos/torinky/LedgerLeap/actions/jobs/{JOB_ID}/logs > /tmp/ci-job.log
+
+grep -E "FAIL|Exception|timeout|SQLSTATE|Error" /tmp/ci-job.log | head -40
+```
+
+Why: `gh run view --log` can be flaky or incomplete; `gh api` is more stable.
+
+## Step 4 — Stable command rules
+
+- Start broad (`gh run list`) → narrow by workflow / branch / commit.
+- For job details, use `gh api repos/.../actions/runs/{RUN_ID}/jobs --jq ...`.
+- For logs, download first, then grep.
+- If a `gh ... --json ...` command returns unexpectedly empty output, rerun with plain-text `gh run list` or switch to `gh api`.
+- Keep shell quoting shallow. Avoid long `bash -lc '... "..." ...'` chains.
+
+See [references/gh-actions-commands.md](references/gh-actions-commands.md) for copyable command recipes.
+
+## Step 5 — Classify & route to fix skill
 
 | Symptom | Root cause | Fix skill / action |
 |---|---|---|
@@ -48,7 +87,7 @@ gh api /repos/torinky/LedgerLeap/actions/jobs/{JOB_ID}/logs 2>&1 \
 | Run cancelled after 30min | Tests too slow (`DatabaseMigrations` overuse) | `database-migrations-test-optimization` |
 | `SQLSTATE Access denied` | DB_PASSWORD mismatch between CI env and app | Check `phpunit.yml` Laravel Setting step |
 
-## Step 5 — Report to issue
+## Step 6 — Report to issue
 
 Post investigation result using `github-issue-workflow` skill.
 

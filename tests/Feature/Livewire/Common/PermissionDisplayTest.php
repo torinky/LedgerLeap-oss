@@ -10,14 +10,14 @@ use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class PermissionDisplayTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $tenancy = true;
 
@@ -30,6 +30,7 @@ class PermissionDisplayTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->user = User::factory()->create();
         $this->role = Role::firstOrCreate(['name' => 'TestRole_'.uniqid(), 'guard_name' => 'web']);

@@ -16,6 +16,7 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Reactive;
 use Livewire\WithPagination;
 
 #[Lazy]
@@ -48,6 +49,7 @@ class RelatedLedgers extends BaseLivewireComponent
     public bool $hasAutoNumber = false;
 
     /** 表示レベル（基本情報タブと同期） */
+    #[Reactive]
     public int $displayLevel = 1;
 
     /** 1ページあたりの件数 */
@@ -102,13 +104,6 @@ class RelatedLedgers extends BaseLivewireComponent
     public function updatedShowSemantic(): void
     {
         $this->resetPage('related_page');
-    }
-
-    /** Show.php の displayLevel 変更を受け取って同期する */
-    #[On('displayLevelUpdated')]
-    public function syncDisplayLevel(int $displayLevel): void
-    {
-        $this->displayLevel = $displayLevel;
     }
 
     // ─────────────────────────────────────────────

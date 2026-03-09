@@ -9,15 +9,15 @@ use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
-use Tests\TestCase; // ColumnDefine をインポート
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant; // ColumnDefine をインポート
 
 class CreateColumnTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected Tenant $tenant;
 
@@ -28,11 +28,10 @@ class CreateColumnTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         // テナントとドメインを作成し、テナンシーを初期化（CI で複数テストが同ドメインを作らないようユニーク化）
-        $this->tenant = Tenant::create(['id' => 'create-col-'.uniqid()]);
-        $this->tenant->domains()->firstOrCreate(['domain' => 'create-column-test.localhost']);
-        tenancy()->initialize($this->tenant);
+        $this->tenant = $this->getTenant();
 
         // ユーザーを作成
         $this->user = User::factory()->create();
@@ -53,10 +52,6 @@ class CreateColumnTest extends TestCase
     // ★ tearDownメソッドを追加
     protected function tearDown(): void
     {
-        // テナントコンテキストを終了
-        if (tenancy()->initialized) {
-            tenancy()->end();
-        }
 
         parent::tearDown();
     }
@@ -112,7 +107,7 @@ class CreateColumnTest extends TestCase
         ]);
 
         // contentの内容も検証
-        $ledger = \App\Models\Ledger::first();
+        $ledger = \App\Models\Ledger::where('ledger_define_id', $this->ledgerDefine->id)->first();
         $this->assertNotNull($ledger);
         // normalizeByColumnDefine は 0..maxId で欠番を埋めるため、実際の保存時は元のカラムIDがそのまま
         // 反映される（このテストではカラムID=1）。したがって content[1] に値が入る。

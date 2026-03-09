@@ -1,0 +1,151 @@
+name: バグ報告
+description: 不具合・エラー・CI失敗の調査に必要な情報を標準フォーマットで報告します。
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        再現手順、期待値と実際値、ログやスクリーンショット、関連リンクをできるだけ具体的に記入してください。
+        調査時は `/.github/prompts/bug-investigation.prompt.md` と `docs/runbooks/bug-response-playbook.md` を参照します。
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 問題の概要
+      description: 何が起きているかを 1〜3 文で要約してください。
+      placeholder: |
+        例: 台帳編集画面で保存後に 500 エラーが発生する。
+        CI の feature job だけが失敗する。
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected_behavior
+    attributes:
+      label: 期待される動作
+      placeholder: |
+        例: 保存後に詳細画面へ遷移し、変更内容が反映される。
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual_behavior
+    attributes:
+      label: 実際の動作
+      placeholder: |
+        例: 保存直後に 500 エラー画面が表示される。
+        画面は成功メッセージを出すが DB に反映されない。
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce_steps
+    attributes:
+      label: 再現手順
+      description: できるだけ番号付きで記入してください。
+      placeholder: |
+        1. テナント A でログイン
+        2. `/ledger/123/edit` を開く
+        3. 添付ファイルを追加して保存
+        4. 500 エラーが出る
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: ログ / エラー / スタックトレース
+      description: Secret は貼らず、必要に応じてマスクしてください。URL やスクリーンショットリンクでも構いません。
+      render: shell
+      placeholder: |
+        SQLSTATE[...]
+        TenantCouldNotBeIdentifiedOnDomain
+        Browser console error ...
+    validations:
+      required: false
+
+  - type: dropdown
+    id: affected_area
+    attributes:
+      label: 影響箇所
+      options:
+        - UI / Livewire
+        - API / Controller
+        - Service / Domain Logic
+        - Permission / ACL
+        - Search / Mroonga / RAG
+        - File / OCR / Embedding
+        - Workflow / Approval
+        - Test / CI
+        - Migration / Database
+        - Other
+    validations:
+      required: true
+
+  - type: dropdown
+    id: impact_scope
+    attributes:
+      label: 影響範囲
+      options:
+        - 自分だけ / ローカルのみ
+        - 1 テナント内の一部ユーザー
+        - 1 テナント全体
+        - 複数テナント
+        - 全体影響の可能性あり
+        - 不明
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: regression
+    attributes:
+      label: 回帰・発生条件
+      options:
+        - label: 以前は正常に動作していた（回帰の可能性がある）
+        - label: 特定のデータ / テナント / 権限でのみ発生する
+        - label: CI のみで発生し、ローカルでは未再現
+        - label: 外部サービス（Embedding / OCR / LDAP など）が関係する可能性がある
+
+  - type: textarea
+    id: environment
+    attributes:
+      label: 環境情報
+      description: 分かる範囲で記入してください。
+      placeholder: |
+        - branch:
+        - commit:
+        - tenant:
+        - URL / route:
+        - browser:
+        - sail / local / CI:
+        - related test:
+    validations:
+      required: true
+
+  - type: textarea
+    id: related_links
+    attributes:
+      label: 関連リンク
+      description: 関連 Issue / PR / commit / doc / Slack thread などがあれば記入してください。
+      placeholder: |
+        - Issue #
+        - PR #
+        - commit SHA
+        - docs/...md
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 確認事項
+      options:
+        - label: 再現手順を自分で確認した
+          required: true
+        - label: 期待値と実際値を書いた
+          required: true
+        - label: ログ / スクリーンショット / 参照先を可能な範囲で添付した
+          required: true
+        - label: Secret や個人情報を本文に含めていない
+          required: true
+

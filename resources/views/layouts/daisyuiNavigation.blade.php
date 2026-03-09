@@ -124,6 +124,8 @@
                 </ul>
             </div>
 
+            @livewire('common.page-qr-code')
+
             {{-- テーマ切り替え --}}
             <label class="swap swap-rotate btn btn-ghost btn-sm btn-circle" x-data="{
                 isDark: localStorage.getItem('theme') === 'dark' || (!localStorage.getItem('theme') && window.matchMedia('(prefers-color-scheme: dark)').matches),

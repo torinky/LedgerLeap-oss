@@ -9,14 +9,14 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class ModifyColumnTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     #[Test]
     public function it_can_mount_without_explicit_parameters()
@@ -39,12 +39,12 @@ class ModifyColumnTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = Tenant::factory()->create();
+        $this->tenant = $this->getTenant();
         $this->user = User::factory()->create();
 
         $this->actingAs($this->user);
-        tenancy()->initialize($this->tenant);
 
         $this->folder = Folder::factory()->create([
             'tenant_id' => $this->tenant->id,

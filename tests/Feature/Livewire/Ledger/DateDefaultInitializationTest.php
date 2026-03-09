@@ -40,12 +40,9 @@ class DateDefaultInitializationTest extends TestCase
         $this->user->assignRole($role);
 
         // Create a tenant specifically for this test
-        tenancy()->central(function () {
-            $this->tenant = Tenant::factory()->create();
-        });
+        $this->tenant = $this->getTenant();
 
         // Initialize tenancy for the created tenant
-        tenancy()->initialize($this->tenant);
 
         $this->folder = Folder::factory()->create([
             'tenant_id' => $this->tenant->id,
@@ -61,13 +58,6 @@ class DateDefaultInitializationTest extends TestCase
 
     protected function tearDown(): void
     {
-        if ($this->tenant) {
-            tenancy()->central(function () {
-                if ($this->tenant->exists) {
-                    $this->tenant->delete();
-                }
-            });
-        }
 
         parent::tearDown();
     }

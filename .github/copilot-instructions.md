@@ -1,45 +1,36 @@
 # LedgerLeap — Copilot Instructions
-## Repository
-- **owner**: `torinky` / **repo**: `LedgerLeap`
+- **Repo**: `torinky/LedgerLeap`
 - **Stack**: PHP 8.4 / Laravel 12 / MySQL (Mroonga) / Livewire / Alpine.js / TailwindCSS (daisyUI, maryUI)
 ## Critical Constraints
-- **Mroonga full-text search**: Single-column `MATCH() AGAINST()` only. Composite indexes do NOT work.
+- **Mroonga**: Single-column `MATCH() AGAINST()` only. Composite indexes do NOT work.
 - **Tenant init in tests**: Every Feature test `setUp()` MUST call `tenancy()->initialize($tenant)`.
-- **AsColumnArrayJson access**: `data_get()` does NOT work. Use direct array access: `$ledger->content[0]`.
+- **AsColumnArrayJson**: `data_get()` does NOT work. Use direct array access: `$ledger->content[0]`.
 - **No manual json_encode**: Never call `json_encode()` on `files`, `chk`, or other cast-array columns.
 - **Livewire state**: Public properties must be plain arrays. Objects cause serialization errors.
 - **Livewire parent calls**: Use `$parent.method()` for sort/filter; not `Livewire.dispatch()`.
 - **Tailwind JIT**: After adding new utility classes, run `sail npm run build`.
 - **Model events in Sail**: Use `$model->update([...])` not `touch()` in event-driven tests.
-- **Permission cache**: Role/Org/User change requires both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`. See `permission-model` skill.
-- **Full-text search tests**: Use `DatabaseMigrationsOnce` trait, not `RefreshDatabase`.
-- **Git in Sail env**: Always use `bash -c "cd /path && git ..."`. See `git-commit` skill.
-- **`#[Lazy]` + tenant**: In `render()`, fall back to `$model->tenant_id` — never rely solely on `tenant()?->id`.
+- **Permission cache**: Role/Org/User change requires both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`.
+- **FTS tests**: Use `DatabaseMigrationsOnce`, not `RefreshDatabase`.
+- **Git after Sail**: Always use `bash -c "cd /path && git ..."`.
+- **`#[Lazy]` + tenant**: In `render()`, fall back to `$model->tenant_id` — never rely only on `tenant()?->id`.
 ## Architecture Patterns
 - Business logic: `App\Services`
 - Interactive UI: Livewire with single-source-of-truth state array
 - ACL: `Spatie\Permission` + `WritableFolderRepository` (folder-level)
-- Data access: always verify live data via MCP tools before reasoning from static files
-## Skills — Load when triggered
-| Trigger | Skill |
-|---|---|
-| `git commit` | `git-commit` |
-| GitHub issue / PR | `github-issue-workflow` |
-| CI failure / timeout | `ci-failure-investigation` |
-| External service / `AttachedFile` test | `test-external-dependency-isolation` |
-| Mroonga / `DatabaseMigrations` trait | `database-migrations-test-optimization` |
-| `tenant()` null in Livewire | `livewire-tenant-context` |
-| `content[n]` null / index shift | `ledger-content-data-structure` |
-| `wire:loading` / `x-show` / sticky header | `livewire-loading-ui` |
-| `#[Computed]` 0% / `#[Url]` / parent-child | `livewire-computed-properties` |
-| 403 / permission cache stale | `permission-model` |
-| Workflow status stuck / `latestDiff` null | `workflow-status-machine` |
-| RAG search wrong / re-index / CI timeout | `rag-vector-search` |
-| git silent / CSS stale / test DB broken | `sail-dev-workflow` |
-| Sprint end / new skill | `skill-maintenance` |
+- Data access: verify live data via MCP tools before reasoning from static files
+## Prompt Shortcuts
+- `/git-commit`, `/github-issue-workflow`, `/ci-failure-investigation`, `/rag-vector-search`, `/bug-investigation`, `/bug-execution`, `/skill-maintenance`
+## Auto Context
+- Path rules: `.github/instructions/livewire.instructions.md`, `.github/instructions/php-laravel.instructions.md`, `.github/instructions/tests.instructions.md`, `.github/instructions/ai-assets.instructions.md`
+- Reusable deep knowledge: `.github/skills/*/SKILL.md`
+- Agent-wide routing/meta: `AGENTS.md`
 ## Workflow
-1. **Lint**: `./vendor/bin/sail pint` before commit
-2. **Error check**: `last-error` / `browser-logs` after every change
-3. **Test**: `./vendor/bin/sail test` for regressions
-4. **Commit**: load `git-commit` skill first
-5. **After sprint**: load `skill-maintenance` skill
+- `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → `./vendor/bin/sail test` → `/git-commit` → `/skill-maintenance`
+## Bug Response Principles
+- Investigate before changing code: define expected vs actual behavior, reproduction, impact scope, and rollback constraints.
+- Evidence order: logs / stack traces → related code / tests / recent changes → repo docs / skills → external sources.
+- External research order: official docs → package docs → GitHub Issues / Discussions → similar OSS implementations → trusted articles.
+- Separate investigation from execution: use `/bug-investigation` first, `/bug-execution` after selecting an approach.
+- Record negative results, confidence, verification plan, rollback plan, and LedgerLeap-specific traps.
+- After solving a reusable pattern, sync `.github` assets with `/skill-maintenance`.

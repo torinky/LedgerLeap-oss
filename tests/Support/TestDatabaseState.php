@@ -2,6 +2,8 @@
 
 namespace Tests\Support;
 
+use Tests\Traits\RefreshDatabaseWithTenant;
+
 /**
  * テストDBグローバル状態の管理クラス
  *
@@ -9,13 +11,16 @@ namespace Tests\Support;
  * トレイト外から操作するためのヘルパー。
  *
  * PHP では trait の静的メンバーをトレイトを use していないクラスから
- * 直接呼び出すことは非推奨のため、状態の読み書きはこのクラス経由で行う。
+ * 直接呼び出すことは非推奨のため、このクラス自身がトレイトを use して
+ * resetState() メソッド経由でリセットを行う。
  *
  * 使用例（setUp() 内で migrate:fresh を実行したテストクラス）:
  *   TestDatabaseState::reset();
  */
 class TestDatabaseState
 {
+    use RefreshDatabaseWithTenant;
+
     /**
      * RefreshDatabaseWithTenant が管理するグローバル状態を全てリセットする。
      *
@@ -24,9 +29,6 @@ class TestDatabaseState
      */
     public static function reset(): void
     {
-        \Tests\Traits\RefreshDatabaseWithTenant::$globalDatabaseMigrated = false;
-        \Tests\Traits\RefreshDatabaseWithTenant::$sharedTenant = null;
-        \Tests\Traits\RefreshDatabaseWithTenant::$databaseInitializedByClass = [];
-        \Tests\Traits\RefreshDatabaseWithTenant::$truncatableTablesCache = null;
+        static::resetState();
     }
 }

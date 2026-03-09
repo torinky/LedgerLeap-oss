@@ -9,14 +9,14 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerHistoryManagerTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected bool $tenancy = true;
 
@@ -35,6 +35,7 @@ class LedgerHistoryManagerTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->user = User::factory()->create();
 

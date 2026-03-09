@@ -8,15 +8,17 @@ use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
+#[CoversClass(CreateColumn::class)]
 class CreateColumnInputTypeValidationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected Tenant $tenant;
 
@@ -27,9 +29,8 @@ class CreateColumnInputTypeValidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->tenant = Tenant::create();
-        tenancy()->initialize($this->tenant);
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
 
         $this->user = User::factory()->create();
         Permission::findOrCreate('create_ledgers', 'web');
@@ -38,7 +39,12 @@ class CreateColumnInputTypeValidationTest extends TestCase
         $this->user->assignRole($role);
         $this->actingAs($this->user);
 
-        $this->folder = Folder::create(['title' => 'Test Folder', 'tenant_id' => $this->tenant->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+        $this->folder = Folder::create([
+            'title' => 'Test Folder',
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
 
         \App\Models\RoleFolderPermission::create([
             'role_id' => $role->id,
@@ -140,8 +146,11 @@ class CreateColumnInputTypeValidationTest extends TestCase
             ->assertHasErrors(['content.1' => 'numeric']);
 
         // Test full-width conversion during save
-        // Note: The validation rule 'numeric' will FAIL for raw full-width strings in standard Laravel validation.
-        // We might need to handle this in LedgerDefine::calculateAutoFillValues or somewhere else if we want it to pass.
+        // Note: The validation rule 'numeric' will fail for raw full-width strings
+        // in standard Laravel validation.
+        // We might need to handle this in
+        // LedgerDefine::calculateAutoFillValues or another normalization step if
+        // we want it to pass.
         // But the previous requirement was "normalization during save".
     }
 }

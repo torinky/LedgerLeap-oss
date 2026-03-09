@@ -8,15 +8,15 @@ use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class CreateColumnValidationTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected Tenant $tenant;
 
@@ -27,10 +27,8 @@ class CreateColumnValidationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $this->tenant = Tenant::create(['id' => 'col-val-'.uniqid()]);
-        $this->tenant->domains()->firstOrCreate(['domain' => 'create-col-validation-test.localhost']);
-        tenancy()->initialize($this->tenant);
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
 
         $this->user = User::factory()->create();
         Permission::findOrCreate('create_ledgers', 'web');
@@ -44,9 +42,6 @@ class CreateColumnValidationTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (tenancy()->initialized) {
-            tenancy()->end();
-        }
         parent::tearDown();
     }
 

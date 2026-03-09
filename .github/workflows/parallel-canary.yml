@@ -1,0 +1,125 @@
+name: Parallel Tests Canary (Sprint 4)
+
+# Sprint 4 カナリア: 並列実行の安定性を既存直列ジョブと並走して検証する
+# 成功基準: 10 連続成功 & フレーク率 < 1%
+# ロールバック基準: P95 が 3 連続で 10% 以上悪化、またはフレーク率 > 1%
+#
+# 対象: parallel-safe な Unit / Feature テスト（database-migrations / external を除く）
+# 直列ジョブ（phpunit.yml）と独立して実行し、CI全体を壊さない設計
+
+on:
+  push:
+    branches:
+      - 'main'
+      - 'develop'
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  pull_request:
+    paths-ignore:
+      - 'docs/**'
+      - '**/*.md'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DB_USERNAME: sail
+  DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+  DB_HOST: 127.0.0.1
+  DB_PORT: 3306
+  DB_DATABASE: ledgerleap_test
+  MAIL_FROM_ADDRESS: info@example.com
+
+jobs:
+
+  # ── カナリア並列ジョブ（Unit） ────────────────────────────
+  # 直列 unit ジョブと同じ対象を --parallel で実行して安定性を検証する
+  canary-unit-parallel:
+    name: '[Canary] Unit Tests (parallel)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    continue-on-error: true  # カナリア失敗が main CI をブロックしない
+    services:
+      mysql:
+        image: groonga/mroonga:mysql-8.0-latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ledgerleap_test
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 15s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Laravel Test Setup
+        uses: ./.github/actions/laravel-test-setup
+        with:
+          db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: '[Canary] Run Unit Tests (parallel)'
+        # --parallel: 並列実行（ワーカー数はデフォルト CPU コア数）
+        # worker DB の作成と権限付与は shared setup action 側で事前実施する
+        run: |
+          ./vendor/bin/pest --parallel \
+            --configuration=phpunit.parallel.xml \
+            --testsuite=Unit \
+            --exclude-group=external \
+            --exclude-group=database-migrations \
+            --display-errors
+
+  # ── カナリア並列ジョブ（Feature・サブセット） ────────────────
+  # Feature 全件は時間がかかるため、まずサブセット（Livewire / Services）で検証する
+  canary-feature-parallel:
+    name: '[Canary] Feature Tests (parallel subset)'
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    continue-on-error: true  # カナリア失敗が main CI をブロックしない
+    services:
+      mysql:
+        image: groonga/mroonga:mysql-8.0-latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ledgerleap_test
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 15s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Laravel Test Setup
+        uses: ./.github/actions/laravel-test-setup
+        with:
+          db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: '[Canary] Run Feature Tests (parallel subset)'
+        # サブセット: tests/Feature/Livewire と tests/Feature/Services を並列実行
+        # paratest は path 引数を1つしか受け付けないため、phpunit.parallel.xml の FeatureParallelSubset
+        # テストスイートにサブセットを定義して --testsuite で指定する
+        # worker DB の作成と権限付与は shared setup action 側で事前実施する
+        run: |
+          ./vendor/bin/pest --parallel \
+            --configuration=phpunit.parallel.xml \
+            --testsuite=FeatureParallelSubset \
+            --exclude-group=external \
+            --exclude-group=database-migrations \
+            --display-errors
+

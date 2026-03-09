@@ -8,19 +8,22 @@ use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\Organization;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class LedgerHistoryManagerApprovalTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+    }
 
     public function test_it_displays_editor_and_approver_info_with_popover()
     {
-        // 0. Tenancy Setup (Best Practice #1)
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
 
         // 1. Setup User and Organization
         $org = Organization::factory()->create(['name' => 'Test Org']);
@@ -44,14 +47,14 @@ class LedgerHistoryManagerApprovalTest extends TestCase
 
         // 2. Setup Ledger and LedgerDiff (Explicitly)
         $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
-            'tenant_id' => $tenant->id,
+            'tenant_id' => $this->getTenant()->id,
             'column_define' => [
                 ['id' => 0, 'name' => 'Col1', 'type' => 'text', 'order' => 1],
             ],
         ]);
 
         $ledger = Ledger::factory()->create([
-            'tenant_id' => $tenant->id,
+            'tenant_id' => $this->getTenant()->id,
             'ledger_define_id' => $ledgerDefine->id,
             'version' => 2,
             'content' => [0 => 'Content'], // Explicit zero-indexed content (Best Practice #2)

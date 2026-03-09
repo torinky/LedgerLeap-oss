@@ -31,7 +31,6 @@ class RecordsTableCompositeScoreSortTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
 
         $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
-        tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create([
             'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
@@ -67,9 +66,6 @@ class RecordsTableCompositeScoreSortTest extends TestCase
 
     protected function tearDown(): void
     {
-        if (tenancy()->initialized) {
-            tenancy()->end();
-        }
         parent::tearDown();
     }
 

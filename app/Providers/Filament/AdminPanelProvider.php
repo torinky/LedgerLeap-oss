@@ -127,7 +127,12 @@ class AdminPanelProvider extends PanelProvider
 //            ->viteTheme('resources/css/filament/admin/theme.css')
             ->renderHook(
                 'panels::global-search.after',
-                fn (): string => Blade::render('<livewire:tenant-switcher-filament :show-folders="false" />'),
+                fn (): string => Blade::render('
+                    <div class="flex items-center gap-x-3">
+                        @livewire(\App\Livewire\Common\PageQrCode::class, ["triggerType" => "filament"])
+                        <livewire:tenant-switcher-filament :show-folders="false" />
+                    </div>
+                '),
             );
     }
 }

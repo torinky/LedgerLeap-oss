@@ -10,15 +10,15 @@ use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\UserService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class FolderFormTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     protected Tenant $tenant;
 
@@ -29,11 +29,10 @@ class FolderFormTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
 
         // テナントを作成（CI で複数テストが同ドメインを作らないようユニーク化）
-        $this->tenant = Tenant::create(['id' => 'folder-form-'.uniqid()]);
-        $this->tenant->domains()->firstOrCreate(['domain' => 'folder-form-test.localhost']);
-        tenancy()->initialize($this->tenant);
+        $this->tenant = $this->getTenant();
 
         // ユーザーを作成
         $this->user = User::factory()->create();

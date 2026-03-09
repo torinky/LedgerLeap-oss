@@ -7,13 +7,13 @@ use App\Livewire\Ledger\Show;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 class SelectionSyncTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     public function test_it_syncs_selection_from_show_to_history_manager()
     {

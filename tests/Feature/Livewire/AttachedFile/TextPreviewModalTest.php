@@ -24,7 +24,6 @@ class TextPreviewModalTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
 
         $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
-        tenancy()->initialize($this->tenant);
     }
 
     #[Test]
