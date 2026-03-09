@@ -70,7 +70,7 @@
         "@upstash/context7-mcp@1.0.31"
       ],
       "env": {
-        "CONTEXT7_API_KEY": ""
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
       }
     },
     "github": {
@@ -80,7 +80,7 @@
         "@modelcontextprotocol/server-github"
       ],
       "env": {
-        "GITHUB_PERSONAL_ACCESS_TOKEN": "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"
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
       }
     }
   },
