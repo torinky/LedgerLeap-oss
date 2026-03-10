@@ -2,13 +2,21 @@
 
 **日付:** 2025年9月27日
 
-**関連ドキュメント:** [LedgerLeap MCPサーバー実装計画](./2025-09-27_MCP_Server_Implementation_Plan.md)
+**関連ドキュメント:**
+- [LedgerLeap MCPサーバー実装計画](./2025-09-27_MCP_Server_Implementation_Plan.md)
+- [ペルソナ、ユースケース、シナリオ](../../function/PersonaUseCaseScenario.md)
+- [LedgerLeap クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)
+
+> **2026-03-10 時点の位置づけ:**
+> この文書は current SoT ではなく、**ペルソナ別の対話例・ユーザーシナリオの参考資料**として扱う。
+> 親計画で client-facing capability を再定義する際は、主に **2.1 実務担当者 / 2.2 管理者** の対話例を具体例母集団として参照し、**2.3 開発者** は developer-facing 資産として再分類する。
+> なお、ここに含まれる `gemini` CLI 前提・ツール名・内部処理説明は、そのまま client-facing 契約へ昇格させない。
 
 ---
 
 ## 1. 概要
 
-本ドキュメントは、`@docs/work/2025-09-27_Docs_Persona_UseCase_Scenario.md` で定義されたペルソナとユースケースに基づき、`gemini` CLIが `@ledgerleap-api` MCPツールを通じてユーザーに応答する際の、具体的な質問応答例と設計方針を定義する。
+本ドキュメントは、`docs/function/PersonaUseCaseScenario.md` で定義されたペルソナとユースケースに基づき、`gemini` CLIが `@ledgerleap-api` MCPツールを通じてユーザーに応答する際の、具体的な質問応答例と設計方針を定義する。
 これは、今後のプロンプトチューニングおよびMCPツール改修のたたき台となることを目的とする。
 
 ## 2. MCPの応答内容検討：ペルソナ別のアプローチ
@@ -18,6 +26,8 @@
 ### 2.1. 実務担当者 (Operational Staff)
 
 **ニーズ:** 具体的で、タスク指向。シンプルで分かりやすい情報。
+
+> **親計画への引き継ぎ観点:** 一覧→詳細の二段階導線、承認待ちタスクの優先度提示、版比較、添付ファイル込み確認を client-facing capability 抽出時に見落とさない。
 
 #### 質問例1: 「昨日私が作成した日報を見せて。」
 
@@ -122,6 +132,8 @@
 ### 2.2. 管理者 (Administrator / Manager)
 
 **ニーズ:** 網羅的、統計的、監査可能。サマリーや異常値の可視化。
+
+> **親計画への引き継ぎ観点:** 統計・監査・ルール確認・添付ファイル起点の存在確認を、管理者向け client-facing capability の候補として再整理する。
 
 #### 質問例1: 「先週、システム全体でどれくらいの台帳が作成されたか、種類ごとに集計して。」
 
@@ -246,6 +258,8 @@
 
 **ニーズ:** 技術的詳細、デバッグ情報、APIの生レスポンス。
 
+> **親計画への引き継ぎ観点:** この節は client-facing capability の根拠ではなく、developer-facing maintenance assets の参考として扱う。
+
 #### 質問例1: 「キーワード『テストです』で台帳検索した結果のJSONを整形して見せて。」
 
 *   **Geminiの内部処理:**
@@ -253,27 +267,18 @@
     2.  返されたJSONをそのまま整形する。
 
 *   **Geminiの応答例（あるべき姿）:**
-    > `@ledgerleap-api search_ledgers` を `format=detailed` で実行しました。以下が結果のJSONです。
+    > `@ledgerleap-api search_ledgers` を `format=detailed` で実行しました。以下が結果のイメージです。
     >
-    > ```json
-    > {
-    >     "ledgers": [
-    >         {
-    >             "id": 112,
-    >             "tenant_id": "tenantc",
-    >             "ledger_define_id": 15,
-    >             "content": ["テストです", "..."],
-    >             "__display_fields__": { ... },
-    >             // ... (完全な情報) ...
-    >         }
-    >     ],
-    >     "total": 1,
-    >     "meta": { ... },
-    >     "__debug_info__": {
-    >         "query_time_ms": 45.2,
-    >         "database_queries": 3
-    >     }
-    > }
+    > ```text
+    > ledgers[0].id = 112
+    > ledgers[0].tenant_id = tenantc
+    > ledgers[0].ledger_define_id = 15
+    > ledgers[0].content[0] = テストです
+    > ledgers[0].__display_fields__ = ...
+    > total = 1
+    > meta = ...
+    > __debug_info__.query_time_ms = 45.2
+    > __debug_info__.database_queries = 3
     > ```
 
 *   **ポイント:**
@@ -290,22 +295,15 @@
 *   **Geminiの応答例（あるべき姿）:**
     > 台帳定義ID `15` のスキーマ情報は以下の通りです。
     >
-    > ```json
-    > {
-    >     "id": 15,
-    >     "tenant_id": "tenantc",
-    >     "folder_id": 1,
-    >     "title": "sit",
-    >     "column_define": [
-    >         {
-    >             "id": 0,
-    >             "name": "ut",
-    >             "type": "chk",
-    >             // ... (省略) ...
-    >         }
-    >     ],
-    >     // ... (省略) ...
-    > }
+    > ```text
+    > id = 15
+    > tenant_id = tenantc
+    > folder_id = 1
+    > title = sit
+    > column_define[0].id = 0
+    > column_define[0].name = ut
+    > column_define[0].type = chk
+    > ...
     > ```
 
 *   **ポイント:**

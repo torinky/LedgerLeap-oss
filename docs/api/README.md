@@ -4,11 +4,14 @@
 - [OpenAPI Specification (JSON)](openapi.json) - 完全なAPIリファレンス（Swagger/OpenAPI形式）
 
 **関連ドキュメント:**
+- [client-facing capability taxonomy](../work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md) - client-facing capability の一覧とペルソナ別初期 skill セット
 - [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - LLM統合のMCPプロトコル詳解
 - [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md) - MCP経由でのAPI活用方法
 
 ## 概要説明
 LedgerLeap APIは、外部アプリケーションやフロントエンドフレームワークとの連携を可能にするために提供されるHTTPベースのインターフェースです。このAPIを利用することで、台帳データの操作、フォルダ情報の取得、ファイルのアップロードなど、LedgerLeapの主要な機能をプログラム経由で利用できます。
+
+client-facing では、API の役割を **検索・登録・更新・承認・集計の業務フローを支える公開契約** として扱います。
 
 ## LLM統合 (MCP) について
 
@@ -41,14 +44,14 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 *   **リクエストボディ (POST/PUT)**:
     *   データを作成・更新するリクエスト (POST, PUT) では、リクエストボディはJSON形式であることが期待されます。
     *   `Content-Type` ヘッダーには `application/json` を指定してください。
-    ```json
+    ```text
     {
         "title": "新しい台帳エントリ",
         "content": {
             "field1": "値1",
             "field2": "値2"
-        }
-        // ... その他の属性
+        },
+        "folder_id": 10
     }
     ```
 *   **共通ヘッダー**:
@@ -63,17 +66,17 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
     *   一覧取得APIなどでは、ページネーション情報（`meta`, `links` キーなど）が含まれる場合があります。
 
     **例 (単一リソース取得):**
-    ```json
+    ```text
     {
         "data": {
             "id": 1,
             "title": "台帳エントリのタイトル",
-            // ... その他の属性
+            "status": "draft"
         }
     }
     ```
     **例 (リソース一覧取得):**
-    ```json
+    ```text
     {
         "data": [
             { "id": 1, "title": "..." },
@@ -89,7 +92,7 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
             "current_page": 1,
             "from": 1,
             "last_page": 5,
-            // ... その他のページネーション情報
+            "total": 42
         }
     }
     ```
@@ -104,7 +107,7 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 |---------|------|------|------|
 | **GET** | `/api/v1/ledger-defines` | 台帳定義（テンプレート）の一覧取得 | フォルダID等でフィルタ可能 |
 | **POST** | `/api/v1/ledgers` | 新しい台帳レコードの作成 | |
-| **GET** | `/api/v1/search` | 高度な全文検索（RAG対応） | Mroongaによる高速検索 |
+| **GET** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | 添付資料を含む確認に利用 |
 
 ### 検索API活用例
 
