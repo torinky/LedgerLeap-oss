@@ -13,10 +13,25 @@
 
 ---
 
-### ✅ 現状サマリー (2025-10-13)
+### ✅ 現状サマリー (2026-03-09)
 
-このカテゴリに記載されている機能（API基盤、MCPサーバー、各種MCPツール、統計機能、デモデータ、**スコアリング統合**）は、すべて実装・解決済みです。
-各ドキュメントに記載されている計画や仕様は、現在のコードベースに正しく反映されており、実装との間に大きな齟齬がないことを確認済みです。
+2025年までの計画で **API基盤 / MCPサーバー / 検索・登録・ワークフロー・統計** の基礎は整いました。
+一方、2026年3月の再検討により、今後の主計画は **クライアント別ファイル生成** ではなく、**MCP / API を唯一の接点とする client-first な公開契約の整備** に置き直しています。
+
+今後は次の3層を明確に分離して整理します。
+
+- **client-facing**: MCP / API クライアントや LLM が見る業務能力、台帳構造、操作導線
+- **developer-facing**: LedgerLeap 開発者向けの内部制約、同期、保守、生成補助
+- **bootstrap discovery**: クライアント初回接続時に、役割・モデル・用途に応じた最小 skill / prompt / resource を返す導線
+
+また、client-facing capability は `docs/function/PersonaUseCaseScenario.md` のペルソナ（実務担当者 / 管理者 / 現場リーダー）を基準に再定義します。
+
+### まず読む順番
+
+1. **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)** — 2026年以降の主計画
+2. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
+3. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
+4. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
 
 ---
 
@@ -41,6 +56,8 @@
 - **[MCPスコアリング統合実装完了](./2025-10-13_MCP_Sorting_Implementation_Complete.md)**: SearchLedgersToolへのソートパラメータ追加の実装完了報告。
 
 #### 機能拡張
+- **[AI 指示書の同期と共有計画](./20260308_ai_instructions_sync_plan.md)**: `.github` を正本とした AI 指示資産の同期・共有方針。
+- **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)**: client-facing / developer-facing を分離し、オンプレ・ローカルモデル前提で、ペルソナ対応と初回 bootstrap discovery を含めて LLM 連携を再計画した親計画。
 - **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)**: MCP経由で添付ファイル情報を活用するための実装計画。
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。
@@ -72,11 +89,17 @@
 ## 📋 アクティブな実装計画
 
 ### 🚀 **メイン実装計画**
-- **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **現在進行中**
+- **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)** ⭐ **最優先**
+  - **目標**: MCP / API を唯一の client 接点として、公開契約・client-facing skill・developer-facing SoT・初回 bootstrap discovery を再整理する
+  - **期間**: 6スプリント（情報設計 → client-facing taxonomy → developer-facing taxonomy → on-prem onboarding → update path → bootstrap discovery）
+  - **範囲**: ペルソナ対応、オンプレ・ローカルモデル前提、更新系公開契約、初回アクセス時 skill bootstrap discovery
+  - **関連Issue**: [#83](https://github.com/torinky/LedgerLeap/issues/83) （親計画・進捗管理先）
+  - **状況**: Sprint 1 完了（情報設計のリセット） / Sprint 2 以降は未着手
+- **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **継続参照**
   - **目標**: AI統合業務管理プラットフォームへの完全発展
   - **期間**: 4-6週間
   - **範囲**: ワークフロー統合、監査機能、統計・レポート、高度検索
-  - **状況**: Phase 0 (準備段階) 開始準備中
+  - **状況**: 2025年時点の実装計画として参照。2026年以降の主計画は上記再計画へ集約
 
 ## 📚 完了済み計画
 
@@ -195,6 +218,6 @@ After: "業務全体を自然言語で操作可能"
 
 ---
 
-**更新日**: 2025年9月29日  
-**最新完了**: Step 0.1 - spatie/laravel-query-builder完全活用 (2025-09-29)  
+**更新日**: 2026年3月10日
+**現行方針**: MCP / API first の client-facing 契約整備
 **責任者**: LedgerLeap開発チーム

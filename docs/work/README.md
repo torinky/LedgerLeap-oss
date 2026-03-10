@@ -3,11 +3,14 @@
 **ディレクトリ種別:** 作業ファイル（計画・設計・実装記録）
 
 > **📖 対応する公式ドキュメント:**  
-> このディレクトリの作業結果として実装された機能の公式仕様は、[`/docs/`](../) 直下の各ディレクトリ（`development/`, `api/`, `features/` 等）を参照してください。
+> このディレクトリの作業結果として実装された機能の公式仕様は、[`/docs/README.md`](../README.md) から各カテゴリへ辿ってください。
 >
 > **特にLLM連携機能については:**
-> - 作業ファイル: [`/docs/work/llm-integration/`](./llm-integration/)
+> - 作業ファイル: [`/docs/work/llm-integration/README.md`](./llm-integration/README.md)
+> - 現在の主計画: [`/docs/work/llm-integration/2026-03-09_Client_Skill_Bootstrap_Strategy.md`](./llm-integration/2026-03-09_Client_Skill_Bootstrap_Strategy.md)
 > - 公式ドキュメント: [`/docs/development/MCP_Architecture_and_Flow.md`](../development/MCP_Architecture_and_Flow.md)
+>
+> 現行方針は **MCP / API first** です。client-facing の公開契約と developer-facing の保守資産を分離し、クライアント別ファイル生成は補助的な位置づけとして扱います。
 
 このディレクトリには、LedgerLeapの機能開発における実装計画と作業記録を格納しています。
 各ドキュメントは、機能や関心事に応じて以下のカテゴリに分類されています。
@@ -47,10 +50,10 @@
 
 ## 📂 カテゴリ一覧
 
-- 🚀 **[コア機能 (core-features)](./core-features/)**: ワークフロー、権限管理、添付ファイル、自動リンクなど。
-- 🎨 **[UI/UX改善 (ui-ux)](./ui-ux/)**: カラム表示やナビゲーションなど、ユーザー体験の向上に関する改修。
-- 🏗️ **[アーキテクチャ (architecture)](./architecture/)**: マルチテナント、データベース、テスト戦略など、システム全体の設計。
-- 🤖 **[LLM連携 (llm-integration)](./llm-integration/)**: 大規模言語モデルとの連携機能。
-- 👁️ **[VLM実装 (vlm-implementation)](./vlm-implementation/)**: VLM/OCR機能の実装に関する過去の作業記録。
-- 🔬 **[VLM/RAG統合 (vlm-rag-integration)](./vlm-rag-integration/)**: VLMとRAG機能を統合し、高度な検索機能を実現するための作業記録。
-- 🛠️ **[プロジェクト管理 (project-management)](./project-management/)**: 開発プロセス、環境構築、ライセンス管理など。
+- 🚀 **[コア機能 (core-features)](./core-features/README.md)**: ワークフロー、権限管理、添付ファイル、自動リンクなど。
+- 🎨 **[UI/UX改善 (ui-ux)](./ui-ux/README.md)**: カラム表示やナビゲーションなど、ユーザー体験の向上に関する改修。
+- 🏗️ **[アーキテクチャ (architecture)](./architecture/README.md)**: マルチテナント、データベース、テスト戦略など、システム全体の設計。
+- 🤖 **[LLM連携 (llm-integration)](./llm-integration/README.md)**: 大規模言語モデルとの連携機能。
+- 👁️ **[VLM実装 (vlm-implementation)](./vlm-implementation/README.md)**: VLM/OCR機能の実装に関する過去の作業記録。
+- 🔬 **[VLM/RAG統合 (vlm-rag-integration)](./vlm-rag-integration/README.md)**: VLMとRAG機能を統合し、高度な検索機能を実現するための作業記録。
+- 🌍 **[環境構築・運用 (environment)](./environment/README.md)**: 開発環境、実行環境、運用に関する作業記録。
