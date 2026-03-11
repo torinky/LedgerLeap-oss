@@ -6,6 +6,9 @@
 - User-invocable workflows: `/.github/prompts/*.prompt.md`
 - Reusable deep capabilities and decision trees: `/.github/skills/<name>/SKILL.md`
 - Long examples and deep procedures: `/.github/skills/<name>/references/*.md`
+- Human-readable operating procedures: `/docs/runbooks/*`
+- Client-facing AI capability manifests / bootstrap inputs: `/resources/ai/capabilities/*.yaml`
+- Implemented MCP / API public contracts: `/docs/development/MCP_Architecture_and_Flow.md`, `/docs/api/README.md`
 
 ## Routing Rules
 - Use prompt files as the primary JetBrains-facing entrypoints.
@@ -13,6 +16,8 @@
 - Keep `copilot-instructions.md` short, repo-wide, and stable.
 - Put agent-wide discovery or maintenance rules here, not in feature skills.
 - Keep one source of truth per rule; link instead of duplicating.
+- Keep step-by-step human/AI operating sequences in `docs/runbooks/*`, not duplicated across prompts and skills.
+- For client-facing AI capability changes, update `resources/ai/capabilities/*.yaml` first; `ai:bootstrap-client-skills` output is derived.
 
 ## Proven Learning → Destination
 - Global short invariant → `/.github/copilot-instructions.md`
@@ -20,6 +25,7 @@
 - Slash workflow / playbook entrypoint → `/.github/prompts/*.prompt.md`
 - Reusable workflow / diagnosis tree → `/.github/skills/<name>/SKILL.md`
 - Detailed examples / evidence formats → `/.github/skills/<name>/references/*.md`
+- Client-facing AI capability manifest / bootstrap source → `resources/ai/capabilities/*.yaml`
 - Missing structured user input → `/.github/ISSUE_TEMPLATE/*`
 - Repeatable human/AI operating sequence → `docs/runbooks/*`
 - Agent routing / discovery / maintenance policy → `AGENTS.md`
