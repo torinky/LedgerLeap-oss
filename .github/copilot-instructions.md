@@ -19,6 +19,7 @@
 - Interactive UI: Livewire with single-source-of-truth state array
 - ACL: `Spatie\Permission` + `WritableFolderRepository` (folder-level)
 - Data access: verify live data via MCP tools before reasoning from static files
+- LLM docs audience split: client-facing docs must use WebUI-observable concepts and business workflows only; DB/Mroonga/Laravel details belong in developer-facing docs
 ## Prompt Shortcuts
 - `/git-commit`, `/github-issue-workflow`, `/ci-failure-investigation`, `/rag-vector-search`, `/bug-investigation`, `/bug-execution`, `/skill-maintenance`
 ## Auto Context

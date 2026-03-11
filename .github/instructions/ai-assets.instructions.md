@@ -21,6 +21,9 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - If a prompt and skill cover the same workflow, they must cross-link.
 - If a new reusable pattern is added, update inventory or routing references when needed.
 - Remove stale guidance instead of layering new text on top of conflicting old text.
+- For LLM-facing docs, keep client-facing and developer-facing guidance separate.
+- Client-facing wording must stay on WebUI-observable concepts and business workflows; implementation details move to developer-facing docs.
+- When targeting local models, prefer short capability cards, small required-field lists, and list→detail flows.
 
 ## Prompt / Skill Bias
 
@@ -40,4 +43,3 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - Prefer relative Markdown links that resolve from the current file.
 - Ensure names, prompt shortcuts, and skill inventory stay consistent.
 - After substantive `.github` changes, check affected files for IDE errors.
-
