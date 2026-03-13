@@ -10,18 +10,20 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Validation\ValidationException;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+// phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps
 
 #[CoversClass(UpdateLedgerTool::class)]
 class UpdateLedgerToolTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabaseWithTenant;
 
     private UpdateLedgerTool $tool;
 
@@ -40,13 +42,11 @@ class UpdateLedgerToolTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-
-        $tenant = \App\Models\Tenant::factory()->create();
-        tenancy()->initialize($tenant);
+        $this->setUpRefreshDatabaseWithTenant();
 
         $this->folderRepository = Mockery::mock(WritableFolderRepository::class);
-        $this->folderRepository->allows()->clearAllCache(Mockery::any())->andReturnNull();
-        $this->folderRepository->allows()->refreshAllCache(Mockery::any())->andReturnNull();
+        $this->folderRepository->allows('clearAllCache')->withAnyArgs()->andReturnNull();
+        $this->folderRepository->allows('refreshAllCache')->withAnyArgs()->andReturnNull();
         $this->app->instance(WritableFolderRepository::class, $this->folderRepository);
 
         $this->ledgerService = Mockery::mock(LedgerService::class);
@@ -94,9 +94,7 @@ class UpdateLedgerToolTest extends TestCase
             'latestDiff',
         ]);
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
+        $this->expectLedgerLookup($ledger);
         $this->ledgerService->expects()
             ->previewLedgerUpdateForApi($ledger, [
                 'content_patch' => [0 => 'After update'],
@@ -116,9 +114,7 @@ class UpdateLedgerToolTest extends TestCase
                 'previous_status' => WorkflowStatus::NONE->value,
                 'returns_to_draft_on_save' => false,
             ]);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -158,9 +154,7 @@ class UpdateLedgerToolTest extends TestCase
         $updatedLedger->content = [0 => 'After update'];
         $updatedLedger->version = 2;
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
+        $this->expectLedgerLookup($ledger);
         $this->ledgerService->expects()
             ->previewLedgerUpdateForApi($ledger, [
                 'content_patch' => [0 => 'After update'],
@@ -180,15 +174,11 @@ class UpdateLedgerToolTest extends TestCase
                 'previous_status' => WorkflowStatus::NONE->value,
                 'returns_to_draft_on_save' => false,
             ]);
-        $this->ledgerService->expects()
-            ->updateLedgerForApi(Mockery::type(\App\Models\User::class), $ledger, [
-                'content_patch' => [0 => 'After update'],
-                'comment' => 'Apply update',
-            ])
-            ->andReturn($updatedLedger);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectLedgerUpdate($ledger, [
+            'content_patch' => [0 => 'After update'],
+            'comment' => 'Apply update',
+        ], $updatedLedger);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -228,9 +218,7 @@ class UpdateLedgerToolTest extends TestCase
         $updatedLedger->status = WorkflowStatus::DRAFT;
         $updatedLedger->content = [0 => 'After review fix'];
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
+        $this->expectLedgerLookup($ledger);
         $this->ledgerService->expects()
             ->previewLedgerUpdateForApi($ledger, [
                 'content_patch' => [0 => 'After review fix'],
@@ -250,15 +238,11 @@ class UpdateLedgerToolTest extends TestCase
                 'previous_status' => WorkflowStatus::PENDING_INSPECTION->value,
                 'returns_to_draft_on_save' => true,
             ]);
-        $this->ledgerService->expects()
-            ->updateLedgerForApi(Mockery::type(\App\Models\User::class), $ledger, [
-                'content_patch' => [0 => 'After review fix'],
-                'comment' => '差し戻し内容を反映',
-            ])
-            ->andReturn($updatedLedger);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectLedgerUpdate($ledger, [
+            'content_patch' => [0 => 'After review fix'],
+            'comment' => '差し戻し内容を反映',
+        ], $updatedLedger);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -296,9 +280,7 @@ class UpdateLedgerToolTest extends TestCase
         $updatedLedger->status = WorkflowStatus::DRAFT;
         $updatedLedger->content = [0 => 'After approval fix'];
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
+        $this->expectLedgerLookup($ledger);
         $this->ledgerService->expects()
             ->previewLedgerUpdateForApi($ledger, [
                 'content_patch' => [0 => 'After approval fix'],
@@ -318,15 +300,11 @@ class UpdateLedgerToolTest extends TestCase
                 'previous_status' => WorkflowStatus::PENDING_APPROVAL->value,
                 'returns_to_draft_on_save' => true,
             ]);
-        $this->ledgerService->expects()
-            ->updateLedgerForApi(Mockery::type(\App\Models\User::class), $ledger, [
-                'content_patch' => [0 => 'After approval fix'],
-                'comment' => '承認前の修正を反映',
-            ])
-            ->andReturn($updatedLedger);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectLedgerUpdate($ledger, [
+            'content_patch' => [0 => 'After approval fix'],
+            'comment' => '承認前の修正を反映',
+        ], $updatedLedger);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -360,9 +338,7 @@ class UpdateLedgerToolTest extends TestCase
             'latestDiff',
         ]);
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
+        $this->expectLedgerLookup($ledger);
         $this->ledgerService->expects()
             ->previewLedgerUpdateForApi($ledger, [
                 'content_patch' => [999 => 'Unknown column'],
@@ -371,9 +347,7 @@ class UpdateLedgerToolTest extends TestCase
             ->andThrow(ValidationException::withMessages([
                 'content_patch' => ['Unknown column definition id(s): 999'],
             ]));
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -402,12 +376,8 @@ class UpdateLedgerToolTest extends TestCase
             'latestDiff',
         ]);
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectLedgerLookup($ledger);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -438,12 +408,8 @@ class UpdateLedgerToolTest extends TestCase
             'latestDiff',
         ]);
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([]);
+        $this->expectLedgerLookup($ledger);
+        $this->expectWritePermissionCheck([]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -472,12 +438,8 @@ class UpdateLedgerToolTest extends TestCase
             'latestDiff',
         ]);
 
-        $this->ledgerService->expects()
-            ->getLedgerForApi(Mockery::type(Ledger::class))
-            ->andReturn($ledger);
-        $this->folderRepository->expects()
-            ->getAccessibleFolderIds(Mockery::type(\App\Models\User::class), FolderPermissionType::WRITE)
-            ->andReturn([$this->folder->id]);
+        $this->expectLedgerLookup($ledger);
+        $this->expectWritePermissionCheck([$this->folder->id]);
 
         $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
@@ -486,5 +448,43 @@ class UpdateLedgerToolTest extends TestCase
 
         $this->assertTrue($response->isError());
         $this->assertStringContainsString('承認済み', $response->content());
+    }
+
+    /**
+     * @param  array<int, int>  $folderIds
+     */
+    private function expectWritePermissionCheck(array $folderIds): void
+    {
+        $this->folderRepository->expects('getAccessibleFolderIds')
+            ->withArgs(
+                fn ($user, $permission) => $user instanceof \App\Models\User
+                    && $permission === FolderPermissionType::WRITE
+            )
+            ->andReturn($folderIds);
+    }
+
+    private function expectLedgerLookup(Ledger $ledger): void
+    {
+        $this->ledgerService->expects('getLedgerForApi')
+            ->withArgs(
+                fn ($candidate) => $candidate instanceof Ledger
+                    && $candidate->getKey() === $ledger->getKey()
+            )
+            ->andReturn($ledger);
+    }
+
+    /**
+     * @param  array{content_patch: array<int, string>, comment: ?string}  $payload
+     */
+    private function expectLedgerUpdate(Ledger $ledger, array $payload, Ledger $updatedLedger): void
+    {
+        $this->ledgerService->expects('updateLedgerForApi')
+            ->withArgs(
+                fn ($user, $candidate, $candidatePayload) => $user instanceof \App\Models\User
+                    && $candidate instanceof Ledger
+                    && $candidate->getKey() === $ledger->getKey()
+                    && $candidatePayload === $payload
+            )
+            ->andReturn($updatedLedger);
     }
 }
