@@ -19,6 +19,9 @@
 - `ledger-search.yaml`
 - `ledger-create.yaml`
 - `ledger-update.yaml`
+- `workflow-review.yaml`
+- `activity-audit.yaml`
+- `analytics-report.yaml`
 
 ## 設計メモ
 
@@ -27,5 +30,5 @@
 - `ledger-update` は Update API / Update MCP Tool の初期契約が実装済みのため `active`
 - manifest は **capability 定義の正本** であり、onboarding 時の bundle 解決や placement instruction の最終 contract そのものではない
 - `required_guides` などの guide ID は論理参照先であり、MCP Resource / REST discovery / 配布ファイルのどれで返すかは Sprint 6 の discovery contract で具体化する
-- Sprint 4 時点では taxonomy 側にある `workflow-review` / `activity-audit` / `analytics-report` が manifest 未整備のため、discovery contract 具体化前に整合を取る
+- Sprint 6 では `GET /api/v1/ai/bootstrap-manifest` を初期 discovery contract として追加し、manifest 群を bootstrap bundle 解決の入力として扱う
 

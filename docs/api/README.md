@@ -22,7 +22,7 @@ Sprint 4 時点では、on-prem / local model 前提の onboarding で REST API 
 
 - **接続契約の主導線**: ベース URL、認証、OpenAPI、HTTP エンドポイントを確認する入口
 - **非MCP クライアントの主要導線**: 既存システム統合や API gateway 経由の利用で参照する契約
-- **bootstrap discovery の具体 contract は未確定**: 初回 bundle 解決用 endpoint / schema は Sprint 6 で定義する
+  - **bootstrap discovery の初期 contract は REST API で提供開始**: `GET /api/v1/ai/bootstrap-manifest` と `POST /api/v1/ai/bootstrap-manifest/resolve` で最小 bundle を解決できる
 
 つまり、Sprint 4 の段階では **API は「接続方法を理解するための入口」** とし、
 role / model / client に応じた最小 bundle の自動解決は将来の discovery contract 側へ分離します。
@@ -120,10 +120,37 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 | メソッド | パス | 説明 | 備考 |
 |---------|------|------|------|
 | **GET** | `/api/v1/ledger-defines` | 台帳定義（テンプレート）の一覧取得 | フォルダID等でフィルタ可能 |
+| **GET** | `/api/v1/ai/bootstrap-manifest` | 初回 bootstrap bundle の取得 | `client_type` / `role_profile` / `model_profile` で最小 bundle を返す |
+| **POST** | `/api/v1/ai/bootstrap-manifest/resolve` | 初回 bootstrap bundle の取得 | 構造化クライアント向けの POST 版 |
 | **POST** | `/api/v1/ledgers` | 新しい台帳レコードの作成 | |
 | **GET** | `/api/v1/ledgers/{ledger}` | 単一台帳の取得 | 更新前確認向け。状態・列定義・現在値を返す |
 | **PATCH** | `/api/v1/ledgers/{ledger}` | 既存台帳の部分更新 | `content_patch` による更新。pending 保存時は `DRAFT` に戻る |
 | **GET** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | 添付資料を含む確認に利用 |
+
+## implemented: bootstrap discovery 公開契約（Issue #89）
+
+初回アクセス時の bootstrap discovery は、REST 側では次の contract を入口にします。
+
+| 種別 | メソッド | パス | 役割 |
+|---|---|---|---|
+| bootstrap discovery | **GET** | `/api/v1/ai/bootstrap-manifest` | Query パラメータから最小 bootstrap bundle を解決する |
+| bootstrap discovery | **POST** | `/api/v1/ai/bootstrap-manifest/resolve` | 構造化 JSON から最小 bootstrap bundle を解決する |
+
+### 返却する主な内容
+
+- `recommended_capabilities`
+- `resources`
+- `prompts`
+- `files`
+- `placement_instructions`
+- `warnings`
+
+### 初期 contract の判断
+
+- client-facing では **WebUI で観測できる概念と業務フロー** のみを返す
+- `required_guides` は初期段階では **logical reference** として返し、実体 resource との紐付けは後続で拡張する
+- prompt は discovery の主契約ではなく **補助導線** として返す
+- bundle 解決は `role_profile` / `model_profile` / `client_type` を主入力とし、local model 向け text budget を維持する
 
 ## implemented: update path 公開契約（Issue #90）
 

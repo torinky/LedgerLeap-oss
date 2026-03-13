@@ -1,0 +1,45 @@
+id: activity-audit
+version: 1
+status: active
+summary: 操作履歴を期間・利用者・対象で追跡し、変更や承認の流れを確認する能力
+primary_user_goals:
+  - 誰がいつ何をしたか確認したい
+  - 特定期間の操作履歴をたどりたい
+  - 変更や承認の監査証跡を追跡したい
+when_to_use:
+  - ユーザーが履歴や監査ログを確認したいとき
+  - 対象レコードの変更経緯を追跡したいとき
+recommended_flow:
+  - step: choose-audit-scope
+    description: 期間・利用者・対象レコードなどの確認範囲を決める
+  - step: fetch-activity-log
+    description: GetActivityLogTool で条件に合う履歴を取得する
+  - step: pivot-to-record
+    description: 必要なら SearchLedgersTool や GetWorkflowHistoryTool で対象レコードへ掘り下げる
+required_mcp_tools:
+  - GetActivityLogTool
+supporting_mcp_tools:
+  - SearchLedgersTool
+  - GetWorkflowHistoryTool
+required_guides:
+  - ledgerleap://guides/activity-audit-strategy
+  - ledgerleap://constraints/ledgerleap-traps
+proposed_inputs:
+  - period
+  - user_id
+  - folder_id
+  - operation_type
+success_criteria:
+  - 条件に合う操作履歴を取得できる
+  - 変更・確認・承認の流れを追跡できる
+  - 必要に応じて対象レコードへ再移動できる
+ledgerleap_constraints:
+  - client-facing では activity_log テーブルや内部イベント名を露出しない
+  - 業務上の操作履歴として説明し、内部実装詳細は developer-facing へ閉じる
+  - まず一覧を返し、必要時だけ詳細へ進む
+examples:
+  - user: 先週の承認ログを確認したい
+    intent: 期間と操作種別による監査
+  - user: A案件の変更履歴を追って
+    intent: 対象を起点にした履歴確認
+
