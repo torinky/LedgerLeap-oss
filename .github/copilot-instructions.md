@@ -11,6 +11,7 @@
 - **Tailwind JIT**: After adding new utility classes, run `sail npm run build`.
 - **Model events in Sail**: Use `$model->update([...])` not `touch()` in event-driven tests.
 - **Permission cache**: Role/Org/User change requires both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`.
+- **Tests run in Sail**: Run tests via `./vendor/bin/sail test` / `./vendor/bin/sail pest`. Host-side `php artisan test` / `./vendor/bin/pest` is unsupported.
 - **FTS tests**: Use `DatabaseMigrationsOnce`, not `RefreshDatabase`.
 - **Git after Sail**: Always use `bash -c "cd /path && git ..."`.
 - **`#[Lazy]` + tenant**: In `render()`, fall back to `$model->tenant_id` — never rely only on `tenant()?->id`.

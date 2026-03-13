@@ -2,6 +2,10 @@
 
 LedgerLeap の標準運用手順への入口です。
 
+> [!IMPORTANT]
+> LedgerLeap のローカルテスト実行は **Laravel Sail / Docker-based interpreter 前提** です。
+> host の `php artisan test` / `./vendor/bin/pest` は使用せず、`./vendor/bin/sail test` / `./vendor/bin/sail pest` を使用してください。
+
 ## Available Runbooks
 - [Bug Response Playbook](./bug-response-playbook.md): 不具合の intake → 調査 → 実装 → 検証 → 学び反映
 - [AI Asset Maintenance Playbook](./ai-asset-maintenance-playbook.md): 学びを `.github` / `AGENTS.md` / runbooks へ同期する手順

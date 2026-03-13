@@ -22,6 +22,12 @@ CSS/JS changes not visible in browser?
 Test failures with "table not found" or stale tenant data?
 │  FIX: bin/reset-test-db.sh    (drops and recreates test DB)
 │
+Tests fail immediately with `mysql_testing -> mysql` name resolution on host PHP?
+│  CAUSE: LedgerLeap test DB host resolution assumes Docker networking.
+│  FIX: run tests via `./vendor/bin/sail test` / `./vendor/bin/sail pest`
+│       or use a Docker-based PhpStorm interpreter.
+│  DO NOT use host-side `php artisan test` / `./vendor/bin/pest`.
+│
 Auto-links / auto_number patterns return 0 for a tenant that has columns?
 │  CAUSE: Cache key missing tenantId — another tenant's 0-result was cached first.
 │  FIX: $cacheKey = "my_key:{$tenantId}";  (tenant()?->id ?? 'global')
@@ -54,6 +60,12 @@ cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git status
 # Run tests
 ./vendor/bin/sail test
 
+# Run a specific test file
+./vendor/bin/sail test tests/Feature/Api
+
+# Pest from Sail only
+./vendor/bin/sail pest --testsuite=Feature --exclude-group=external --exclude-group=database-migrations
+
 # Reset test DB
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && bin/reset-test-db.sh"
 
@@ -74,6 +86,7 @@ bash .github/skills/sail-dev-workflow/scripts/check-env.sh
 - [ ] Git commands: use `bash -c "cd /path && git ..."`
 - [ ] After new Tailwind class: `sail npm run build`
 - [ ] After schema change: re-run `sail artisan migrate`
+- [ ] Never run `php artisan test` / `./vendor/bin/pest` from the host OS
 - [ ] Test DB broken: `bin/reset-test-db.sh`
 - [ ] Cache over tenant-scoped model: include `tenant()?->id` in key
 - [ ] Before commit: `sail pint` + `sail test`

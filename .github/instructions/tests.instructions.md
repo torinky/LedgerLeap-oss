@@ -4,6 +4,12 @@ applyTo: "tests/**"
 
 # Test Rules for LedgerLeap
 
+## Runtime Rule
+
+- **Tests must run inside Laravel Sail or a Docker-based PhpStorm interpreter.**
+- Host-side commands such as `php artisan test` / `./vendor/bin/pest` are unsupported for LedgerLeap and must be replaced with `./vendor/bin/sail test` / `./vendor/bin/sail pest`.
+- Reason: testing DB host resolution (`mysql_testing` → `mysql`) is Docker-network based; host execution causes false-negative infrastructure failures before the actual test logic runs.
+
 ## Database Trait Selection
 
 ```

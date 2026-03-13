@@ -60,6 +60,10 @@ LedgerLeap は、以下のようなユーザーと状況での利用を想定し
 
 開発環境（Laravel Sail）での基本操作コマンドです。詳細は `/docs/development/environment-setup.md` を参照。
 
+> [!IMPORTANT]
+> LedgerLeap のローカル開発・テストは **Laravel Sail (Docker)** 前提です。
+> とくにテストは host の `php artisan test` / `./vendor/bin/pest` では実行せず、必ず `./vendor/bin/sail ...` か Docker-based PhpStorm interpreter を使用してください。
+
 ```bash
 # 起動・停止
 ./vendor/bin/sail up -d
@@ -186,6 +190,7 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 *   [コーディング規約](/docs/development/coding_standards.md)
 *   [Gitブランチ戦略とコミット規約](/docs/development/branch_strategy.md)
 *   [テストのベストプラクティス](/docs/development/testing/README.md)（旧: [Testing-Best-Practices.md](/docs/development/Testing-Best-Practices.md)）
+    * テスト実行は **Laravel Sail / Docker-based PhpStorm interpreter 必須**
 *   [ユーティリティコマンド](/docs/development/utility-commands.md)
 *   [デモ環境構築ガイド](/docs/development/demo-environment-setup.md) - サンプルデータ付きデモ環境の構築
 *   [MCP アーキテクチャと動作フロー](/docs/development/MCP_Architecture_and_Flow.md) - LLM統合のための技術詳解

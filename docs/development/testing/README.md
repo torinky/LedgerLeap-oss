@@ -5,6 +5,10 @@
 LedgerLeap のテスト設計・実装に関するドキュメントをトピック別に分割しています。
 新しいテストを書く前に、該当するドキュメントを参照してください。
 
+> [!IMPORTANT]
+> LedgerLeap のテスト実行は **Laravel Sail / Docker-based PhpStorm interpreter 前提** です。
+> `php artisan test` や `./vendor/bin/pest` の host 実行は禁止です。必ず `./vendor/bin/sail test` または `./vendor/bin/sail pest` を使ってください。
+
 ---
 
 ## ドキュメント一覧
@@ -74,6 +78,8 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 ./vendor/bin/sail composer test:full
 ```
 
+- host の PHP から `composer test:*` / `php artisan test` を直接実行しないこと
+
 - `test:full` は `test:prepare:local` → `test:ci:unit` → `test:ci:feature` → `test:ci:db-migrations` → `test:external` を順番に実行する
 - ローカルで利用可能な外部コンテナがあれば、その範囲の `external` テストも含めて確認できる
 - **カバレッジは取らない**が、CI に近い分割順で再現したいときの補助入口として使える
@@ -114,6 +120,7 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 ### PhpStorm 設定の考え方
 
 - PHP interpreter は `docker-compose.yml` の `laravel` service に合わせる
+- ローカルの system PHP / Homebrew PHP を test runner に使わない
 - 通常実行は `phpunit.xml`、並列 canary は `phpunit.parallel.xml` を使う
 - **日常の全体確認は `Pest: Full (phpunit.xml)` を優先**する
 - `Full: All Tests` は `composer test:full` 相当の補助入口で、`test:prepare:local` や `test:external` を含む分割実行を再現したいときに使う
