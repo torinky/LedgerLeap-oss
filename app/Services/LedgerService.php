@@ -11,8 +11,10 @@ use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -20,9 +22,12 @@ class LedgerService
 {
     protected WritableFolderRepository $writableFolderRepository;
 
-    public function __construct(WritableFolderRepository $writableFolderRepository)
+    protected WorkflowService $workflowService;
+
+    public function __construct(WritableFolderRepository $writableFolderRepository, WorkflowService $workflowService)
     {
         $this->writableFolderRepository = $writableFolderRepository;
+        $this->workflowService = $workflowService;
     }
 
     /**
@@ -36,8 +41,13 @@ class LedgerService
      *
      * @throws \Throwable
      */
-    public function saveDirectly(?int $ledgerId, int $ledgerDefineId, array $content, array $contentAttached, int $userId): Ledger
-    {
+    public function saveDirectly(
+        ?int $ledgerId,
+        int $ledgerDefineId,
+        array $content,
+        array $contentAttached,
+        int $userId
+    ): Ledger {
         $ledgerDefine = LedgerDefine::findOrFail($ledgerDefineId);
 
         return \DB::transaction(function () use ($ledgerId, $ledgerDefine, $content, $contentAttached, $userId) {
@@ -100,17 +110,71 @@ class LedgerService
         return Ledger::orderBy('created_at', 'DESC')->get();
     }
 
+    public function getLedgerForApi(Ledger $ledger): Ledger
+    {
+        return $ledger->load([
+            'define',
+            'define.folder',
+            'define.folder.ancestors',
+            'define.tags',
+            'creator:id,name',
+            'modifier:id,name',
+            'latestDiff',
+        ]);
+    }
+
+    public function updateLedgerForApi(\App\Models\User $user, Ledger $ledger, array $data): Ledger
+    {
+        $ledger = $this->getLedgerForApi($ledger);
+
+        $contentPatch = (array) Arr::get($data, 'content_patch', []);
+        $comment = Arr::get($data, 'comment');
+
+        $this->validatePatchColumns($ledger, $contentPatch);
+
+        $newContent = $this->applyContentPatch($ledger, $contentPatch);
+
+        if ($ledger->define?->workflow_enabled) {
+            $result = match ($ledger->status) {
+                WorkflowStatus::PENDING_INSPECTION,
+                WorkflowStatus::PENDING_APPROVAL => $this->workflowService->saveEditedRecord(
+                    $ledger,
+                    $newContent,
+                    is_array($ledger->content_attached) ? $ledger->content_attached : [],
+                    $user->id,
+                    $comment,
+                ),
+                default => $this->workflowService->saveDraft(
+                    $ledger->id,
+                    $ledger->ledger_define_id,
+                    $newContent,
+                    is_array($ledger->content_attached) ? $ledger->content_attached : [],
+                    $user->id,
+                ),
+            };
+
+            return $this->getLedgerForApi($result['ledger']);
+        }
+
+        $updatedLedger = $this->saveDirectly(
+            $ledger->id,
+            $ledger->ledger_define_id,
+            $newContent,
+            is_array($ledger->content_attached) ? $ledger->content_attached : [],
+            $user->id,
+        );
+
+        return $this->getLedgerForApi($updatedLedger);
+    }
+
     /**
      * @return Builder[]|Collection
      */
     public function searchLedgers(string $keyword)
     {
         //        return Ledger::freeword($keyword)->orderBy('created_at', 'DESC')->get();
-        $result = Ledger::search($keyword)->orderBy('created_at', 'DESC')->get();
-
         //        var_dump(DB::getQueryLog());
-        return $result;
-
+        return Ledger::search($keyword)->orderBy('created_at', 'DESC')->get();
     }
 
     public function searchLedgersForApi(\App\Models\User $user, array $params)
@@ -229,9 +293,14 @@ class LedgerService
                     // カンマ区切り文字列または配列を処理
                     $tagNames = is_string($value) ? array_filter(explode(',', $value)) : $value;
                     if (! empty($tagNames)) {
-                        $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
-                            $q->whereIn('name', $tagNames);
-                        }, '=', count($tagNames));
+                                $query->whereHas(
+                                    'define.tags',
+                                    function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                                        $q->whereIn('name', $tagNames);
+                                    },
+                                    '=',
+                                    count($tagNames)
+                                );
                     }
                 }),
                 AllowedFilter::scope('without_tags'),
@@ -299,7 +368,12 @@ class LedgerService
         $mainQueryStartTime = microtime(true);
         $ledgers = $query->offset($offset)->limit($limit)->get();
         $mainQueryTime = microtime(true) - $mainQueryStartTime;
-        \Log::info('[MCP Search Debug] Main query result: '.$ledgers->count().' items (took '.round($mainQueryTime * 1000, 2).'ms)');
+        $mainQuerySummary = '[MCP Search Debug] Main query result: '
+            .$ledgers->count()
+            .' items (took '
+            .round($mainQueryTime * 1000, 2)
+            .'ms)';
+        \Log::info($mainQuerySummary);
 
         // Eager Loading を追加（N+1問題回避）
         \Log::info('[MCP Search Debug] Loading relationships...');
@@ -357,6 +431,44 @@ class LedgerService
 
             return $ledger->load('define');
         });
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $contentPatch
+     */
+    private function validatePatchColumns(Ledger $ledger, array $contentPatch): void
+    {
+        $allowedColumnIds = collect($ledger->define->column_define ?? [])
+            ->map(fn ($column) => (string) $column->id)
+            ->values();
+
+        $invalidColumnIds = collect(array_keys($contentPatch))
+            ->map(fn ($columnId) => (string) $columnId)
+            ->reject(fn (string $columnId) => $allowedColumnIds->contains($columnId))
+            ->values();
+
+        if ($invalidColumnIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'content_patch' => [
+                    'Unknown column definition id(s): '.$invalidColumnIds->implode(', '),
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $contentPatch
+     * @return array<string|int, mixed>
+     */
+    private function applyContentPatch(Ledger $ledger, array $contentPatch): array
+    {
+        $currentContent = is_array($ledger->content) ? $ledger->content : [];
+
+        foreach ($contentPatch as $columnId => $value) {
+            $currentContent[$columnId] = $value;
+        }
+
+        return $currentContent;
     }
 
     private function buildMetaData(\Illuminate\Database\Eloquent\Collection $ledgers): array

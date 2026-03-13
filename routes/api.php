@@ -34,10 +34,18 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/v1/ledger-defines', [LedgerDefineController::class, 'index'])->name('api.v1.ledger-defines.index');
 
     // Ledger Create API
-    Route::post('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'store'])->name('api.v1.ledgers.store');
+    Route::post('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'store'])
+        ->name('api.v1.ledgers.store');
 
     // Ledger Index API
-    Route::get('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'index'])->name('api.v1.ledgers.index');
+    Route::get('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'index'])
+        ->name('api.v1.ledgers.index');
+
+    // Ledger Detail / Update API
+    Route::get('/v1/ledgers/{ledger}', [\App\Http\Controllers\Api\V1\LedgerController::class, 'show'])
+        ->name('api.v1.ledgers.show');
+    Route::patch('/v1/ledgers/{ledger}', [\App\Http\Controllers\Api\V1\LedgerController::class, 'update'])
+        ->name('api.v1.ledgers.update');
 });
 
 Route::get('/openapi.json', function () {

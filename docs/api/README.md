@@ -7,6 +7,7 @@
 - [client-facing capability taxonomy](../work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md) - client-facing capability の一覧とペルソナ別初期 skill セット
 - [on-prem / local model onboarding design](../work/llm-integration/2026-03-13_OnPrem_Local_Model_Onboarding_Design.md) - on-prem / local model 前提の onboarding 役割分担
 - [update path public contract](../work/llm-integration/2026-03-13_Update_Path_Public_Contract.md) - 更新系公開契約の planned workflow
+- [update API implementation log](../work/llm-integration/2026-03-13_Update_API_Implementation_Log.md) - `GET/PATCH /api/v1/ledgers/{ledger}` 実装時の判断記録
 - [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - LLM統合のMCPプロトコル詳解
 - [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md) - MCP経由でのAPI活用方法
 
@@ -120,11 +121,13 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 |---------|------|------|------|
 | **GET** | `/api/v1/ledger-defines` | 台帳定義（テンプレート）の一覧取得 | フォルダID等でフィルタ可能 |
 | **POST** | `/api/v1/ledgers` | 新しい台帳レコードの作成 | |
+| **GET** | `/api/v1/ledgers/{ledger}` | 単一台帳の取得 | 更新前確認向け。状態・列定義・現在値を返す |
+| **PATCH** | `/api/v1/ledgers/{ledger}` | 既存台帳の部分更新 | `content_patch` による更新。pending 保存時は `DRAFT` に戻る |
 | **GET** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | 添付資料を含む確認に利用 |
 
-## planned: update path 公開契約（Sprint 5 定義）
+## implemented: update path 公開契約（Issue #90）
 
-> **注意:** この節は **planned public contract** です。実装済み endpoint の正確な一覧は引き続き [OpenAPI Specification (JSON)](openapi.json) を正本とします。ここに書く planned contract は、実装後に OpenAPI へ反映します。
+> **注意:** 実装済み endpoint の正確なスキーマは [OpenAPI Specification (JSON)](openapi.json) を正本とします。ここでは、実装時に採った contract 上の判断だけを短く整理します。
 
 Sprint 5 では、更新系公開契約を次のように整理しました。
 
@@ -141,6 +144,7 @@ Sprint 5 では、更新系公開契約を次のように整理しました。
 - `PENDING_INSPECTION` / `PENDING_APPROVAL` の編集保存では、client-facing に **`DRAFT` へ戻る** ことを説明する
 - `APPROVED` は初期公開契約では **原則更新不可** とする
 - `dry_run` は拡張候補だが、初期 API 実装の必須要件にはしない
+- 初期 REST update API では **tag update を未対応** とし、`content_patch` + `comment` に絞る
 
 ### 検索API活用例
 
