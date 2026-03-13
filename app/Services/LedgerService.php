@@ -168,6 +168,43 @@ class LedgerService
     }
 
     /**
+     * @param  array<string, mixed>  $data
+     * @return array{
+     *     ledger: Ledger,
+     *     content_patch: array<string|int, mixed>,
+     *     comment: mixed,
+     *     new_content: array<string|int, mixed>,
+     *     changed_columns: array<int, array{column_id:int, column_name:string, before:mixed, after:mixed}>,
+     *     previous_status: string|null,
+     *     returns_to_draft_on_save: bool
+     * }
+     */
+    public function previewLedgerUpdateForApi(Ledger $ledger, array $data): array
+    {
+        $ledger = $this->getLedgerForApi($ledger);
+
+        $contentPatch = (array) Arr::get($data, 'content_patch', []);
+        $comment = Arr::get($data, 'comment');
+
+        $this->validatePatchColumns($ledger, $contentPatch);
+
+        $newContent = $this->applyContentPatch($ledger, $contentPatch);
+
+        return [
+            'ledger' => $ledger,
+            'content_patch' => $contentPatch,
+            'comment' => $comment,
+            'new_content' => $newContent,
+            'changed_columns' => $this->buildChangedColumns($ledger, $newContent),
+            'previous_status' => $ledger->status?->value,
+            'returns_to_draft_on_save' => in_array($ledger->status, [
+                WorkflowStatus::PENDING_INSPECTION,
+                WorkflowStatus::PENDING_APPROVAL,
+            ], true),
+        ];
+    }
+
+    /**
      * @return Builder[]|Collection
      */
     public function searchLedgers(string $keyword)
@@ -293,14 +330,14 @@ class LedgerService
                     // カンマ区切り文字列または配列を処理
                     $tagNames = is_string($value) ? array_filter(explode(',', $value)) : $value;
                     if (! empty($tagNames)) {
-                                $query->whereHas(
-                                    'define.tags',
-                                    function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
-                                        $q->whereIn('name', $tagNames);
-                                    },
-                                    '=',
-                                    count($tagNames)
-                                );
+                        $query->whereHas(
+                            'define.tags',
+                            function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                                $q->whereIn('name', $tagNames);
+                            },
+                            '=',
+                            count($tagNames)
+                        );
                     }
                 }),
                 AllowedFilter::scope('without_tags'),
@@ -469,6 +506,38 @@ class LedgerService
         }
 
         return $currentContent;
+    }
+
+    /**
+     * @return array<int, array{column_id:int, column_name:string, before:mixed, after:mixed}>
+     */
+    private function buildChangedColumns(Ledger $ledger, array $newContent): array
+    {
+        $currentContent = is_array($ledger->content) ? $ledger->content : [];
+        $columnDefinitions = collect($ledger->define->column_define ?? [])->keyBy(
+            fn ($column) => (string) $column->id
+        );
+
+        return collect($newContent)
+            ->map(function ($afterValue, $columnId) use ($currentContent, $columnDefinitions) {
+                $beforeValue = $currentContent[$columnId] ?? null;
+
+                if ($beforeValue === $afterValue) {
+                    return null;
+                }
+
+                $column = $columnDefinitions->get((string) $columnId);
+
+                return [
+                    'column_id' => (int) $columnId,
+                    'column_name' => $column?->name ?? 'unknown_column_'.$columnId,
+                    'before' => $beforeValue,
+                    'after' => $afterValue,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
     }
 
     private function buildMetaData(\Illuminate\Database\Eloquent\Collection $ledgers): array

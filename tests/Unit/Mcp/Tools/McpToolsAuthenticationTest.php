@@ -9,11 +9,13 @@ use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
 use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
+use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Mcp\Tools\UpdateLedgerTool;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
@@ -179,6 +181,7 @@ class McpToolsAuthenticationTest extends TestCase
         $tools = [
             new SearchLedgersTool(Mockery::mock(LedgerService::class)),
             new CreateLedgerTool,
+            new GetLedgerDetailTool(Mockery::mock(LedgerService::class)),
             new GetLedgerDefinesTool,
             new GetPendingApprovalsTool,
             new ExecuteApprovalTool,
@@ -188,6 +191,7 @@ class McpToolsAuthenticationTest extends TestCase
             new GetLedgerStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
             new GetUserActivityStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
             new GetFolderStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
+            new UpdateLedgerTool(Mockery::mock(LedgerService::class)),
         ];
 
         foreach ($tools as $tool) {

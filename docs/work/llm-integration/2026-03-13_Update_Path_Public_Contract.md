@@ -144,8 +144,8 @@ MCP では、自然言語の更新依頼を次の構造に落とし込む。
 - `ledger_id`
 - `content_patch`
 - `comment`
-- `tag_operation`
-- `tag_values`
+- `tag_operation`（初期 MCP 契約では受理後に未対応メッセージを返す）
+- `tag_values`（初期 MCP 契約では受理後に未対応メッセージを返す）
 - `dry_run`（補助機能として有力）
 
 ## 7.2 MCP 側の利用フロー
@@ -157,6 +157,10 @@ MCP では、自然言語の更新依頼を次の構造に落とし込む。
 5. 必要なら差分要約や `dry_run` で確認する
 6. `UpdateLedgerTool` で更新する
 7. 更新後の状態と次アクションを返す
+
+2026-03-14 時点では、`GetLedgerDetailTool` / `UpdateLedgerTool` の初期実装が入り、
+`dry_run` による列単位差分確認、および `APPROVED` ロック / pending 保存時の `DRAFT` 戻しを
+MCP 側からも扱えるようになった。
 
 ## 7.3 MCP と API の違い
 
@@ -227,6 +231,11 @@ Sprint 5 では、**差分確認を公開 workflow の必須段階**として定
 - 単一レコード read path の MCP 露出方法
 - `UpdateLedgerTool`
 - 差分要約 / `dry_run` 支援
+
+実装メモ:
+- `GetLedgerDetailTool` は単一レコード read path の正式導線として実装済み
+- `UpdateLedgerTool` は `ledger_id` / `content_patch` / `comment` / `dry_run` を実装済み
+- `tag_operation` / `tag_values` は schema で受け取り、初期契約では明示的に未対応メッセージを返す
 
 主な論点:
 - 会話文脈からの対象特定

@@ -24,7 +24,7 @@
 
 - `status: active` は現行実装に乗っている能力
 - `status: planned` は設計優先度が高いが、API / MCP 実装が未完了の能力
-- `ledger-update` は Update API / Update MCP Tool 実装後に `active` 化する前提
+- `ledger-update` は Update API / Update MCP Tool の初期契約が実装済みのため `active`
 - manifest は **capability 定義の正本** であり、onboarding 時の bundle 解決や placement instruction の最終 contract そのものではない
 - `required_guides` などの guide ID は論理参照先であり、MCP Resource / REST discovery / 配布ファイルのどれで返すかは Sprint 6 の discovery contract で具体化する
 - Sprint 4 時点では taxonomy 側にある `workflow-review` / `activity-audit` / `analytics-report` が manifest 未整備のため、discovery contract 具体化前に整合を取る

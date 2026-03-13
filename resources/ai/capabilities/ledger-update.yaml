@@ -1,13 +1,14 @@
 id: ledger-update
 version: 2
-status: planned
+status: active
 summary: 既存台帳を単一レコードとして確認し、変更差分を確認した上で安全に更新する能力
 primary_user_goals:
   - 既存台帳の一部項目を修正したい
   - 検索結果から対象を選び、内容を更新したい
   - AI 提案を確認してから変更を反映したい
 when_to_use:
-  - ユーザーが既存レコードの訂正・追記・タグ変更を求めるとき
+  - ユーザーが既存レコードの訂正・追記を求めるとき
+  - ユーザーがタグ変更を求め、現契約では未対応であることも含めて案内すべきとき
   - 検索の次のアクションとして更新が必要なとき
 recommended_flow:
   - step: identify-target
@@ -26,7 +27,8 @@ recommended_flow:
     description: UpdateLedgerTool または Update API で必要項目だけ更新する
   - step: confirm-result
     description: 更新後の主要項目、状態変化、再提出要否を確認する
-planned_mcp_tools:
+required_mcp_tools:
+  - GetLedgerDetailTool
   - UpdateLedgerTool
 supporting_mcp_tools:
   - SearchLedgersTool
@@ -63,11 +65,12 @@ ledgerleap_constraints:
   - フォルダ権限と対象レコード可視性を両方確認する
   - PENDING_INSPECTION / PENDING_APPROVAL の更新は保存後に DRAFT へ戻る前提で扱う
   - APPROVED 状態は初期公開契約では原則更新不可として扱う
+  - tag_operation / tag_values は受け取れても、初期 MCP 更新契約では明示的に未対応として返す
   - モデルイベント依存のケースでは update([...]) ベースの反映を優先する
 open_questions:
-  - 初期実装で API に dry_run を含めるか、MCP 側の補助機能に留めるか
-  - 単一レコード read path を API と MCP のどちらから先に実装するか
-  - 楽観的排他（expected_version など）を初期実装に含めるか
+  - タグ更新を初期公開契約の次段階でどう実更新へ拡張するか
+  - 楽観的排他（expected_version など）をどの段階で導入するか
+  - bootstrap discovery で ledger-update をどの bundle に含めるか
 examples:
   - user: さっきの議事録の開催場所だけ会議室Bに直して
     intent: 検索結果から単一列更新

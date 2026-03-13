@@ -67,6 +67,7 @@
 - **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)**: Sprint 4 の成果物。on-prem / local model 前提で、offline docs / MCP / REST API の役割分担、prompt / resource / tool の責務分担、local model 向け text budget、Sprint 5 / 6 への引き継ぎ境界を整理する。
 - **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)**: Sprint 5 の成果物。`ledger-update` を client-facing 契約として定義し、単一レコード read path の必要性、PATCH 主契約、pending 状態編集時の `DRAFT` 戻し、API 実装 / MCP 実装への分解単位を整理する。
 - **[update API implementation log](./2026-03-13_Update_API_Implementation_Log.md)**: Issue #90 の実装ログ。`GET/PATCH /api/v1/ledgers/{ledger}` の判断、既存 workflow サービス再利用方針、tag update を見送った理由、公式ドキュメント化の手掛かりを記録する。
+- **[MCP update tools implementation log](./2026-03-13_MCP_Update_Tools_Implementation_Log.md)**: Issue #91 の実装ログ。`GetLedgerDetailTool` / `UpdateLedgerTool` の役割分担、`dry_run` の最小差分設計、テストの責務分離、別スプリントへ切り出した論点を記録する。
 - **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)**: MCP経由で添付ファイル情報を活用するための実装計画。
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。

@@ -39,6 +39,14 @@ Test fails in 0s? → Previous test's migrate:rollback destroyed DB
 - After Role/Org change → both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`
 - `tenancy()->initialize($tenant)` MUST be called in every Feature test `setUp()`
 
+## MCP Tool Test Harness
+
+- MCP unit tests that create tenant-scoped models should prefer `RefreshDatabaseWithTenant`
+- When the test creates a `User` and binds `WritableFolderRepository`, stub both
+  `clearAllCache()` and `refreshAllCache()` because `User` model events call them
+- For token-authenticated MCP tools, mock permission checks with `Mockery::type(User::class)`
+  rather than assuming the factory-created user instance is reused after token auth
+
 ## Workflow / LedgerDiff in Tests
 
 ```php

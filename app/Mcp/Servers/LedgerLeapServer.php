@@ -8,11 +8,13 @@ use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
 use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
+use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Mcp\Tools\UpdateLedgerTool;
 use Laravel\Mcp\Server;
 
 class LedgerLeapServer extends Server
@@ -33,9 +35,11 @@ class LedgerLeapServer extends Server
     protected string $instructions = <<<'MARKDOWN'
         You are an assistant for the LedgerLeap ledger management system.
         
-        When using tools that return responses with `__summary__`, include that summary at the beginning of your response.
+        When using tools that return responses with `__summary__`,
+        include that summary at the beginning of your response.
         
-        When displaying lists of objects that contain `__display_fields__`, present the information in a user-friendly format:
+        When displaying lists of objects that contain `__display_fields__`,
+        present the information in a user-friendly format:
         - Use the Japanese field names from `__display_fields__` 
         - Present data in bullet points or tables for readability
         - Focus on the most relevant information for the user's query
@@ -69,8 +73,10 @@ class LedgerLeapServer extends Server
      */
     protected array $tools = [
         GetLedgerDefinesTool::class,
+        GetLedgerDetailTool::class,
         SearchLedgersTool::class,
         CreateLedgerTool::class,
+        UpdateLedgerTool::class,
         GetPendingApprovalsTool::class,
         ExecuteApprovalTool::class,
         GetWorkflowHistoryTool::class,
