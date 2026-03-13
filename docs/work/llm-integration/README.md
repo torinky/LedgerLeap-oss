@@ -13,7 +13,7 @@
 
 ---
 
-### ✅ 現状サマリー (2026-03-12)
+### ✅ 現状サマリー (2026-03-13 / Sprint 5反映)
 
 2025年までの計画で **API基盤 / MCPサーバー / 検索・登録・ワークフロー・統計** の基礎は整いました。
 一方、2026年3月の再検討により、今後の主計画は **クライアント別ファイル生成** ではなく、**MCP / API を唯一の接点とする client-first な公開契約の整備** に置き直しています。
@@ -22,7 +22,7 @@
 
 - **client-facing**: MCP / API クライアントや LLM が見る業務能力、台帳構造、操作導線
 - **developer-facing**: LedgerLeap 開発者向けの内部制約、同期、保守、生成補助
-- **bootstrap discovery**: クライアント初回接続時に、役割・モデル・用途に応じた最小 skill / prompt / resource を返す導線
+- **bootstrap discovery**: クライアント初回接続時に、役割・モデル・用途に応じた最小 skill / prompt / resource を返す導線（具体 contract は Sprint 6）
 
 また、client-facing capability は `docs/function/PersonaUseCaseScenario.md` のペルソナ（実務担当者 / 管理者 / 現場リーダー）を基準に再定義します。
 
@@ -31,9 +31,11 @@
 1. **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)** — 2026年以降の主計画
 2. **[client-facing capability taxonomy](./2026-03-10_Client_Facing_Capability_Taxonomy.md)** — Sprint 2 で整理した client-facing capability の一覧とペルソナ別初期 skill セット
 3. **[developer-facing maintenance taxonomy](./2026-03-12_Developer_Facing_Maintenance_Taxonomy.md)** — Sprint 3 で整理した AI 資産の保守先・SoT / 派生物の境界・重複整理方針
-4. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
-5. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
-6. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
+4. **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)** — Sprint 4 で整理した on-prem / local model 前提の onboarding 役割分担、text budget、Sprint 5 / 6 への引き継ぎ境界
+5. **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)** — Sprint 5 で整理した `ledger-update` の client-facing workflow、PATCH 主契約、read path 前提、API / MCP 差分
+6. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
+7. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
+8. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
 
 ---
 
@@ -62,6 +64,8 @@
 - **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)**: client-facing / developer-facing を分離し、オンプレ・ローカルモデル前提で、ペルソナ対応と初回 bootstrap discovery を含めて LLM 連携を再計画した親計画。
 - **[client-facing capability taxonomy](./2026-03-10_Client_Facing_Capability_Taxonomy.md)**: `ledger-search` / `ledger-create` / `ledger-update` / `workflow-review` を業務能力として整理し、ペルソナ別の初期 skill セットを定義した Sprint 2 の成果物。`docs/function/Ledger.md` / `Search.md` / `WorkFlow.md` は developer-facing の正式仕様として維持し、この文書群とは役割を分離する。
 - **[developer-facing maintenance taxonomy](./2026-03-12_Developer_Facing_Maintenance_Taxonomy.md)**: Sprint 3 の成果物。`.github` / `AGENTS.md` / `docs/runbooks` / `docs/work` / `resources/ai/capabilities` / generator prototype の責務を整理し、内部制約の保守先と SoT / 派生物の境界を明文化する。
+- **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)**: Sprint 4 の成果物。on-prem / local model 前提で、offline docs / MCP / REST API の役割分担、prompt / resource / tool の責務分担、local model 向け text budget、Sprint 5 / 6 への引き継ぎ境界を整理する。
+- **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)**: Sprint 5 の成果物。`ledger-update` を client-facing 契約として定義し、単一レコード read path の必要性、PATCH 主契約、pending 状態編集時の `DRAFT` 戻し、API 実装 / MCP 実装への分解単位を整理する。
 - **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)**: MCP経由で添付ファイル情報を活用するための実装計画。
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。
@@ -98,7 +102,7 @@
   - **期間**: 6スプリント（情報設計 → client-facing taxonomy → developer-facing taxonomy → on-prem onboarding → update path → bootstrap discovery）
   - **範囲**: ペルソナ対応、オンプレ・ローカルモデル前提、更新系公開契約、初回アクセス時 skill bootstrap discovery
   - **関連Issue**: [#83](https://github.com/torinky/LedgerLeap/issues/83) （親計画・進捗管理先）
-  - **状況**: Sprint 1-3 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy） / Sprint 4 以降は未着手
+  - **状況**: Sprint 1-5 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy / on-prem onboarding design / update path public contract） / Sprint 6 が未着手
 - **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **継続参照**
   - **目標**: AI統合業務管理プラットフォームへの完全発展
   - **期間**: 4-6週間

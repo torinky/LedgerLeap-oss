@@ -5,6 +5,8 @@
 
 **関連ドキュメント:**
 - [client-facing capability taxonomy](../work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md) - client-facing capability の一覧とペルソナ別初期 skill セット
+- [on-prem / local model onboarding design](../work/llm-integration/2026-03-13_OnPrem_Local_Model_Onboarding_Design.md) - on-prem / local model 前提の onboarding 役割分担
+- [update path public contract](../work/llm-integration/2026-03-13_Update_Path_Public_Contract.md) - 更新系公開契約の planned workflow
 - [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - LLM統合のMCPプロトコル詳解
 - [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md) - MCP経由でのAPI活用方法
 
@@ -12,6 +14,17 @@
 LedgerLeap APIは、外部アプリケーションやフロントエンドフレームワークとの連携を可能にするために提供されるHTTPベースのインターフェースです。このAPIを利用することで、台帳データの操作、フォルダ情報の取得、ファイルのアップロードなど、LedgerLeapの主要な機能をプログラム経由で利用できます。
 
 client-facing では、API の役割を **検索・登録・更新・承認・集計の業務フローを支える公開契約** として扱います。
+
+## on-prem / local model onboarding における API の位置づけ
+
+Sprint 4 時点では、on-prem / local model 前提の onboarding で REST API を次のように扱います。
+
+- **接続契約の主導線**: ベース URL、認証、OpenAPI、HTTP エンドポイントを確認する入口
+- **非MCP クライアントの主要導線**: 既存システム統合や API gateway 経由の利用で参照する契約
+- **bootstrap discovery の具体 contract は未確定**: 初回 bundle 解決用 endpoint / schema は Sprint 6 で定義する
+
+つまり、Sprint 4 の段階では **API は「接続方法を理解するための入口」** とし、
+role / model / client に応じた最小 bundle の自動解決は将来の discovery contract 側へ分離します。
 
 ## LLM統合 (MCP) について
 
@@ -109,6 +122,26 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 | **POST** | `/api/v1/ledgers` | 新しい台帳レコードの作成 | |
 | **GET** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | 添付資料を含む確認に利用 |
 
+## planned: update path 公開契約（Sprint 5 定義）
+
+> **注意:** この節は **planned public contract** です。実装済み endpoint の正確な一覧は引き続き [OpenAPI Specification (JSON)](openapi.json) を正本とします。ここに書く planned contract は、実装後に OpenAPI へ反映します。
+
+Sprint 5 では、更新系公開契約を次のように整理しました。
+
+| 種別 | メソッド | パス | 役割 |
+|---|---|---|---|
+| supporting read path | **GET** | `/api/v1/ledgers/{ledger}` | 更新前に単一レコードの最新内容・状態を確認する |
+| primary update path | **PATCH** | `/api/v1/ledgers/{ledger}` | 必要項目だけを部分更新する |
+| deferred contract | **PUT** | `/api/v1/ledgers/{ledger}` | 将来の完全置換向け候補。初期公開契約の主対象にはしない |
+
+### Sprint 5 の判断
+
+- update path は **検索結果だけで即更新せず、単一レコード read path を前提**にする
+- 初期公開契約の主契約は **PATCH** とする
+- `PENDING_INSPECTION` / `PENDING_APPROVAL` の編集保存では、client-facing に **`DRAFT` へ戻る** ことを説明する
+- `APPROVED` は初期公開契約では **原則更新不可** とする
+- `dry_run` は拡張候補だが、初期 API 実装の必須要件にはしない
+
 ### 検索API活用例
 
 ```bash
@@ -117,7 +150,7 @@ curl -H "Authorization: Bearer {token}" \
      "http://localhost/api/v1/search?q=日報&limit=5"
 ```
 
-詳細なパラメータやスキーマについては [OpenAPI Specification (JSON)](openapi.json) を参照してください。
+詳細なパラメータやスキーマについては [OpenAPI Specification (JSON)](openapi.json) を参照してください。planned contract の判断根拠は [update path public contract](../work/llm-integration/2026-03-13_Update_Path_Public_Contract.md) を参照してください。
 
 ## セキュリティ考慮事項
 

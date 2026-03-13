@@ -1,0 +1,59 @@
+id: ledger-search
+version: 1
+status: active
+summary: 台帳をキーワード・意味・メタデータで検索し、関連情報を読むための基本能力
+primary_user_goals:
+  - 台帳を探したい
+  - 類似記録を参照したい
+  - 担当者や更新状況を知りたい
+when_to_use:
+  - ユーザーが特定の台帳、会社名、案件名、日付範囲、タグで絞り込みたいとき
+  - ユーザーが自然文で関連情報を探したいとき
+recommended_flow:
+  - step: keyword-search
+    description: まず SearchLedgersTool でキーワード検索する
+  - step: semantic-search
+    description: キーワード結果が不十分なら order_by=semantic_score で意味検索する
+  - step: pivot-to-activity-log
+    description: それでも不足なら GetActivityLogTool で手がかりを探し、再検索する
+required_mcp_tools:
+  - SearchLedgersTool
+optional_mcp_tools:
+  - GetActivityLogTool
+required_rest_endpoints:
+  - method: GET
+    path: /api/v1/search
+  - method: POST
+    path: /api/v1/search
+required_guides:
+  - ledgerleap://guides/search-strategy
+  - ledgerleap://constraints/ledgerleap-traps
+key_parameters:
+  - q
+  - tags
+  - exclude_q
+  - exclude_tags
+  - folder_id
+  - ledger_define_id
+  - creator_id
+  - created_from
+  - created_to
+  - mode
+  - limit
+  - offset
+  - include_content
+  - order_by
+success_criteria:
+  - 必要な台帳候補を絞り込める
+  - 必要に応じて meta から作成者・フォルダ・台帳定義を読める
+  - 不要に大きいレスポンスを避けられる
+ledgerleap_constraints:
+  - Mroonga の MATCH AGAINST は単一カラム前提。複合インデックス前提で考えない
+  - content は数値インデックス配列。カラム定義を見ずに title/body を決め打ちしない
+  - include_content=false や mode=count を使って段階的に情報取得する
+examples:
+  - user: 昨日私が作成した日報を見せて
+    intent: 作成者と日付で絞った検索
+  - user: A社との最近のやり取りを教えて
+    intent: まずキーワード、必要なら意味検索
+

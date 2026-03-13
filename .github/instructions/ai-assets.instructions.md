@@ -24,6 +24,7 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - For LLM-facing docs, keep client-facing and developer-facing guidance separate.
 - Client-facing wording must stay on WebUI-observable concepts and business workflows; implementation details move to developer-facing docs.
 - When targeting local models, prefer short capability cards, small required-field lists, and list→detail flows.
+- For client onboarding assets, use **prompt = short task starters**, **resource = stable reference cards**, **tool = dynamic or user-specific resolution**; avoid putting the final discovery contract into prompt text alone.
 
 ## Prompt / Skill Bias
 

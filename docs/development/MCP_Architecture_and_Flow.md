@@ -673,6 +673,14 @@ protected array $tools = [
 ];
 ```
 
+### Sprint 5 時点の update path 契約メモ
+
+- `UpdateLedgerTool` は **未実装** だが、公開契約としては Sprint 5 で要件整理済み
+- 更新系は **検索結果から即更新せず、単一レコード read path で最新内容・状態を確認してから実行する** 前提にする
+- MCP 側では `SearchLedgersTool` → 単一レコード read → `GetLedgerDefinesTool` → 差分確認 → `UpdateLedgerTool` の流れを標準 workflow とする
+- `dry_run` / 差分要約は MCP 側の補助機能として有力だが、具体 schema は実装 Issue で確定する
+- 詳細は `docs/work/llm-integration/2026-03-13_Update_Path_Public_Contract.md` を参照
+
 ### 多言語対応
 ```php
 // instructions の多言語化
