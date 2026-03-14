@@ -13,7 +13,7 @@ recommended_flow:
   - step: list-pending-tasks
     description: GetPendingApprovalsTool で自分の未処理タスクを確認する
   - step: inspect-history
-    description: 必要に応じて GetWorkflowHistoryTool で経緯やコメントを確認する
+    description: 必要に応じて GetWorkflowHistoryTool で経緯やコメントを確認し、最新版と前版または任意の2版を比較する
   - step: claim-task
     description: 代理処理が必要なら ClaimWorkflowTaskTool で担当を引き取る
   - step: execute-decision
@@ -34,6 +34,7 @@ proposed_inputs:
 success_criteria:
   - 自分の未処理タスクを一覧できる
   - 対象レコードの確認後に承認または差し戻しを実行できる
+  - 承認前に何が変わったか、いつか、誰かを短く確認できる
   - 実行結果の状態変化を利用者へ説明できる
 ledgerleap_constraints:
   - client-facing では内部ワークフロー実装名ではなく、未処理タスク・承認・差し戻しの業務語彙で扱う

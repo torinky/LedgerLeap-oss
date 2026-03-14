@@ -694,6 +694,13 @@ protected array $tools = [
 - 出力は client-facing に `reason`（identifier / semantic / both）、`score`、詳細確認へ進む識別情報を返す
 - まず MCP の最小契約を優先し、REST の補助 contract は必要性が固まった段階で追加検討する
 
+### workflow history comparison 契約メモ
+
+- `GetWorkflowHistoryTool` は履歴一覧取得に加えて、比較入力が渡された時だけ **版比較の最小契約** を返す
+- 初期実装では `base_diff_id` + `target_diff_id` による任意2版比較と、`compare_latest_vs_previous=true` による直近比較をサポートする
+- 出力は client-facing に `changed_fields`、`changed_by`、`changed_at`、比較した版情報、最小の `next_actions` を返し、内部 diff engine の詳細は露出しない
+- 位置づけは **履歴一覧 → 必要時に比較** の 2 段階導線であり、`activity-audit` / `workflow-review` から補助的に使う
+
 ### Sprint 6 bootstrap discovery parity メモ
 
 - `GetClientBootstrapManifestTool` は Issue #94 で実装済み

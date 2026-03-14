@@ -16,6 +16,8 @@ recommended_flow:
     description: GetActivityLogTool で条件に合う履歴を取得する
   - step: pivot-to-record
     description: 必要なら SearchLedgersTool や GetWorkflowHistoryTool で対象レコードへ掘り下げる
+  - step: compare-versions
+    description: 必要なら GetWorkflowHistoryTool で最新版と前版、または任意の2版を比較し、何が変わったか・いつか・誰かを確認する
 required_mcp_tools:
   - GetActivityLogTool
 supporting_mcp_tools:
@@ -32,6 +34,7 @@ proposed_inputs:
 success_criteria:
   - 条件に合う操作履歴を取得できる
   - 変更・確認・承認の流れを追跡できる
+  - 必要に応じて2つの版を比較し、変更点と更新者・更新日時を説明できる
   - 必要に応じて対象レコードへ再移動できる
 ledgerleap_constraints:
   - client-facing では activity_log テーブルや内部イベント名を露出しない
