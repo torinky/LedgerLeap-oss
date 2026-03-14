@@ -835,6 +835,8 @@ return [
         'detail_summary' => '台帳「:title」の最新内容を取得しました。現在の状態は :status です。',
         'invalid_content_patch_json' => 'content_patch は JSON オブジェクト形式で指定してください。',
         'preview_summary' => '台帳「:title」の更新プレビューです。:count 件の変更候補があり、現在の状態は :status です。',
+        'related_axis_required' => '関連レコード調査では、識別番号または意味検索の少なくとも一方を有効にしてください。',
+        'related_summary' => '台帳「:title」に関連するレコードが :count 件見つかりました。',
         'tag_updates_not_supported' => 'タグ更新はまだ初期のMCP更新契約ではサポートされていません。内容更新のみを行うか、タグ更新の公開契約整備を待ってください。',
         'updated_summary' => '台帳「:title」を更新しました。:count 件の変更を反映し、現在の状態は :status です。',
     ],

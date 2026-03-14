@@ -667,6 +667,7 @@ protected array $tools = [
     GetClientBootstrapManifestTool::class, // ✅ bootstrap manifest parity
     GetLedgerDefinesTool::class,
     GetLedgerDetailTool::class,
+    GetRelatedLedgersTool::class,          // ✅ 関連レコード調査
     SearchLedgersTool::class,
     CreateLedgerTool::class,
     UpdateLedgerTool::class,            // ✅ 台帳更新
@@ -685,6 +686,13 @@ protected array $tools = [
 - `dry_run` は列単位の最小差分 (`changed_columns`) を返す初期実装とし、複雑な自然言語差分要約は後続スプリントへ分離した
 - 詳細は `docs/work/llm-integration/2026-03-13_Update_Path_Public_Contract.md` を参照
 - 実装判断の詳細は `docs/work/llm-integration/2026-03-13_MCP_Update_Tools_Implementation_Log.md` を参照
+
+### related ledger investigation 契約メモ
+
+- `GetRelatedLedgersTool` は、単一レコード詳細を起点に関連レコード候補を調査する MCP tool として追加した
+- 初期実装では **既存 capability `ledger-search` の拡張シナリオ** として扱い、新 capability 分離は後続判断に委ねる
+- 出力は client-facing に `reason`（identifier / semantic / both）、`score`、詳細確認へ進む識別情報を返す
+- まず MCP の最小契約を優先し、REST の補助 contract は必要性が固まった段階で追加検討する
 
 ### Sprint 6 bootstrap discovery parity メモ
 

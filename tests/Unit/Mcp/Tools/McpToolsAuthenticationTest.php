@@ -13,6 +13,7 @@ use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetRelatedLedgersTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
@@ -23,6 +24,7 @@ use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\Ai\BootstrapManifestService;
 use App\Services\Ai\CapabilityManifestRepository;
+use App\Services\Ledger\RelatedLedgerService;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Mockery;
@@ -119,6 +121,22 @@ class McpToolsAuthenticationTest extends TestCase
     }
 
     #[Test]
+    public function get_related_ledgers_tool_rejects_missing_token(): void
+    {
+        putenv('MCP_AUTH_TOKEN=');
+
+        $tool = new GetRelatedLedgersTool(Mockery::mock(RelatedLedgerService::class));
+        $request = new Request([
+            'ledger_id' => 1,
+        ]);
+
+        $response = $tool->handle($request);
+
+        $this->assertTrue($response->isError());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
+    }
+
+    #[Test]
     public function create_ledger_tool_rejects_missing_token(): void
     {
         putenv('MCP_AUTH_TOKEN=');
@@ -209,6 +227,7 @@ class McpToolsAuthenticationTest extends TestCase
             new SearchLedgersTool(Mockery::mock(LedgerService::class)),
             new CreateLedgerTool,
             new GetLedgerDetailTool(Mockery::mock(LedgerService::class)),
+            new GetRelatedLedgersTool(Mockery::mock(RelatedLedgerService::class)),
             new GetLedgerDefinesTool,
             new GetPendingApprovalsTool,
             new ExecuteApprovalTool,

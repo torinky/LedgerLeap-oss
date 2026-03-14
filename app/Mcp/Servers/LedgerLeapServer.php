@@ -14,6 +14,7 @@ use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetRelatedLedgersTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
@@ -78,6 +79,7 @@ class LedgerLeapServer extends Server
         GetClientBootstrapManifestTool::class,
         GetLedgerDefinesTool::class,
         GetLedgerDetailTool::class,
+        GetRelatedLedgersTool::class,
         SearchLedgersTool::class,
         CreateLedgerTool::class,
         UpdateLedgerTool::class,
