@@ -497,8 +497,9 @@ This directory was generated from `resources/ai/capabilities/*.yaml`.
 
 ## Usage notes
 - Treat this directory as generated output and regenerate when manifests change.
+- Treat this pack as an optional downstream export, not as the primary discovery contract.
+- Refresh the bootstrap manifest when role, model, or capability guidance changes before redistributing this pack.
 - Review MCP server names, auth settings, and local file placement before copying into a real client config.
-- `ledger-update` remains planned until the Update API / Update MCP Tool are implemented.
 MARKDOWN)."\n";
     }
 

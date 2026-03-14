@@ -90,7 +90,13 @@ YAML);
         $this->assertFileExists($this->outputPath.'/copilot/prompts/ledger-search.prompt.md');
         $this->assertFileExists($this->outputPath.'/claude-code/agents/ledger-search-agent.md');
         $this->assertFileExists($this->outputPath.'/gemini-cli/GEMINI.md.snippet');
-        $this->assertStringContainsString('ledger-update', File::get($this->outputPath.'/copilot/README.md'));
+        $copilotReadme = File::get($this->outputPath.'/copilot/README.md');
+        $this->assertStringContainsString('ledger-update', $copilotReadme);
+        $this->assertStringContainsString('optional downstream export', $copilotReadme);
+        $this->assertStringNotContainsString(
+            'remains planned until the Update API / Update MCP Tool are implemented',
+            $copilotReadme,
+        );
     }
 
     #[Test]

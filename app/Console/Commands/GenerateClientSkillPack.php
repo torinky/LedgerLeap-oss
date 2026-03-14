@@ -22,7 +22,7 @@ class GenerateClientSkillPack extends Command
     /**
      * @var string
      */
-    protected $description = 'Generate LedgerLeap client bootstrap packs from AI capability manifests';
+    protected $description = 'Generate optional downstream client bootstrap export packs from AI capability manifests';
 
     public function __construct(
         private readonly ClientSkillBootstrapService $bootstrapService,

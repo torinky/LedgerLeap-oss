@@ -13,7 +13,7 @@
 
 ---
 
-### ✅ 現状サマリー (2026-03-14 / Sprint 6反映)
+### ✅ 現状サマリー (2026-03-14 / Sprint 6 + Issue #95反映)
 
 2025年までの計画で **API基盤 / MCPサーバー / 検索・登録・ワークフロー・統計** の基礎は整いました。
 一方、2026年3月の再検討により、今後の主計画は **クライアント別ファイル生成** ではなく、**MCP / API を唯一の接点とする client-first な公開契約の整備** に置き直しています。
@@ -23,6 +23,7 @@
 - **client-facing**: MCP / API クライアントや LLM が見る業務能力、台帳構造、操作導線
 - **developer-facing**: LedgerLeap 開発者向けの内部制約、同期、保守、生成補助
 - **bootstrap discovery**: クライアント初回接続時に、役割・モデル・用途に応じた最小 skill / prompt / resource を返す導線（具体 contract は Sprint 6 文書で定義済み）
+- **optional export**: discovery の後段で、client 別の派生ファイル群をローカル配置用ディレクトリとして生成する補助導線（Issue #95 で整理）
 
 また、client-facing capability は `docs/function/PersonaUseCaseScenario.md` のペルソナ（実務担当者 / 管理者 / 現場リーダー）を基準に再定義します。
 
@@ -34,10 +35,11 @@
 4. **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)** — Sprint 4 で整理した on-prem / local model 前提の onboarding 役割分担、text budget、Sprint 5 / 6 への引き継ぎ境界
 5. **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)** — Sprint 5 で整理した `ledger-update` の client-facing workflow、PATCH 主契約、read path 前提、API / MCP 差分
 6. **[first-access bootstrap discovery contract](./2026-03-14_First_Access_Bootstrap_Discovery_Contract.md)** — Sprint 6 で固定した初回 discovery contract、carrier 比較、local model budget、client/developer 境界
-7. **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)** — VSCode + Continue + ローカルLLM 主体の UI 評価計画、ダミーデータ、期待応答、低能力SaaS比較
-8. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
-9. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
-10. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
+7. **[optional client bootstrap export flow](./2026-03-14_Optional_Client_Bootstrap_Export_Flow.md)** — Issue #95 で整理した optional downstream export の責務境界、client 別出力物、overwrite policy、follow-up 境界
+8. **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)** — VSCode + Continue + ローカルLLM 主体の UI 評価計画、ダミーデータ、期待応答、低能力SaaS比較
+9. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
+10. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
+11. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
 
 ---
 
@@ -69,6 +71,7 @@
 - **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)**: Sprint 4 の成果物。on-prem / local model 前提で、offline docs / MCP / REST API の役割分担、prompt / resource / tool の責務分担、local model 向け text budget、Sprint 5 / 6 への引き継ぎ境界を整理する。
 - **[first-access bootstrap discovery contract](./2026-03-14_First_Access_Bootstrap_Discovery_Contract.md)**: Sprint 6 の成果物。REST bootstrap manifest を初期 contract として固定し、MCP `resource / prompt / tool` の比較、local model 向け text/schema budget、client-facing / developer-facing 境界、後続 Issue 分解を整理する。
   - 後続実装 Issue: [#92](https://github.com/torinky/LedgerLeap/issues/92), [#93](https://github.com/torinky/LedgerLeap/issues/93), [#94](https://github.com/torinky/LedgerLeap/issues/94), [#95](https://github.com/torinky/LedgerLeap/issues/95)
+- **[optional client bootstrap export flow](./2026-03-14_Optional_Client_Bootstrap_Export_Flow.md)**: Issue #95 の判断記録。`ai:bootstrap-client-skills` を optional downstream export として正式化し、client 別出力物、配置責務、overwrite policy、follow-up 境界を整理する。
 - **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)**: VSCode + Continue + ローカルLLM を主対象に、bootstrap discovery / capability / onboarding を UI から評価する計画。ダミーデータ、シナリオ、期待応答、低能力SaaS比較の観点を整理する。
   - Tracking Issue: [#96](https://github.com/torinky/LedgerLeap/issues/96)
 - **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)**: Sprint 5 の成果物。`ledger-update` を client-facing 契約として定義し、単一レコード read path の必要性、PATCH 主契約、pending 状態編集時の `DRAFT` 戻し、API 実装 / MCP 実装への分解単位を整理する。
@@ -110,7 +113,7 @@
   - **期間**: 6スプリント（情報設計 → client-facing taxonomy → developer-facing taxonomy → on-prem onboarding → update path → bootstrap discovery）
   - **範囲**: ペルソナ対応、オンプレ・ローカルモデル前提、更新系公開契約、初回アクセス時 skill bootstrap discovery
   - **関連Issue**: [#83](https://github.com/torinky/LedgerLeap/issues/83) （親計画・進捗管理先）
-  - **状況**: Sprint 1-6 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy / on-prem onboarding design / update path public contract / first-access bootstrap discovery contract） / static bootstrap resource（Issue #92）、bootstrap prompt starter（Issue #93）、MCP parity tool `GetClientBootstrapManifestTool`（Issue #94）を実装済み。後続は optional file export と UI 評価が中心
+  - **状況**: Sprint 1-6 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy / on-prem onboarding design / update path public contract / first-access bootstrap discovery contract） / static bootstrap resource（Issue #92）、bootstrap prompt starter（Issue #93）、MCP parity tool `GetClientBootstrapManifestTool`（Issue #94）を実装済み。Issue #95 では optional export flow を既存 CLI ベースで正式化し、後続は MCP export tool / archive 化の要否検討と UI 評価が中心
 - **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **継続参照**
   - **目標**: AI統合業務管理プラットフォームへの完全発展
   - **期間**: 4-6週間
