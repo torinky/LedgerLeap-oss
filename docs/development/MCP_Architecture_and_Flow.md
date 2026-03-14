@@ -692,7 +692,7 @@ protected array $tools = [
 - MCP からも `client_type` / `role_profile` / `model_profile` / `language` を受けて、REST bootstrap manifest と同じ bundle 解決を返せる
 - 実装は `BootstrapManifestService::resolve()` を再利用し、client-facing な `recommended_capabilities` / `resources` / `prompts` / `files` / `placement_instructions` / `warnings` のみを返す
 - `ledgerleap://bootstrap/{client}` resource template は Issue #92 で実装済み
-- `bootstrap-client-skills` prompt は引き続き Issue #93 の責務として扱う
+- `bootstrap-client-skills` prompt は Issue #93 で実装済み。最初の質問例 / 確認事項 / 次アクションだけを返す補助導線として扱う
 
 ### 多言語対応
 ```php

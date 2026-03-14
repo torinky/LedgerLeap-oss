@@ -2,6 +2,7 @@
 
 namespace App\Mcp\Servers;
 
+use App\Mcp\Prompts\BootstrapClientSkillsPrompt;
 use App\Mcp\Resources\BootstrapClientResource;
 use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
@@ -105,6 +106,6 @@ class LedgerLeapServer extends Server
      * @var array<int, class-string<\Laravel\Mcp\Server\Prompt>>
      */
     protected array $prompts = [
-        //
+        BootstrapClientSkillsPrompt::class,
     ];
 }

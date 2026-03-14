@@ -177,7 +177,7 @@ class BootstrapManifestService
     {
         return [[
             'id' => 'bootstrap-client-skills',
-            'status' => 'candidate',
+            'status' => 'implemented',
             'type' => 'supplementary-starter',
             'client_type' => $clientType,
             'role_profile' => $roleProfile,
