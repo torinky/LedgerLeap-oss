@@ -44,6 +44,22 @@ Issue #95 では次を採用する。
 - role / model ごとの動的 bundle 解決そのもの
 - archive 配布、バイナリ配布、クライアントへの自動インストール
 
+### 3.4 initialization gate との関係
+
+Issue #83 の後続検討として、**client-side skill の初期化が終わるまで通常 tool を解放しない gate** を追加する案が出ている。
+
+この場合でも、export の責務は変わらない。
+
+- export は、required bundle を**実ファイル化する手段の一つ**
+- initialization gate は、client が必要 skill を**利用可能にしたことを確認する仕組み**
+
+つまり、次を混同しない。
+
+1. `optional export`: file 生成・配置補助
+2. `required initialization`: skill 有効化の完了確認
+
+file export を optional のままにしつつ、初期化完了確認だけを required にする設計は両立可能である。
+
 ## 4. ペルソナ / シナリオから抽出した要求
 
 根拠:
@@ -146,4 +162,6 @@ Issue #95 時点では、**package = client 別ディレクトリとしてまと
    - zip / tar などの物理 package が必要になった場合のみ検討
 3. export README の client 別 activation 例追加
    - 実 client の配置例が安定した段階で追記
+4. initialization completion と export の接続
+   - 物理 file 配置を required とするか、ACK ベースにするかを別 Issue で判断する
 

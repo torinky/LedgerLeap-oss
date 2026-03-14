@@ -250,6 +250,19 @@ client-facing capability は、既存の `docs/function/PersonaUseCaseScenario.m
 
 したがって `php artisan ai:bootstrap-client-skills` は、今後は **主計画ではなく補助的実験実装** と位置づける。
 
+### 4.5 follow-up 候補: initialization gate
+
+Issue #83 の後続検討として、**client-side skill の初期化が終わるまで通常 tool を解放しない gate** を追加する案がある。
+
+この案を採用する場合も、序列は変わらない。
+
+1. discovery で必要 bundle を知る
+2. client 側で skill を有効化する
+3. gate を解除して通常 tool を使う
+
+ここで重要なのは、`ai:bootstrap-client-skills` のような file export はあくまで初期化手段の一つであり、
+**initialization 完了そのもの** と同一視しないことである。
+
 ---
 
 ## 5. client-facing で見せるべき世界観

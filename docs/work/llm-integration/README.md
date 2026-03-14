@@ -36,10 +36,11 @@
 5. **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)** — Sprint 5 で整理した `ledger-update` の client-facing workflow、PATCH 主契約、read path 前提、API / MCP 差分
 6. **[first-access bootstrap discovery contract](./2026-03-14_First_Access_Bootstrap_Discovery_Contract.md)** — Sprint 6 で固定した初回 discovery contract、carrier 比較、local model budget、client/developer 境界
 7. **[optional client bootstrap export flow](./2026-03-14_Optional_Client_Bootstrap_Export_Flow.md)** — Issue #95 で整理した optional downstream export の責務境界、client 別出力物、overwrite policy、follow-up 境界
-8. **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)** — VSCode + Continue + ローカルLLM 主体の UI 評価計画、ダミーデータ、期待応答、低能力SaaS比較
-9. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
-10. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
-11. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
+8. **[client skill initialization gating proposal](./2026-03-14_Client_Skill_Initialization_Gating_Proposal.md)** — discovery 後に client-side skill を有効化し、pre-init では通常 tool を解放しない gate 案
+9. **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)** — VSCode + Continue + ローカルLLM 主体の UI 評価計画、ダミーデータ、期待応答、低能力SaaS比較
+10. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
+11. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
+12. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
 
 ---
 
@@ -74,6 +75,10 @@
 - **[optional client bootstrap export flow](./2026-03-14_Optional_Client_Bootstrap_Export_Flow.md)**: Issue #95 の判断記録。`ai:bootstrap-client-skills` を optional downstream export として正式化し、client 別出力物、配置責務、overwrite policy、follow-up 境界を整理する。
 - **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)**: VSCode + Continue + ローカルLLM を主対象に、bootstrap discovery / capability / onboarding を UI から評価する計画。ダミーデータ、シナリオ、期待応答、低能力SaaS比較の観点を整理する。
   - Tracking Issue: [#96](https://github.com/torinky/LedgerLeap/issues/96)
+- **[MCP tool description audit and reduction plan](./2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md)**: Issue #83 の検討結果として、`app/Mcp/Tools/*.php` の description を棚卸しし、tool contract に残す内容と client-side skill / capability / guide へ移す process guidance を整理した調査メモ。
+- **Issue #100: MCP tool description / client-skill separation**: #83 関連の follow-up issue。対象 tool、受け入れ基準、非対象、実施順を GitHub issue として起票済み。
+- **[client skill initialization gating proposal](./2026-03-14_Client_Skill_Initialization_Gating_Proposal.md)**: serena 的なイメージで、client-side skill の初期化が終わるまで通常 tool を解放しない bootstrap gate を追加提案した検討メモ。discovery / initialization / gate / optional export の責務分離を整理する。
+- **Issue #101: client skill initialization gate**: #83 関連の follow-up issue。pre-init allowlist、初期化完了条件、re-init policy、optional export との境界を GitHub issue として起票済み。
 - **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)**: Sprint 5 の成果物。`ledger-update` を client-facing 契約として定義し、単一レコード read path の必要性、PATCH 主契約、pending 状態編集時の `DRAFT` 戻し、API 実装 / MCP 実装への分解単位を整理する。
 - **[update API implementation log](./2026-03-13_Update_API_Implementation_Log.md)**: Issue #90 の実装ログ。`GET/PATCH /api/v1/ledgers/{ledger}` の判断、既存 workflow サービス再利用方針、tag update を見送った理由、公式ドキュメント化の手掛かりを記録する。
 - **[MCP update tools implementation log](./2026-03-13_MCP_Update_Tools_Implementation_Log.md)**: Issue #91 の実装ログ。`GetLedgerDetailTool` / `UpdateLedgerTool` の役割分担、`dry_run` の最小差分設計、テストの責務分離、別スプリントへ切り出した論点を記録する。

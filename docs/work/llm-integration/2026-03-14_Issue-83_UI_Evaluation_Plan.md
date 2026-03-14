@@ -58,6 +58,10 @@
   - `tool`
   - `files`
   - `placement_instructions`
+- 初期化ゲート案（follow-up 候補）
+  - pre-init では bootstrap 系のみ許可
+  - post-init で通常 tool を解放
+  - manifest / role / client 変更時は re-init 要否を再判定
 
 ### 4.2 参照する正本
 
@@ -186,6 +190,22 @@ UI 評価専用に、以下を後続で追加検討する。
   - drill-down すべき対象の案内
   - 詳細確認先への橋渡し
 
+#### Scenario I: pre-init gate / post-init unlock
+- ペルソナ: 任意
+- 例: 初回接続直後に通常検索を要求する
+- 期待:
+  - pre-init では bootstrap manifest / bootstrap card / starter prompt へ誘導される
+  - 通常 tool の詳細な process guidance を返す代わりに、初期設定完了を短く案内する
+  - 初期化完了後は通常の capability 導線へ進める
+
+#### Scenario J: re-init required after bundle change
+- ペルソナ: 管理者または現場リーダー
+- 例: role_profile または required capability が変わった後に既存 tool を呼ぶ
+- 期待:
+  - 再初期化が必要な理由を client-facing に短く説明する
+  - 変更後 bundle の取得手順へ戻せる
+  - developer-facing な内部用語を出さない
+
 ## 7. 期待する応答の設計
 
 ### 7.1 共通原則
@@ -237,6 +257,8 @@ UI 評価専用に、以下を後続で追加検討する。
 - Continue の chat UI で一読して次アクションが分かるか
 - コピペや再質問が最小で済むか
 - 低能力モデルでも「候補 → 確認 → 実行」が崩れないか
+- pre-init / post-init の切り替えが UI 上で理解しやすいか
+- re-init が必要になったときに迷わず bootstrap 導線へ戻れるか
 
 ### 8.3 比較評価
 - `small-local` と `general-local` で bundle の粒度差が適切か
