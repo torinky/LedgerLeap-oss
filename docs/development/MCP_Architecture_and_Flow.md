@@ -691,7 +691,8 @@ protected array $tools = [
 - `GetClientBootstrapManifestTool` は Issue #94 で実装済み
 - MCP からも `client_type` / `role_profile` / `model_profile` / `language` を受けて、REST bootstrap manifest と同じ bundle 解決を返せる
 - 実装は `BootstrapManifestService::resolve()` を再利用し、client-facing な `recommended_capabilities` / `resources` / `prompts` / `files` / `placement_instructions` / `warnings` のみを返す
-- `ledgerleap://bootstrap/{client}` resource と `bootstrap-client-skills` prompt はそれぞれ Issue #92 / #93 の責務として未分離のまま扱う
+- `ledgerleap://bootstrap/{client}` resource template は Issue #92 で実装済み
+- `bootstrap-client-skills` prompt は引き続き Issue #93 の責務として扱う
 
 ### 多言語対応
 ```php

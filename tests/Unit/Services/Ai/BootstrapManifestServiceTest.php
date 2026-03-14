@@ -58,6 +58,7 @@ class BootstrapManifestServiceTest extends TestCase
         $this->assertSame([], $manifest['warnings']);
         $this->assertSame('skills/ledger-search/SKILL.md', $manifest['files'][0]['relative_path']);
         $this->assertSame('ledgerleap://bootstrap/copilot', $manifest['resources'][0]['uri']);
+        $this->assertSame('implemented', $manifest['resources'][0]['status']);
     }
 
     #[Test]

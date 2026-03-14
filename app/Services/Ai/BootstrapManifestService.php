@@ -153,8 +153,8 @@ class BootstrapManifestService
         $resources = [[
             'uri' => 'ledgerleap://bootstrap/'.$clientType,
             'type' => 'bootstrap-card',
-            'status' => 'candidate',
-            'description' => 'クライアント別の初回 bundle 概要を返すための resource 候補',
+            'status' => 'implemented',
+            'description' => 'クライアント別の静的 bootstrap card。role / model ごとの動的 bundle 解決は別 contract に委譲する。',
         ]];
 
         foreach ($guideMap as $guideUri => $capabilityIds) {

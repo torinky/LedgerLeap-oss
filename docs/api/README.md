@@ -156,7 +156,7 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 ### MCP との役割分担（Sprint 6）
 
 - **REST API**: 現在の初期 discovery contract
-- **MCP Resource**: `ledgerleap://bootstrap/{client}` のような短い bootstrap card 候補（Issue #92）
+- **MCP Resource**: `ledgerleap://bootstrap/{client}` の静的 bootstrap card を resource template として提供（Issue #92 実装済み）
 - **MCP Prompt**: `bootstrap-client-skills` のような開始支援（Issue #93）
 - **MCP Tool**: `GetClientBootstrapManifestTool` により REST bootstrap manifest と同じ bundle 解決を取得可能（Issue #94 実装済み）
 
