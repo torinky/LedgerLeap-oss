@@ -6,6 +6,7 @@ use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
+use App\Mcp\Tools\GetClientBootstrapManifestTool;
 use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
@@ -72,6 +73,7 @@ class LedgerLeapServer extends Server
      * @var array<int, class-string<\Laravel\Mcp\Server\Tool>>
      */
     protected array $tools = [
+        GetClientBootstrapManifestTool::class,
         GetLedgerDefinesTool::class,
         GetLedgerDetailTool::class,
         SearchLedgersTool::class,

@@ -7,6 +7,7 @@ use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
+use App\Mcp\Tools\GetClientBootstrapManifestTool;
 use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
@@ -20,12 +21,16 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
+use App\Services\Ai\BootstrapManifestService;
+use App\Services\Ai\CapabilityManifestRepository;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
+
+// phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps
 
 /**
  * MCPツールの統一認証機能テスト
@@ -72,12 +77,31 @@ class McpToolsAuthenticationTest extends TestCase
     }
 
     #[Test]
+    public function get_client_bootstrap_manifest_tool_rejects_missing_token(): void
+    {
+        putenv('MCP_AUTH_TOKEN=');
+
+        $tool = new GetClientBootstrapManifestTool(
+            new BootstrapManifestService(new CapabilityManifestRepository)
+        );
+        $request = new Request([
+            'client_type' => 'copilot',
+            'role_profile' => 'operator',
+        ]);
+
+        $response = $tool->handle($request);
+
+        $this->assertTrue($response->isError());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
+    }
+
+    #[Test]
     public function search_ledgers_tool_accepts_valid_token(): void
     {
         putenv("MCP_AUTH_TOKEN={$this->validToken}");
 
         $ledgerService = Mockery::mock(LedgerService::class);
-        $ledgerService->shouldReceive('searchLedgersForApi')
+        $ledgerService->expects('searchLedgersForApi')
             ->once()
             ->with(Mockery::type(User::class), Mockery::any())
             ->andReturn([
@@ -123,7 +147,7 @@ class McpToolsAuthenticationTest extends TestCase
 
         // WritableFolderRepositoryをモック（権限なし）
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
+        $mockRepository->expects('getAccessibleFolderIds')
             ->with(Mockery::type(User::class), FolderPermissionType::WRITE)
             ->andReturn([]); // 空の配列 = 権限なし
 
@@ -154,7 +178,7 @@ class McpToolsAuthenticationTest extends TestCase
 
         // ユーザーはfolder1のみアクセス可能
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getReadableFolderIds')
+        $mockRepository->expects('getReadableFolderIds')
             ->with(Mockery::type(User::class))
             ->andReturn([$folder1->id]);
 
@@ -179,6 +203,9 @@ class McpToolsAuthenticationTest extends TestCase
         putenv('MCP_AUTH_TOKEN=invalid-token-12345');
 
         $tools = [
+            new GetClientBootstrapManifestTool(
+                new BootstrapManifestService(new CapabilityManifestRepository)
+            ),
             new SearchLedgersTool(Mockery::mock(LedgerService::class)),
             new CreateLedgerTool,
             new GetLedgerDetailTool(Mockery::mock(LedgerService::class)),
@@ -212,7 +239,10 @@ class McpToolsAuthenticationTest extends TestCase
             }
 
             $this->assertTrue($response->isError());
-            $this->assertStringContainsString('The provided token is invalid or has been revoked', $response->content());
+            $this->assertStringContainsString(
+                'The provided token is invalid or has been revoked',
+                $response->content()
+            );
         }
     }
 

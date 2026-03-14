@@ -110,7 +110,7 @@
   - **期間**: 6スプリント（情報設計 → client-facing taxonomy → developer-facing taxonomy → on-prem onboarding → update path → bootstrap discovery）
   - **範囲**: ペルソナ対応、オンプレ・ローカルモデル前提、更新系公開契約、初回アクセス時 skill bootstrap discovery
   - **関連Issue**: [#83](https://github.com/torinky/LedgerLeap/issues/83) （親計画・進捗管理先）
-  - **状況**: Sprint 1-6 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy / on-prem onboarding design / update path public contract / first-access bootstrap discovery contract） / MCP parity 実装は後続 Issue へ分離
+  - **状況**: Sprint 1-6 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy / on-prem onboarding design / update path public contract / first-access bootstrap discovery contract） / MCP parity は `GetClientBootstrapManifestTool`（Issue #94）として実装済み。resource / prompt 分離は後続 Issue を継続
 - **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **継続参照**
   - **目標**: AI統合業務管理プラットフォームへの完全発展
   - **期間**: 4-6週間

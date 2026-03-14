@@ -251,6 +251,7 @@ class LedgerLeapServer extends Server
     protected string $version = '0.0.1';
     protected string $instructions = '...'; // LLMへの動作指示
     protected array $tools = [
+        GetClientBootstrapManifestTool::class,
         GetLedgerDefinesTool::class,
         SearchLedgersTool::class,
         CreateLedgerTool::class,
@@ -260,6 +261,7 @@ class LedgerLeapServer extends Server
 ```
 
 #### 2. MCPツールクラス群
+- **GetClientBootstrapManifestTool**: 認証済み MCP client 向け bootstrap manifest parity
 - **SearchLedgersTool**: 台帳検索機能
 - **CreateLedgerTool**: 台帳作成機能  
 - **GetLedgerDefinesTool**: 台帳定義取得機能
@@ -662,6 +664,7 @@ try {
 ```php
 // 実装済み + 将来的な拡張例
 protected array $tools = [
+    GetClientBootstrapManifestTool::class, // ✅ bootstrap manifest parity
     GetLedgerDefinesTool::class,
     GetLedgerDetailTool::class,
     SearchLedgersTool::class,
@@ -682,6 +685,13 @@ protected array $tools = [
 - `dry_run` は列単位の最小差分 (`changed_columns`) を返す初期実装とし、複雑な自然言語差分要約は後続スプリントへ分離した
 - 詳細は `docs/work/llm-integration/2026-03-13_Update_Path_Public_Contract.md` を参照
 - 実装判断の詳細は `docs/work/llm-integration/2026-03-13_MCP_Update_Tools_Implementation_Log.md` を参照
+
+### Sprint 6 bootstrap discovery parity メモ
+
+- `GetClientBootstrapManifestTool` は Issue #94 で実装済み
+- MCP からも `client_type` / `role_profile` / `model_profile` / `language` を受けて、REST bootstrap manifest と同じ bundle 解決を返せる
+- 実装は `BootstrapManifestService::resolve()` を再利用し、client-facing な `recommended_capabilities` / `resources` / `prompts` / `files` / `placement_instructions` / `warnings` のみを返す
+- `ledgerleap://bootstrap/{client}` resource と `bootstrap-client-skills` prompt はそれぞれ Issue #92 / #93 の責務として未分離のまま扱う
 
 ### 多言語対応
 ```php
