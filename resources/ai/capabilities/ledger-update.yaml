@@ -1,7 +1,7 @@
 id: ledger-update
 version: 2
 status: active
-summary: 既存台帳を単一レコードとして確認し、変更差分を確認した上で安全に更新する能力
+summary: 既存の記録を確認し、必要な項目だけを安全に更新する能力
 primary_user_goals:
   - 既存台帳の一部項目を修正したい
   - 検索結果から対象を選び、内容を更新したい
@@ -44,7 +44,7 @@ deferred_rest_endpoints:
     path: /api/v1/ledgers/{ledger}
 required_guides:
   - ledgerleap://guides/update-strategy
-  - ledgerleap://constraints/ledgerleap-traps
+  - ledgerleap://guides/common-usage-basics
 proposed_inputs:
   - ledger_id
   - content_patch

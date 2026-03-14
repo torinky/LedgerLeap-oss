@@ -26,7 +26,7 @@ supporting_mcp_tools:
   - ClaimWorkflowTaskTool
 required_guides:
   - ledgerleap://guides/workflow-review-strategy
-  - ledgerleap://constraints/ledgerleap-traps
+  - ledgerleap://guides/common-usage-basics
 proposed_inputs:
   - task_id
   - decision

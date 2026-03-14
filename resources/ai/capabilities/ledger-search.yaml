@@ -27,7 +27,7 @@ required_rest_endpoints:
     path: /api/v1/search
 required_guides:
   - ledgerleap://guides/search-strategy
-  - ledgerleap://constraints/ledgerleap-traps
+  - ledgerleap://guides/common-usage-basics
 key_parameters:
   - q
   - tags

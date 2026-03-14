@@ -25,7 +25,7 @@ supporting_mcp_tools:
   - GetFolderStatsTool
 required_guides:
   - ledgerleap://guides/analytics-report-strategy
-  - ledgerleap://constraints/ledgerleap-traps
+  - ledgerleap://guides/common-usage-basics
 proposed_inputs:
   - period
   - ledger_define_id

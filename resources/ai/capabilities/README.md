@@ -30,5 +30,7 @@
 - `ledger-update` は Update API / Update MCP Tool の初期契約が実装済みのため `active`
 - manifest は **capability 定義の正本** であり、onboarding 時の bundle 解決や placement instruction の最終 contract そのものではない
 - `required_guides` などの guide ID は論理参照先であり、MCP Resource / REST discovery / 配布ファイルのどれで返すかは Sprint 6 の discovery contract で具体化する
+- `required_guides` は **client-facing で意味が通る guide ID** に限定し、`constraints/*` のような developer-facing 名前空間を bootstrap discovery へ直接出さない
 - Sprint 6 では `GET /api/v1/ai/bootstrap-manifest` を初期 discovery contract として追加し、manifest 群を bootstrap bundle 解決の入力として扱う
+- REST/MCP の役割分担と local model budget の詳細は `docs/work/llm-integration/2026-03-14_First_Access_Bootstrap_Discovery_Contract.md` を参照する
 

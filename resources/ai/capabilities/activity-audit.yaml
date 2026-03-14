@@ -23,7 +23,7 @@ supporting_mcp_tools:
   - GetWorkflowHistoryTool
 required_guides:
   - ledgerleap://guides/activity-audit-strategy
-  - ledgerleap://constraints/ledgerleap-traps
+  - ledgerleap://guides/common-usage-basics
 proposed_inputs:
   - period
   - user_id

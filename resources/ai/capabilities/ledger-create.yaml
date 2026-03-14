@@ -1,7 +1,7 @@
 id: ledger-create
 version: 1
 status: active
-summary: 台帳定義を確認し、適切な content 配列とタグを組み立てて新規台帳を登録する能力
+summary: 台帳定義と必須項目を確認し、必要な記録を新しく登録する能力
 primary_user_goals:
   - 会議録や日報を対話から登録したい
   - 台帳定義に沿って安全にレコードを作成したい
@@ -27,7 +27,7 @@ required_rest_endpoints:
     path: /api/v1/ledgers
 required_guides:
   - ledgerleap://guides/create-strategy
-  - ledgerleap://constraints/ledgerleap-traps
+  - ledgerleap://guides/common-usage-basics
 key_inputs:
   - ledger_define_id
   - folder_id
