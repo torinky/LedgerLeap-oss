@@ -18,6 +18,9 @@
 - Keep one source of truth per rule; link instead of duplicating.
 - Keep step-by-step human/AI operating sequences in `docs/runbooks/*`, not duplicated across prompts and skills.
 - For client-facing AI capability changes, update `resources/ai/capabilities/*.yaml` first; `ai:bootstrap-client-skills` output is derived.
+- When slimming MCP / API tool descriptions, move client-facing workflow text to `resources/ai/capabilities/*.yaml` or discovery docs first; keep tool descriptions contract-centered and record rationale in `docs/work/*`.
+- Reusable guidance must link to evidence that the next agent can inspect; keep repo proof in `docs/work/*` and official source summaries in `references/*.md`.
+- If guidance depends on upstream docs or IDE support behavior, record when it was last confirmed and recheck it after the configured window or when the same area changes.
 
 ## Proven Learning → Destination
 - Global short invariant → `/.github/copilot-instructions.md`

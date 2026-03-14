@@ -34,8 +34,19 @@ For each primary update, check adjacent assets.
 - Instruction changed → should `copilot-instructions.md` mention the rule class?
 - Runbook or issue template changed → should the prompt link to it?
 - Routing changed → update `AGENTS.md` and maintenance refs.
+- Tool description was slimmed → did `resources/ai/capabilities/*.yaml` or discovery docs receive the removed client-facing workflow text?
 
-## Step 4 — Quality gate
+## Step 4 — Attach evidence and freshness
+
+Before a finding becomes durable guidance:
+
+- add a reachable evidence link for the claim
+- store repo proof in `docs/work/*` when the evidence is implementation-specific
+- summarize official product evidence in `references/*.md` when the evidence comes from upstream docs
+- record `status`, `last_confirmed_at`, and `recheck_after` for doc-sensitive claims
+- if `today > last_confirmed_at + recheck_after`, refresh the source before you keep the rule
+
+## Step 5 — Quality gate
 
 - [ ] `copilot-instructions.md` stays short and repo-wide
 - [ ] SKILL `name` matches directory name exactly
@@ -45,8 +56,12 @@ For each primary update, check adjacent assets.
 - [ ] No duplicate rule remains in two places without an explicit reason
 - [ ] All links resolve
 - [ ] Inventory reflects new or removed skills
+- [ ] For tool-description slimming, `tool = contract`, `capability = flow`, and `docs/work = rationale` are all true after the change
+- [ ] Every durable claim has reachable evidence
+- [ ] Official-doc-sensitive claims have `last_confirmed_at` and `recheck_after`
+- [ ] No overdue recheck is being silently carried forward as confirmed guidance
 
-## Step 5 — Commit flow
+## Step 6 — Commit flow
 
 Use the `git-commit` prompt instead of ad-hoc shell quoting.
 
@@ -70,7 +85,9 @@ Suggested body bullets:
 - [ ] Neighbor sync checked across prompt / skill / instructions / AGENTS / issue template / runbook
 - [ ] Stale text removed, not merely appended around
 - [ ] New recurring workflow promoted to prompt or skill
+- [ ] Evidence and freshness recorded for reusable claims
 - [ ] Commit prepared with `/git-commit`
 
 See [routing](./routing.md) for the authoritative matrix.
+See [evidence-freshness](./evidence-freshness.md) for the evidence template and recheck defaults.
 See [jetbrains-copilot-support](./jetbrains-copilot-support.md) for support notes.

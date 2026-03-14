@@ -7,6 +7,7 @@
 - [skill-maintenance skill](/.github/skills/skill-maintenance/SKILL.md)
 - [Bug Response Playbook](/docs/runbooks/bug-response-playbook.md)
 - [Routing Matrix](/.github/skills/skill-maintenance/references/routing.md)
+- [Evidence & Freshness](/.github/skills/skill-maintenance/references/evidence-freshness.md)
 - [Agent Routing](/AGENTS.md)
 
 ---
@@ -17,9 +18,10 @@
 
 1. 今回の学びを列挙する
 2. どのファイルへ反映すべきかを決める
-3. 近接する `.github` 資産へ同期する
-4. 古くなった指示を削除する
-5. 発見性と再利用性を確認する
+3. 学びごとの evidence と鮮度情報を残す
+4. 近接する `.github` 資産へ同期する
+5. 古くなった指示を削除する
+6. 発見性と再利用性を確認する
 
 ---
 
@@ -67,8 +69,24 @@
 - skill は再利用知識
 - runbook は人向けの説明
 - AGENTS は routing と discovery
+- MCP / API tool description を slim 化する場合は、先に `resources/ai/capabilities/*.yaml` または discovery docs に client-facing flow の受け皿を作ってから削る
 
-## Step 4 — Sync Neighbors
+## Step 4 — Attach Evidence and Freshness
+
+各 durable claim について次を残す。
+
+- repo 実装証拠の置き場（通常は `docs/work/*`）
+- official source の要約置き場（通常は `references/*.md`）
+- `last_confirmed_at`
+- `recheck_after`
+- 期限前でも再確認すべき trigger
+
+目安:
+- official docs 依存の主張 → `90d`
+- 推測を含む暫定主張 → `30d`
+- repo 内で完結する運用パターン → `180d`
+
+## Step 5 — Sync Neighbors
 
 主反映先を更新したら、次の近接資産を確認する。
 
@@ -78,21 +96,25 @@
 - issue template を変えた → prompt の参照先も変えるべきか
 - routing を変えた → `AGENTS.md` と maintenance 資料を同期すべきか
 
-## Step 5 — Consolidate
+## Step 6 — Consolidate
 
 次を確認する。
 
 - もう不要な古い記述が残っていないか
 - 同じルールが複数箇所に重複していないか
 - 用語が prompt と skill でズレていないか
+- tool description を削った場合、同等の client-facing 情報が capability / discovery / generated skill 側で再取得できるか
+- evidence link が切れていないか、または再確認期限が切れたまま放置されていないか
 
-## Step 6 — Validate
+## Step 7 — Validate
 
 - リンクが解決する
 - slash entrypoint がある
 - skill description が WHAT / WHEN を含む
 - `copilot-instructions.md` が肥大化していない
 - JetBrains で prompt 主導になっている
+- evidence から元資料へ辿れる
+- `today > last_confirmed_at + recheck_after` の主張が残っていない
 
 ---
 
@@ -103,6 +125,8 @@
 - [ ] 古い / 重複した記述を整理した
 - [ ] 新しい recurring workflow は prompt または skill に昇格した
 - [ ] `AGENTS.md` の routing と矛盾しない
+- [ ] tool description の slim 化では、削除前に受け皿資産を更新した
+- [ ] reusable claim に evidence と再確認期限がある
 
 ---
 
