@@ -263,13 +263,106 @@ UI 評価専用に、以下を後続で追加検討する。
 - demo data の固定 ID / 固定検索語の整備
 - Playwright 等による UI 補助自動化
 
+### 9.4 着手順（推奨実施順）
+
+Issue #96 の着手時は、次の順序で確認すると bundle 差分と UI 上の失敗要因を切り分けやすい。
+
+1. **bootstrap discovery の bundle 固定**
+   - Scenario A / B / C の順で、role・model ごとの推奨 capability と guide 参照先を記録する
+   - ここでは「出し過ぎていないか」「内部事情が混ざっていないか」を優先確認する
+2. **一覧 → 詳細 の導線確認**
+   - Scenario D（検索 → 詳細確認）を先に実施し、Continue の chat UI で候補提示と絞り込み提案が短く伝わるかを見る
+3. **実行系シナリオの確認**
+   - Scenario E（作成）→ F（更新）→ G（承認 / 差し戻し）の順で、対象確認と状態変化説明が崩れないかを確認する
+4. **管理系シナリオの確認**
+   - Scenario H（監査 / 集計）を最後に実施し、件数確認から drill-down 先の案内までを記録する
+5. **比較対象モデルで再実施**
+   - 低能力 SaaS LLM では Scenario A / D / F / H の代表ケースを再実施し、冗長化・誤読・順序崩れを比較する
+6. **#97 への引き渡し候補整理**
+   - 「ユーザーはやりたいが、現行 contract では安全に扱えない」シナリオを抽出し、後述の引き渡しテンプレートで記録する
+
+### 9.5 Continue 手動評価テンプレート
+
+各評価ケースは、最低限次の形式で記録する。
+
+| 項目 | 記録内容 |
+|---|---|
+| 実施日 | 例: `2026-03-14` |
+| evaluator | 実施者名またはイニシャル |
+| client | `VSCode + Continue` / 比較対象 SaaS chat |
+| role_profile | `operator` / `administrator` / `field-leader` |
+| model_profile | `small-local` / `general-local` / 低能力 SaaS |
+| scenario | `A`〜`H` |
+| 対象 capability | `ledger-search` など 1〜2 件 |
+| 入力文 | Continue の chat UI にそのまま貼る文面 |
+| 期待する最低ライン | 候補提示 / 再質問 / 状態説明 / drill-down 案内 など |
+| 実際の応答 | 応答全文または要点 |
+| 判定 | `pass` / `needs-fix` / `handoff-to-#97` |
+| メモ | 冗長、誤読、内部事情露出、未 API / MCP 化シナリオなど |
+
+記録例:
+
+```markdown
+- 実施日: 2026-03-14
+- evaluator: kk
+- client: VSCode + Continue
+- role_profile: operator
+- model_profile: small-local
+- scenario: D
+- 対象 capability: ledger-search
+- 入力文: 昨日私が作成した営業日報を見せて
+- 期待する最低ライン: 候補一覧を返し、必要なら日付や作成者での絞り込みを提案し、詳細候補の確認を挟む
+- 実際の応答: 3件の候補を箇条書きで提示。詳細表示前に「どれを開くか」を確認した
+- 判定: pass
+- メモ: 応答は短い。内部実装用語なし
+```
+
+### 9.6 #97 への引き渡しテンプレート
+
+UI 評価で未 API / MCP 化シナリオや contract の粒度不足を見つけた場合は、実装要求に直結させず、次の形式で記録して #97 に渡す。
+
+| 項目 | 記録内容 |
+|---|---|
+| 発見元 scenario | `A`〜`H` |
+| ペルソナ | 実務担当者 / 管理者 / 現場リーダー |
+| やりたいこと | ユーザーが UI 上で達成したい業務目的 |
+| 現行 contract で不足している点 | capability / guide / prompt / tool / endpoint のどこが不足か |
+| 現時点で無理に実装要求へしない理由 | 安全性、導線順序、client-facing 境界、粒度不足など |
+| 暫定回避策 | 手動での確認手順、別 capability での代替など |
+| #97 での論点 | capability 拡張 / 新規 capability / 非対象 のどれを検討したいか |
+
+記録例:
+
+```markdown
+- 発見元 scenario: H
+- ペルソナ: 管理者
+- やりたいこと: 滞留案件一覧から、関連案件をまとめて見つけたい
+- 現行 contract で不足している点: analytics-report から related cases を直接辿る client-facing contract がない
+- 現時点で無理に実装要求へしない理由: まずは一覧 → 詳細 → 実行の順序を守れる粒度に分解する必要がある
+- 暫定回避策: 集計で滞留件数を確認し、ledger-search で条件を絞り直して個別レコードへ進む
+- #97 での論点: 既存 capability 拡張か、新規 capability 候補かを判定する
+```
+
+### 9.7 軽量自動化へ分離しやすい単位
+
+将来の軽量自動化では、次の単位に分離すると保守しやすい。
+
+1. **bootstrap manifest fixture**
+   - role / model ごとの推奨 capability 件数、guide 参照数、内部事情非露出を比較する
+2. **starter prompt fixture**
+   - 最初の質問例が role に合っているか、冗長でないかを比較する
+3. **scenario prompt set**
+   - Scenario D / F / H の代表入力を固定し、期待する最小応答原則を snapshot 化する
+4. **gap intake log**
+   - `handoff-to-#97` 判定になったケースだけを別シート化し、後続 triage の入力にする
+
 ## 10. 後続 Issue でやること
 
-1. 評価シナリオの確定
-2. UI 評価用ダミーデータの追加方針確定
-3. Continue 手動評価テンプレート作成
-4. 低能力 SaaS LLM 比較記録の様式化
-5. 必要なら簡易自動化へ分離
+1. Scenario A / B / C の bootstrap discovery 記録を採取し、role / model ごとの bundle 差分を固定する
+2. Scenario D / E / F / G / H を上記テンプレートで記録し、一覧 → 詳細 → 実行の順序が守られるか確認する
+3. UI 評価用ダミーデータの追加要否を判定し、必要なら別 issue へ分離する
+4. 低能力 SaaS LLM 比較で `needs-fix` / `handoff-to-#97` ケースを抽出する
+5. 必要なら prompt fixture / snapshot / gap intake log 単位で軽量自動化へ分離する
 
 ## 11. この計画の位置づけ
 
