@@ -19,16 +19,6 @@ class GetClientBootstrapManifestTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Resolve the client-facing bootstrap manifest for an authenticated MCP client.
 
-        Use this tool when the client needs the same dynamic bootstrap bundle that the REST
-        bootstrap manifest API returns. The response reuses LedgerLeap's shared bootstrap
-        resolution service and includes only client-facing fields:
-        - recommended_capabilities
-        - resources
-        - prompts
-        - files
-        - placement_instructions
-        - warnings
-
         Required inputs:
         - client_type
         - role_profile
@@ -37,8 +27,13 @@ class GetClientBootstrapManifestTool extends Tool
         - model_profile (defaults to general-local)
         - language (defaults to ja)
 
-        This tool returns the same bundle resolution as the REST bootstrap manifest contract.
-        It must not expose developer-facing internals.
+        Returns a client-facing bootstrap bundle with:
+        - recommended_capabilities
+        - resources
+        - prompts
+        - files
+        - placement_instructions
+        - warnings
     MARKDOWN;
 
     public function __construct(

@@ -16,23 +16,17 @@ class GetLedgerDetailTool extends Tool
     use AuthenticatedMcpTool;
 
     protected string $description = <<<'MARKDOWN'
-        Get the latest detail for a single ledger before updating it.
+        Get the latest single-record detail for a ledger before reviewing or editing it.
 
-        Standard workflow:
-        1. Use SearchLedgersTool to identify the target ledger.
-        2. Use GetLedgerDetailTool to confirm the latest content, workflow state, and editability.
-        3. Use GetLedgerDefinesTool to confirm column IDs before building a content patch.
-        4. Use UpdateLedgerTool with dry_run=true when you need a change preview.
-        5. Use UpdateLedgerTool to apply the final patch.
+        Use this when the target record is already identified and you need the latest content,
+        column definitions, workflow state, and editability in one response.
 
-        Use this after search results identify a target record and before building a content patch.
-        The response includes the latest content, column definitions, workflow state, and editability.
+        Supports `summary` for compact review and `raw` for machine-readable detail.
     MARKDOWN;
 
     public function __construct(
         protected LedgerService $ledgerService,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request): Response
     {

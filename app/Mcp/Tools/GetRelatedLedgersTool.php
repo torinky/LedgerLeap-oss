@@ -18,14 +18,11 @@ class GetRelatedLedgersTool extends Tool
     protected string $description = <<<'MARKDOWN'
         Get related ledgers for a specific source ledger.
 
-        Standard workflow:
-        1. Use SearchLedgersTool to identify the source ledger.
-        2. Use GetLedgerDetailTool if you need to confirm the latest content before tracing related records.
-        3. Use GetRelatedLedgersTool to retrieve ledgers related by identifier
-           matches, semantic similarity, or both.
-        4. Use GetLedgerDetailTool again for any related ledger you want to inspect in detail.
+        Returns related candidates for the source ledger by identifier matches,
+        semantic similarity, or both.
 
-        This tool is useful when a user wants to investigate records related to the one currently being viewed.
+        Use `include_identifier` / `include_semantic` to choose the axis,
+        `limit` to control result size, and `format` to choose `summary` or `raw`.
     MARKDOWN;
 
     public function __construct(

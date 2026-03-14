@@ -76,7 +76,7 @@
 - **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)**: VSCode + Continue + ローカルLLM を主対象に、bootstrap discovery / capability / onboarding を UI から評価する計画。ダミーデータ、シナリオ、期待応答、低能力SaaS比較の観点を整理する。
   - Tracking Issue: [#96](https://github.com/torinky/LedgerLeap/issues/96)
 - **[MCP tool description audit and reduction plan](./2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md)**: Issue #83 の検討結果として、`app/Mcp/Tools/*.php` の description を棚卸しし、tool contract に残す内容と client-side skill / capability / guide へ移す process guidance を整理した調査メモ。
-- **Issue #100: MCP tool description / client-skill separation**: #83 関連の follow-up issue。対象 tool、受け入れ基準、非対象、実施順を GitHub issue として起票済み。
+- **Issue #100: MCP tool description / client-skill separation**: #83 関連の follow-up issue。対象 tool、受け入れ基準、非対象、スプリント別チェックリストを GitHub issue として管理し、実装判断は [`2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md`](./2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md) に追記する。
 - **[client skill initialization gating proposal](./2026-03-14_Client_Skill_Initialization_Gating_Proposal.md)**: serena 的なイメージで、client-side skill の初期化が終わるまで通常 tool を解放しない bootstrap gate を追加提案した検討メモ。discovery / initialization / gate / optional export の責務分離を整理する。
 - **Issue #101: client skill initialization gate**: #83 関連の follow-up issue。pre-init allowlist、初期化完了条件、re-init policy、optional export との境界を GitHub issue として起票済み。
 - **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)**: Sprint 5 の成果物。`ledger-update` を client-facing 契約として定義し、単一レコード read path の必要性、PATCH 主契約、pending 状態編集時の `DRAFT` 戻し、API 実装 / MCP 実装への分解単位を整理する。

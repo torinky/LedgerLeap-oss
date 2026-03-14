@@ -17,27 +17,18 @@ class UpdateLedgerTool extends Tool
     use AuthenticatedMcpTool;
 
     protected string $description = <<<'MARKDOWN'
-        Update an existing ledger by applying a content patch.
+        Update an existing ledger by applying a partial `content_patch`.
 
-        Standard workflow:
-        1. Use SearchLedgersTool to identify the target ledger.
-        2. Use GetLedgerDetailTool to read the latest single-record detail.
-        3. Use GetLedgerDefinesTool to confirm column IDs before building a patch.
-        4. Build a content_patch with only the column IDs that should change.
-        5. Optionally use dry_run=true to preview changed columns and workflow impact.
-        6. Apply the update and confirm the resulting status.
-
-        Initial MCP contract scope:
-        - Supports ledger_id, content_patch, and optional comment
-        - Supports dry_run preview
-        - Accepts tag update inputs only to return a clear unsupported-contract message
-        - Does not update approved ledgers
+        Contract notes:
+        - Updates only the column IDs present in `content_patch`
+        - Supports an optional `comment` and `dry_run=true` preview
+        - `tag_operation` / `tag_values` are currently rejected as unsupported
+        - Approved ledgers cannot be updated by this initial MCP contract
     MARKDOWN;
 
     public function __construct(
         protected LedgerService $ledgerService,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request): Response
     {

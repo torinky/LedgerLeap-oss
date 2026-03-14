@@ -12,21 +12,21 @@ when_to_use:
   - 検索の次のアクションとして更新が必要なとき
 recommended_flow:
   - step: identify-target
-    description: まず検索結果や現在の文脈から対象候補を絞る
+    description: まず検索結果や現在の文脈から対象候補を絞るが、一覧だけで即更新しない
   - step: read-current-record
     description: 単一レコードの read path で最新内容・状態・可視性を確認する
   - step: check-editability
-    description: 現在の状態で編集できるか、保存時に状態が戻るかを確認する
+    description: 現在の状態で編集できるか、保存時に状態が戻るか、承認済みでロックされていないかを確認する
   - step: inspect-schema
     description: GetLedgerDefinesTool で対象定義の column_define を確認する
   - step: build-patch
-    description: どの column id をどう変更するか content_patch を構築する
+    description: どの column id をどう変更するかを整理し、変更対象だけを含む content_patch を構築する
   - step: preview-diff
-    description: 適用前に変更要約または dry_run で差分を確認する
+    description: 適用前に変更要約または dry_run で差分と workflow 影響を確認する
   - step: apply-patch
     description: UpdateLedgerTool または Update API で必要項目だけ更新する
   - step: confirm-result
-    description: 更新後の主要項目、状態変化、再提出要否を確認する
+    description: 更新後の主要項目、状態変化、再提出要否、未対応入力がないかを確認する
 required_mcp_tools:
   - GetLedgerDetailTool
   - UpdateLedgerTool
@@ -54,6 +54,7 @@ proposed_inputs:
   - dry_run
 success_criteria:
   - 更新前に単一レコードの最新内容と編集可否を確認できる
+  - 検索結果だけで対象を確定せず、単一レコード確認後に更新へ進める
   - 対象レコードの誤認なく更新できる
   - 更新差分を要約して確認できる
   - 変更理由と差分を追跡できる
@@ -66,6 +67,7 @@ ledgerleap_constraints:
   - PENDING_INSPECTION / PENDING_APPROVAL の更新は保存後に DRAFT へ戻る前提で扱う
   - APPROVED 状態は初期公開契約では原則更新不可として扱う
   - tag_operation / tag_values は受け取れても、初期 MCP 更新契約では明示的に未対応として返す
+  - 更新前に GetLedgerDefinesTool で対象 column id を確認し、変更対象だけを content_patch に含める
   - モデルイベント依存のケースでは update([...]) ベースの反映を優先する
 open_questions:
   - タグ更新を初期公開契約の次段階でどう実更新へ拡張するか
