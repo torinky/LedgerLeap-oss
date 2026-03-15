@@ -2,6 +2,10 @@
   "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
   // Copy this file to `settings.json` in the copied harness workspace.
   // Replace every __PLACEHOLDER__ token before starting Gemini CLI.
+  // This template currently assumes command-based local MCP.
+  // Localhost HTTP MCP simulation is tracked separately in Issue #109.
+  // Replace __LEDGERLEAP_MCP_ARGS__ with a platform-appropriate string array.
+  // See docs/harnesses/gemini-clean-room/platforms/macos.md and windows.md.
   "privacy": {
     "usageStatisticsEnabled": false
   },
@@ -29,7 +33,9 @@
   "mcpServers": {
     "ledgerleap-api": {
       "command": "__LEDGERLEAP_MCP_COMMAND__",
-      "args": __LEDGERLEAP_MCP_ARGS__,
+      "args": [
+        "__LEDGERLEAP_MCP_ARGS__"
+      ],
       "cwd": "__LEDGERLEAP_MCP_CWD__",
       "trust": false,
       "description": "LedgerLeap bootstrap evaluation server"

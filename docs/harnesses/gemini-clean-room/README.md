@@ -41,6 +41,12 @@ Gemini CLI 公式 docs では、少なくとも次が確認されています。
 - macOS: [`platforms/macos.md`](/docs/harnesses/gemini-clean-room/platforms/macos.md)
 - Windows: [`platforms/windows.md`](/docs/harnesses/gemini-clean-room/platforms/windows.md)
 
+> [!NOTE]
+> 現在の harness template は **`command` ベースの local MCP** を前提にしています。
+> Gemini CLI 側は `httpUrl` / `headers` をサポートしますが、LedgerLeap 側はまだ
+> `localhost` の **HTTP-accessible MCP endpoint** と request-header ベース認証へ揃っていません。
+> この差分は follow-up Issue [`#109`](https://github.com/torinky/LedgerLeap/issues/109) で整理します。
+
 ### 推奨フロー
 
 1. `base/` の内容を neutral parent 配下へコピーする

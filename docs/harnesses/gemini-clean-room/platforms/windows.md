@@ -20,6 +20,12 @@ C:\ledgerleap-gemini-eval\issue-106\
   evidence\
 ```
 
+> [!NOTE]
+> 現時点の `settings.json` は **`command` ベースの local MCP** を使います。
+> `httpUrl: http://localhost/...` で remote-like evaluation を行う案は、
+> `routes/ai.php` の web transport と MCP 認証モデルの整理が必要なため、
+> follow-up Issue [`#109`](https://github.com/torinky/LedgerLeap/issues/109) で扱います。
+
 ## 参考コマンド例
 
 以下は `base/` を `C:\ledgerleap-gemini-eval\issue-106\` 配下へコピーして準備する例です。
