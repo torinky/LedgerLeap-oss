@@ -36,6 +36,7 @@ trait HandlesPrefillLinks
     /**
      * 事前入力リンクを生成
      */
+    #[\Livewire\Attributes\On('open-prefill-modal')]
     public function generatePrefillLink(): void
     {
         $params = [];
@@ -303,5 +304,21 @@ trait HandlesPrefillLinks
     public function getPrefillUrlIsLongProperty(): bool
     {
         return $this->prefillUrlLength >= self::PREFILL_URL_WARNING_LENGTH;
+    }
+
+    /**
+     * ダウンロード用のファイル名を生成
+     */
+    public function getPrefillDownloadFileNameProperty(): string
+    {
+        $timestamp = now()->format('Ymd_His');
+        $name = 'prefill';
+
+        if (isset($this->ledgerDefineRecord) && $this->ledgerDefineRecord) {
+            // ファイル名に使えない文字をアンダースコアに置換
+            $name = preg_replace('/[\/\\:\*\?\"\<\>\|]/', '_', $this->ledgerDefineRecord->name);
+        }
+
+        return "{$name}_prefill_qr_{$timestamp}.svg";
     }
 }
