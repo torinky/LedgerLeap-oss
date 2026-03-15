@@ -3,17 +3,22 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\CreateColumn;
+use App\Livewire\Traits\HandlesPrefillLinks;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use Carbon\Carbon;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
+#[CoversClass(CreateColumn::class)]
+#[CoversClass(HandlesPrefillLinks::class)]
 class PrefillParametersTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -367,5 +372,24 @@ class PrefillParametersTest extends TestCase
         ])
             ->set('generatedPrefillURL', 'http://example.com/?prefill='.str_repeat('a', 6000))
             ->assertSet('prefillQRCode', '');
+    }
+
+    #[Test]
+    public function it_generates_prefill_download_file_name_from_ledger_define_title()
+    {
+        Carbon::setTestNow('2026-03-15 13:30:00');
+
+        $this->ledgerDefine->update(['title' => '見積 / 依頼 : 2026 | draft']);
+
+        $component = Livewire::test(CreateColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ]);
+
+        $this->assertSame(
+            '見積_依頼_2026_draft_事前入力用QR_20260315_133000.svg',
+            $component->instance()->getPrefillDownloadFileNameProperty()
+        );
+
+        Carbon::setTestNow();
     }
 }

@@ -3,6 +3,7 @@
 namespace App\Livewire\Common;
 
 use App\Livewire\BaseLivewireComponent;
+use App\Services\QrCodeDownloadFileNameService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
 use Filament\Actions\Contracts\HasActions;
@@ -26,10 +27,12 @@ class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
 
     public function mount()
     {
-        $route = request()->route();
-        if ($route && in_array($route->getName(), ['ledger.edit', 'ledger.create'])) {
-            $this->isLedgerEditScreen = true;
-        }
+        $this->isLedgerEditScreen = $this->shouldUsePrefillModal(request()->route()?->getName());
+    }
+
+    protected function shouldUsePrefillModal(?string $routeName): bool
+    {
+        return in_array($routeName, ['ledger.create', 'ledger.edit', 'ledger.duplicate'], true);
     }
 
     /**
@@ -48,6 +51,7 @@ class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
     {
         if ($this->isLedgerEditScreen) {
             $this->dispatch('open-prefill-modal');
+
             return;
         }
 
@@ -79,21 +83,9 @@ class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
     #[Computed]
     public function downloadFileName(): string
     {
-        $timestamp = now()->format('Ymd_His');
-        $host = parse_url($this->url, PHP_URL_HOST) ?? 'ledgerleap';
-        $path = parse_url($this->url, PHP_URL_PATH) ?? '';
-
-        $name = 'qrcode';
-        if ($path && $path !== '/') {
-            $pathParts = explode('/', trim($path, '/'));
-            $name = end($pathParts) ?: 'qrcode';
-            // Sanitize
-            $name = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $name);
-        } else {
-            $name = preg_replace('/[^a-zA-Z0-9_\-\.]/', '_', $host);
-        }
-
-        return "{$name}_{$timestamp}.svg";
+        return app(QrCodeDownloadFileNameService::class)->forPageShare(
+            $this->url !== '' ? $this->url : $this->resolveCurrentUrl()
+        );
     }
 
     /**
@@ -115,12 +107,14 @@ class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
 
         return $action
             ->modalHeading(__('ledger.page_qr_code.modal_title'))
+            ->modalDescription(__('ledger.page_qr_code.description'))
             ->modalContent(function () {
                 $url = $this->resolveCurrentUrl();
 
                 return view('livewire.common.page-qr-code-modal-content', [
                     'url' => $url,
                     'qrCode' => QrCode::size(250)->format('svg')->generate($url)->toHtml(),
+                    'downloadName' => app(QrCodeDownloadFileNameService::class)->forPageShare($url),
                 ]);
             })
             ->modalSubmitAction(false)

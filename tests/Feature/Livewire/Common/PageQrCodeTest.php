@@ -3,7 +3,11 @@
 namespace Tests\Feature\Livewire\Common;
 
 use App\Livewire\Common\PageQrCode;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -54,6 +58,9 @@ class PageQrCodeTest extends TestCase
             ->assertSet('showModal', true)
             ->assertSet('url', $url)
             ->assertSeeHtml('<svg') // QR code SVG
+            ->assertSeeHtml('timeout: 2400')
+            ->assertSee(__('ledger.qr_share.url_label'))
+            ->assertDontSee(__('ledger.prefill.url_label'))
             ->assertSee($url);
     }
 
@@ -80,5 +87,125 @@ class PageQrCodeTest extends TestCase
         } finally {
             app()->instance('request', $originalRequest);
         }
+    }
+
+    #[Test]
+    public function it_generates_contextual_download_file_name_from_target_url()
+    {
+        Carbon::setTestNow('2026-03-15 13:30:00');
+
+        $folder = Folder::factory()->create([
+            'title' => '共有フォルダ',
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'title' => '契約/台帳:2026',
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $component = Livewire::test(PageQrCode::class)
+            ->call('openModal', route('ledger.edit', [
+                'tenant' => $this->getTenant()->id,
+                'ledgerId' => $ledger->id,
+            ]));
+
+        $this->assertSame(
+            '契約_台帳_2026_台帳編集用QR_20260315_133000.svg',
+            $component->instance()->downloadFileName()
+        );
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function it_falls_back_to_generic_download_file_name_for_unknown_url()
+    {
+        Carbon::setTestNow('2026-03-15 13:30:00');
+
+        $component = Livewire::test(PageQrCode::class)
+            ->call('openModal', 'https://example.com/custom/share-page');
+
+        $this->assertSame(
+            '画面共有用QR_20260315_133000.svg',
+            $component->instance()->downloadFileName()
+        );
+
+        Carbon::setTestNow();
+    }
+
+    #[Test]
+    public function it_uses_prefill_modal_on_duplicate_create_screen()
+    {
+        $folder = Folder::factory()->create([
+            'title' => '複製元フォルダ',
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'title' => '複製元台帳',
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $originalRequest = app('request');
+        $request = Request::create(route('ledger.duplicate', [
+            'tenant' => $this->getTenant()->id,
+            'ledgerId' => $ledger->id,
+        ]), 'GET');
+        $route = app('router')->getRoutes()->match($request);
+        $request->setRouteResolver(fn () => $route);
+        app()->instance('request', $request);
+
+        try {
+            $component = new PageQrCode;
+            $component->mount();
+
+            $this->assertTrue($component->isLedgerEditScreen);
+
+            $component->openModal();
+
+            $this->assertFalse($component->showModal);
+            $this->assertSame('', $component->url);
+        } finally {
+            app()->instance('request', $originalRequest);
+        }
+    }
+
+    #[Test]
+    public function it_renders_filament_modal_content_with_generic_share_labels()
+    {
+        $this->view('livewire.common.page-qr-code-modal-content', [
+            'url' => 'https://example.com/shared',
+            'qrCode' => '<svg></svg>',
+            'downloadName' => 'test.svg',
+        ])
+            ->assertSee(__('ledger.qr_share.url_label'))
+            ->assertSee(__('ledger.qr_share.qr_code_title'))
+            ->assertDontSee(__('ledger.page_qr_code.modal_title'))
+            ->assertDontSee(__('ledger.prefill.url_label'));
     }
 }

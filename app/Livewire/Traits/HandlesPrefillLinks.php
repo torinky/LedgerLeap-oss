@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Traits;
 
+use App\Services\QrCodeDownloadFileNameService;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -311,14 +312,8 @@ trait HandlesPrefillLinks
      */
     public function getPrefillDownloadFileNameProperty(): string
     {
-        $timestamp = now()->format('Ymd_His');
-        $name = 'prefill';
-
-        if (isset($this->ledgerDefineRecord) && $this->ledgerDefineRecord) {
-            // ファイル名に使えない文字をアンダースコアに置換
-            $name = preg_replace('/[\/\\:\*\?\"\<\>\|]/', '_', $this->ledgerDefineRecord->name);
-        }
-
-        return "{$name}_prefill_qr_{$timestamp}.svg";
+        return app(QrCodeDownloadFileNameService::class)->forPrefill(
+            $this->ledgerDefineRecord->title ?? null
+        );
     }
 }

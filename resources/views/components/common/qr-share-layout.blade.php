@@ -1,13 +1,13 @@
 @props([
     'title' => null,
     'description' => null,
-    'urlLabel' => __('ledger.prefill.url_label') ?? 'URL',
+    'urlLabel' => __('ledger.qr_share.url_label'),
     'url' => null,
-    'qrCodeTitle' => __('ledger.prefill.qr_code_title') ?? 'QR Code',
-    'qrCodeDescription' => __('ledger.prefill.qr_code_description') ?? '',
+    'qrCodeTitle' => __('ledger.qr_share.qr_code_title'),
+    'qrCodeDescription' => __('ledger.qr_share.qr_code_description'),
     'qrCode' => null,
     'downloadName' => 'qr-code.svg',
-    'copySuccessMessage' => __('ledger.prefill.copy_success') ?? 'Copied',
+    'copySuccessMessage' => __('ledger.qr_share.copy_success'),
 ])
 
 @php
@@ -32,7 +32,14 @@
     notify(title, type = 'success') {
         const css = type === 'success' ? 'alert-success' : 'alert-error';
         this.$dispatch('mary-toast', {
-            toast: { type, title, description: '', icon: this.toastIcon(type), css }
+            toast: {
+                type,
+                title,
+                description: '',
+                icon: this.toastIcon(type),
+                css,
+                timeout: 2400
+            }
         });
     },
 
@@ -56,7 +63,7 @@
         } catch (e) {
             console.error(`${type} failed:`, e);
             if (type === 'copy') this.showWarning = true;
-            this.notify(e.message || 'Error occurred', 'error');
+            this.notify(e.message || @js(__('ledger.qr_share.error_generic')), 'error');
         } finally {
             this.actionState[type].loading = false;
         }
@@ -66,7 +73,7 @@
         // Fallback to Livewire's url if provided
         const url = @js($url) || (this.$wire ? this.$wire.url : '');
         if (!url) {
-            this.notify('URL Not Found', 'error');
+            this.notify(@js(__('ledger.qr_share.url_not_found')), 'error');
             return;
         }
 
@@ -75,7 +82,7 @@
                 await navigator.clipboard.writeText(url);
             } else {
                 const successful = this.fallbackCopy(url);
-                if (!successful) throw new Error('Copy failed');
+                if (!successful) throw new Error(@js(__('ledger.qr_share.auto_copy_failed_title')));
             }
         });
     },
@@ -83,7 +90,7 @@
     async downloadQRCode() {
         const svgElement = this.$root.querySelector('.qr-svg-container svg');
         if (!svgElement) {
-            this.notify('{{ __('ledger.prefill.qr_code_unavailable_title') ?? 'QRコードを利用できません' }}', 'error');
+            this.notify(@js(__('ledger.qr_share.qr_code_unavailable_title')), 'error');
             return;
         }
 
@@ -93,12 +100,12 @@
             const url = URL.createObjectURL(blob);
             const link = document.createElement('a');
             link.href = url;
-            link.download = @js($downloadName);
+            link.download = {{ Illuminate\Support\Js::from($downloadName) }};
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
             URL.revokeObjectURL(url);
-        }, '{{ __('ledger.prefill.download_qr') }}');
+        }, @js(__('ledger.qr_share.download_qr')));
     },
 
     fallbackCopy(text) {
@@ -149,7 +156,7 @@
                      x-transition
                      class="alert alert-warning py-2 px-3 text-xs">
                     <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 shrink-0" />
-                    <span>{{ __('ledger.prefill.auto_copy_failed_description') ?? 'コピーに失敗しました。以下のテキストエリアから手動でコピーしてください。' }}</span>
+                     <span>{{ __('ledger.qr_share.auto_copy_failed_description') }}</span>
                 </div>
 
                 <div class="relative group grow">
@@ -175,7 +182,7 @@
                 </div>
 
                 @if($qrCodeAvailable)
-                    <div class="qr-svg-container bg-white p-5 rounded-2xl shadow-xl mb-6 transform transition-transform hover:scale-105">
+                    <div class="qr-svg-container mx-auto my-3 w-fit rounded-2xl bg-white px-4 py-5 shadow-xl transform transition-transform hover:scale-105">
                         {!! $qrCode !!}
                     </div>
 
@@ -185,7 +192,7 @@
                 @else
                     <div class="alert alert-warning text-sm w-full shadow-sm">
                         <x-mary-icon name="o-exclamation-triangle" class="w-5 h-5 shrink-0" />
-                        <span>{{ __('ledger.prefill.qr_code_unavailable') ?? 'QRコードを利用できません' }}</span>
+                        <span>{{ __('ledger.qr_share.qr_code_unavailable') }}</span>
                     </div>
                 @endif
             </div>
@@ -201,7 +208,7 @@
         <div class="flex flex-col sm:flex-row gap-4 w-full justify-between items-center bg-base-100 pt-6">
             <div class="text-xs text-base-content/40 italic flex items-center gap-2">
                 <x-mary-icon name="o-device-phone-mobile" class="w-4 h-4" />
-                {{ __('ledger.prefill.qr_code_hint') ?? '※モバイル端末での利用に最適化されています' }}
+                {{ __('ledger.qr_share.qr_code_hint') }}
             </div>
 
             <div class="flex flex-wrap justify-center sm:justify-end gap-3 w-full sm:w-auto">
@@ -214,7 +221,7 @@
                 >
                     <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
                     <x-mary-icon x-show="!actionState.download.loading" name="o-arrow-down-tray" class="w-4 h-4" />
-                    <span>{{ __('ledger.prefill.download_qr') ?? 'QRコードを保存' }}</span>
+                    <span>{{ __('ledger.qr_share.download_qr') }}</span>
                 </x-mary-button>
 
                 <x-mary-button
@@ -229,7 +236,7 @@
                     <template x-if="!actionState.copy.loading && !actionState.copy.success">
                         <x-mary-icon name="o-clipboard-document" class="w-4 h-4" />
                     </template>
-                    <span>{{ __('ledger.prefill.copy_to_clipboard') ?? 'クリップボードにコピー' }}</span>
+                    <span>{{ __('ledger.qr_share.copy_to_clipboard') }}</span>
                 </x-mary-button>
 
                 @if(isset($closeButton))

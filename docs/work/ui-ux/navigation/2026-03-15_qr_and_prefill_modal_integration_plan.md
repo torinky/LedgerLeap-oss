@@ -38,40 +38,178 @@
   3. 「長いURLに対する警告」などの事前入力特有の表示は、`PageQrCode`側では非表示（または不要）とする。
   4. URLコピー時のクリップボードAPIのフォールバック機能やToast通知のUXを両者で統一する。
 
-## 3. 今後の進め方（Step-by-Step）
+## 3. 再確認後のステータス
 
-アプローチB（UI/UXの調和）で進める場合のタスク計画です。
+2026-03-15 の再確認結果を反映した現時点のステータスです。
 
-- [ ] **Step 1: UI共通部分のBladeコンポーネント化（またはクラスの移植）**
-  - URL表示、QRコード表示、コピーボタン、ダウンロードボタンの見た目を共通化するためのBladeコンポーネント（例: `resources/views/components/common/qr-share-layout.blade.php`）を作成し、既存のモーダルから呼び出すか、あるいは`PageQrCode`側のViewを直接書き換える。
-- [ ] **Step 2: `PageQrCode` 側の機能強化**
-  - QRコードのダウンロード機能を追加する。
-  - URLコピーの成功/失敗のフィードバックを統一する。
-- [ ] **Step 3: Filament用ビューの見た目調整**
-  - `page-qr-code-modal-content.blade.php` のレイアウトを新しい共通デザインに合わせて調整する。
-- [ ] **Step 4: ユーザー動線へ配慮した呼び出し制御の追加（台帳編集画面）**
-  - 台帳編集・作成画面（ルート名 `ledger.edit`, `ledger.create`）において、`PageQrCode` コンポーネントの処理を分岐させる。
-  - 該当画面でグローバルQRアイコンがクリックされた場合、標準のQRモーダルを開く代わりにLivewireイベント（例: `open-prefill-modal`）を発火する。
-  - `HandlesPrefillLinks` トレイト側でこのイベントをリッスンし、`generatePrefillLink()` を呼び出して事前入力リンクダイアログを開くようにする。
-- [ ] **Step 5: 手動検証**
-  - Sail環境を起動し、台帳編集画面からの事前入力モーダルの動作確認を実施（メニューバーのQRアイコンの挙動を含む）。
-  - 各種画面からのグローバルなQRコードモーダルの動作確認（URLコピー、QRダウンロードが正常に機能するか）を実施。
+- [x] **Step 1: UI共通部分のBladeコンポーネント化（またはクラスの移植）**
+  - `resources/views/components/common/qr-share-layout.blade.php` に URL / QR / コピー / ダウンロード UI を集約済み。
+- [x] **Step 2: `PageQrCode` 側の機能強化**
+  - MaryUI 側は共通レイアウトを利用し、QR ダウンロードとコピー UX を統一済み。
+- [x] **Step 3: Filament用ビューの見た目調整**
+  - `resources/views/livewire/common/page-qr-code-modal-content.blade.php` を 2 カラム構成へ寄せ、コピーのフォールバック・動的ダウンロード名・ヘッダー/フッター構成を共通レイアウトへ近づけて調整済み。
+  - 追加調整として、Filament 標準モーダルヘッダーと本文ヘッダーの二重表示を解消し、見出しはモーダルシェル側へ一本化した。
+- [x] **Step 4: ユーザー動線へ配慮した呼び出し制御の追加（台帳編集画面）**
+  - `ledger.edit` / `ledger.create` では `PageQrCode` から `open-prefill-modal` を優先発火する分岐を維持。
+  - 追加修正として `ledger.duplicate`（既存レコード流用の新規作成画面）も prefill 優先分岐へ含めた。
+- [x] **Step 5: QRコードダウンロードのファイル名改善（カスタマイズ）**
+  - `app/Services/QrCodeDownloadFileNameService.php` を追加し、MaryUI / Filament / Prefill で同じ命名規則を共有。
+- [x] **Step 5.1: 翻訳キーの共通化**
+  - `ledger.prefill.*` に寄っていた共通ラベルを `ledger.qr_share.*` へ整理し、日本語のコード埋め込みを除去。
+- [ ] **Step 6: 手動・画面スモーク検証**
+  - この再確認ではコード確認・Lint・対象 Feature テストまでは完了。
+  - 実ブラウザでの MaryUI / Filament 両画面のクリック確認は、今回の作業記録上は未証跡のため未完了扱いとする。
 
-## 4. 発生した問題と解決の手引き (トラブルシューティング)
+## 4. 実装仕様（再確認後の確定事項）
+
+### 4.1. ファイル名の命名規則
+
+#### ページ共有 QR (`PageQrCode`)
+
+形式:
+
+```text
+[文脈名_]画面種別用QR_YYYYMMDD_HHMMSS.svg
+```
+
+文脈名の解決ルール:
+
+- `ledger.show`, `ledger.edit`
+  - `Ledger` から `define` リレーションを辿り、**台帳定義タイトル** (`LedgerDefine.title`) を採用
+- `ledger.create`, `ledgersByDefineId`, `ledger.import.show`
+  - ルートパラメータの `ledgerDefineId` / `defineId` から **台帳定義タイトル** を採用
+- `ledgersByFolderId`
+  - `folderId` から **フォルダタイトル** を採用
+- それ以外
+  - 文脈名なしで `画面共有用QR_...svg`
+
+画面種別の解決ルール:
+
+- `ledger.index`, `ledgersByFolderId`, `ledgersByDefineId` → `台帳一覧`
+- `ledger.show` → `台帳詳細`
+- `ledger.edit` → `台帳編集`
+- `ledger.create` → `台帳作成`
+- `ledger.import.show` → `台帳インポート`
+- その他 → `画面共有`
+
+#### 事前入力 QR (`HandlesPrefillLinks`)
+
+形式:
+
+```text
+[LedgerDefine.title]_事前入力用QR_YYYYMMDD_HHMMSS.svg
+```
+
+### 4.2. サニタイズ仕様
+
+ダウンロード名は共通サービスで以下を適用する。
+
+- `\\ / : * ? " < > |` は `_` に置換
+- 連続空白は `_` に正規化
+- 連続する `_` は 1 つに圧縮
+- 先頭/末尾の `_`・`.`・空白は除去
+- 1 セグメント 80 文字までに切り詰め
+
+### 4.3. ラベル/翻訳キーの責務分離
+
+- 共通ダイアログで使うラベルは `ledger.qr_share.*` に集約
+  - 例: `url_label`, `copy_to_clipboard`, `copy_success`, `download_qr`, `qr_code_title`
+- 事前入力専用の文言は `ledger.prefill.*` を維持
+  - 例: `modal_title`, `description`, `long_url_warning`, `generate_link`, `qr_code_description`
+- ページ共有専用の文言は `ledger.page_qr_code.*` を維持
+  - 例: `modal_title`, `description`
+
+### 4.4. 今回の再確認で補正したギャップ
+
+- `prefill-link-modal.blade.php` に固定ファイル名 `prefill-qr-code.svg` が残っていた
+  - → `:downloadName="$this->prefillDownloadFileName"` に統一
+- `page-qr-code-modal-content.blade.php` に固定ファイル名 `page-qr-code.svg` が残っていた
+  - → `PageQrCode` から動的 `downloadName` を受け渡すよう修正
+- ファイル名解決が現在の Livewire リクエスト文脈に依存しやすかった
+  - → 対象 URL を `router()->match(Request::create(...))` で再解決する共通サービスへ集約
+- `LedgerDefine` の表示名に `name` を使う前提が混在していた
+  - → 実データに合わせて `title` 基準へ修正
+- 共通レイアウトが `ledger.prefill.url_label` など事前入力専用キーをデフォルト利用していた
+  - → 共通キー `ledger.qr_share.*` を新設し、Prefill 側だけ明示的に専用ラベルを渡す構成へ変更
+- Filament 側ビューが共通レイアウトより情報構造・フッター構成で乖離していた
+  - → ヘッダー、URL領域、QR領域、モバイル向けヒント、アクション配置を共通レイアウトへ寄せて再調整
+- Filament 側でモーダルタイトルと本文表題が重複して不自然だった
+  - → `PageQrCode` の Filament Action に `modalHeading` / `modalDescription` を持たせ、本文側のヘッダーブロックを削除
+- QRコード画像カードの余白バランスが不自然だった
+  - → MaryUI / Filament 両方で QR カードを `w-fit + mx-auto + my-3 + px-4 py-5` ベースへ調整し、左右余白を減らして上下余白を追加
+- 通常画面側の通知がクリックしないと消えない UX だった
+  - → `mary-toast` の payload に `timeout: 2400` を追加し、自動消去されるよう変更
+- 既存レコード流用の新規作成画面でメニューQRが通常共有ダイアログへ落ちていた
+  - → 原因は `PageQrCode` の prefill 分岐対象が `ledger.create` / `ledger.edit` のみで、実導線の route 名 `ledger.duplicate` を含めていなかったこと
+  - → `shouldUsePrefillModal()` に `ledger.duplicate` を追加し、回帰テスト `it_uses_prefill_modal_on_duplicate_create_screen()` を追加
+
+## 5. 作業エビデンス
+
+### 5.1. 関連ファイル
+
+- `app/Services/QrCodeDownloadFileNameService.php`
+- `app/Livewire/Common/PageQrCode.php`
+- `app/Livewire/Traits/HandlesPrefillLinks.php`
+- `lang/ja/ledger.php`
+- `resources/views/components/ledger/prefill-link-modal.blade.php`
+- `resources/views/livewire/common/page-qr-code-modal-content.blade.php`
+- `resources/views/components/common/qr-share-layout.blade.php`
+- `tests/Feature/Livewire/Common/PageQrCodeTest.php`
+- `tests/Feature/Livewire/Ledger/PrefillParametersTest.php`
+
+### 5.2. 自動検証ログ
+
+実行コマンド:
+
+```bash
+./vendor/bin/sail pint app/Services/QrCodeDownloadFileNameService.php app/Livewire/Common/PageQrCode.php resources/views/components/common/qr-share-layout.blade.php resources/views/components/ledger/prefill-link-modal.blade.php resources/views/livewire/common/page-qr-code-modal-content.blade.php tests/Feature/Livewire/Common/PageQrCodeTest.php lang/ja/ledger.php
+./vendor/bin/sail test tests/Feature/Livewire/Common/PageQrCodeTest.php tests/Feature/Livewire/Ledger/PrefillParametersTest.php
+```
+
+結果:
+
+- Pint: **7 files checked, no violations**
+- Test: **20 passed / 47 assertions**
+
+### 5.3. 回帰テストで確認した代表ケース
+
+- `契約/台帳:2026` を持つ編集画面 URL → `契約_台帳_2026_台帳編集用QR_20260315_133000.svg`
+- 未知の URL → `画面共有用QR_20260315_133000.svg`
+- `見積 / 依頼 : 2026  draft` を持つ事前入力 QR → `見積_依頼_2026_draft_事前入力用QR_20260315_133000.svg`
+- MaryUI の `PageQrCode` モーダル → `共有URL` ラベルを表示し、`事前入力URL` は表示しない
+- Filament モーダルコンテンツ → `ledger.qr_share.*` を利用し、`ledger.prefill.url_label` に依存しない
+- MaryUI モーダル → 通知 payload に `timeout: 2400` を含み、自動消去設定が入る
+- Filament モーダルコンテンツ → 本文内に `ledger.page_qr_code.modal_title` を重複表示しない
+- `ledger.duplicate` 画面 → `PageQrCode` が `open-prefill-modal` 優先分岐となり、通常共有モーダルへ落ちない
+
+## 6. 発生した問題と解決の手引き (トラブルシューティング)
 
 今回の統合実装において、以下の問題が発生し、解決策を講じました。後から本機能をメンテナンスする際や同様の実装を行う際の参考にしてください。
 
-### 4.1. Livewireプロパティ名とBladeバインディングの不一致
+### 6.1. Livewireプロパティ名とBladeバインディングの不一致
 *   **事象**: `HandlesPrefillLinks.php` で `getPrefillQRCodeProperty()` として定義されたComputed Propertyが、Blade (`prefill-link-modal.blade.php`) で正しく呼び出されず、QRコード（SVG）が生成されない。
 *   **調査**: Livewire v3では、旧来の `getProperty()` 形式で定義されたComputed Property（例: `getPrefillQRCodeProperty`）にアクセスする際、プロパティの命名規則により `$this->prefillQRCode` としてアクセスするのが正解です。しかし、一時的な実装において `$this->prefill_q_r_code` や `$this->qrCode` といった不整合が生じていました。
 *   **解決と判断理由**: コントローラとBladeのプロパティ参照を `$this->prefillQRCode` に統一することで解決しました。
 
-### 4.2. LivewireのDOM更新（Morphdom）とAlpine.jsの状態の乖離
+### 6.2. LivewireのDOM更新（Morphdom）とAlpine.jsの状態の乖離
 *   **事象**: QRコード利用可能判定フラグである `qrCodeAvailable` をAlpine.jsの `x-data` キャッシュステートとして持たせ、Bladeの `@if` と混用した結果、LivewireによってDOMが更新された後もAlpine.jsのステートがリセットされず、UI（ダウンロードボタンの活性化など）が更新されたDOMと一致しない状態が発生。
 *   **調査**: LivewireのMorphdomとAlpine.jsの密結合により、Alpine側のリアクティブな判定変数にLivewire起因のPHP変数をマージすると、更新サイクルがずれて意図しない挙動（ボタンがDisabledのまま、あるいは表示が消えるなど）になることが一般的です。
 *   **解決と判断理由**: Alpine.js側の `qrCodeAvailable` ステート変数を削除し、純粋にBladeの属性バインディング `:disabled="!$qrCodeAvailable"` に依存するシンプルな構成にリファクタリングしました。これによりDOMの状態差分とAlpine.jsステートの乖離を根本から防いでいます。
 
-### 4.3. Alpine.js の `$el` と `$root` コンテキストの違いによるDOM探索失敗
+### 6.3. Alpine.js の `$el` と `$root` コンテキストの違いによるDOM探索失敗
 *   **事象**: ダウンロードボタンをクリックした際、JavaScript内で `QRコードを利用できません` エラートーストが表示され、生成・表示されているはずのSVGが見つからない。
 *   **調査**: Alpine.js v3環境において、コンポーネントメソッド内（`async downloadQRCode() { ... }`）で `this.$el` を参照すると、場合により**イベントのトリガーとなったDOMノード**（この場合は `<button>` 要素自身）がコンテキストとして入り込む仕様（または不確実にバインドされる制約）があります。これにより、`this.$el.querySelector('.qr-svg-container svg')` の探索範囲が限定され、ボタン内の子要素しか検索されないため `null` が返されていました。
 *   **解決と判断理由**: コンポーネントツリーの最上位（ルート要素）から安全に要素を探索するため、`this.$el` を `this.$root` に置換しました。これによりダウンロードボタンが発火した際でも、確実にコンポーネント全体から対象のSVGを探索・取得できるようになりました。
+
+## 7. より良い仕様への提案
+
+1. **ファイル名に route category を明示的に残す**
+   - 例: `契約台帳_台帳編集_page-share_...svg`, `契約台帳_prefill_...svg`
+   - 日本語だけでも運用可能だが、将来的な API / 外部連携を考えると機械可読な suffix を追加すると扱いやすい。
+2. **長すぎるファイル名への追加対策**
+   - 現在はセグメント単位で 80 文字制限。OS 互換性をより強めるなら、最終ファイル名全体でも 120〜150 文字程度に丸めると安全。
+3. **手動スモークの証跡化**
+   - issue / docs へ「MaryUI 画面」「Filament 画面」「台帳編集画面で prefill に分岐」の 3 スクリーンショットまたは短い操作ログを毎回残す。
+4. **将来的なユーザー指定ファイル名**
+   - 共有先が多い運用では、台帳定義タイトルだけでなく `tenant` や `folder` を先頭辞へ入れる需要がある。設定化は follow-up issue に切る価値がある。
+
