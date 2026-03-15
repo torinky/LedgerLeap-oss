@@ -2,8 +2,9 @@
   "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
   // Copy this file to `settings.json` in the copied harness workspace.
   // This template assumes remote MCP over HTTP.
-  // Use a tenant-resolving host in httpUrl (for example tenant-name.localhost),
-  // not a bare localhost that bypasses domain-based tenancy resolution.
+  // Prefer the path-based tenant URL (for example http://localhost/{tenant}/mcp/ledgerleap)
+  // so the MCP endpoint matches the rest of LedgerLeap's tenant URL style.
+  // A tenant-resolving host such as tenant-name.localhost is also supported.
   // LedgerLeap web app must already be reachable at that endpoint.
   // Replace every __PLACEHOLDER__ before starting Gemini CLI.
   "privacy": {

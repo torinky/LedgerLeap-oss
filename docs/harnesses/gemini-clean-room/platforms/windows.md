@@ -55,15 +55,18 @@ Set-Location "C:\ledgerleap-gemini-eval\issue-106\workspace"
 
 `workspace/.gemini/settings.json` では、たとえば次のように置き換えます。
 
-前提として、LedgerLeap 側の web app が起動しており、指定する host から
-`/mcp/ledgerleap` に到達できる必要があります。
+前提として、LedgerLeap 側の web app が起動しており、指定する URL から
+MCP endpoint に到達できる必要があります。
 
-- `__LEDGERLEAP_MCP_HTTP_URL__` → `http://ledgerleap-eval.localhost/mcp/ledgerleap`
+- `__LEDGERLEAP_MCP_HTTP_URL__` → `http://localhost/tenant-a/mcp/ledgerleap`
 - `__LEDGERLEAP_MCP_BEARER_TOKEN__` → `mcp:*` ability を持つ Sanctum token
 
-`httpUrl` の host は、LedgerLeap 側で tenant を解決できる値にしてください。
-`localhost` をそのまま使うのではなく、tenant domain として登録済みの
-`*.localhost` などを使う方が安全です。
+推奨は path-based tenant URL です。
+
+- 推奨: `http://localhost/{tenant}/mcp/ledgerleap`
+- 互換: `http://tenant-name.localhost/mcp/ledgerleap`
+
+path-based でも subdomain-based でも、token 利用者にその tenant へのアクセス権が必要です。
 
 token は既存の evaluation user 用 token でも構いませんが、少なくとも
 `mcp:*` ability が必要です。demo user を使う場合は、次のコマンドで token を生成できます。
@@ -73,13 +76,26 @@ Set-Location "C:\path\to\LedgerLeap"
 .\vendor\bin\sail artisan demo:generate-mcp-token
 ```
 
+任意ユーザーへ発行する場合:
+
+```powershell
+Set-Location "C:\path\to\LedgerLeap"
+.\vendor\bin\sail artisan tinker
+```
+
+```php
+$user = App\Models\User::where('email', 'operator@example.com')->firstOrFail();
+$token = $user->createToken('mcp-client', ['mcp:*']);
+$token->plainTextToken;
+```
+
 置換後のイメージは次のとおりです。
 
 ```jsonc
 {
   "mcpServers": {
     "ledgerleap-api": {
-      "httpUrl": "http://ledgerleap-eval.localhost/mcp/ledgerleap",
+      "httpUrl": "http://localhost/tenant-a/mcp/ledgerleap",
       "headers": {
         "Authorization": "Bearer <replace-with-mcp-token>"
       }
@@ -100,7 +116,7 @@ Set-Location "C:\path\to\LedgerLeap"
 - `workspace\` の親が `%USERPROFILE%` 配下ではない
 - `GEMINI_CLI_HOME` が既存 user home と別
 - `workspace\.gemini\settings.json` に dev 用 absolute path や余分な includeDirectories がない
-- `httpUrl` が tenant domain を解決できる host を使っている
+- `httpUrl` が対象 tenant を正しく表現している（推奨: `/{tenant}/mcp/ledgerleap`）
 - bearer token が `mcp:*` ability を持つ
 - 初回起動後に `/memory show` と `/skills list` を記録する
 

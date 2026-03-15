@@ -472,8 +472,30 @@ Mcp::web('/mcp/ledgerleap', LedgerLeapServer::class)
     ->middleware([
         InitializeTenancyByDomain::class,
         'auth:sanctum',
+        EnsureAuthenticatedUserHasCurrentTenantAccess::class,
+    ]);
+
+Mcp::web('/{tenant}/mcp/ledgerleap', LedgerLeapServer::class)
+    ->middleware([
+        InitializeTenancyByPath::class,
+        'auth:sanctum',
+        EnsureAuthenticatedUserHasCurrentTenantAccess::class,
     ]);
 ```
+
+推奨は **path-based tenant URL**、互換として **subdomain / domain-based URL** も使える。
+
+```text
+https://ledgerleap.example.com/tenant-a/mcp/ledgerleap
+https://ledgerleap.example.com/tenant-b/mcp/ledgerleap
+
+https://tenant-a.example.com/mcp/ledgerleap
+https://tenant-b.example.com/mcp/ledgerleap
+```
+
+path-based では `InitializeTenancyByPath`、subdomain-based では `InitializeTenancyByDomain` が tenant を解決する。
+どちらの remote route でも、`EnsureAuthenticatedUserHasCurrentTenantAccess` により
+**認証済みユーザーが現在 tenant へ実際にアクセス可能か** を追加検証する。
 
 #### 設定ファイル（推定構造）
 ```php
@@ -494,9 +516,11 @@ Mcp::web('/mcp/ledgerleap', LedgerLeapServer::class)
 - エラー情報は標準エラー出力に送信
 
 **HTTP Transport:**
-- `POST /mcp/ledgerleap` に JSON-RPC を送る
+- `POST /{tenant}/mcp/ledgerleap` または `POST /mcp/ledgerleap` に JSON-RPC を送る
 - `Authorization: Bearer <token>` を付与する
-- host は tenant を解決できる domain を使う
+- path-based を使う場合は `{tenant}` セグメントで tenant を指定する
+- subdomain-based を使う場合は host が tenant を解決できる必要がある
+- どちらの場合も、token 利用者にその tenant へのアクセス権が無ければ `403` を返す
 
 **メッセージフロー:**
 ```

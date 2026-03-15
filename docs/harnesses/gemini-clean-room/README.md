@@ -44,7 +44,7 @@ Gemini CLI 公式 docs では、少なくとも次が確認されています。
 
 > [!NOTE]
 > `#109` の Sprint 2 実装で、LedgerLeap は
-> **`Mcp::web('/mcp/ledgerleap', LedgerLeapServer::class)` + `auth:sanctum`** を持つようになりました。
+> **subdomain 版 `/mcp/ledgerleap`** と **path 版 `/{tenant}/mcp/ledgerleap`** の両方を持つようになりました。
 > clean-room harness では、`command` ベースの local MCP を正本にせず、
 > **`httpUrl` + `headers.Authorization`** を使う remote MCP を主経路として扱います。
 > local command MCP は比較・退避用 fallback としてのみ残します。
@@ -83,8 +83,9 @@ Gemini CLI 公式 docs では、少なくとも次が確認されています。
 - **親ディレクトリに余計な `GEMINI.md` / `.env` / 別 repo を置かない**
 - **`GEMINI_CLI_HOME` を開発用 home と分離する**
 - **開発用 `.gemini/settings.json` をそのままコピーしない**
-- **`httpUrl` は tenant を解決できる host を使う**
-  - 例: `http://tenant-name.localhost/mcp/ledgerleap`
+- **`httpUrl` は tenant を解決できる URL を使う**
+  - 推奨: `http://localhost/{tenant}/mcp/ledgerleap`
+  - 代替: `http://tenant-name.localhost/mcp/ledgerleap`
 - **`Authorization: Bearer ...` には `mcp:*` ability を持つ Sanctum token を使う**
 - **評価前に `/memory show` と `/skills list` を確認する**
 

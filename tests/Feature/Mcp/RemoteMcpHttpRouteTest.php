@@ -2,7 +2,11 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Servers\LedgerLeapServer;
+use App\Models\Folder;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -21,6 +25,8 @@ class RemoteMcpHttpRouteTest extends TestCase
 
     private string $tenantDomain;
 
+    private string $secondTenantDomain;
+
     protected function setUp(): void
     {
         parent::setUp();
@@ -35,6 +41,8 @@ class RemoteMcpHttpRouteTest extends TestCase
         $this->tenant->domains()->firstOrCreate([
             'domain' => $this->tenantDomain,
         ]);
+
+        $this->secondTenantDomain = 'mcp-http-test-tenant-b.localhost';
 
         config(['app.url' => "http://{$this->tenantDomain}"]);
         \URL::forceRootUrl(config('app.url'));
@@ -51,8 +59,7 @@ class RemoteMcpHttpRouteTest extends TestCase
     #[Test]
     public function remote_mcp_http_route_allows_authenticated_tool_calls_via_bearer_token(): void
     {
-        $user = User::factory()->create();
-        $token = $user->createToken('remote-mcp-test', ['mcp:*'])->plainTextToken;
+        $token = $this->createAuthorizedTokenForTenant($this->tenant, 'remote-mcp-test');
 
         $response = $this->withToken($token)
             ->postJson($this->mcpUrl(), $this->toolCallPayload());
@@ -67,6 +74,44 @@ class RemoteMcpHttpRouteTest extends TestCase
         $this->assertIsString($payloadText);
         $this->assertStringContainsString('"client_type":"copilot"', $payloadText);
         $this->assertStringContainsString('"language":"ja"', $payloadText);
+    }
+
+    #[Test]
+    public function remote_mcp_http_route_rejects_cross_tenant_access_even_with_valid_bearer_token(): void
+    {
+        $firstTenantToken = $this->createAuthorizedTokenForTenant($this->tenant, 'remote-mcp-test-a');
+
+        $secondTenant = Tenant::create(['id' => 'mcp-http-test-tenant-b']);
+        $secondTenant->domains()->create([
+            'domain' => $this->secondTenantDomain,
+        ]);
+
+        $this->artisan('tenants:migrate', ['--tenants' => [$secondTenant->id]]);
+
+        $this->withToken($firstTenantToken)
+            ->postJson($this->mcpUrl($this->tenantDomain), $this->toolCallPayload())
+            ->assertOk()
+            ->assertJsonPath('result.isError', false);
+
+        $this->assertNotSame(
+            $this->mcpUrl($this->tenantDomain),
+            $this->mcpUrl($this->secondTenantDomain)
+        );
+
+        $this->withToken($firstTenantToken)
+            ->postJson($this->mcpUrl($this->secondTenantDomain), $this->toolCallPayload())
+            ->assertForbidden();
+    }
+
+    #[Test]
+    public function remote_mcp_http_route_supports_path_based_tenant_urls(): void
+    {
+        $token = $this->createAuthorizedTokenForTenant($this->tenant, 'remote-mcp-path-test');
+
+        $this->withToken($token)
+            ->postJson($this->pathBasedMcpUrl(), $this->toolCallPayload())
+            ->assertOk()
+            ->assertJsonPath('result.isError', false);
     }
 
     /**
@@ -90,8 +135,46 @@ class RemoteMcpHttpRouteTest extends TestCase
         ];
     }
 
-    private function mcpUrl(): string
+    private function mcpUrl(?string $domain = null): string
     {
-        return "http://{$this->tenantDomain}/mcp/ledgerleap";
+        $domain ??= $this->tenantDomain;
+
+        return "http://{$domain}/mcp/ledgerleap";
+    }
+
+    private function pathBasedMcpUrl(?string $tenantId = null): string
+    {
+        $tenantId ??= (string) $this->tenant->getTenantKey();
+
+        return "http://localhost/{$tenantId}/mcp/ledgerleap";
+    }
+
+    private function createAuthorizedTokenForTenant(Tenant $tenant, string $tokenName): string
+    {
+        return $tenant->run(function () use ($tokenName) {
+            $user = User::factory()->create();
+            $role = Role::firstOrCreate([
+                'name' => 'MCP '.$tokenName,
+                'guard_name' => 'web',
+            ]);
+
+            $user->assignRole($role);
+
+            $folder = Folder::create([
+                'title' => 'MCP '.$tokenName,
+                'creator_id' => $user->id,
+                'modifier_id' => $user->id,
+            ]);
+
+            RoleFolderPermission::create([
+                'role_id' => $role->id,
+                'folder_id' => $folder->id,
+                'permission' => FolderPermissionType::ADMIN,
+                'creator_id' => $user->id,
+                'modifier_id' => $user->id,
+            ]);
+
+            return $user->createToken($tokenName, ['mcp:*'])->plainTextToken;
+        });
     }
 }
