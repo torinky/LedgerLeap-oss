@@ -31,10 +31,11 @@ Gemini CLI 公式 docs では、少なくとも次が確認されています。
 
 1. `base/` を **home directory の外** にコピーする
 2. `workspace/.gemini/settings.clean-room.template.jsonc` を `settings.json` に複製する
-3. `settings.json` の placeholder を埋める
-4. `gemini-home/` を `GEMINI_CLI_HOME` に割り当てる
-5. `workspace/` を current working directory にして Gemini CLI を起動する
-6. 実行前後に `/memory show` と `/skills list` を記録する
+3. LedgerLeap 側の web app が起動中で、tenant domain から `/mcp/ledgerleap` に到達できることを確認する
+4. `settings.json` の `httpUrl` / `Authorization` placeholder を埋める
+5. `gemini-home/` を `GEMINI_CLI_HOME` に割り当てる
+6. `workspace/` を current working directory にして Gemini CLI を起動する
+7. 実行前後に `/memory show` と `/skills list` を記録する
 
 実コマンドは OS 別ノートを参照してください。
 
@@ -42,19 +43,21 @@ Gemini CLI 公式 docs では、少なくとも次が確認されています。
 - Windows: [`platforms/windows.md`](/docs/harnesses/gemini-clean-room/platforms/windows.md)
 
 > [!NOTE]
-> 現在の harness template は **`command` ベースの local MCP** を前提にしています。
-> Gemini CLI 側は `httpUrl` / `headers` をサポートしますが、LedgerLeap 側はまだ
-> `localhost` の **HTTP-accessible MCP endpoint** と request-header ベース認証へ揃っていません。
-> この差分は follow-up Issue [`#109`](https://github.com/torinky/LedgerLeap/issues/109) で整理します。
+> `#109` の Sprint 2 実装で、LedgerLeap は
+> **`Mcp::web('/mcp/ledgerleap', LedgerLeapServer::class)` + `auth:sanctum`** を持つようになりました。
+> clean-room harness では、`command` ベースの local MCP を正本にせず、
+> **`httpUrl` + `headers.Authorization`** を使う remote MCP を主経路として扱います。
+> local command MCP は比較・退避用 fallback としてのみ残します。
 
 ### 推奨フロー
 
 1. `base/` の内容を neutral parent 配下へコピーする
 2. copy 先を必要なら独立 `.git` boundary にする
-3. `workspace/.gemini/settings.clean-room.template.jsonc` を `settings.json` に複製し、placeholder を埋める
-4. `gemini-home/` を `GEMINI_CLI_HOME` 用に使う
-5. Gemini CLI は `workspace/` を current working directory として起動する
-6. 評価前後の観測結果を `evidence-template.md` に記録する
+3. LedgerLeap 側で tenant domain を解決できる host と remote MCP endpoint を準備する
+4. `workspace/.gemini/settings.clean-room.template.jsonc` を `settings.json` に複製し、`httpUrl` と bearer token を設定する
+5. `gemini-home/` を `GEMINI_CLI_HOME` 用に使う
+6. Gemini CLI は `workspace/` を current working directory として起動する
+7. 評価前後の観測結果を `evidence-template.md` に記録する
 
 ## ディレクトリ構成
 
@@ -80,6 +83,9 @@ Gemini CLI 公式 docs では、少なくとも次が確認されています。
 - **親ディレクトリに余計な `GEMINI.md` / `.env` / 別 repo を置かない**
 - **`GEMINI_CLI_HOME` を開発用 home と分離する**
 - **開発用 `.gemini/settings.json` をそのままコピーしない**
+- **`httpUrl` は tenant を解決できる host を使う**
+  - 例: `http://tenant-name.localhost/mcp/ledgerleap`
+- **`Authorization: Bearer ...` には `mcp:*` ability を持つ Sanctum token を使う**
 - **評価前に `/memory show` と `/skills list` を確認する**
 
 ## 公式 docs に基づく判断ログ

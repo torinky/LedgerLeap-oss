@@ -462,6 +462,19 @@ present the information in a user-friendly format:
 php artisan mcp:start ledgerleap:mcp
 ```
 
+#### HTTP transport
+
+LedgerLeap では local MCP (`ledgerleap:mcp`) に加えて、remote AI client 向けに
+`/mcp/ledgerleap` の web transport も公開する。
+
+```php
+Mcp::web('/mcp/ledgerleap', LedgerLeapServer::class)
+    ->middleware([
+        InitializeTenancyByDomain::class,
+        'auth:sanctum',
+    ]);
+```
+
 #### 設定ファイル（推定構造）
 ```php
 // config/mcp.php または サービスプロバイダ内
@@ -480,6 +493,11 @@ php artisan mcp:start ledgerleap:mcp
 - 標準出力にJSONRPCレスポンスを送信
 - エラー情報は標準エラー出力に送信
 
+**HTTP Transport:**
+- `POST /mcp/ledgerleap` に JSON-RPC を送る
+- `Authorization: Bearer <token>` を付与する
+- host は tenant を解決できる domain を使う
+
 **メッセージフロー:**
 ```
 stdin  ← {"jsonrpc":"2.0","method":"tools/call","params":{...}}
@@ -491,19 +509,22 @@ stderr → エラーログ（該当時のみ）
 
 #### トークンベース認証
 ```php
-// SearchLedgersTool::handle() 内
+// AuthenticatedMcpTool::authenticateUser() 内
+$authenticatedUser = Auth::user();
+
+if ($authenticatedUser instanceof User) {
+    return $authenticatedUser; // HTTP + auth:sanctum の正規経路
+}
+
 $token = getenv('MCP_AUTH_TOKEN');
-if (!$token) {
-    return Response::error('Authentication token not provided.', 401);
+if (! $token) {
+    throw new Exception('MCP_AUTH_TOKEN environment variable is not set');
 }
 
+// local command MCP / 既存テスト互換の fallback
 $accessToken = PersonalAccessToken::findToken($token);
-if (!$accessToken || !$accessToken->tokenable) {
-    return Response::error('Invalid authentication token.', 401);
-}
-
 $user = $accessToken->tokenable;
-Auth::setUser($user); // 認証状態設定
+Auth::setUser($user);
 ```
 
 #### 権限チェック

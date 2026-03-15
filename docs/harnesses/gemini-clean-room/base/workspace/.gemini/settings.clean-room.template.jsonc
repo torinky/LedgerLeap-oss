@@ -1,11 +1,11 @@
 {
   "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
   // Copy this file to `settings.json` in the copied harness workspace.
-  // Replace every __PLACEHOLDER__ token before starting Gemini CLI.
-  // This template currently assumes command-based local MCP.
-  // Localhost HTTP MCP simulation is tracked separately in Issue #109.
-  // Replace __LEDGERLEAP_MCP_ARGS__ with a platform-appropriate string array.
-  // See docs/harnesses/gemini-clean-room/platforms/macos.md and windows.md.
+  // This template assumes remote MCP over HTTP.
+  // Use a tenant-resolving host in httpUrl (for example tenant-name.localhost),
+  // not a bare localhost that bypasses domain-based tenancy resolution.
+  // LedgerLeap web app must already be reachable at that endpoint.
+  // Replace every __PLACEHOLDER__ before starting Gemini CLI.
   "privacy": {
     "usageStatisticsEnabled": false
   },
@@ -32,13 +32,13 @@
   },
   "mcpServers": {
     "ledgerleap-api": {
-      "command": "__LEDGERLEAP_MCP_COMMAND__",
-      "args": [
-        "__LEDGERLEAP_MCP_ARGS__"
-      ],
-      "cwd": "__LEDGERLEAP_MCP_CWD__",
+      "httpUrl": "__LEDGERLEAP_MCP_HTTP_URL__",
+      "headers": {
+        "Authorization": "Bearer __LEDGERLEAP_MCP_BEARER_TOKEN__"
+      },
+      "timeout": 30000,
       "trust": false,
-      "description": "LedgerLeap bootstrap evaluation server"
+      "description": "LedgerLeap remote MCP evaluation server"
     }
   }
 }
