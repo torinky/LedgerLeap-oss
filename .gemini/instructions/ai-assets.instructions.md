@@ -21,6 +21,15 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - If a prompt and skill cover the same workflow, they must cross-link.
 - If a new reusable pattern is added, update inventory or routing references when needed.
 - Remove stale guidance instead of layering new text on top of conflicting old text.
+- For LLM-facing docs, keep client-facing and developer-facing guidance separate.
+- Client-facing wording must stay on WebUI-observable concepts and business workflows; implementation details move to developer-facing docs.
+- When targeting local models, prefer short capability cards, small required-field lists, and list→detail flows.
+- For client onboarding assets, use **prompt = short task starters**, **resource = stable reference cards**, **tool = dynamic or user-specific resolution**; avoid putting the final discovery contract into prompt text alone.
+- When slimming MCP / API tool descriptions, keep the tool text focused on **contract, response shape, and misuse-prevention constraints**.
+- Move step-by-step workflow guidance, fallback strategy, and rich examples to `resources/ai/capabilities/*.yaml` or bootstrap/discovery docs before removing them from tools.
+- Never delete client-facing guidance from a tool description unless the destination asset already preserves equivalent information for generated skills or discovery flows.
+- Durable guidance must cite traceable evidence: use `docs/work/*` for repo proof and `references/*.md` for official source summaries.
+- For official-doc-sensitive guidance, record `last_confirmed_at` and `recheck_after`, and recheck when the same domain changes or the window expires.
 
 ## Prompt / Skill Bias
 
@@ -40,4 +49,3 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - Prefer relative Markdown links that resolve from the current file.
 - Ensure names, prompt shortcuts, and skill inventory stay consistent.
 - After substantive `.github` changes, check affected files for IDE errors.
-

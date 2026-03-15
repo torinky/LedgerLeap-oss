@@ -14,6 +14,7 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 - [AI Asset Maintenance Playbook](../../docs/runbooks/ai-asset-maintenance-playbook.md)
 - [Routing Matrix](../skills/skill-maintenance/references/routing.md)
 - [Workflow & Quality Gate](../skills/skill-maintenance/references/workflow.md)
+- [Evidence & Freshness](../skills/skill-maintenance/references/evidence-freshness.md)
 - [JetBrains / Copilot Support Notes](../skills/skill-maintenance/references/jetbrains-copilot-support.md)
 - [Skill Inventory](../skills/skill-maintenance/references/skill-inventory.md)
 
@@ -24,6 +25,7 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 - 新しい recurring workflow が 2 回以上出現したとき
 - issue template / runbook / AGENTS の不足が判明したとき
 - 同じ CI 調査コマンドや shell 手順で 2 回以上詰まったとき
+- MCP / API tool description から process guidance を capability / docs 側へ移し、受け皿の確認が必要になったとき
 
 ## Routing Matrix
 
@@ -44,8 +46,10 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 2. **Classify**: 上の routing matrix で primary destination を決める
 3. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
 4. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
-5. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint を確認する
-6. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
+5. **Evidence**: durable claim ごとに、repo 証拠または official source への到達点を記録する
+6. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint、evidence reachability に加えて、`tool = contract` / `capability = flow` / `docs = rationale` の分離を確認する
+7. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
+8. **Recheck**: doc-sensitive guidance には `last_confirmed_at` と `recheck_after` を付け、期限超過または同領域変更時に再確認する
 
 ## JetBrains / Copilot Rule
 
@@ -56,6 +60,9 @@ JetBrains では **prompt files と instructions が主導線**。skills は reu
 - 今回の学び一覧
 - 変更すべき `.github` / `docs` ファイル一覧
 - 追加 / 更新 / 削除の理由
+- 学びごとの evidence link / evidence location
+- doc-sensitive guidance の `last_confirmed_at` / `recheck_after` / `status`
+- tool description を削る場合の移送先と、受け皿確認結果
 - 同期漏れチェック結果
 - follow-up 候補
 
@@ -66,3 +73,6 @@ JetBrains では **prompt files と instructions が主導線**。skills は reu
 - [ ] prompt / skill / instructions / AGENTS の重複を減らした
 - [ ] `copilot-instructions.md` は短く保った
 - [ ] 新規 recurring workflow は skill 化または prompt 化した
+- [ ] tool description を slim 化した場合、capability / discovery 側に同等の client-facing 情報が残っている
+- [ ] durable claim に evidence があり、次の担当者が辿れる
+- [ ] doc-sensitive guidance に `last_confirmed_at` / `recheck_after` がある
