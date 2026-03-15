@@ -4,11 +4,14 @@ namespace Tests\Feature\Livewire\Common;
 
 use App\Livewire\Common\PageQrCode;
 use App\Models\User;
+use Illuminate\Http\Request;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
+#[CoversClass(PageQrCode::class)]
 class PageQrCodeTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -52,5 +55,30 @@ class PageQrCodeTest extends TestCase
             ->assertSet('url', $url)
             ->assertSeeHtml('<svg') // QR code SVG
             ->assertSee($url);
+    }
+
+    #[Test]
+    public function it_falls_back_to_referer_when_opening_modal_without_explicit_url()
+    {
+        $url = 'https://example.com/current?tab=search';
+
+        $originalRequest = app('request');
+        $request = Request::create('/dummy', 'GET', server: ['HTTP_REFERER' => $url]);
+
+        app()->instance('request', $request);
+
+        try {
+            $component = new PageQrCode;
+
+            $this->assertFalse($component->showModal);
+
+            $component->openModal();
+
+            $this->assertTrue($component->showModal);
+            $this->assertSame($url, $component->url);
+            $this->assertStringContainsString('<svg', $component->qrCode());
+        } finally {
+            app()->instance('request', $originalRequest);
+        }
     }
 }

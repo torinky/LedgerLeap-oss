@@ -148,6 +148,10 @@ class CreateColumnTest extends TestCase
         $url = $component->get('generatedPrefillURL');
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringContainsString('prefill%5B2%5D=', $url);
+
+        $component
+            ->assertSeeHtml('toastIcon(type)')
+            ->assertDontSeeHtml("icon: ''");
     }
 
     #[Test]
@@ -164,6 +168,7 @@ class CreateColumnTest extends TestCase
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
             ['id' => 2, 'name' => 'Number Column', 'type' => 'number', 'order' => 2, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
+            ['id' => 3, 'name' => 'Textarea Column', 'type' => 'textarea', 'order' => 3, 'required' => false, 'unique' => false, 'options' => ['placeholder' => '複数行で入力'], 'group' => null, 'file' => null],
         ];
 
         $this->ledgerDefine = LedgerDefine::factory()->create([
@@ -341,6 +346,7 @@ class CreateColumnTest extends TestCase
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
             ['id' => 2, 'name' => 'Number Column', 'type' => 'number', 'order' => 2, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
+            ['id' => 3, 'name' => 'Textarea Column', 'type' => 'textarea', 'order' => 3, 'required' => false, 'unique' => false, 'options' => ['placeholder' => '複数行で入力'], 'group' => null, 'file' => null],
         ];
 
         $this->ledgerDefine = LedgerDefine::factory()->create([
@@ -356,12 +362,94 @@ class CreateColumnTest extends TestCase
             'prefillParams' => [
                 1 => '事前入力テキスト',
                 2 => '999',
+                3 => "1行目\n2行目",
             ],
         ]);
 
         // contentに正しく設定されているか確認
         $this->assertEquals('事前入力テキスト', $component->get('content')[1]);
         $this->assertEquals('999', $component->get('content')[2]);
+        $this->assertSame("1行目\n2行目", $component->get('content')[3]);
+    }
+
+    #[Test]
+    public function it_renders_textarea_columns_with_markdown_editor()
+    {
+        $folder = Folder::create([
+            'title' => 'Test Folder',
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+        $this->assignFolderPermission($folder);
+
+        $columnDefineArray = [
+            [
+                'id' => 1,
+                'name' => '複数行テキスト',
+                'type' => 'textarea',
+                'order' => 1,
+                'required' => false,
+                'unique' => false,
+                'options' => [
+                    'placeholder' => '複数行で入力',
+                    'hint' => '補足説明',
+                ],
+                'group' => null,
+                'file' => null,
+            ],
+        ];
+
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->tenant->id,
+            'workflow_enabled' => false,
+            'column_define' => $columnDefineArray,
+        ]);
+
+        Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
+            ->assertSee('複数行テキスト')
+            ->assertSee('補足説明')
+            ->assertSeeHtml('x-ref="markdown')
+            ->assertSeeHtml('window.Livewire.find');
+    }
+
+    #[Test]
+    public function it_shows_warning_when_prefill_url_is_too_long_for_qr_generation()
+    {
+        $folder = Folder::create([
+            'title' => 'Test Folder',
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+        $this->assignFolderPermission($folder);
+
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->tenant->id,
+            'workflow_enabled' => false,
+            'column_define' => [
+                [
+                    'id' => 1,
+                    'name' => 'Text Column',
+                    'type' => 'text',
+                    'order' => 1,
+                    'required' => false,
+                    'unique' => false,
+                    'options' => [],
+                    'group' => null,
+                    'file' => null,
+                ],
+            ],
+        ]);
+
+        Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
+            ->set('showPrefillModal', true)
+            ->set('generatedPrefillURL', 'http://example.com/?prefill='.str_repeat('a', 6000))
+            ->assertSee(__('ledger.prefill.long_url_warning'))
+            ->assertSee(__('ledger.prefill.qr_code_unavailable'))
+            ->assertDontSeeHtml('id="prefill-qr-svg"');
     }
 
     #[Test]

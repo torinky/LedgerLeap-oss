@@ -2,8 +2,13 @@
 
 namespace App\Livewire\Traits;
 
+use Illuminate\Support\Facades\Log;
+use Throwable;
+
 trait HandlesPrefillLinks
 {
+    protected const PREFILL_URL_WARNING_LENGTH = 1800;
+
     /**
      * 事前入力モーダルの表示状態
      */
@@ -21,7 +26,9 @@ trait HandlesPrefillLinks
     {
         foreach ($this->prefillParams as $columnId => $value) {
             if (array_key_exists($columnId, $this->content)) {
-                $this->content[$columnId] = $value;
+                $column = $this->getColumnById((int) $columnId);
+
+                $this->content[$columnId] = $this->normalizePrefillValueForContent($column, $value);
             }
         }
     }
@@ -59,10 +66,9 @@ trait HandlesPrefillLinks
 
             // パラメータに追加
             if (is_array($value)) {
-                // 配列の場合、空要素を除去してから追加
-                $filteredValue = array_filter($value, 'strlen');
+                $filteredValue = $this->normalizeArrayValueForPrefillUrl($column, $value);
                 if (! empty($filteredValue)) {
-                    $params['prefill'][$columnId] = array_values($filteredValue);
+                    $params['prefill'][$columnId] = $filteredValue;
                 }
             } else {
                 $params['prefill'][$columnId] = $value;
@@ -84,10 +90,133 @@ trait HandlesPrefillLinks
     protected function isEmptyValue($value): bool
     {
         if (is_array($value)) {
-            return empty(array_filter($value, 'strlen'));
+            return $this->filterFilledArrayValues($value) === [];
+        }
+
+        if (is_bool($value)) {
+            return $value === false;
         }
 
         return empty(trim((string) $value));
+    }
+
+    protected function normalizePrefillValueForContent(?object $column, mixed $value): mixed
+    {
+        if (! $column || $column->type !== 'chk') {
+            return $value;
+        }
+
+        return $this->normalizeCheckboxSelections($column, $value);
+    }
+
+    protected function normalizeArrayValueForPrefillUrl(object $column, array $value): array
+    {
+        if ($column->type === 'chk') {
+            return $this->normalizeCheckboxSelections($column, $value, returnBooleanMap: false);
+        }
+
+        return array_values($this->filterFilledArrayValues($value));
+    }
+
+    protected function normalizeCheckboxSelections(object $column, mixed $value, bool $returnBooleanMap = true): array
+    {
+        if (! is_array($value) && ! is_string($value)) {
+            return [];
+        }
+
+        $validOptions = $column->options ?? [];
+        $normalized = [];
+
+        if (is_string($value)) {
+            $option = $this->sanitizePrefillCheckboxOption($value);
+
+            if ($option !== null && ($validOptions === [] || in_array($option, $validOptions, true))) {
+                $normalized[$option] = $returnBooleanMap ? true : '1';
+            }
+
+            return $normalized;
+        }
+
+        if (array_is_list($value)) {
+            foreach ($value as $option) {
+                $sanitizedOption = $this->sanitizePrefillCheckboxOption($option);
+
+                if ($sanitizedOption === null) {
+                    continue;
+                }
+
+                if ($validOptions !== [] && ! in_array($sanitizedOption, $validOptions, true)) {
+                    continue;
+                }
+
+                $normalized[$sanitizedOption] = $returnBooleanMap ? true : '1';
+            }
+
+            return $normalized;
+        }
+
+        foreach ($value as $option => $selected) {
+            $sanitizedOption = $this->sanitizePrefillCheckboxOption($option);
+
+            if ($sanitizedOption === null) {
+                continue;
+            }
+
+            if ($validOptions !== [] && ! in_array($sanitizedOption, $validOptions, true)) {
+                continue;
+            }
+
+            if (! $this->isTruthyPrefillCheckboxSelection($selected)) {
+                continue;
+            }
+
+            $normalized[$sanitizedOption] = $returnBooleanMap ? true : '1';
+        }
+
+        return $normalized;
+    }
+
+    protected function sanitizePrefillCheckboxOption(mixed $option): ?string
+    {
+        if (! is_string($option)) {
+            return null;
+        }
+
+        $sanitizedOption = trim(strip_tags(mb_substr($option, 0, 255)));
+
+        return $sanitizedOption === '' ? null : $sanitizedOption;
+    }
+
+    protected function filterFilledArrayValues(array $value): array
+    {
+        return array_filter($value, function ($item) {
+            if (is_array($item)) {
+                return ! $this->isEmptyValue($item);
+            }
+
+            if (is_bool($item)) {
+                return $item;
+            }
+
+            return trim((string) $item) !== '';
+        });
+    }
+
+    protected function isTruthyPrefillCheckboxSelection(mixed $value): bool
+    {
+        if (is_bool($value)) {
+            return $value;
+        }
+
+        if (is_int($value) || is_float($value)) {
+            return (int) $value === 1;
+        }
+
+        if (! is_string($value)) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($value)), ['1', 'true', 'on', 'yes'], true);
     }
 
     /**
@@ -104,8 +233,11 @@ trait HandlesPrefillLinks
     public function getInitialValue(object $column)
     {
         return match ($column->type) {
-            'user_name' => method_exists($column, 'getInputType') && $column->getInputType() instanceof \App\Models\ColumnTypes\UserNameType
-                ? $column->getInputType()->generateValue(\Illuminate\Support\Facades\Auth::user())
+            'user_name' => method_exists($column, 'getInputType')
+                    && $column->getInputType() instanceof \App\Models\ColumnTypes\UserNameType
+                ? $column->getInputType()->generateValue(
+                    \Illuminate\Support\Facades\Auth::user()
+                )
                 : '',
             'YMD' => now()->format('Y-m-d'),
             'YMDHM' => now()->format('Y-m-d H:i'),
@@ -146,8 +278,30 @@ trait HandlesPrefillLinks
             return '';
         }
 
-        return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)
-            ->margin(1)
-            ->generate($this->generatedPrefillURL);
+        try {
+            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)
+                ->margin(1)
+                ->generate($this->generatedPrefillURL);
+        } catch (Throwable $e) {
+            Log::warning('Prefill QR code generation skipped.', [
+                'ledger_define_id' => $this->ledgerDefineId ?? null,
+                'tenant_id' => $this->tenantId ?? null,
+                'prefill_url_length' => strlen($this->generatedPrefillURL),
+                'exception' => $e::class,
+                'message' => $e->getMessage(),
+            ]);
+
+            return '';
+        }
+    }
+
+    public function getPrefillUrlLengthProperty(): int
+    {
+        return strlen($this->generatedPrefillURL);
+    }
+
+    public function getPrefillUrlIsLongProperty(): bool
+    {
+        return $this->prefillUrlLength >= self::PREFILL_URL_WARNING_LENGTH;
     }
 }

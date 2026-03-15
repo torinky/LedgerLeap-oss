@@ -9,7 +9,6 @@ use App\Models\LedgerDefine;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\View\Factory;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
-use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\View;
 
 class CreateController extends Controller
@@ -32,12 +31,9 @@ class CreateController extends Controller
         }
 
         // リクエストパラメータから台帳定義を特定
-        $ledgerDefine = LedgerDefine::findOrFail($request->ledgerDefineId);
+        $ledgerDefine = $this->findLedgerDefineOrFail($request->ledgerDefineId);
 
-        //        if (Gate::denies('create', [Ledger::class, $ledgerDefine])) {
-        if (auth()->user()->cannot('create', [Ledger::class, $ledgerDefine])) {
-            abort(403, __('ledger.not_allow_create'));
-        }
+        $this->authorizeLedgerCreate($ledgerDefine);
 
         // prefillパラメータを検証
         $prefillParams = $this->validatePrefillParams(
@@ -61,6 +57,7 @@ class CreateController extends Controller
         $columnDefines = collect($ledgerDefine->column_define);
 
         foreach ($params as $columnId => $value) {
+            /** @var object|null $column */
             $column = $columnDefines->firstWhere('id', (int) $columnId);
 
             // カラムが存在しない場合はスキップ
@@ -70,6 +67,18 @@ class CreateController extends Controller
 
             // auto_number と files は prefill 対象外
             if (in_array($column->type, ['auto_number', 'files'])) {
+                continue;
+            }
+
+            if ($column->type === 'chk') {
+                $value = $this->normalizeCheckboxPrefillValue($value, $column->options ?? []);
+
+                if ($value === []) {
+                    continue;
+                }
+
+                $validated[$columnId] = $value;
+
                 continue;
             }
 
@@ -99,5 +108,108 @@ class CreateController extends Controller
         }
 
         return $validated;
+    }
+
+    private function findLedgerDefineOrFail(int|string $ledgerDefineId): LedgerDefine
+    {
+        $ledgerDefine = LedgerDefine::query()->whereKey($ledgerDefineId)->first();
+
+        if (! $ledgerDefine instanceof LedgerDefine) {
+            throw (new ModelNotFoundException)->setModel(LedgerDefine::class, [$ledgerDefineId]);
+        }
+
+        return $ledgerDefine;
+    }
+
+    private function authorizeLedgerCreate(LedgerDefine $ledgerDefine): void
+    {
+        if (auth()->user()->cannot('create', [Ledger::class, $ledgerDefine])) {
+            abort(403, __('ledger.not_allow_create'));
+        }
+    }
+
+    private function normalizeCheckboxPrefillValue(mixed $value, array $options): array
+    {
+        $normalized = [];
+
+        if (is_string($value)) {
+            $sanitizedOption = $this->sanitizeCheckboxOption($value);
+
+            if ($sanitizedOption !== null && ($options === [] || in_array($sanitizedOption, $options, true))) {
+                $normalized[$sanitizedOption] = true;
+            }
+
+            return $normalized;
+        }
+
+        if (! is_array($value)) {
+            return $normalized;
+        }
+
+        if (array_is_list($value)) {
+            foreach ($value as $option) {
+                $sanitizedOption = $this->sanitizeCheckboxOption($option);
+
+                if ($sanitizedOption === null) {
+                    continue;
+                }
+
+                if ($options !== [] && ! in_array($sanitizedOption, $options, true)) {
+                    continue;
+                }
+
+                $normalized[$sanitizedOption] = true;
+            }
+
+            return $normalized;
+        }
+
+        foreach ($value as $option => $selected) {
+            $sanitizedOption = $this->sanitizeCheckboxOption($option);
+
+            if ($sanitizedOption === null) {
+                continue;
+            }
+
+            if ($options !== [] && ! in_array($sanitizedOption, $options, true)) {
+                continue;
+            }
+
+            if (! $this->isTruthyCheckboxSelection($selected)) {
+                continue;
+            }
+
+            $normalized[$sanitizedOption] = true;
+        }
+
+        return $normalized;
+    }
+
+    private function sanitizeCheckboxOption(mixed $option): ?string
+    {
+        if (! is_string($option)) {
+            return null;
+        }
+
+        $sanitizedOption = trim(strip_tags(mb_substr($option, 0, 255)));
+
+        return $sanitizedOption === '' ? null : $sanitizedOption;
+    }
+
+    private function isTruthyCheckboxSelection(mixed $selected): bool
+    {
+        if (is_bool($selected)) {
+            return $selected;
+        }
+
+        if (is_int($selected) || is_float($selected)) {
+            return (int) $selected === 1;
+        }
+
+        if (! is_string($selected)) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($selected)), ['1', 'true', 'on', 'yes'], true);
     }
 }

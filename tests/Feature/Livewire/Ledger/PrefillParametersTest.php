@@ -150,6 +150,20 @@ class PrefillParametersTest extends TestCase
     public function it_applies_array_prefill_params()
     {
         $prefillParams = [
+            3 => ['オプションA' => true, 'オプションC' => true],
+        ];
+
+        Livewire::test(CreateColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'prefillParams' => $prefillParams,
+        ])
+            ->assertSet('content.3', ['オプションA' => true, 'オプションC' => true]);
+    }
+
+    #[Test]
+    public function it_normalizes_legacy_checkbox_prefill_params_on_mount()
+    {
+        $prefillParams = [
             3 => ['オプションA', 'オプションC'],
         ];
 
@@ -157,7 +171,7 @@ class PrefillParametersTest extends TestCase
             'ledgerDefineId' => $this->ledgerDefine->id,
             'prefillParams' => $prefillParams,
         ])
-            ->assertSet('content.3', ['オプションA', 'オプションC']);
+            ->assertSet('content.3', ['オプションA' => true, 'オプションC' => true]);
     }
 
     #[Test]
@@ -170,6 +184,7 @@ class PrefillParametersTest extends TestCase
                 0 => 'テスト値',
                 1 => '456',
                 2 => '選択肢1',
+                3 => ['オプションA' => true, 'オプションB' => false, 'オプションC' => true],
             ])
             ->set('tenantId', $this->tenant->id)
             ->call('generatePrefillLink');
@@ -178,9 +193,14 @@ class PrefillParametersTest extends TestCase
 
         $url = $component->get('generatedPrefillURL');
 
+        parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $query);
+
         $this->assertStringContainsString('prefill', $url);
         $this->assertStringContainsString($this->tenant->id, $url);
         $this->assertStringContainsString((string) $this->ledgerDefine->id, $url);
+        $this->assertSame('1', $query['prefill'][3]['オプションA']);
+        $this->assertSame('1', $query['prefill'][3]['オプションC']);
+        $this->assertArrayNotHasKey('オプションB', $query['prefill'][3]);
     }
 
     #[Test]
@@ -335,5 +355,17 @@ class PrefillParametersTest extends TestCase
             ->assertSet('prefillQRCode', function ($value) {
                 return str_contains($value, '<svg') && str_contains($value, '</svg>');
             });
+    }
+
+    #[Test]
+    public function it_returns_empty_qr_code_for_too_long_prefill_url()
+    {
+        Livewire::test(CreateColumn::class, [
+            'tenantId' => $this->tenant->id,
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'folderId' => $this->folder->id,
+        ])
+            ->set('generatedPrefillURL', 'http://example.com/?prefill='.str_repeat('a', 6000))
+            ->assertSet('prefillQRCode', '');
     }
 }

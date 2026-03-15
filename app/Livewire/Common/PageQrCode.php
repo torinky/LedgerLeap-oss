@@ -11,7 +11,7 @@ use Filament\Forms\Contracts\HasForms;
 use Livewire\Attributes\Computed;
 use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
-class PageQrCode extends BaseLivewireComponent implements HasForms, HasActions
+class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
 {
     use InteractsWithActions;
     use InteractsWithForms;
@@ -34,9 +34,11 @@ class PageQrCode extends BaseLivewireComponent implements HasForms, HasActions
     /**
      * モーダルを開き、URLを更新する (MaryUI用)
      */
-    public function openModal(): void
+    public function openModal(?string $url = null): void
     {
-        $this->url = $this->resolveCurrentUrl();
+        $this->url = $url !== null && $url !== ''
+            ? $url
+            : $this->resolveCurrentUrl();
         $this->showModal = true;
     }
 
@@ -69,6 +71,7 @@ class PageQrCode extends BaseLivewireComponent implements HasForms, HasActions
             ->modalHeading(__('ledger.page_qr_code.modal_title'))
             ->modalContent(function () {
                 $url = $this->resolveCurrentUrl();
+
                 return view('livewire.common.page-qr-code-modal-content', [
                     'url' => $url,
                     'qrCode' => QrCode::size(250)->format('svg')->generate($url)->toHtml(),

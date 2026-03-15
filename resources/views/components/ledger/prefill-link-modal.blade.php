@@ -1,11 +1,27 @@
 @props(['generatedPrefillURL'])
 
+@php
+    $prefillQrCode = $this->prefillQRCode;
+    $prefillUrlIsLong = $this->prefillUrlIsLong;
+    $prefillQrCodeAvailable = $prefillQrCode !== '';
+@endphp
+
 <div x-data="{
     actionState: {
         copy: { loading: false, success: false },
         download: { loading: false, success: false }
     },
+    qrCodeAvailable: @js($prefillQrCodeAvailable),
     showWarning: false,
+
+    toastIcon(type = 'success') {
+        const icons = {
+            success: `<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-5 h-5'><path stroke-linecap='round' stroke-linejoin='round' d='M9 12.75 11.25 15 15 9.75m6 2.25a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' /></svg>`,
+            error: `<svg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke-width='1.5' stroke='currentColor' class='w-5 h-5'><path stroke-linecap='round' stroke-linejoin='round' d='m9.75 9.75 4.5 4.5m0-4.5-4.5 4.5M21 12a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z' /></svg>`,
+        };
+
+        return icons[type] ?? icons.success;
+    },
 
     notify(title, type = 'success') {
         const css = type === 'success' ? 'alert-success' : 'alert-error';
@@ -14,6 +30,7 @@
                 type,
                 title,
                 description: '',
+                icon: this.toastIcon(type),
                 css
             }
         });
@@ -64,6 +81,11 @@
     },
 
     async downloadQRCode() {
+        if (!this.qrCodeAvailable) {
+            this.notify('{{ __('ledger.prefill.qr_code_unavailable_title') }}', 'error');
+            return;
+        }
+
         await this.performAction('download', async () => {
             const svgElement = document.querySelector('#prefill-qr-svg svg');
             if (!svgElement) throw new Error('QR Code not found');
@@ -134,6 +156,13 @@
                         {{ __('ledger.prefill.url_label') ?? '事前入力URL' }}
                     </div>
 
+                    @if($prefillUrlIsLong)
+                        <div class="alert alert-warning py-2 px-3 text-xs">
+                            <x-mary-icon name="o-exclamation-triangle" class="w-4 h-4 shrink-0" />
+                            <span>{{ __('ledger.prefill.long_url_warning') }}</span>
+                        </div>
+                    @endif
+
                     {{-- コピー失敗メッセージ (手動コピー誘導) --}}
                     <div x-show="showWarning"
                          x-transition
@@ -165,13 +194,20 @@
                         {{ __('ledger.prefill.qr_code_title') }}
                     </div>
 
-                    <div id="prefill-qr-svg" class="bg-white p-5 rounded-2xl shadow-xl mb-6 transform transition-transform hover:scale-105">
-                        {!! $this->prefillQRCode !!}
-                    </div>
+                    @if($prefillQrCodeAvailable)
+                        <div id="prefill-qr-svg" class="bg-white p-5 rounded-2xl shadow-xl mb-6 transform transition-transform hover:scale-105">
+                            {!! $prefillQrCode !!}
+                        </div>
 
-                    <div class="text-xs text-base-content/50 text-center max-w-[200px] leading-relaxed">
-                        {{ __('ledger.prefill.qr_code_description') }}
-                    </div>
+                        <div class="text-xs text-base-content/50 text-center max-w-[200px] leading-relaxed">
+                            {{ __('ledger.prefill.qr_code_description') }}
+                        </div>
+                    @else
+                        <div class="alert alert-warning text-sm w-full shadow-sm">
+                            <x-mary-icon name="o-exclamation-triangle" class="w-5 h-5 shrink-0" />
+                            <span>{{ __('ledger.prefill.qr_code_unavailable') }}</span>
+                        </div>
+                    @endif
                 </div>
             </div>
         </div>
@@ -188,7 +224,7 @@
                         type="button"
                         class="btn-ghost btn-sm border border-base-300 hover:bg-base-200"
                         @click="downloadQRCode()"
-                        x-bind:disabled="actionState.download.loading"
+                        x-bind:disabled="actionState.download.loading || !qrCodeAvailable"
                     >
                         <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
                         <x-mary-icon x-show="!actionState.download.loading" name="o-arrow-down-tray" class="w-4 h-4" />
