@@ -6,6 +6,7 @@
 - User-invocable workflows: `/.github/prompts/*.prompt.md`
 - Reusable deep capabilities and decision trees: `/.github/skills/<name>/SKILL.md`
 - Long examples and deep procedures: `/.github/skills/<name>/references/*.md`
+- Reusable evaluation harnesses / fixtures: `/docs/harnesses/*`
 - Human-readable operating procedures: `/docs/runbooks/*`
 - Client-facing AI capability manifests / bootstrap inputs: `/resources/ai/capabilities/*.yaml`
 - Implemented MCP / API public contracts: `/docs/development/MCP_Architecture_and_Flow.md`, `/docs/api/README.md`
@@ -17,6 +18,7 @@
 - Put agent-wide discovery or maintenance rules here, not in feature skills.
 - Keep one source of truth per rule; link instead of duplicating.
 - Keep step-by-step human/AI operating sequences in `docs/runbooks/*`, not duplicated across prompts and skills.
+- Keep copyable evaluation fixtures, sanitized templates, and clean-room harness layouts in `docs/harnesses/*`.
 - For client-facing AI capability changes, update `resources/ai/capabilities/*.yaml` first; `ai:bootstrap-client-skills` output is derived.
 - When slimming MCP / API tool descriptions, move client-facing workflow text to `resources/ai/capabilities/*.yaml` or discovery docs first; keep tool descriptions contract-centered and record rationale in `docs/work/*`.
 - Reusable guidance must link to evidence that the next agent can inspect; keep repo proof in `docs/work/*` and official source summaries in `references/*.md`.
@@ -28,6 +30,7 @@
 - Slash workflow / playbook entrypoint → `/.github/prompts/*.prompt.md`
 - Reusable workflow / diagnosis tree → `/.github/skills/<name>/SKILL.md`
 - Detailed examples / evidence formats → `/.github/skills/<name>/references/*.md`
+- Reusable evaluation harness / fixture → `/docs/harnesses/*`
 - Client-facing AI capability manifest / bootstrap source → `resources/ai/capabilities/*.yaml`
 - Missing structured user input → `/.github/ISSUE_TEMPLATE/*`
 - Repeatable human/AI operating sequence → `docs/runbooks/*`

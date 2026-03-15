@@ -34,6 +34,7 @@
 | slash で起動するワークフロー | `.github/prompts/*.prompt.md` |
 | 再利用可能な判断木 / 診断知識 | `.github/skills/<name>/SKILL.md` |
 | 長い例 / 詳細手順 / 深い資料 | `.github/skills/<name>/references/*.md` |
+| 再利用可能な評価ハーネス / fixture / sanitized template | `docs/harnesses/*` |
 | 入力テンプレート不足 | `.github/ISSUE_TEMPLATE/*` |
 | 人向けの運用手順 | `docs/runbooks/*` |
 | agent 全体の routing / 発見規則 | `AGENTS.md` |

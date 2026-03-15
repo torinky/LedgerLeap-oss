@@ -1,0 +1,39 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  // Copy this file to `settings.json` in the copied harness workspace.
+  // Replace every __PLACEHOLDER__ token before starting Gemini CLI.
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "ui": {
+    "hideContextSummary": false,
+    "showHomeDirectoryWarning": true
+  },
+  "context": {
+    "fileName": [
+      "GEMINI.md"
+    ],
+    "includeDirectoryTree": true,
+    "discoveryMaxDirs": 50,
+    "includeDirectories": [],
+    "loadMemoryFromIncludeDirectories": false,
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true
+    }
+  },
+  "skills": {
+    "enabled": true,
+    "disabled": []
+  },
+  "mcpServers": {
+    "ledgerleap-api": {
+      "command": "__LEDGERLEAP_MCP_COMMAND__",
+      "args": __LEDGERLEAP_MCP_ARGS__,
+      "cwd": "__LEDGERLEAP_MCP_CWD__",
+      "trust": false,
+      "description": "LedgerLeap bootstrap evaluation server"
+    }
+  }
+}
+
