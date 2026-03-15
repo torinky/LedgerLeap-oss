@@ -27,6 +27,7 @@ use App\Services\Ai\CapabilityManifestRepository;
 use App\Services\Ledger\RelatedLedgerService;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
+use Laravel\Sanctum\Sanctum;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -118,6 +119,49 @@ class McpToolsAuthenticationTest extends TestCase
         $response = $tool->handle($request);
 
         $this->assertFalse($response->isError());
+    }
+
+    #[Test]
+    public function search_ledgers_tool_accepts_authenticated_guard_user_when_env_token_is_missing(): void
+    {
+        putenv('MCP_AUTH_TOKEN=');
+        Sanctum::actingAs($this->user, ['mcp:*']);
+
+        $ledgerService = Mockery::mock(LedgerService::class);
+        $ledgerService->expects('searchLedgersForApi')
+            ->once()
+            ->with(Mockery::type(User::class), Mockery::any())
+            ->andReturn([
+                'ledgers' => [],
+                'total' => 0,
+                'meta' => ['ledger_defines' => [], 'folders' => [], 'users' => []],
+            ]);
+
+        $tool = new SearchLedgersTool($ledgerService);
+        $request = new Request([]);
+
+        $response = $tool->handle($request);
+
+        $this->assertFalse($response->isError());
+    }
+
+    #[Test]
+    public function search_ledgers_tool_rejects_authenticated_guard_user_without_mcp_ability_even_with_valid_env_token(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+        Sanctum::actingAs($this->user, ['read-only']);
+
+        $ledgerService = Mockery::mock(LedgerService::class);
+        $tool = new SearchLedgersTool($ledgerService);
+        $request = new Request([]);
+
+        $response = $tool->handle($request);
+
+        $this->assertTrue($response->isError());
+        $this->assertStringContainsString(
+            'The authenticated token does not have MCP access permissions',
+            $response->content()
+        );
     }
 
     #[Test]

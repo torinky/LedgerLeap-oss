@@ -24,18 +24,36 @@ trait AuthenticatedMcpTool
      */
     protected function authenticateUser(): User
     {
+        $authenticatedUser = Auth::user();
+
+        if ($authenticatedUser instanceof User) {
+            $this->ensureAuthenticatedUserHasMcpAccess($authenticatedUser);
+            Auth::setUser($authenticatedUser);
+
+            return $authenticatedUser;
+        }
+
         $token = getenv('MCP_AUTH_TOKEN');
         if (! $token) {
-            throw new \Exception('Authentication failed: MCP_AUTH_TOKEN environment variable is not set. Please set the MCP_AUTH_TOKEN in your .env file with a valid Sanctum token.');
+            throw new \Exception(
+                'Authentication failed: MCP_AUTH_TOKEN environment variable is not set. '
+                .'Please set the MCP_AUTH_TOKEN in your .env file with a valid Sanctum token.'
+            );
         }
 
         $accessToken = PersonalAccessToken::findToken($token);
         if (! $accessToken) {
-            throw new \Exception('Authentication failed: The provided token is invalid or has been revoked. Please generate a new token using: php artisan demo:generate-mcp-token');
+            throw new \Exception(
+                'Authentication failed: The provided token is invalid or has been revoked. '
+                .'Please generate a new token using: php artisan demo:generate-mcp-token'
+            );
         }
 
         if (! $accessToken->tokenable) {
-            throw new \Exception('Authentication failed: The token is not associated with any user. Please generate a new token using: php artisan demo:generate-mcp-token');
+            throw new \Exception(
+                'Authentication failed: The token is not associated with any user. '
+                .'Please generate a new token using: php artisan demo:generate-mcp-token'
+            );
         }
 
         $user = $accessToken->tokenable;
@@ -45,13 +63,45 @@ trait AuthenticatedMcpTool
 
         // トークンの能力（abilities）をチェック
         if (! $accessToken->can('mcp:*')) {
-            throw new \Exception('Authentication failed: The token does not have MCP access permissions. Please generate a token with mcp:* ability.');
+            throw new \Exception(
+                'Authentication failed: The token does not have MCP access permissions. '
+                .'Please generate a token with mcp:* ability.'
+            );
         }
 
         // 現在のユーザーを設定
         Auth::setUser($user);
 
         return $user;
+    }
+
+    /**
+     * 認証済みユーザーに関連づくSanctumトークン能力を検証
+     *
+     * HTTP transport では auth:sanctum によりユーザーが解決されるため、
+     * currentAccessToken() がある場合は従来どおり mcp:* 能力を要求する。
+     * セッション認証やテストの actingAs() など、現在トークンが無い経路は後方互換のため許可する。
+     *
+     * @throws \Exception
+     */
+    protected function ensureAuthenticatedUserHasMcpAccess(User $user): void
+    {
+        if (! method_exists($user, 'currentAccessToken')) {
+            return;
+        }
+
+        $currentAccessToken = $user->currentAccessToken();
+
+        if ($currentAccessToken === null) {
+            return;
+        }
+
+        if (! $currentAccessToken->can('mcp:*')) {
+            throw new \Exception(
+                'Authentication failed: The authenticated token does not have MCP access permissions. '
+                .'Please generate a token with mcp:* ability.'
+            );
+        }
     }
 
     /**

@@ -8,9 +8,12 @@ use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Response;
+use Laravel\Sanctum\Sanctum;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+
+// phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps
 
 /**
  * AuthenticatedMcpTraitの詳細テスト
@@ -91,6 +94,30 @@ class AuthenticatedMcpToolTest extends TestCase
     }
 
     #[Test]
+    public function authenticate_user_prefers_authenticated_guard_user_over_env_token(): void
+    {
+        putenv('MCP_AUTH_TOKEN=invalid-token-12345');
+        $this->actingAs($this->user);
+
+        $user = $this->testClass->callAuthenticateUser();
+
+        $this->assertInstanceOf(User::class, $user);
+        $this->assertEquals($this->user->id, $user->id);
+    }
+
+    #[Test]
+    public function authenticate_user_rejects_authenticated_token_without_mcp_ability(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+        Sanctum::actingAs($this->user, ['read-only']);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('The authenticated token does not have MCP access permissions');
+
+        $this->testClass->callAuthenticateUser();
+    }
+
+    #[Test]
     public function authenticate_user_throws_exception_with_missing_token(): void
     {
         putenv('MCP_AUTH_TOKEN=');
@@ -119,7 +146,7 @@ class AuthenticatedMcpToolTest extends TestCase
 
         // WritableFolderRepositoryをモック（権限あり）
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
+        $mockRepository->expects('getAccessibleFolderIds')
             ->with($this->user, \App\Enums\FolderPermissionType::READ)
             ->andReturn([$folder->id]);
 
@@ -137,7 +164,7 @@ class AuthenticatedMcpToolTest extends TestCase
 
         // WritableFolderRepositoryをモック（権限なし）
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
+        $mockRepository->expects('getAccessibleFolderIds')
             ->with($this->user, \App\Enums\FolderPermissionType::WRITE)
             ->andReturn([]); // 空の配列 = 権限なし
 
@@ -154,7 +181,7 @@ class AuthenticatedMcpToolTest extends TestCase
         $folder = Folder::factory()->create();
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
+        $mockRepository->expects('getAccessibleFolderIds')
             ->with($this->user, \App\Enums\FolderPermissionType::ADMIN)
             ->andReturn([$folder->id]);
 
@@ -205,7 +232,7 @@ class AuthenticatedMcpToolTest extends TestCase
         $folder = Folder::factory()->create(['title' => 'Test Folder']);
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
+        $mockRepository->expects('getAccessibleFolderIds')
             ->with($this->user, \App\Enums\FolderPermissionType::READ)
             ->andReturn([$folder->id]);
 
@@ -222,7 +249,7 @@ class AuthenticatedMcpToolTest extends TestCase
         $folder = Folder::factory()->create(['title' => 'Test Folder']);
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
+        $mockRepository->expects('getAccessibleFolderIds')
             ->with($this->user, \App\Enums\FolderPermissionType::WRITE)
             ->andReturn([]);
 
@@ -232,7 +259,10 @@ class AuthenticatedMcpToolTest extends TestCase
 
         $this->assertInstanceOf(Response::class, $result);
         $this->assertTrue($result->isError());
-        $this->assertStringContainsString('Insufficient permission (WRITE) for folder: Test Folder', $result->content());
+        $this->assertStringContainsString(
+            'Insufficient permission (WRITE) for folder: Test Folder',
+            $result->content()
+        );
     }
 
     #[Test]
