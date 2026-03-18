@@ -1,3 +1,4 @@
+{{-- 関連案件タブ用: 識別理由インジケーター（null=通常リスト） --}}
 @props([
     'ledgerRecord' => null,
     'highlightKeyword' => null,
@@ -6,7 +7,7 @@
     'allAttachments' => [],
     'filteredColumnDefines' => [],
     'currentTenantId' => null,
-    'relatedBadge' => null,    {{-- 関連案件タブ用: 識別理由インジケーター（null=通常リスト） --}}
+    'relatedBadge' => null,
 ])
 @php
     use App\Helpers\SearchHelper;
@@ -32,7 +33,7 @@
     }
 @endphp
 <tr class="hover group hover:bg-accent/20" wire:key="ledger-row-{{ $ledgerRecord->id }}">
-    <th class=" border flex-col bg-accent/20">
+    <th scope="row" class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
             @if ($canUpdate && !$ledgerRecord->isLocked())
                 <a href="{{ route('ledger.edit', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id]) }}"
@@ -215,12 +216,18 @@
                     <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId"
                         :search="$highlightKeyword" />
                 @else
-                    <x-ledger.empty-message />
+                    <div class="text-neutral/50 flex w-full items-center justify-center">
+                        <i class="fa-solid fa-cube text-info/50 mr-2"></i>
+                        <span>{{ __('ledger.empty') }}</span>
+                    </div>
                 @endif
             @else
                 @if (empty($ledgerRecord->content[$columnDefine->id]))
                     {{--                    @php \Log::info('Debug table-row: content empty', ['id' => $columnDefine->id, 'content' => $ledgerRecord->content]); @endphp --}}
-                    <x-ledger.empty-message />
+                    <div class="text-neutral/50 flex w-full items-center justify-center">
+                        <i class="fa-solid fa-cube text-info/50 mr-2"></i>
+                        <span>{{ __('ledger.empty') }}</span>
+                    </div>
                 @else
                     @php
                         //                        \Log::info('Debug table-row: rendering content', ['id' => $columnDefine->id, 'val' => $ledgerRecord->content[$columnDefine->id]]);
@@ -243,7 +250,23 @@
                         $columnHtmlString = $columnHtml->toHtml();
                     @endphp
 
-                    <x-expandable-content :content="$columnHtmlString" max-height="6rem" />
+                    <div x-data="expandableContent({ maxHeight: '6rem' })" x-intersect.once.threshold.10="checkOverflow()"
+                        class="relative">
+                        <div x-ref="content" :class="{ 'overflow-hidden': !expanded }" :style="contentStyle"
+                            class="transition-all duration-500">
+                            {!! $columnHtmlString !!}
+                        </div>
+
+                        <button x-show="showToggle" @click="toggle()" type="button"
+                            class="btn btn-sm btn-ghost w-full mt-2 gap-2">
+                            <span x-text="expanded ? '{{ __('ledger.show_less') }}' : '{{ __('ledger.show_more') }}'"></span>
+                            <i class="fas text-sm transition-transform duration-200"
+                                :class="{
+                                    'fa-chevron-up': expanded,
+                                    'fa-chevron-down': !expanded
+                                }"></i>
+                        </button>
+                    </div>
                 @endif
             @endif
         </td>

@@ -7,11 +7,13 @@
 ])
 <tr class="hover z-30" wire:key="ledger_table_header_{{ $ledgerDefine->id }}">
     {{-- アクションボタン用の列 --}}
-    <th class="w-10 text-center px-4 py-2 tracking-wider bg-accent/30 bg-opacity-30">
+    <th scope="col" class="w-10 text-center px-4 py-2 tracking-wider bg-accent/30 bg-opacity-30">
         @if (!empty($defaultSortColumns) && $orderBy !== 'default')
             {{-- デフォルト順に戻すボタン --}}
-            <x-mary-button wire:click="$parent.sort('default')" icon="o-arrow-path" class="btn btn-square btn-warning"
-                spinner="$parent.sort" />
+            <button type="button" class="btn btn-square btn-warning" wire:click.stop="$parent.sort('default')"
+                wire:loading.attr="disabled" wire:target="$parent.sort" aria-label="{{ __('ledger.actions.reset_sort') }}">
+                <i class="fas fa-arrow-path"></i>
+            </button>
         @else
             {{-- 通常のアクションアイコン --}}
             <div class="tooltip tooltip-right z-50" data-tip="{{ __('actions.actions') }}">
@@ -39,7 +41,7 @@
                 $highlightClass = "bg-primary/{$opacity} border-b-2 border-primary";
             }
         @endphp
-        <th class="px-4 py-2 space-y-1 text-center {{ $highlightClass }}"
+        <th scope="col" class="px-4 py-2 space-y-1 text-center {{ $highlightClass }}"
             wire:key="ledger_table_header_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}">
             <div
                 @if ($orderBy === 'default' && $sortIndex !== null) class="tooltip tooltip-bottom z-50" data-tip="{{ __('ledger.sort_priority') }}: {{ $sortIndex }}" @endif>
@@ -61,15 +63,13 @@
                     @endif
                 </button>
             </div>
-            <x-mary-input
-                    x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{$column_define->id}}', $event.target.value, {{$ledgerDefine->id}})"
-                    value="{{ $this->filter[$column_define->id] ?? '' }}"
-                    wire:key="ledger_filter_id_{{$ledgerDefine->id}}_column_{{$column_define->id}}"
-                    type="search"
-                    class="input-xs w-full max-w-xs"
-                    icon="o-funnel"
-                    spinner="$wire.$parent.updateFilterFromChild"
-                    placeholder="{{__('ledger.filter')}}..." />
+            <input
+                x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{ $column_define->id }}', $event.target.value, {{ $ledgerDefine->id }})"
+                value="{{ $this->filter[$column_define->id] ?? '' }}"
+                wire:key="ledger_filter_id_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}"
+                type="search"
+                class="input input-xs w-full max-w-xs"
+                placeholder="{{ __('ledger.filter') }}..." />
         </th>
     @endforeach
 
@@ -77,13 +77,13 @@
         $isUpdatedAtSorted = $orderBy === 'updated_at';
         $updatedAtHeaderClass = $isUpdatedAtSorted ? 'bg-primary/40 border-b-2 border-primary' : 'bg-accent/30';
     @endphp
-    <th class="px-4 py-2 text-center {{ $updatedAtHeaderClass }}">
+    <th scope="col" class="px-4 py-2 text-center {{ $updatedAtHeaderClass }}">
         <span class="text-sm font-bold text-accent-content">
             {{ __('ledger.updated_at') }}
         </span>
         <button class="btn btn-xs" wire:click.stop="$parent.sort('updated_at', '{{ __('ledger.updated_at') }}')"
             wire:loading.attr="disabled" wire:target="$parent.sort">
-            @if ($orderBy == 'updated_at')
+            @if ($orderBy === 'updated_at')
                 @if ($orderAsc)
                     <i class="fas fa-sort-down" style="pointer-events: none;"></i>
                 @else

@@ -64,6 +64,22 @@ class Ledger extends Model
      */
     public function scopeSearch(EloquentBuilder $query, string $freeWord)
     {
+        $freeWord = trim($freeWord);
+        if (empty($freeWord)) {
+            return $query;
+        }
+
+        $keywords = preg_split('/[\s,]+/', $freeWord, -1, PREG_SPLIT_NO_EMPTY);
+
+        if (empty($keywords)) {
+            return $query;
+        }
+
+        // OR検索: 各キーワードをスペース区切りで渡す（+を付けない）
+        // Mroongaでは複数単語をスペース区切りにするとOR検索になる
+        $searchString = implode(' ', $keywords);
+
+        /* DEBUG: 一時調査用（必要時にコメント解除）
         $connection = $query->getConnection();
         $dbName = $connection->getDatabaseName();
         $tenantId = tenancy()->tenant?->id ?? 'central';
@@ -74,42 +90,22 @@ class Ledger extends Model
             'dbName' => $dbName,
             'connection' => $connection->getName(),
         ]);
-
-        $freeWord = trim($freeWord);
-        if (empty($freeWord)) {
-            \Log::info('[MCP Search Debug] scopeSearch: freeWord is empty after trim, returning original query');
-
-            return $query;
-        }
-
-        $keywords = preg_split('/[\s,]+/', $freeWord, -1, PREG_SPLIT_NO_EMPTY);
         \Log::info('[MCP Search Debug] scopeSearch: extracted keywords: '.json_encode($keywords, JSON_UNESCAPED_UNICODE));
-
-        if (empty($keywords)) {
-            \Log::info('[MCP Search Debug] scopeSearch: no keywords found, returning original query');
-
-            return $query;
-        }
-
-        // OR検索: 各キーワードをスペース区切りで渡す（+を付けない）
-        // Mroongaでは複数単語をスペース区切りにするとOR検索になる
-        $searchString = implode(' ', $keywords);
         \Log::info('[MCP Search Debug] scopeSearch: searchString for MATCH AGAINST: '.$searchString);
-
-        // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
         \Log::info('[MCP Search Debug] scopeSearch: applying MATCH AGAINST on content and content_attached');
-        $query->where(function (EloquentBuilder $q) use ($searchString) {
-            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
-                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
-        });
-
-        // Debug: Log the count
         $count = (clone $query)->count();
         \Log::info("[MCP Search Debug] scopeSearch: found {$count} records", [
             'tenantId' => $tenantId,
             'dbName' => $dbName,
         ]);
         \Log::info('[MCP Search Debug] scopeSearch: completed successfully');
+        */
+
+        // 複合インデックスではなく、個別のインデックスを利用するように orWhereRaw を使用
+        $query->where(function (EloquentBuilder $q) use ($searchString) {
+            $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$searchString])
+                ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$searchString]);
+        });
     }
 
     /**
