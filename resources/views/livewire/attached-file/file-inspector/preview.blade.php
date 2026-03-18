@@ -1,14 +1,14 @@
 {{-- Preview Area --}}
-@if ($this->showPreview)
+@if ($previewState['showPreview'])
     <div class="bg-base-200/50 border-b border-base-300 flex-none relative z-0">
         {{-- Tier 2: Loading overlay for source switching --}}
         <x-element.loading-overlay tier="2" target="switchSource" />
 
-        @if ($this->isImage)
+        @if ($previewState['isImage'])
             <div class="relative aspect-video bg-base-300"
                 x-data="{
                     imgLoaded: false,
-                    cacheKey: 'img-loaded-{{ $this->previewUrl ?? 'none' }}',
+                    cacheKey: 'img-loaded-{{ $previewState['previewUrl'] ?? 'none' }}',
                     loadStartTime: null,
                     init() {
                         // セッションストレージから読み込み済み状態を復元
@@ -46,20 +46,20 @@
 
                             // Livewireコンポーネントのメソッドを呼び出し
                             $wire.logPerformance('image_preview_load', duration, {
-                                url: '{{ $this->previewUrl }}',
+                                url: '{{ $previewState['previewUrl'] }}',
                                 from_cache: false
                             });
                         }
                     }
                 }"
-                wire:key="img-preview-{{ $this->previewUrl ?? 'none' }}">
+                wire:key="img-preview-{{ $previewState['previewUrl'] ?? 'none' }}">
                 {{-- Loading Spinner --}}
                 <div x-show="!imgLoaded" class="absolute inset-0 flex items-center justify-center bg-base-300/50">
                     <span class="loading loading-spinner loading-lg text-primary/40"></span>
                 </div>
 
-                @if ($this->previewUrl)
-                    <img src="{{ $this->previewUrl }}" alt="{{ $file?->original_filename ?? 'Preview' }}"
+                @if ($previewState['previewUrl'])
+                    <img src="{{ $previewState['previewUrl'] }}" alt="{{ $file?->original_filename ?? 'Preview' }}"
                         class="w-full h-full object-contain transition-opacity duration-500"
                         :class="imgLoaded ? 'opacity-100' : 'opacity-0'"
                         x-on:load="markLoaded()"
@@ -69,7 +69,7 @@
                 @endif
 
                 <div class="absolute top-2 right-2 flex gap-2">
-                    @if ($this->shouldUseThumbnail && $this->thumbnailUrl)
+                    @if ($previewState['shouldUseThumbnail'] && $previewState['thumbnailUrl'])
                         <div class="badge badge-neutral bg-base-100/80 border-none shadow-sm gap-1 pl-1 tooltip tooltip-left"
                             data-tip="{{ __('ledger.file_inspector.preview.thumbnail_hint') ?? '表示を高速化するためにサムネイルを表示しています。拡大ボタンでオリジナルを確認できます。' }}">
                             <i class="fa-solid fa-bolt text-warning text-[10px]"></i>
@@ -79,12 +79,12 @@
                     <button
                         class="btn btn-xs btn-circle btn-ghost bg-base-100/90 hover:bg-base-100 shadow-lg tooltip tooltip-left"
                         data-tip="{{ __('ledger.file_inspector.actions.zoom') }}"
-                        @click="window.open('{{ $this->originalUrl }}', '_blank')">
+                        @click="window.open('{{ $previewState['originalUrl'] }}', '_blank')">
                         <i class="fa-solid fa-magnifying-glass-plus"></i>
                     </button>
                 </div>
             </div>
-        @elseif($this->isPdf)
+        @elseif ($previewState['isPdf'])
             <div class="relative aspect-video bg-base-300 flex items-center justify-center">
                 @if ($file && $file->id >= 1 && $file->id <= 12)
                     <div class="text-center p-6">
@@ -97,13 +97,13 @@
                             {{ number_format(($file->size ?? 0) / 1024, 1) }}
                             KB</p>
                         <button class="btn btn-sm btn-outline gap-2"
-                            @click="window.open('{{ $this->originalUrl }}', '_blank')">
+                            @click="window.open('{{ $previewState['originalUrl'] }}', '_blank')">
                             <i class="fa-solid fa-external-link-alt"></i>
                             {{ __('ledger.file_inspector.preview.open_new_tab') }}
                         </button>
                     </div>
                 @else
-                    <iframe src="{{ $this->previewUrl }}" class="w-full h-full border-0" title="PDF Preview"></iframe>
+                    <iframe src="{{ $previewState['previewUrl'] }}" class="w-full h-full border-0" title="PDF Preview"></iframe>
                 @endif
             </div>
         @endif

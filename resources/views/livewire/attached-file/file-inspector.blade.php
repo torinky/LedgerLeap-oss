@@ -110,30 +110,27 @@
                     @include('livewire.attached-file.file-inspector.quick-actions')
                     @include('livewire.attached-file.file-inspector.preview')
 
-                    @if($performanceEnabled && $tabSwitchMetricEnabled)
                     <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]"
-                         x-data="{
-                             previousTab: 'content',
-                             init() {
-                                 this.$watch('$wire.selectedTab', (value, oldValue) => {
-                                     if (oldValue && value !== oldValue) {
-                                         // タブ切り替え時間を測定
-                                         const start = performance.now();
-                                         requestAnimationFrame(() => {
-                                             const duration = performance.now() - start;
-                                             console.log('[FileInspector Performance] Tab switch:', oldValue, '->', value, duration.toFixed(2), 'ms');
-                                             $wire.logPerformance('tab_switch', duration, { from: oldValue, to: value });
-                                         });
-                                         this.previousTab = value;
-                                     }
-                                 });
-                             }
-                         }">
+                        @if($performanceEnabled && $tabSwitchMetricEnabled)
+                            x-data="{
+                                previousTab: 'content',
+                                init() {
+                                    this.$watch('$wire.selectedTab', (value, oldValue) => {
+                                        if (oldValue && value !== oldValue) {
+                                            // タブ切り替え時間を測定
+                                            const start = performance.now();
+                                            requestAnimationFrame(() => {
+                                                const duration = performance.now() - start;
+                                                console.log('[FileInspector Performance] Tab switch:', oldValue, '->', value, duration.toFixed(2), 'ms');
+                                                $wire.logPerformance('tab_switch', duration, { from: oldValue, to: value });
+                                            });
+                                            this.previousTab = value;
+                                        }
+                                    });
+                                }
+                            }"
+                        @endif>
                         {{-- Tier 2: Tab switching loading overlay REMOVED per user request (Reference: Phase 6 remediation) --}}
-                    @else
-                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]">
-                        {{-- Tier 2: Tab switching loading overlay REMOVED per user request (Reference: Phase 6 remediation) --}}
-                    @endif
                         <x-mary-tabs wire:model="selectedTab"
                                      tabsClass="flex flex-col mt-2"
                                      activeClass="border-b-0"
@@ -144,28 +141,28 @@
                                         icon="o-document-text"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @include('livewire.attached-file.file-inspector.tabs.content')
+                                @php if ($selectedTab === 'content') echo view('livewire.attached-file.file-inspector.tabs.content', get_defined_vars())->render(); @endphp
                             </x-mary-tab>
 
                             <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}"
                                         icon="o-information-circle"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @include('livewire.attached-file.file-inspector.tabs.details')
+                                @php if ($selectedTab === 'details') echo view('livewire.attached-file.file-inspector.tabs.details', get_defined_vars())->render(); @endphp
                             </x-mary-tab>
 
                             <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}"
                                         icon="o-clock"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @include('livewire.attached-file.file-inspector.tabs.history')
+                                @php if ($selectedTab === 'history') echo view('livewire.attached-file.file-inspector.tabs.history', get_defined_vars())->render(); @endphp
                             </x-mary-tab>
 
                             <x-mary-tab name="permissions" label="{{ __('ledger.file_inspector.tabs.permissions') }}"
                                         icon="o-shield-check"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @include('livewire.attached-file.file-inspector.tabs.permissions')
+                                @php if ($selectedTab === 'permissions') echo view('livewire.attached-file.file-inspector.tabs.permissions', get_defined_vars())->render(); @endphp
                             </x-mary-tab>
                         </x-mary-tabs>
                     </div>

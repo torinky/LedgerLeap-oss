@@ -55,6 +55,8 @@ class FileInspector extends BaseLivewireComponent
     // キャッシュ用プロパティ（WBS 5.2.1）
     protected ?string $cachedPreviewText = null;
 
+    protected ?string $cachedPreviewBaseText = null;
+
     protected ?bool $cachedHasKeywordHit = null;
 
     protected ?string $cachedSearchKeyword = null;
@@ -68,6 +70,16 @@ class FileInspector extends BaseLivewireComponent
     public ?string $mockFolderPath = null;
 
     public ?string $mockCreatorName = null;
+
+    public array $previewState = [
+        'showPreview' => false,
+        'isImage' => false,
+        'isPdf' => false,
+        'shouldUseThumbnail' => false,
+        'thumbnailUrl' => null,
+        'originalUrl' => null,
+        'previewUrl' => null,
+    ];
 
     public bool $isInLedgerDetailPage = false; // 台帳詳細画面内かどうか
 
@@ -119,6 +131,7 @@ class FileInspector extends BaseLivewireComponent
     protected function clearPreviewCache(): void
     {
         $this->cachedPreviewText = null;
+        $this->cachedPreviewBaseText = null;
         $this->cachedHasKeywordHit = null;
         $this->cachedSearchKeyword = null;
         $this->cachedActiveSource = null;
@@ -190,6 +203,8 @@ class FileInspector extends BaseLivewireComponent
                 ],
             ]));
         }
+
+        $this->preparePreviewState();
     }
 
     #[On('open-file-inspector')]
@@ -315,6 +330,8 @@ class FileInspector extends BaseLivewireComponent
                 'file_id' => $id,
                 'active_source' => $this->activeSource,
             ]);
+
+                $this->preparePreviewState();
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('FileInspector loadData failed', [
                 'id' => $id,
@@ -371,6 +388,15 @@ class FileInspector extends BaseLivewireComponent
         $this->activeSource = null;
         $this->searchKeyword = '';
         $this->isExpanded = false;
+        $this->previewState = [
+            'showPreview' => false,
+            'isImage' => false,
+            'isPdf' => false,
+            'shouldUseThumbnail' => false,
+            'thumbnailUrl' => null,
+            'originalUrl' => null,
+            'previewUrl' => null,
+        ];
         $this->clearPreviewCache(); // WBS 5.2.1: キャッシュクリア
     }
 
@@ -406,6 +432,66 @@ class FileInspector extends BaseLivewireComponent
                 'filename' => $this->file->filename,
             ]);
         }
+    }
+
+    protected function preparePreviewState(): void
+    {
+        if (! $this->file) {
+            $this->previewState = [
+                'showPreview' => false,
+                'isImage' => false,
+                'isPdf' => false,
+                'shouldUseThumbnail' => false,
+                'thumbnailUrl' => null,
+                'originalUrl' => null,
+                'previewUrl' => null,
+            ];
+
+            return;
+        }
+
+        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
+        $isImage = str_starts_with($mime, 'image/');
+        $isPdf = $mime === 'application/pdf';
+        $showPreview = $isImage || $isPdf;
+        $shouldUseThumbnail = ! $this->isMockFile() && (($this->file->size ?? 0) >= 1048576);
+
+        $thumbnailUrl = null;
+        if (! $this->isMockFile() && $isImage && $this->file->hashedbasename) {
+            $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+                $this->file->hashedbasename,
+                $this->file->tenant_id
+            );
+
+            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+                $thumbnailUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thumbnailPath);
+            }
+        }
+
+        $originalUrl = null;
+        $previewUrl = null;
+
+        if ($showPreview) {
+            if ($this->isMockFile()) {
+                $originalUrl = $isImage
+                    ? 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' . urlencode($this->file->original_filename ?? 'Image')
+                    : ($isPdf ? '#pdf-preview' : null);
+                $previewUrl = $originalUrl;
+            } elseif ($this->file->path) {
+                $originalUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+                $previewUrl = $thumbnailUrl ?: $originalUrl;
+            }
+        }
+
+        $this->previewState = [
+            'showPreview' => $showPreview,
+            'isImage' => $isImage,
+            'isPdf' => $isPdf,
+            'shouldUseThumbnail' => $shouldUseThumbnail,
+            'thumbnailUrl' => $thumbnailUrl,
+            'originalUrl' => $originalUrl,
+            'previewUrl' => $previewUrl,
+        ];
     }
 
     /**
@@ -645,6 +731,23 @@ class FileInspector extends BaseLivewireComponent
         return $perms[$action] ?? false;
     }
 
+    public function requestPreviewText(string $purpose = 'copy'): void
+    {
+        if (! $this->file) {
+            $this->dispatch('preview-text-ready', purpose: $purpose, text: '', filename: null);
+
+            return;
+        }
+
+        $text = $this->getPreviewText(false) ?? '';
+
+        $this->dispatch('preview-text-ready',
+            purpose: $purpose,
+            text: $text,
+            filename: $this->file->original_filename ?? $this->file->filename ?? 'preview'
+        );
+    }
+
     public function getFolderPermission(): ?string
     {
         /** @var \App\Models\User|null $user */
@@ -696,13 +799,53 @@ class FileInspector extends BaseLivewireComponent
 
     public function getPreviewText(bool $withHighlight = true): ?string
     {
-        $startTime = microtime(true);
+
 
         if (! $this->file) {
             return null;
         }
 
-        // 1. テキスト取得
+        $text = $this->getPreviewBaseText($withHighlight);
+
+        if (! $text) {
+            return null;
+        }
+
+        // 2. 段階的ロード（大規模テキスト対応）: とりあえず先頭10,000文字で制限
+        $limit = 10000;
+        $isTruncated = ! $this->isExpanded && mb_strlen($text) > $limit;
+        if ($isTruncated && $withHighlight) {
+            $text = mb_substr($text, 0, $limit)."\n\n... (テキストが長いため省略されました。全表示ボタンで確認できます) ...";
+        }
+
+        // 3. ハイライト処理 (HTML出力用のみ)
+        if ($withHighlight && ! empty($this->searchKeyword)) {
+            $keywords = SearchHelper::extractKeywords($this->searchKeyword);
+
+            if (! empty($keywords)) {
+                // vlm (Markdown) と structured (JSON) の場合はエスケープせず、それ以外はエスケープしてハイライト
+                $shouldEscape = ! in_array($this->activeSource, ['vlm', 'structured']);
+                $text = SearchHelper::highlight($text, $keywords, 'bg-yellow-200 text-black px-0.5 rounded', $shouldEscape);
+            }
+        }
+
+        if ($withHighlight) {
+            $this->cachedPreviewText = $text;
+            $this->cachedSearchKeyword = $this->searchKeyword;
+            $this->cachedActiveSource = $this->activeSource;
+        }
+
+        return $text;
+    }
+
+    protected function getPreviewBaseText($withHighlight): ?string
+    {
+        $startTime = microtime(true);
+
+        if ($this->cachedPreviewBaseText !== null && $this->cachedActiveSource === $this->activeSource) {
+            return $this->cachedPreviewBaseText;
+        }
+
         if ($this->isMockFile()) {
             // モックデータの場合はソース固有のテキストがあれば優先
             $baseText = $this->mockData['mock_preview_text'] ?? '';
