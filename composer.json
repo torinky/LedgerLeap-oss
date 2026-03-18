@@ -130,6 +130,12 @@
     "patches": {
       "laravel/boost": {
         "Fix MCP tools schema for Laravel 12": "patches/fix_mcp_tools_schema.patch"
+      },
+      "althinect/filament-spatie-roles-permissions": {
+        "Fix Filament 3 type compatibility for getNavigationGroup()": "patches/fix_filament_spatie_roles_permissions.patch"
+      },
+      "stancl/tenancy": {
+        "Fix PHP 8.4 static trait property deprecation": "patches/fix_tenancy_php84_trait_property.patch"
       }
     }
   },

@@ -1,17 +1,1 @@
-{
-    "_hash": "9c5e0332589fa14c05ae37e12a55519098f3df85fecb59c33f85e313677ed720",
-    "patches": {
-        "laravel/boost": [
-            {
-                "package": "laravel/boost",
-                "description": "Fix MCP tools schema for Laravel 12",
-                "url": "patches/fix_mcp_tools_schema.patch",
-                "sha256": "7f3b8736ca9ac821ce56effedc4fd8753c86bcb8cc69c0e1e9dbeb04dcd28196",
-                "depth": 1,
-                "extra": {
-                    "provenance": "root"
-                }
-            }
-        ]
-    }
-}
+{}
