@@ -177,3 +177,21 @@
   - **31 passed**
   - 画像、PDF、サムネイル、権限拒否、パフォーマンス系の既存テストが継続成功
 
+### 7.3 Sprint 2 の実装
+
+- `app/Livewire/Ledger/ModifyColumn.php`
+  - FilePond poster の生成を storage 存在確認なしの route ベースへ統一
+  - 画像は `file.download?thumbnail=true`、非画像は icon route に固定
+- `app/Services/Ledger/ColumnHtmlService.php`
+  - 添付一覧の thumbnail URL を route ベースへ統一
+  - `Storage::disk('public')->exists()` を削除
+- `resources/views/components/ledger/table-row.blade.php`
+  - 添付一覧の thumbnail 判定を route ベースへ統一
+  - view 側で storage を見に行かない構成へ寄せた
+
+### 7.4 Sprint 2 の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Livewire/Ledger/ModifyColumnTest.php tests/Feature/Components/AttachmentListComponentTest.php tests/Unit/Services/Ledger/ColumnHtmlServiceTest.php --stop-on-failure`
+  - **34 passed**
+  - FilePond 初期化、添付一覧描画、ColumnHtmlService の既存挙動が継続成功
+

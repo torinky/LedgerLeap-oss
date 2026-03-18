@@ -103,22 +103,13 @@
                             'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
                         ]);
-                        $thumbnailUrl = null;
-                        if (
-                            str_starts_with($af->original_mime_type, 'image/') &&
-                            \Illuminate\Support\Facades\Storage::disk('public')->exists(
-                                \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
-                                    basename($af->filename),
-                                    $currentTenantId,
-                                ),
-                            )
-                        ) {
-                            $thumbnailUrl = route('file.download', [
+                        $thumbnailUrl = str_starts_with($af->original_mime_type, 'image/')
+                            ? route('file.download', [
                                 'tenant' => $currentTenantId,
                                 'attachedFile' => $af->id,
-                                'thumbnail' => 'true',
-                            ]);
-                        }
+                                'thumbnail' => true,
+                            ])
+                            : null;
                         $originalDownloadUrl = route('file.download', [
                             'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,

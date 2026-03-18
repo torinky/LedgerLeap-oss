@@ -456,20 +456,14 @@ class ModifyColumn extends CreateColumn
                         );
                     }
 
-                    $fileExists = $storagePath && Storage::disk('public')->exists($storagePath);
                     $posterUrl = '';
                     $isIconFlag = false; // デフォルトはfalse（画像扱い）
 
-                    if ($fileExists) {
-                        // MIMEタイプを取得（AttachedFileレコードまたはストレージから）
-                        $mimeType = $currentAttachedFile?->mime ?? Storage::disk('public')->mimeType($storagePath);
-
-                        // サムネイルが存在するか、または画像ファイル（ImagePreviewプラグインが処理）であるかを確認
+                    if ($currentAttachedFile) {
+                        $mimeType = $currentAttachedFile->mime ?? 'application/octet-stream';
                         $isImage = str_starts_with($mimeType, 'image/');
-                        $thumbnailPath = $currentAttachedFile ? AttachedFilePathHelper::getThumbnailStoragePath($currentAttachedFile->hashedbasename, $currentAttachedFile->tenant_id) : '';
-                        $hasThumbnail = $thumbnailPath && Storage::disk('public')->exists($thumbnailPath);
 
-                        if ($isImage || $hasThumbnail) {
+                        if ($isImage) {
                             $posterUrl = route('file.download', [
                                 'tenant' => $this->tenantId,
                                 'attachedFile' => $attachmentId,
@@ -477,7 +471,7 @@ class ModifyColumn extends CreateColumn
                             ]);
                             $isIconFlag = false;
                         } else {
-                            // サムネイルがない非画像ファイルについては、アイコンURLを直接セットしてリダイレクトを避ける
+                            // 非画像ファイルについては、アイコンURLを直接セットしてリダイレクトを避ける
                             $posterUrl = route('api.fontawesome.icon.by_mime', ['type' => $mimeType]);
                             $isIconFlag = true;
                         }
@@ -492,10 +486,8 @@ class ModifyColumn extends CreateColumn
                             'type' => 'local',
                             'file' => [
                                 'name' => $originalFilename,
-                                'size' => $fileExists ? Storage::disk('public')->size($storagePath) : 0,
-                                'type' => $fileExists
-                                    ? Storage::disk('public')->mimeType($storagePath)
-                                    : 'application/octet-stream',
+                                'size' => $currentAttachedFile?->size ?? 0,
+                                'type' => $currentAttachedFile?->mime ?? 'application/octet-stream',
                             ],
                             'metadata' => [
                                 'filename' => $originalFilename,

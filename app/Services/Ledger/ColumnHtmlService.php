@@ -2,14 +2,12 @@
 
 namespace App\Services\Ledger;
 
-use App\Helpers\AttachedFilePathHelper;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Services\AutoLinkService;
 use App\Services\Util\HtmlProcessorService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
@@ -340,12 +338,7 @@ class ColumnHtmlService
                 // サムネイルURL (画像かつサムネイルファイルが存在する場合)
                 $thumbnailUrl = null;
                 if (str_starts_with($attachment->original_mime_type, 'image/') && $attachment->hashedbasename) {
-                    $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachment->hashedbasename, $this->tenantId);
-                    $thumbnailExists = Storage::disk('public')->exists($thumbnailPath);
-
-                    if ($thumbnailExists) {
-                        $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
-                    }
+                    $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => true]);
                 }
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
                 $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
