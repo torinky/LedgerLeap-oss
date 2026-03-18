@@ -54,6 +54,18 @@
                 true,
             ); // true for absolute URL
 
+        $downloadUrl = $isMockFile
+            ? $originalUrl
+            : route(
+                'file.download',
+                [
+                    'tenant' => tenant()?->id,
+                    'attachedFile' => $file->id ?? 0,
+                    'original' => true,
+                ],
+                true,
+            );
+
         // OCR PDF（変換/最適化PDF）のダウンロードURL
         $ocrPdfUrl = null;
         if ($hasOcrProcessed && ($isImageFile || $isPdfFile)) {
@@ -73,8 +85,8 @@
 
     {{-- オリジナルファイルダウンロード & リンクコピー --}}
     <div class="join flex-1">
-        <a href="{{ $originalUrl }}"
-            class="btn btn-sm join-item gap-2 tooltip tooltip-bottom before:z-[9999] {{ $ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1' }}"
+        <a href="{{ $downloadUrl }}"
+            class="btn btn-sm join-item gap-2 tooltip tooltip-bottom before:z-9999 {{ $ocrPdfUrl ? 'btn-ghost flex-1' : 'btn-primary flex-1' }}"
             data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_original_image') : __('ledger.file_inspector.actions.download_original') }}"
             @click="handleDownload('original')" :disabled="downloadingOriginal">
             <span x-show="downloadingOriginal" class="loading loading-spinner loading-xs"></span>
@@ -84,10 +96,10 @@
                 x-show="!downloadingOriginal && {{ !$isImageFile && !$isPdfFile ? 'true' : 'false' }}"></i>
             <span class="hidden sm:inline">{{ __('ledger.file_inspector.actions.original') }}</span>
         </a>
-        <button class="btn btn-sm join-item w-10 tooltip tooltip-bottom before:z-[9999] transition-all duration-300"
+        <button class="btn btn-sm join-item w-10 tooltip tooltip-bottom before:z-9999 transition-all duration-300"
             :class="copyingOriginal ? 'btn-success text-white' : 'btn-ghost'"
             data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}"
-            @click="handleCopy('{{ $originalUrl }}', 'original')">
+            @click="handleCopy('{{ $downloadUrl }}', 'original')">
             <i class="fa-solid fa-link" x-show="!copyingOriginal"></i>
             <i class="fa-solid fa-check" x-show="copyingOriginal" x-cloak></i>
         </button>
@@ -96,7 +108,7 @@
     {{-- OCR変換/最適化PDFダウンロード & リンクコピー（ある場合のみ） --}}
     @if ($ocrPdfUrl)
         <div class="join flex-1">
-            <a href="{{ $ocrPdfUrl }}" class="btn btn-primary btn-sm join-item flex-1 gap-2 tooltip tooltip-bottom before:z-[9999]"
+            <a href="{{ $ocrPdfUrl }}" class="btn btn-primary btn-sm join-item flex-1 gap-2 tooltip tooltip-bottom before:z-9999"
                 data-tip="{{ $isImageFile ? __('ledger.file_inspector.actions.download_converted_pdf') : __('ledger.file_inspector.actions.download_optimized_pdf') }}"
                 @click="handleDownload('pdf')" :disabled="downloadingPdf">
                 <span x-show="downloadingPdf" class="loading loading-spinner loading-xs"></span>
@@ -105,7 +117,7 @@
                     class="hidden sm:inline">{{ $isImageFile ? 'PDF' : __('ledger.file_inspector.actions.optimized') }}</span>
             </a>
             <button
-                class="btn btn-primary btn-sm join-item w-10 tooltip tooltip-bottom before:z-[9999] border-l-primary-focus/20 transition-all duration-300"
+                class="btn btn-primary btn-sm join-item w-10 tooltip tooltip-bottom before:z-9999 border-l-primary-focus/20 transition-all duration-300"
                 :class="copyingPdf ? 'btn-success text-white' : ''"
                 data-tip="{{ __('ledger.file_inspector.actions.copy_link') }}"
                 @click="handleCopy('{{ $ocrPdfUrl }}', 'pdf')">

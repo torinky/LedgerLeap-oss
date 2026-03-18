@@ -9,8 +9,10 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Helpers\AttachedFilePathHelper;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -33,10 +35,8 @@ class FileInspectorTest extends TestCase
         parent::setUp();
 
         $this->setUpRefreshDatabaseWithTenant();
+        // テナント初期化（RefreshDatabaseWithTenant が作成した共有テナントを使用）
         $this->tenant = $this->getTenant();
-
-        // テナント初期化（RefreshDatabaseWithTenantがstatic::$sharedTenantを作成・初期化している）
-        $this->tenant = static::$sharedTenant;
 
         // テストユーザー作成とログイン
         $this->user = User::factory()->create();
@@ -154,7 +154,12 @@ class FileInspectorTest extends TestCase
         $this->assertTrue($component->get('isImage'));
         $this->assertFalse($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $this->assertStringContainsString('storage/attachments/test_image.jpg', $component->get('previewUrl'));
+        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]);
+        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'original' => true]);
+
+        $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
+        $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
+        $this->assertEquals($expectedDownloadUrl, $component->get('downloadUrl'));
     }
 
     #[Test]
@@ -185,7 +190,48 @@ class FileInspectorTest extends TestCase
         $this->assertFalse($component->get('isImage'));
         $this->assertTrue($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $this->assertStringContainsString('storage/attachments/test_document.pdf', $component->get('previewUrl'));
+        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]);
+        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'original' => true]);
+
+        $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
+        $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
+        $this->assertEquals($expectedDownloadUrl, $component->get('downloadUrl'));
+    }
+
+    #[Test]
+    public function it_uses_thumbnail_route_for_large_image_files_when_thumbnail_exists()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Storage::fake('public');
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'large_image.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'hashedbasename' => 'large_image.jpg',
+            'path' => 'attachments/large_image.jpg',
+            'size' => 2 * 1024 * 1024,
+            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($file->hashedbasename, $this->tenant->id);
+        Storage::disk('public')->put($thumbnailPath, 'thumbnail-bytes');
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $expectedThumbnailUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'thumbnail' => true]);
+
+        $this->assertEquals($expectedThumbnailUrl, $component->get('thumbnailUrl'));
+        $this->assertEquals($expectedThumbnailUrl, $component->get('previewUrl'));
     }
 
     #[Test]

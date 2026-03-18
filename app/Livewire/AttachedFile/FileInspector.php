@@ -236,7 +236,7 @@ class FileInspector extends BaseLivewireComponent
         $this->isLoading = true;
 
         // 実データが存在するかチェック
-        $realFileExists = AttachedFile::where('id', $id)->exists();
+        $realFileExists = AttachedFile::find($id) !== null;
 
         // 実データが存在する場合は実データを優先、存在しない場合でモックモードが有効なら場合モックデータを使用
         if (! $realFileExists && $id >= 10001 && $id <= 10012 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
@@ -434,6 +434,52 @@ class FileInspector extends BaseLivewireComponent
         }
     }
 
+    protected function getFileRouteUrl(array $extraQuery = [], bool $forceDownload = false): ?string
+    {
+        if (! $this->file) {
+            return null;
+        }
+
+        $tenantId = $this->tenantId ?? tenant('id') ?? $this->file->tenant_id;
+        if (! $tenantId) {
+            return null;
+        }
+
+        $parameters = array_merge([
+            'tenant' => $tenantId,
+            'attachedFile' => $this->file->id,
+        ], $extraQuery);
+
+        if ($forceDownload) {
+            $parameters['original'] = true;
+        }
+
+        return route('file.download', $parameters);
+    }
+
+    protected function getThumbnailRouteUrl(): ?string
+    {
+        if (! $this->file || $this->isMockFile()) {
+            return null;
+        }
+
+        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
+        if (! str_starts_with($mime, 'image/') || ! $this->file->hashedbasename) {
+            return null;
+        }
+
+        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+            $this->file->hashedbasename,
+            $this->file->tenant_id
+        );
+
+        if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+            return null;
+        }
+
+        return $this->getFileRouteUrl(['thumbnail' => true]);
+    }
+
     protected function preparePreviewState(): void
     {
         if (! $this->file) {
@@ -456,17 +502,7 @@ class FileInspector extends BaseLivewireComponent
         $showPreview = $isImage || $isPdf;
         $shouldUseThumbnail = ! $this->isMockFile() && (($this->file->size ?? 0) >= 1048576);
 
-        $thumbnailUrl = null;
-        if (! $this->isMockFile() && $isImage && $this->file->hashedbasename) {
-            $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
-                $this->file->hashedbasename,
-                $this->file->tenant_id
-            );
-
-            if (\Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
-                $thumbnailUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($thumbnailPath);
-            }
-        }
+        $thumbnailUrl = $this->getThumbnailRouteUrl();
 
         $originalUrl = null;
         $previewUrl = null;
@@ -477,8 +513,8 @@ class FileInspector extends BaseLivewireComponent
                     ? 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' . urlencode($this->file->original_filename ?? 'Image')
                     : ($isPdf ? '#pdf-preview' : null);
                 $previewUrl = $originalUrl;
-            } elseif ($this->file->path) {
-                $originalUrl = \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+            } else {
+                $originalUrl = $this->getFileRouteUrl();
                 $previewUrl = $thumbnailUrl ?: $originalUrl;
             }
         }
@@ -1145,20 +1181,7 @@ class FileInspector extends BaseLivewireComponent
     #[\Livewire\Attributes\Computed]
     public function thumbnailUrl(): ?string
     {
-        if (! $this->file || $this->isMockFile()) {
-            return null;
-        }
-
-        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
-            $this->file->hashedbasename,
-            $this->file->tenant_id
-        );
-
-        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
-            return \Illuminate\Support\Facades\Storage::disk('public')->url($thumbnailPath);
-        }
-
-        return null;
+        return $this->getThumbnailRouteUrl();
     }
 
     /**
@@ -1175,11 +1198,20 @@ class FileInspector extends BaseLivewireComponent
             return $this->previewUrl;
         }
 
-        if (! $this->file->path) {
+        return $this->getFileRouteUrl();
+    }
+
+    /**
+     * ダウンロード用のURLを取得
+     */
+    #[\Livewire\Attributes\Computed]
+    public function downloadUrl(): ?string
+    {
+        if (! $this->file || $this->isMockFile()) {
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+        return $this->getFileRouteUrl([], true);
     }
 
     /**
@@ -1209,18 +1241,14 @@ class FileInspector extends BaseLivewireComponent
             return null;
         }
 
-        // 実ファイルの場合
-        if (! $this->file->path) {
-            return null;
-        }
-
         // 画像で、かつサムネイルを表示すべき条件を満たし、サムネイルが存在する場合
-        if ($this->isImage() && $this->shouldUseThumbnail() && $this->thumbnailUrl()) {
+        $thumbnailUrl = $this->thumbnailUrl();
+        if ($this->isImage() && $this->shouldUseThumbnail() && $thumbnailUrl) {
             return $this->thumbnailUrl();
         }
 
-        // 通常はオリジナルのURLを返す
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+        // 通常はダウンロードルートをそのままプレビューに使う
+        return $this->originalUrl();
     }
 
     /**
