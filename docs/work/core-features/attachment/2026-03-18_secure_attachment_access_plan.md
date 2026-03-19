@@ -1,7 +1,7 @@
 # 添付画像・サムネイルのセキュア配信統一計画
 
 **作成日:** 2026-03-18  
-**ステータス:** 実装計画起草済み / 進行中（Sprint 3 反映中）  
+**ステータス:** ✅ 完了（2026-03-20）  
 **Tracking Issue:** [#110](https://github.com/torinky/LedgerLeap/issues/110)
 
 ---
@@ -242,4 +242,11 @@
   - **1 passed (9 assertions)**
 - `./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php --stop-on-failure`
   - **32 passed (80 assertions)**
+
+### 7.10 スプリント完了メモ
+
+- 予定していた `storage` 直参照の回収、セキュア配信への統一、サムネイル欠損時の処理中表示、重複キュー抑止まで完了した。
+- 追加の再利用知識は `docs/function/Attachment.md` と `docs/runbooks/ai-asset-maintenance-playbook.md` の既存導線で十分に追跡できるため、今回の完了時点では `.github` の追加更新は不要と判断した。
+- 最終コミット: `b7cc1503` (`fix(attachment): suppress duplicate thumbnail jobs`)
+- 以後のフォローアップが出る場合は、`issue #110` の後続ではなく新しい work log / issue として切り出す。
 
