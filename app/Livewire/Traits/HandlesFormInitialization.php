@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Traits;
 
+use App\Helpers\LedgerDefineBackgroundImageUrlHelper;
 use App\Models\ColumnTypes\AutoNumberType;
 use App\Models\ColumnTypes\UserNameType;
 use Illuminate\Support\Facades\Auth;
@@ -68,12 +69,16 @@ trait HandlesFormInitialization
     {
         $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)
             ->pluck('file', 'id')
-            ->map(function ($value) {
+            ->map(function ($value, $columnId) {
                 if (empty($value['path'])) {
                     return null;
                 }
 
-                return asset('storage/'.$value['path']);
+                return LedgerDefineBackgroundImageUrlHelper::thumbnailUrl(
+                    $this->ledgerDefineId,
+                    (int) $columnId,
+                    $this->tenantId ?? tenant('id'),
+                );
             })->toArray();
     }
 

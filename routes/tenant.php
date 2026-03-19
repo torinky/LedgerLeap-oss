@@ -56,6 +56,10 @@ Route::group([
     Route::get('/ledgerDefine/edit/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'edit'])
         ->name('ledgerDefine.edit')
         ->where('ledgerDefineId', '[0-9]+');
+    Route::get('/ledgerDefine/{ledgerDefineId}/background-image/{columnId}', [\App\Http\Controllers\LedgerDefineBackgroundImageController::class, 'download'])
+        ->name('ledgerDefine.background-image')
+        ->where('ledgerDefineId', '[0-9]+')
+        ->where('columnId', '[0-9]+');
     Route::put('/ledgerDefine/{ledgerDefineId}', [LedgerDefineUpdateController::class, 'update'])
         ->name('ledgerDefine.update')
         ->where('ledgerDefineId', '[0-9]+');

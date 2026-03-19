@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
@@ -613,6 +614,57 @@ class ModifyColumnTest extends TestCase
         $attachedFile = AttachedFile::where('hashedbasename', $hashedBasename)->first();
         $expectedPosterUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id, 'thumbnail' => true]);
         $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Poster URL should point to thumbnail API for image files.');
+    }
+
+    #[Test]
+    public function it_treats_pdf_optimized_images_as_images_for_filepond_initial_files()
+    {
+        Storage::fake('public');
+
+        tenancy()->initialize($this->tenant);
+        $hashedBasename = 'optimized_image.pdf';
+        $originalFilename = 'optimized_image.jpg';
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [
+                    $hashedBasename => $originalFilename,
+                ],
+            ],
+        ]);
+
+        $attachedFile = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'hashedbasename' => $hashedBasename,
+            'filename' => $originalFilename,
+            'column_id' => 0,
+            'path' => 'attachments/'.$hashedBasename,
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'image/jpeg',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $livewireTest = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $livewireTest->set('tenantId', $this->tenant->id);
+
+        $filePondFiles = $livewireTest->get('filePondInitialFiles');
+        $filesForColumn = $filePondFiles[0] ?? null;
+        $this->assertNotNull($filesForColumn);
+
+        $firstFile = $filesForColumn[0] ?? null;
+        $this->assertNotNull($firstFile);
+
+        $this->assertArrayHasKey('is_icon', $firstFile['options']['metadata']);
+        $this->assertFalse($firstFile['options']['metadata']['is_icon'], 'Optimized images should still be treated as image thumbnails.');
+
+        $expectedPosterUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id, 'thumbnail' => true]);
+        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster']);
+        $this->assertSame('image/jpeg', $firstFile['options']['file']['type']);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Livewire\LedgerDefine;
 
+use App\Helpers\LedgerDefineBackgroundImageUrlHelper;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HandlesFormGroups;
 use App\Models\LedgerDefine;
@@ -25,10 +26,9 @@ class Preview extends BaseLivewireComponent
 
     public function mount(Request $request)
     {
-        $ledgerDefine = new LedgerDefine;
         $this->ledgerDefineId = $this->ledgerDefineId ?? (int) $request->route('ledgerDefineId');
 
-        $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
+        $this->ledgerDefineRecord = LedgerDefine::findOrNew($this->ledgerDefineId);
         $this->initBackgroundImages();
         $this->initializeGroups();
     }
@@ -43,8 +43,8 @@ class Preview extends BaseLivewireComponent
     public function redraw()
     {
         //        dd('redrawing!');
-        $ledgerDefine = new LedgerDefine;
-        $this->ledgerDefineRecord = $ledgerDefine->where('id', $this->ledgerDefineId)->firstOrNew();
+        $this->ledgerDefineRecord = LedgerDefine::findOrNew($this->ledgerDefineId);
+        $this->initBackgroundImages();
         //        session()->flash('status', __('ledger.define.saved'));
         $this->initializeGroups();
         $this->render();
@@ -71,12 +71,16 @@ class Preview extends BaseLivewireComponent
     private function initBackgroundImages()
     {
         $this->backgroundImages = collect($this->ledgerDefineRecord->column_define)->pluck('file', 'id')
-            ->map(function ($value) {
+            ->map(function ($value, $columnId) {
                 if (empty($value['path'])) {
                     return null;
                 }
 
-                return asset('storage/'.$value['path']);
+                return LedgerDefineBackgroundImageUrlHelper::thumbnailUrl(
+                    $this->ledgerDefineId,
+                    (int) $columnId,
+                    $this->ledgerDefineRecord->tenant_id,
+                );
             })->toArray();
     }
 }

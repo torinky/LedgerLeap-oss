@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
+use App\Helpers\LedgerDefineBackgroundImageUrlHelper;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\ColumnDefine;
@@ -108,6 +109,16 @@ class ModifyColumn extends BaseLivewireComponent
         foreach ($this->columns as $index => $column) {
             if (isset($column['file']['path'])) {
                 $this->createThumbnail($column['file']['path']);
+                $this->columns[$index]['file']['url'] = LedgerDefineBackgroundImageUrlHelper::downloadUrl(
+                    $this->ledgerDefineRecord->id,
+                    (int) $column['id'],
+                    $this->tenantId,
+                );
+                $this->columns[$index]['file']['thumbnail_url'] = LedgerDefineBackgroundImageUrlHelper::thumbnailUrl(
+                    $this->ledgerDefineRecord->id,
+                    (int) $column['id'],
+                    $this->tenantId,
+                );
             }
             // アップロード用プロパティの初期化
             $this->columnUploadedFile[$column['id']] = null;
@@ -455,7 +466,20 @@ class ModifyColumn extends BaseLivewireComponent
             // $this->columns 配列内の該当カラムの 'file' プロパティを更新
             foreach ($this->columns as $index => &$column) {
                 if ($column['id'] == $columnId) {
-                    $column['file'] = ['name' => $originalFileName, 'path' => $filePath];
+                    $column['file'] = [
+                        'name' => $originalFileName,
+                        'path' => $filePath,
+                        'url' => LedgerDefineBackgroundImageUrlHelper::downloadUrl(
+                            $this->ledgerDefineRecord->id,
+                            (int) $columnId,
+                            $this->tenantId,
+                        ),
+                        'thumbnail_url' => LedgerDefineBackgroundImageUrlHelper::thumbnailUrl(
+                            $this->ledgerDefineRecord->id,
+                            (int) $columnId,
+                            $this->tenantId,
+                        ),
+                    ];
                     break;
                 }
             }

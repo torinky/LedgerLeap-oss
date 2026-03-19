@@ -1,7 +1,7 @@
 # 添付画像・サムネイルのセキュア配信統一計画
 
 **作成日:** 2026-03-18  
-**ステータス:** 実装計画起草済み / 進行中  
+**ステータス:** 実装計画起草済み / 進行中（Sprint 3 反映中）  
 **Tracking Issue:** [#110](https://github.com/torinky/LedgerLeap/issues/110)
 
 ---
@@ -194,4 +194,32 @@
 - `./vendor/bin/sail test tests/Feature/Livewire/Ledger/ModifyColumnTest.php tests/Feature/Components/AttachmentListComponentTest.php tests/Unit/Services/Ledger/ColumnHtmlServiceTest.php --stop-on-failure`
   - **34 passed**
   - FilePond 初期化、添付一覧描画、ColumnHtmlService の既存挙動が継続成功
+
+### 7.5 Sprint 3 の実装と想定外の派生修正
+
+- `app/Livewire/LedgerDefine/Preview.php`
+  - 背景画像URLの再描画で `initBackgroundImages()` を再実行するように変更
+- `app/Livewire/Traits/HandlesFormInitialization.php`
+  - 背景画像URLを tenant-aware の helper 経由へ統一
+- `resources/views/livewire/ledger-define/partials/column-options.blade.php`
+  - 背景画像の `asset('storage/...')` 直参照を排除し、`thumbnail_url` / `url` 前提へ統一
+- `app/Http/Controllers/AttachedFileDownloadController.php`
+  - `thumbnail=true` でサムネイルが未生成の画像は `GenerateThumbnail` を再発行し、処理中 SVG を返すように変更
+  - サムネイル生成待ちのときに PDF アイコンへ落ちないようにした
+- `tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php`
+  - サムネイル欠損時のキュー発行と処理中レスポンスを回帰テスト化
+
+### 7.6 Sprint 3 / 派生修正の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Livewire/LedgerDefine/ModifyColumnTest.php --stop-on-failure`
+  - **10 passed**
+- `./vendor/bin/sail test tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php --stop-on-failure`
+  - **1 passed**
+- `./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php --filter=it_uses_thumbnail_route_for_large_image_files_when_thumbnail_exists --stop-on-failure`
+  - **1 passed**
+
+### 7.7 想定外の作業メモ
+
+- Issue #110 の調査中に、`thumbnail=true` の欠損時に PDF アイコンへ落ちる経路を確認したため、`GenerateThumbnail` の再発行と処理中プレースホルダ返却を追加対応した。
+- これは当初の ledger-define 背景画像整理とは別の派生修正だが、添付ファイルのセキュア配信を壊さないために必要だった。
 

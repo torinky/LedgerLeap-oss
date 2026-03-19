@@ -123,6 +123,128 @@ class ModifyColumnTest extends TestCase
         $preview->assertDontSee('Column 1');
     }
 
+    #[Test]
+    public function preview_background_images_refresh_on_sync_event()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Background Image',
+                    'type' => 'files',
+                    'order' => 1,
+                ]),
+            ],
+        ]);
+
+        $preview = Livewire::test(Preview::class, [
+            'ledgerDefineId' => $ledgerDefine->id,
+        ]);
+
+        $this->assertNull($preview->get('backgroundImages')[0]);
+
+        $ledgerDefine->column_define = [
+            new ColumnDefine((object) [
+                'id' => 0,
+                'name' => 'Background Image',
+                'type' => 'files',
+                'order' => 1,
+                'file' => [
+                    'name' => 'background.png',
+                    'path' => 'column_files/background.png',
+                ],
+            ]),
+        ];
+        $ledgerDefine->save();
+
+        $preview->dispatch('ledgerDefineRecordStored');
+
+        $expectedUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+            'thumbnail' => true,
+        ]);
+
+        $this->assertSame($expectedUrl, $preview->get('backgroundImages')[0]);
+    }
+
+    #[Test]
+    public function preview_background_images_use_secure_routes()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Background Image',
+                    'type' => 'files',
+                    'order' => 1,
+                    'file' => [
+                        'name' => 'background.png',
+                        'path' => 'column_files/background.png',
+                    ],
+                ]),
+            ],
+        ]);
+
+        $preview = Livewire::test(Preview::class, [
+            'ledgerDefineId' => $ledgerDefine->id,
+        ]);
+
+        $expectedUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+            'thumbnail' => true,
+        ]);
+
+        $this->assertSame($expectedUrl, $preview->get('backgroundImages')[0]);
+    }
+
+    #[Test]
+    public function modify_column_initial_files_include_secure_background_image_routes()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Background Image',
+                    'type' => 'files',
+                    'order' => 1,
+                    'file' => [
+                        'name' => 'background.png',
+                        'path' => 'column_files/background.png',
+                    ],
+                ]),
+            ],
+        ]);
+
+        $component = Livewire::test(ModifyColumn::class, [
+            'ledgerDefineId' => $ledgerDefine->id,
+        ]);
+
+        $expectedOriginalUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+        ]);
+        $expectedThumbnailUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+            'thumbnail' => true,
+        ]);
+
+        $this->assertSame($expectedOriginalUrl, $component->get('columns')[0]['file']['url']);
+        $this->assertSame($expectedThumbnailUrl, $component->get('columns')[0]['file']['thumbnail_url']);
+    }
+
     // --- Date Type Specific Tests (Migrated from ModifyColumnDateTypeTest) ---
 
     #[Test]

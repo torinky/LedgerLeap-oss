@@ -15,7 +15,6 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -460,7 +459,9 @@ class ModifyColumn extends CreateColumn
                     $isIconFlag = false; // デフォルトはfalse（画像扱い）
 
                     if ($currentAttachedFile) {
-                        $mimeType = $currentAttachedFile->mime ?? 'application/octet-stream';
+                        $mimeType = $currentAttachedFile->original_mime_type
+                            ?? $currentAttachedFile->mime
+                            ?? 'application/octet-stream';
                         $isImage = str_starts_with($mimeType, 'image/');
 
                         if ($isImage) {
@@ -487,7 +488,9 @@ class ModifyColumn extends CreateColumn
                             'file' => [
                                 'name' => $originalFilename,
                                 'size' => $currentAttachedFile?->size ?? 0,
-                                'type' => $currentAttachedFile?->mime ?? 'application/octet-stream',
+                                'type' => $currentAttachedFile?->original_mime_type
+                                    ?? $currentAttachedFile?->mime
+                                    ?? 'application/octet-stream',
                             ],
                             'metadata' => [
                                 'filename' => $originalFilename,
