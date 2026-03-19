@@ -50,7 +50,7 @@ graph TD
     M --> N
     
     N --> O[最適テキストを選択]
-    O --> P[content保存・検索可能に]
+    O --> P[content saved / searchable]
     
     style A fill:#f9f
     style P fill:#9f9
@@ -205,6 +205,12 @@ if ($file->ocr_processed_at) {
 -   **VLM再処理:** VLMエンジンによる処理を再実行します。
 -   **全エンジン再処理:** VLM、OCR、Tikaの全処理を最初からやり直します。
 -   **OCR PDF再ダウンロード:** OCR処理によって生成されたテキスト付きPDFをダウンロードできます。
+
+#### サムネイル生成の重複抑止
+
+- `thumbnail=true` のリクエストでサムネイルが未生成の場合は、`GenerateThumbnail` を1件だけキュー投入します。
+- 同じ `attachedFileId` のサムネイルがすでに処理中（`OPTIMIZING`）の場合は、追加のキュー投入を行いません。
+- 100MB級の TIFF のように生成時間が長い画像でも、同一サムネイルのキュー多発を防ぎます。
 
 ### 3.6. ファイルの削除
 

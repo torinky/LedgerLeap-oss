@@ -53,7 +53,7 @@ class AttachedFileDownloadControllerTest extends TestCase
     }
 
     #[Test]
-    public function it_queues_thumbnail_generation_when_thumbnail_is_missing(): void
+    public function it_queues_thumbnail_generation_only_once_when_thumbnail_is_missing(): void
     {
         Storage::fake('public');
         Queue::fake();
@@ -90,14 +90,19 @@ class AttachedFileDownloadControllerTest extends TestCase
             'thumbnail' => true,
         ]));
 
+        $secondResponse = $this->get(tenant_route('file.download', [
+            'attachedFile' => $file->id,
+            'thumbnail' => true,
+        ]));
+
         $response->assertOk();
+        $secondResponse->assertOk();
         $response->assertHeader('Content-Type', 'image/svg+xml');
+        $secondResponse->assertHeader('Content-Type', 'image/svg+xml');
         $this->assertStringContainsString('Processing', $response->getContent());
         $this->assertSame(AttachedFileStatus::OPTIMIZING->value, $file->fresh()->status->value);
 
-        Queue::assertPushed(GenerateThumbnail::class, function (GenerateThumbnail $job) use ($file) {
-            return $job->attachedFileId === $file->id;
-        });
+        Queue::assertPushed(GenerateThumbnail::class, 1);
     }
 }
 

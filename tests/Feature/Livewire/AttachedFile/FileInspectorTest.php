@@ -2,6 +2,9 @@
 
 namespace Tests\Feature\Livewire\AttachedFile;
 
+use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Ledger\GenerateThumbnail;
 use App\Jobs\Ledger\RetryVlmProcessingJob;
 use App\Livewire\AttachedFile\FileInspector;
 use App\Models\AttachedFile;
@@ -9,9 +12,9 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
-use App\Helpers\AttachedFilePathHelper;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -232,6 +235,39 @@ class FileInspectorTest extends TestCase
 
         $this->assertEquals($expectedThumbnailUrl, $component->get('thumbnailUrl'));
         $this->assertEquals($expectedThumbnailUrl, $component->get('previewUrl'));
+    }
+
+    #[Test]
+    public function it_queues_thumbnail_generation_only_once_when_thumbnail_is_missing()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Storage::fake('public');
+        Queue::fake();
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'missing_thumbnail.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'hashedbasename' => 'missing_thumbnail.jpg',
+            'path' => 'attachments/missing_thumbnail.jpg',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertSame(AttachedFileStatus::OPTIMIZING->value, $file->fresh()->status->value);
+        Queue::assertPushed(GenerateThumbnail::class, 1);
+        $this->assertTrue($component->get('showPreview'));
     }
 
     #[Test]

@@ -157,15 +157,21 @@ class AttachedFileDownloadController extends Controller
 
     private function queueThumbnailGeneration(AttachedFile $attachedFile): void
     {
-        if ($attachedFile->status !== AttachedFileStatus::OPTIMIZING) {
-            $attachedFile->update(['status' => AttachedFileStatus::OPTIMIZING->value]);
+        if ($attachedFile->status === AttachedFileStatus::OPTIMIZING) {
+            Log::info('[DownloadController@download] Thumbnail generation already in progress; skipping dispatch.', [
+                'attached_file_id' => $attachedFile->id,
+            ]);
+
+            return;
         }
+
+        $attachedFile->update(['status' => AttachedFileStatus::OPTIMIZING->value]);
 
         GenerateThumbnail::dispatch($attachedFile->id);
 
         Log::info('[DownloadController@download] Thumbnail generation queued.', [
             'attached_file_id' => $attachedFile->id,
-            'status' => $attachedFile->fresh()?->status?->value,
+            'status' => AttachedFileStatus::OPTIMIZING->value,
         ]);
     }
 

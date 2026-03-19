@@ -6,6 +6,7 @@ use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Models\AttachedFile;
 use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldBeUnique;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
@@ -16,11 +17,13 @@ use Illuminate\Support\Str;
 use Intervention\Image\ImageManager;
 use Throwable;
 
-class GenerateThumbnail implements ShouldQueue
+class GenerateThumbnail implements ShouldBeUnique, ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
 
     public $attachedFileId;
+
+    public int $uniqueFor = 7200;
 
     // ジョブの最大試行回数を設定
     public $tries = 3;
@@ -31,6 +34,11 @@ class GenerateThumbnail implements ShouldQueue
     public function __construct(int $attachedFileId)
     {
         $this->attachedFileId = $attachedFileId;
+    }
+
+    public function uniqueId(): string
+    {
+        return (string) $this->attachedFileId;
     }
 
     /**
@@ -58,7 +66,10 @@ class GenerateThumbnail implements ShouldQueue
         // ▼▼▼ ソースファイルのパスではなく、コンテンツを取得するように変更 ▼▼▼
         $sourcePath = $attachedFile->path; // デフォルトは現在のパス
         $sourcePathForLog = $attachedFile->path; // ログ出力用にパスを保持
-        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename, $attachedFile->tenant_id);
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(
+            $attachedFile->hashedbasename,
+            $attachedFile->tenant_id,
+        );
 
         // サムネイルが既に存在する場合はスキップ
         if (Storage::disk('public')->exists($thumbnailPath)) {

@@ -223,3 +223,23 @@
 - Issue #110 の調査中に、`thumbnail=true` の欠損時に PDF アイコンへ落ちる経路を確認したため、`GenerateThumbnail` の再発行と処理中プレースホルダ返却を追加対応した。
 - これは当初の ledger-define 背景画像整理とは別の派生修正だが、添付ファイルのセキュア配信を壊さないために必要だった。
 
+### 7.8 サムネイル重複キュー抑止の追加対応
+
+- `app/Jobs/Ledger/GenerateThumbnail.php`
+  - `ShouldBeUnique` を実装し、同一 `attachedFileId` の重複 dispatch をキュー段階で抑止するように変更
+- `app/Http/Controllers/AttachedFileDownloadController.php`
+  - `OPTIMIZING` への遷移が成功したときだけサムネイル生成ジョブを積むように変更
+- `app/Livewire/AttachedFile/FileInspector.php`
+  - `openInspector` を繰り返しても同じサムネイル生成ジョブが連続 dispatch されないように変更
+- `tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php`
+  - `thumbnail=true` を 2 回呼んでも 1 件しか queued されないことを回帰テスト化
+- `tests/Feature/Livewire/AttachedFile/FileInspectorTest.php`
+  - FileInspector 側の重複 dispatch 抑止も回帰テスト化
+
+### 7.9 サムネイル重複キュー抑止の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php --stop-on-failure`
+  - **1 passed (9 assertions)**
+- `./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php --stop-on-failure`
+  - **32 passed (80 assertions)**
+

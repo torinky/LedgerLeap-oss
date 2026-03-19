@@ -2,6 +2,7 @@
 
 namespace App\Livewire\AttachedFile;
 
+use App\Enums\AttachedFileStatus;
 use App\Helpers\SearchHelper;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
@@ -331,7 +332,7 @@ class FileInspector extends BaseLivewireComponent
                 'active_source' => $this->activeSource,
             ]);
 
-                $this->preparePreviewState();
+            $this->preparePreviewState();
         } catch (\Exception $e) {
             \Illuminate\Support\Facades\Log::error('FileInspector loadData failed', [
                 'id' => $id,
@@ -424,8 +425,22 @@ class FileInspector extends BaseLivewireComponent
             $this->file->tenant_id
         );
 
-        // サムネイルが存在しない場合は生成ジョブをディスパッチ
+        // サムネイルが存在しない場合は、処理中状態へ遷移できたときだけ生成ジョブをディスパッチ
         if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+            if ($this->file->status === AttachedFileStatus::OPTIMIZING) {
+                \Illuminate\Support\Facades\Log::info(
+                    'FileInspector: Thumbnail generation already in progress; skipping dispatch',
+                    [
+                        'file_id' => $this->file->id,
+                        'filename' => $this->file->filename,
+                    ]
+                );
+
+                return;
+            }
+
+            $this->file->update(['status' => AttachedFileStatus::OPTIMIZING->value]);
+
             \App\Jobs\Ledger\GenerateThumbnail::dispatch($this->file->id);
             \Illuminate\Support\Facades\Log::info('FileInspector: Dispatched thumbnail generation job', [
                 'file_id' => $this->file->id,
@@ -510,7 +525,7 @@ class FileInspector extends BaseLivewireComponent
         if ($showPreview) {
             if ($this->isMockFile()) {
                 $originalUrl = $isImage
-                    ? 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text=' . urlencode($this->file->original_filename ?? 'Image')
+                    ? 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.urlencode($this->file->original_filename ?? 'Image')
                     : ($isPdf ? '#pdf-preview' : null);
                 $previewUrl = $originalUrl;
             } else {
@@ -835,7 +850,6 @@ class FileInspector extends BaseLivewireComponent
 
     public function getPreviewText(bool $withHighlight = true): ?string
     {
-
 
         if (! $this->file) {
             return null;
