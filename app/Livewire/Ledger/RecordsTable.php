@@ -6,6 +6,7 @@ use App\Http\Requests\Ledger\SearchRequest;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HasSortingLabels;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -13,9 +14,6 @@ use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
 use App\Services\SynonymService;
-use Illuminate\Contracts\Foundation\Application;
-use Illuminate\Contracts\View\Factory;
-use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive; // 追加
@@ -26,7 +24,7 @@ use Psr\Container\NotFoundExceptionInterface;
 
 class RecordsTable extends BaseLivewireComponent
 {
-    use HasSortingLabels, InitializesTenantContext, Toast, WithPagination;
+    use HasSortingLabels, InitializesTenantContext, LogPerformance, Toast, WithPagination;
 
     #[Reactive]
     public $perPage = 100;
@@ -74,6 +72,10 @@ class RecordsTable extends BaseLivewireComponent
     public $keywords = [];
 
     public $totalRecords;
+
+    public bool $totalRecordsLoaded = false;
+
+    public string $totalRecordsQuerySignature = '';
 
     #[Reactive]
     public $highlights = [];
@@ -126,6 +128,14 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function mount(SynonymServiceConfig $synonymServiceConfig, SearchRequest $request)
     {
+        $startedAt = microtime(true);
+        $selectedFolderCount = is_countable($this->selectedFolderIds)
+            ? count($this->selectedFolderIds)
+            : 0;
+        $selectedLedgerDefineCount = is_countable($this->selectedLedgerDefineIds)
+            ? count($this->selectedLedgerDefineIds)
+            : 0;
+
         if (session()->has('success')) {
             $this->success(session('success'));
         }
@@ -144,6 +154,13 @@ class RecordsTable extends BaseLivewireComponent
 
         // 初期orderByLabelの設定
         $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
+
+        $this->logPerformance('ledger_records_mount', (microtime(true) - $startedAt) * 1000, [
+            'current_folder_id' => $this->currentFolderId,
+            'selected_folder_count' => $selectedFolderCount,
+            'selected_ledger_define_count' => $selectedLedgerDefineCount,
+            'has_workflow_enabled' => $this->hasWorkflowEnabled,
+        ]);
     }
 
     /**
@@ -164,6 +181,67 @@ class RecordsTable extends BaseLivewireComponent
         $this->searchContext->highlights = $this->highlights ?? [];
         $this->searchContext->synonyms = $this->synonyms ?? [];
         $this->searchContext->filter = $this->filter ?? [];
+    }
+
+    protected function getPerformanceContext(): array
+    {
+        $selectedFolderCount = is_countable($this->selectedFolderIds)
+            ? count($this->selectedFolderIds)
+            : 0;
+        $selectedLedgerDefineCount = is_countable($this->selectedLedgerDefineIds)
+            ? count($this->selectedLedgerDefineIds)
+            : 0;
+
+        return [
+            'tenant_id' => $this->currentTenantId ?? tenant()?->id,
+            'current_folder_id' => $this->currentFolderId,
+            'display_level' => $this->displayLevel,
+            'per_page' => $this->perPage,
+            'use_semantic_search' => $this->useSemanticSearch,
+            'selected_folder_count' => $selectedFolderCount,
+            'selected_ledger_define_count' => $selectedLedgerDefineCount,
+            'has_workflow_enabled' => $this->hasWorkflowEnabled,
+        ];
+    }
+
+    protected function clearTotalRecordsCache(): void
+    {
+        $this->totalRecordsLoaded = false;
+        $this->totalRecordsQuerySignature = '';
+    }
+
+    protected function buildTotalRecordsQuerySignature(array $searchTargetLedgerDefineIds): string
+    {
+        $payload = [
+            'search' => $this->search,
+            'search_target_ledger_define_ids' => array_values(array_map(
+                'intval',
+                array_unique($searchTargetLedgerDefineIds)
+            )),
+            'keywords' => $this->searchContext?->keywords ?? [],
+            'highlights' => $this->searchContext?->highlights ?? [],
+            'synonyms' => $this->searchContext?->synonyms ?? [],
+            'filter' => $this->searchContext?->filter ?? [],
+            'filter_status' => $this->filterStatus,
+            'use_semantic_search' => $this->useSemanticSearch,
+            'use_synonym' => $this->useSynonym,
+            'use_technical_term' => $this->useTechnicalTerm,
+            'selected_ledger_define_ids' => array_values(array_map(
+                'intval',
+                $this->selectedLedgerDefineIds ?? []
+            )),
+            'selected_folder_ids' => array_values(array_map(
+                'intval',
+                $this->selectedFolderIds ?? []
+            )),
+        ];
+
+        return sha1(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+    }
+
+    protected function dispatchTotalRecordsChanged(int $totalRecords): void
+    {
+        $this->dispatch('ledger-records-count-updated', total: $totalRecords);
     }
 
     /**
@@ -274,14 +352,12 @@ class RecordsTable extends BaseLivewireComponent
 
     /**
      * コンポーネントの表示を更新する
-     *
-     * @return Application|Factory|View
      */
     #[On('ledgerStored')]
     #[On('permissions-changed')]
-    #[On('recordsUpdated')]
-    public function refresh()
+    public function refresh(): void
     {
+        $this->clearTotalRecordsCache();
         $this->prepareFolderAsset();
     }
 
@@ -299,8 +375,22 @@ class RecordsTable extends BaseLivewireComponent
 
     public function render()
     {
+        $startedAt = microtime(true);
         $tenantId = tenancy()->tenant?->id ?? 'central';
         $dbName = \DB::connection()->getDatabaseName();
+        $ledgerRecords = collect();
+        $ledgerDefineRecords = collect();
+        $ledgerSelectColumns = [
+            'id',
+            'ledger_define_id',
+            'content',
+            'content_attached',
+            'updated_at',
+            'status',
+            'composite_score',
+            'default_sort_value',
+        ];
+        $prepareFolderAssetStartedAt = microtime(true);
         Log::info('[MCP Debug] RecordsTable.render START', [
             'tenantId' => $tenantId,
             'dbName' => $dbName,
@@ -314,6 +404,7 @@ class RecordsTable extends BaseLivewireComponent
         // render で毎回呼ぶのを避けるため、必要な時のみ実行されるように mount と updatedXXX で管理されるべきだが、
         // 現状は安全のためここでの実行を維持（クエリキャッシュがあれば高速）。
         $this->prepareFolderAsset();
+        $prepareFolderAssetDurationMs = (microtime(true) - $prepareFolderAssetStartedAt) * 1000;
 
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: [
@@ -321,39 +412,50 @@ class RecordsTable extends BaseLivewireComponent
             'filter' => $this->filter,
         ]);
 
+        $searchTargetLedgerDefineIdsStartedAt = microtime(true);
+        $searchTargetLedgerDefineIdsCount = 0;
+        $searchTargetLedgerDefineIdsMode = 'unscoped';
+        $displayLedgerDefinesDurationMs = 0.0;
+        $displayLedgerDefinesQueryDurationMs = 0.0;
+        $displayLedgerDefinesLoadDurationMs = 0.0;
+        $breadcrumbsPreparedDurationMs = 0.0;
+        $ledgerRecordsQueryPrepDurationMs = 0.0;
+        $relatedLedgerDefineIdsDurationMs = 0.0;
+        $missingDefineFetchDurationMs = 0.0;
+        $ledgerRecordsQueryCountDurationMs = 0.0;
+        $ledgerRecordsQueryCountCacheHit = false;
+        $ledgerRecordsQueryPaginateDurationMs = 0.0;
+        $ledgerRecordsDefineLoadDurationMs = 0.0;
+        $pageLedgerDefineCount = 0;
+
         // グローバル検索かどうかの判定
-        $isGlobalSearch = ! empty($this->search) && empty($this->selectedLedgerDefineIds) && empty($this->selectedFolderIds);
+        $isGlobalSearch = ! empty($this->search)
+            && empty($this->selectedLedgerDefineIds)
+            && empty($this->selectedFolderIds);
 
         if ($isGlobalSearch) {
-            // グローバル検索の場合、すべての台帳定義を対象にする
-            $displayLedgerDefines = LedgerDefine::query()
+            // グローバル検索の場合、すべての台帳定義IDを対象にする
+            $searchTargetLedgerDefineIdsMode = 'global';
+            $searchTargetLedgerDefineIds = LedgerDefine::query()
                 ->searchTags($this->searchContext->tags)
-                ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
-                ->get();
-            $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
+                ->pluck('id')
+                ->toArray();
         } else {
             // 通常の場合、選択された台帳定義のみを対象にする
-            $displayLedgerDefines = LedgerDefine::WhereIn('id', $this->selectedLedgerDefineIds)
+            $searchTargetLedgerDefineIdsMode = ! empty($this->selectedLedgerDefineIds)
+                ? 'selected'
+                : 'unscoped';
+            $searchTargetLedgerDefineIds = LedgerDefine::whereIn('id', $this->selectedLedgerDefineIds)
                 ->searchTags($this->searchContext->tags)
-                ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
-                ->get();
-            $searchTargetLedgerDefineIds = $displayLedgerDefines->pluck('id')->toArray() ?? [];
+                ->pluck('id')
+                ->toArray();
         }
-
-        $breadcrumbsPerLedgerDefine = [];
-        foreach ($displayLedgerDefines as $displayLedgerDefine) {
-            // 台帳ごとのパンくずリストを準備
-            if ($displayLedgerDefine->folder) {
-                // with('folder.ancestors') により、ここでは追加クエリが発生しないはず
-                $ancestors = $displayLedgerDefine->folder->ancestors;
-                $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = $ancestors->push($displayLedgerDefine->folder)->all();
-            } else {
-                // フォルダが存在しない場合のフォールバック処理
-                $breadcrumbsPerLedgerDefine[$displayLedgerDefine->id] = [];
-            }
-        }
+        $searchTargetLedgerDefineIdsCount = count($searchTargetLedgerDefineIds);
+        $searchTargetLedgerDefineIdsDurationMs = (microtime(true) - $searchTargetLedgerDefineIdsStartedAt) * 1000;
 
         // 表示対象の台帳に紐づく仕訳データを取得
+        $ledgerRecordsQueryStartedAt = microtime(true);
+        $ledgerRecordsDefineLoadDurationMs = 0.0;
         if ($this->useSemanticSearch && ! empty($this->search)) {
             // ============================================
             // セマンティック検索モード
@@ -380,6 +482,11 @@ class RecordsTable extends BaseLivewireComponent
             if (empty($ragResults)) {
                 // 検索結果がない場合
                 $this->totalRecords = 0;
+                $this->totalRecordsLoaded = true;
+                $this->totalRecordsQuerySignature = $this->buildTotalRecordsQuerySignature(
+                    $searchTargetLedgerDefineIds
+                );
+                $this->dispatchTotalRecordsChanged($this->totalRecords);
                 $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
                     [],
                     0,
@@ -393,12 +500,16 @@ class RecordsTable extends BaseLivewireComponent
                 $scoreMap = collect($ragResults)->pluck('max_score', 'ledger_id');
 
                 $ledgersCollection = Ledger::whereIn('id', $ledgerIds)
+                    ->select($ledgerSelectColumns)
                     ->whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
                     ->when(! empty($this->filterStatus), function ($query) {
                         return $query->where('status', $this->filterStatus);
                     })
-                    ->with(['define'])
                     ->get();
+
+                $ledgerRecordsDefineLoadStartedAt = microtime(true);
+                $ledgersCollection->load(['define:id,folder_id,workflow_enabled,column_define']);
+                $ledgerRecordsDefineLoadDurationMs = (microtime(true) - $ledgerRecordsDefineLoadStartedAt) * 1000;
 
                 // Step 3: スコアを動的属性として付与
                 $ledgersCollection->each(function ($ledger) use ($scoreMap) {
@@ -413,6 +524,11 @@ class RecordsTable extends BaseLivewireComponent
 
                 // Step 5: ページネーション
                 $this->totalRecords = $sortedLedgers->count();
+                $this->totalRecordsLoaded = true;
+                $this->totalRecordsQuerySignature = $this->buildTotalRecordsQuerySignature(
+                    $searchTargetLedgerDefineIds
+                );
+                $this->dispatchTotalRecordsChanged($this->totalRecords);
                 $currentPage = \Illuminate\Pagination\Paginator::resolveCurrentPage();
                 $currentPageItems = $sortedLedgers->slice(($currentPage - 1) * $this->perPage, $this->perPage)->values();
 
@@ -424,8 +540,9 @@ class RecordsTable extends BaseLivewireComponent
                 );
 
                 // 台帳定義情報を取得
+                $pageLedgerDefineCount = count($ledgerRecords->pluck('ledger_define_id')->unique()->toArray());
                 $ledgerDefineRecords = LedgerDefine::whereIn('id', $ledgerRecords->pluck('ledger_define_id')->unique()->toArray())
-                    ->with(['folder.ancestors.roles', 'folder.roles', 'tags'])
+                    ->with(['folder.ancestors', 'tags'])
                     ->get()
                     ->keyBy('id');
             }
@@ -433,13 +550,14 @@ class RecordsTable extends BaseLivewireComponent
             // ============================================
             // 通常検索モード
             // ============================================
+            $ledgerRecordsQueryPrepStartedAt = microtime(true);
             $ledgerRecordsQuery = Ledger::whereIn('ledger_define_id', $searchTargetLedgerDefineIds)
+                ->select($ledgerSelectColumns)
                 ->searchContext($this->searchContext)
                 ->contentsFilter($this->filter)
                 ->when(! empty($this->filterStatus), function ($query) {
                     return $query->where('status', $this->filterStatus);
                 })
-                ->with(['define.folder'])
                 ->orderBy('ledger_define_id', 'asc')
                 ->when($this->orderBy === 'default', function ($query) {
                     // 新設した denormalized カラムを使用して高速にソート
@@ -455,71 +573,93 @@ class RecordsTable extends BaseLivewireComponent
                     }
                 });
 
-            // 台帳定義とフォルダ情報を先に取得
-            // $displayLedgerDefines を再利用して重複クエリを削減
-            $relatedLedgerDefineIds = (clone $ledgerRecordsQuery)
-                ->reorder()
-                ->distinct()
-                ->pluck('ledger_define_id')
-                ->toArray();
+            $ledgerRecordsQueryPrepDurationMs = (microtime(true) - $ledgerRecordsQueryPrepStartedAt) * 1000;
 
-            // 既に取得済みの$displayLedgerDefinesから必要なものを抽出
-            // 追加で必要なものがあれば取得
-            $displayDefineIds = $displayLedgerDefines->pluck('id')->toArray();
-            $missingDefineIds = array_diff($relatedLedgerDefineIds, $displayDefineIds);
+            $totalRecordsQuerySignature = $this->buildTotalRecordsQuerySignature(
+                $searchTargetLedgerDefineIds
+            );
+            $ledgerRecordsQueryCountCacheHit =
+                $this->totalRecordsLoaded
+                && $this->totalRecordsQuerySignature === $totalRecordsQuerySignature;
 
-            if (! empty($missingDefineIds)) {
-                // 不足している台帳定義を追加取得
-                $additionalDefines = LedgerDefine::whereIn('id', $missingDefineIds)
-                    ->with(['folder.ancestors.roles', 'folder.roles', 'roles', 'tags'])
-                    ->get();
-                $displayLedgerDefines = $displayLedgerDefines->merge($additionalDefines);
-            }
-
-            $ledgerDefineRecords = $displayLedgerDefines->whereIn('id', $relatedLedgerDefineIds)->keyBy('id');
-
-            // 総数を取得
-            Log::info('[MCP Debug] RecordsTable.render searchTargetLedgerDefineIds: '.json_encode($searchTargetLedgerDefineIds));
-            Log::info('[MCP Debug] RecordsTable.render search: '.$this->search);
-
-            $newTotal = $ledgerRecordsQuery->count();
-            Log::info('[MCP Debug] RecordsTable.render count result', [
-                'count' => $newTotal,
-                'sql' => $ledgerRecordsQuery->toSql(),
-                'bindings' => $ledgerRecordsQuery->getBindings(),
-            ]);
-
-            if ($this->totalRecords !== $newTotal) {
+            if ($ledgerRecordsQueryCountCacheHit) {
+                $newTotal = (int) $this->totalRecords;
+            } else {
+                $ledgerRecordsQueryCountStartedAt = microtime(true);
+                $newTotal = $ledgerRecordsQuery->count();
+                $ledgerRecordsQueryCountDurationMs =
+                    (microtime(true) - $ledgerRecordsQueryCountStartedAt) * 1000;
                 $this->totalRecords = $newTotal;
-                $this->dispatch('recordsUpdated', total: $this->totalRecords);
+                $this->totalRecordsLoaded = true;
+                $this->totalRecordsQuerySignature = $totalRecordsQuerySignature;
+                $this->dispatchTotalRecordsChanged($this->totalRecords);
             }
-
-            Log::info('[MCP Debug] RecordsTable.render totalRecords: '.$this->totalRecords);
-            Log::info('[MCP Debug] RecordsTable.render query SQL: '.$ledgerRecordsQuery->toSql());
-            Log::info('[MCP Debug] RecordsTable.render query bindings: '.json_encode($ledgerRecordsQuery->getBindings()));
 
             // ページネーション実行
+            $ledgerRecordsQueryPaginateStartedAt = microtime(true);
             $ledgerRecords = $ledgerRecordsQuery->simplePaginate($this->perPage);
+            $ledgerRecordsQueryPaginateDurationMs = (microtime(true) - $ledgerRecordsQueryPaginateStartedAt) * 1000;
+
+            $ledgerRecordsDefineLoadStartedAt = microtime(true);
+            $ledgerRecords->getCollection()->load(['define:id,folder_id,workflow_enabled,column_define']);
+            $ledgerRecordsDefineLoadDurationMs = (microtime(true) - $ledgerRecordsDefineLoadStartedAt) * 1000;
+
+            $pageLedgerDefineIds = $ledgerRecords->pluck('ledger_define_id')->unique()->toArray();
+            $pageLedgerDefineCount = count($pageLedgerDefineIds);
+            $ledgerDefineRecords = LedgerDefine::whereIn('id', $pageLedgerDefineIds)
+                ->with(['folder.ancestors', 'tags'])
+                ->get()
+                ->keyBy('id');
             //            Log::info('RecordsTable render: ledgerRecords after simplePaginate', ['ledgerRecords' => $ledgerRecords->toArray()]);
         }
+        $ledgerRecordsQueryDurationMs = (microtime(true) - $ledgerRecordsQueryStartedAt) * 1000;
+
+        $breadcrumbsPerLedgerDefine = [];
+        $breadcrumbsPreparedStartedAt = microtime(true);
+        foreach ($ledgerDefineRecords as $ledgerDefineRecord) {
+            if ($ledgerDefineRecord->folder) {
+                $ancestors = $ledgerDefineRecord->folder->ancestors;
+                $breadcrumbsPerLedgerDefine[$ledgerDefineRecord->id] = $ancestors->push($ledgerDefineRecord->folder)->all();
+            } else {
+                $breadcrumbsPerLedgerDefine[$ledgerDefineRecord->id] = [];
+            }
+        }
+        $breadcrumbsPreparedDurationMs = (microtime(true) - $breadcrumbsPreparedStartedAt) * 1000;
 
         // 表示される台帳レコードIDリストを取得
+        $attachmentsFetchStartedAt = microtime(true);
         $ledgerIds = $ledgerRecords->pluck('id');
         // 関連する添付ファイル情報を一括で取得
         $allAttachments = AttachedFile::whereIn('ledger_id', $ledgerIds)
             ->get()
             ->groupBy('ledger_id'); // ledger_id ごとにグループ化
+        $attachmentsFetchDurationMs = (microtime(true) - $attachmentsFetchStartedAt) * 1000;
 
         // 検索結果のフラグを設定
-        $ledgerRecords->getCollection()->transform(function ($ledger) {
+        $normalizeStartedAt = microtime(true);
+        $contentNormalizeDurationMs = 0.0;
+        $contentAttachedNormalizeDurationMs = 0.0;
+        $searchHitMarkDurationMs = 0.0;
+        $ledgerRecords->getCollection()->transform(function ($ledger) use (
+            &$contentNormalizeDurationMs,
+            &$contentAttachedNormalizeDurationMs,
+            &$searchHitMarkDurationMs
+        ) {
             // DBから取得したデータを正規化（二重エンコード等の破損データへの耐性を持たせる）
             // これにより、content_attached が文字列（破損データ）の場合でも配列に復元される。
+            $contentNormalizeStartedAt = microtime(true);
             $ledger->content = $ledger->define->normalizeByColumnDefine($ledger->content ?? []);
+            $contentNormalizeDurationMs += (microtime(true) - $contentNormalizeStartedAt) * 1000;
+
+            $contentAttachedNormalizeStartedAt = microtime(true);
             $ledger->content_attached = $ledger->define->normalizeByColumnDefine($ledger->content_attached ?? []);
+            $contentAttachedNormalizeDurationMs += (microtime(true) - $contentAttachedNormalizeStartedAt) * 1000;
 
             if (empty($ledger->content_attached) || empty($this->search)) {
                 return $ledger;
             }
+
+            $searchHitMarkStartedAt = microtime(true);
             $contentAttached = $ledger->content_attached;
             $hits = $this->searchContext->highlights;
             foreach ($contentAttached as $key => $attached) {
@@ -536,16 +676,21 @@ class RecordsTable extends BaseLivewireComponent
                     }
                 }
             }
+            $searchHitMarkDurationMs += (microtime(true) - $searchHitMarkStartedAt) * 1000;
             $ledger->content_attached = $contentAttached;
 
             //            dd($ledger->content_attached,$hits);
             return $ledger;
         });
+        $normalizeDurationMs = (microtime(true) - $normalizeStartedAt) * 1000;
 
         $currentFolder = $this->currentFolder;
+        $currentUserPermissionStartedAt = microtime(true);
         $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
+        $currentUserPermissionDurationMs = (microtime(true) - $currentUserPermissionStartedAt) * 1000;
 
         // Filter column_define for each ledgerDefine based on displayLevel
+        $filteredColumnDefinesStartedAt = microtime(true);
         $filteredColumnDefines = $ledgerDefineRecords->map(function ($ledgerDefine) {
             return collect($ledgerDefine->column_define)
                 ->filter(function ($column) {
@@ -555,8 +700,10 @@ class RecordsTable extends BaseLivewireComponent
                 })
                 ->sortBy('order');
         });
+        $filteredColumnDefinesDurationMs = (microtime(true) - $filteredColumnDefinesStartedAt) * 1000;
 
         // 台帳定義ごとのスコア統計を計算
+        $scoreStatsStartedAt = microtime(true);
         $scoreStatsByDefineId = $ledgerRecords->groupBy('ledger_define_id')->map(function ($records) {
             $scores = $records->pluck('composite_score')->filter(fn ($score) => $score > 0);
 
@@ -568,9 +715,11 @@ class RecordsTable extends BaseLivewireComponent
                 'has_scores' => $scores->count() > 0,
             ];
         });
+        $scoreStatsDurationMs = (microtime(true) - $scoreStatsStartedAt) * 1000;
 
         // 台帳定義をグループ化（順序を保持）
         // セマンティック検索時は既にソート済みなので、順序を維持したままグループ化
+        $groupingStartedAt = microtime(true);
         $ledgerRecordsGroupByDefineIds = collect();
         foreach ($ledgerRecords as $ledger) {
             $defineId = $ledger->ledger_define_id;
@@ -590,8 +739,44 @@ class RecordsTable extends BaseLivewireComponent
             // そうしないと、中のレコードの並び順（スコア順など）によって台帳カードの並びが変わってしまうため
             $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortKeys();
         }
+        $groupingDurationMs = (microtime(true) - $groupingStartedAt) * 1000;
 
-        Log::info('RecordsTable render end, returning view');
+        $viewPrepareStartedAt = microtime(true);
+
+        $this->logPerformance('ledger_records_render', (microtime(true) - $startedAt) * 1000, [
+            'record_count' => method_exists($ledgerRecords, 'count') ? $ledgerRecords->count() : 0,
+            'group_count' => $ledgerRecordsGroupByDefineIds->count(),
+            'attachment_count' => $allAttachments->count(),
+            'search_present' => ! empty($this->search),
+            'semantic_search' => $this->useSemanticSearch,
+            'prepare_folder_asset_ms' => round($prepareFolderAssetDurationMs, 2),
+            'display_ledger_defines_ms' => round($displayLedgerDefinesDurationMs, 2),
+            'display_ledger_defines_query_ms' => round($displayLedgerDefinesQueryDurationMs, 2),
+            'display_ledger_defines_load_ms' => round($displayLedgerDefinesLoadDurationMs, 2),
+            'breadcrumbs_prepared_ms' => round($breadcrumbsPreparedDurationMs, 2),
+            'ledger_records_query_ms' => round($ledgerRecordsQueryDurationMs, 2),
+            'attachments_fetch_ms' => round($attachmentsFetchDurationMs, 2),
+            'normalize_ms' => round($normalizeDurationMs, 2),
+            'content_normalize_ms' => round($contentNormalizeDurationMs, 2),
+            'content_attached_normalize_ms' => round($contentAttachedNormalizeDurationMs, 2),
+            'search_hit_mark_ms' => round($searchHitMarkDurationMs, 2),
+            'current_user_permission_ms' => round($currentUserPermissionDurationMs, 2),
+            'filtered_column_defines_ms' => round($filteredColumnDefinesDurationMs, 2),
+            'score_stats_ms' => round($scoreStatsDurationMs, 2),
+            'grouping_ms' => round($groupingDurationMs, 2),
+            'view_prepare_ms' => round((microtime(true) - $viewPrepareStartedAt) * 1000, 2),
+            'ledger_records_query_prep_ms' => round($ledgerRecordsQueryPrepDurationMs ?? 0.0, 2),
+            'related_ledger_define_ids_ms' => round($relatedLedgerDefineIdsDurationMs ?? 0.0, 2),
+            'missing_define_fetch_ms' => round($missingDefineFetchDurationMs ?? 0.0, 2),
+            'ledger_records_query_count_ms' => round($ledgerRecordsQueryCountDurationMs ?? 0.0, 2),
+            'ledger_records_query_count_cache_hit' => $ledgerRecordsQueryCountCacheHit,
+            'ledger_records_query_paginate_ms' => round($ledgerRecordsQueryPaginateDurationMs ?? 0.0, 2),
+            'ledger_records_define_load_ms' => round($ledgerRecordsDefineLoadDurationMs, 2),
+            'search_target_ledger_define_ids_ms' => round($searchTargetLedgerDefineIdsDurationMs, 2),
+            'search_target_ledger_define_ids_count' => $searchTargetLedgerDefineIdsCount,
+            'search_target_ledger_define_ids_mode' => $searchTargetLedgerDefineIdsMode,
+            'page_ledger_define_count' => $pageLedgerDefineCount ?? 0,
+        ]);
 
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
@@ -614,6 +799,7 @@ class RecordsTable extends BaseLivewireComponent
     #[On('permissions-changed')]
     public function refreshDueToPermissionChange()
     {
+        $this->clearTotalRecordsCache();
         // このメソッドが存在し、イベントをリッスンするだけで、
         // Livewireがコンポーネントを再レンダリングし、render()が自動的に呼び出される
     }

@@ -8,6 +8,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -161,6 +162,116 @@ class RecordsTableActionsTest extends TestCase
         $component->dispatch('ledgerStored');
 
         $component->assertOk();
+    }
+
+    #[Test]
+    public function render_logs_fine_grained_phase_metrics(): void
+    {
+        config(['ledgerleap.performance.enabled' => true]);
+        config(['ledgerleap.performance.log_destination' => 'log']);
+
+        Log::spy();
+
+        $component = Livewire::test(RecordsTable::class, $this->mountProps);
+
+        $component->assertOk();
+        $component->assertDispatched('ledger-records-count-updated');
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (...$args): bool {
+                [$message, $context] = array_pad($args, 2, []);
+
+                return $message === '[Performance] ledger_records_render'
+                    && ($context['component'] ?? null) === 'RecordsTable'
+                    && array_key_exists('prepare_folder_asset_ms', $context)
+                    && array_key_exists('ledger_records_query_ms', $context)
+                    && array_key_exists('attachments_fetch_ms', $context)
+                    && array_key_exists('normalize_ms', $context)
+                    && array_key_exists('content_normalize_ms', $context)
+                    && array_key_exists('content_attached_normalize_ms', $context)
+                    && array_key_exists('search_hit_mark_ms', $context)
+                    && array_key_exists('display_ledger_defines_query_ms', $context)
+                    && array_key_exists('display_ledger_defines_load_ms', $context)
+                    && array_key_exists('ledger_records_query_prep_ms', $context)
+                    && array_key_exists('related_ledger_define_ids_ms', $context)
+                    && array_key_exists('missing_define_fetch_ms', $context)
+                    && array_key_exists('ledger_records_query_count_ms', $context)
+                    && array_key_exists('ledger_records_query_count_cache_hit', $context)
+                    && array_key_exists('ledger_records_query_paginate_ms', $context)
+                    && array_key_exists('ledger_records_define_load_ms', $context)
+                    && array_key_exists('search_target_ledger_define_ids_ms', $context)
+                    && array_key_exists('search_target_ledger_define_ids_count', $context)
+                    && array_key_exists('search_target_ledger_define_ids_mode', $context)
+                    && array_key_exists('page_ledger_define_count', $context)
+                    && array_key_exists('grouping_ms', $context)
+                    && array_key_exists('view_prepare_ms', $context);
+            })
+            ->atLeast()
+            ->once();
+    }
+
+    #[Test]
+    public function render_reuses_total_records_count_for_unrelated_state_changes(): void
+    {
+        config(['ledgerleap.performance.enabled' => true]);
+        config(['ledgerleap.performance.log_destination' => 'log']);
+
+        Log::spy();
+
+        Livewire::test(RecordsTable::class, $this->mountProps)
+            ->call('openPermissionModal', 'Folder', $this->folder->id, 'テストフォルダ')
+            ->assertSet('showPermissionModal', true);
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (...$args): bool {
+                [$message, $context] = array_pad($args, 2, []);
+
+                return $message === '[Performance] ledger_records_render'
+                    && ($context['component'] ?? null) === 'RecordsTable'
+                    && ($context['ledger_records_query_count_cache_hit'] ?? null) === true;
+            })
+            ->atLeast()
+            ->once();
+    }
+
+    #[Test]
+    public function render_logs_search_target_ledger_define_modes(): void
+    {
+        config(['ledgerleap.performance.enabled' => true]);
+        config(['ledgerleap.performance.log_destination' => 'log']);
+
+        $assertMode = function (array $mountProps, string $expectedMode): void {
+            Log::spy();
+
+            Livewire::test(RecordsTable::class, $mountProps)
+                ->assertOk();
+
+            Log::shouldHaveReceived('info')
+                ->withArgs(function (...$args) use ($expectedMode): bool {
+                    [$message, $context] = array_pad($args, 2, []);
+
+                    return $message === '[Performance] ledger_records_render'
+                        && ($context['component'] ?? null) === 'RecordsTable'
+                        && ($context['search_target_ledger_define_ids_mode'] ?? null) === $expectedMode;
+                })
+                ->atLeast()
+                ->once();
+        };
+
+        $assertMode($this->mountProps, 'selected');
+
+        $assertMode([
+            'currentFolderId' => $this->folder->id,
+            'selectedFolderIds' => [],
+            'selectedLedgerDefineIds' => [],
+        ], 'unscoped');
+
+        $assertMode([
+            'currentFolderId' => $this->folder->id,
+            'selectedFolderIds' => [],
+            'selectedLedgerDefineIds' => [],
+            'search' => '全体',
+        ], 'global');
     }
 
     // ===================================================================
@@ -371,7 +482,6 @@ class RecordsTableActionsTest extends TestCase
         // perPage=0のときのlastPage()をリフレクションでテスト
         $reflection = new \ReflectionClass($instance);
         $perPageProp = $reflection->getProperty('perPage');
-        $perPageProp->setAccessible(true);
         $perPageProp->setValue($instance, 0);
 
         $this->assertEquals(1, $instance->lastPage());

@@ -30,7 +30,7 @@ class RecordsTableQueryTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
+        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid('', true)]);
 
         // Use a unique email for each test to avoid constraint violations
         $this->user = User::factory()->create([
@@ -114,6 +114,24 @@ class RecordsTableQueryTest extends TestCase
             ->test(IndexManager::class) // IndexManager を対象に
             ->assertOk()
             ->assertSee(__('ledger.select_message'));
+    }
+
+    #[Test]
+    public function it_marks_zero_result_counts_as_loaded_in_records_table()
+    {
+        Livewire::actingAs($this->user)
+            ->test(
+                \App\Livewire\Ledger\RecordsTable::class,
+                [
+                    'search' => 'non-existent-term',
+                    'selectedFolderIds' => [$this->folder->id],
+                    'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
+                    'currentFolderId' => $this->folder->id,
+                ]
+            )
+            ->assertOk()
+            ->assertSet('totalRecordsLoaded', true)
+            ->assertSet('totalRecords', 0);
     }
 
     #[Test]
