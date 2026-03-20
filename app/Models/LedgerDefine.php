@@ -25,6 +25,10 @@ class LedgerDefine extends Model
 {
     use HasFactory, HasModelRoles, LogsActivity, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
+    private ?int $cachedMaxColumnId = null;
+
+    private ?Collection $cachedColumnDefineKeyById = null;
+
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
         'workflow_enabled' => 'boolean',
@@ -149,7 +153,11 @@ class LedgerDefine extends Model
      */
     public function getMaxColumnIdAttribute()
     {
-        return collect($this->column_define)->pluck('id')->max();
+        if ($this->cachedMaxColumnId !== null) {
+            return $this->cachedMaxColumnId;
+        }
+
+        return $this->cachedMaxColumnId = collect($this->column_define)->pluck('id')->max();
     }
 
     /**
@@ -157,8 +165,11 @@ class LedgerDefine extends Model
      */
     private function getColumnDefineKeyByIdAttribute()
     {
-        return collect($this->column_define)->keyBy('id')->sortKeys();
+        if ($this->cachedColumnDefineKeyById !== null) {
+            return $this->cachedColumnDefineKeyById;
+        }
 
+        return $this->cachedColumnDefineKeyById = collect($this->column_define)->keyBy('id')->sortKeys();
     }
 
     /**
@@ -169,17 +180,16 @@ class LedgerDefine extends Model
         $maxId = $this->getMaxColumnIdAttribute();
         $columnDefineKeyById = $this->getColumnDefineKeyByIdAttribute();
 
-        // contentをcollectionに変換
-        $contentCollection = collect($content);
+        $normalizedContent = is_array($content) ? $content : collect($content)->all();
 
         // 欠番を埋める
         for ($i = 0; $i <= $maxId; $i++) {
-            if (! $contentCollection->has($i)) {
+            if (! array_key_exists($i, $normalizedContent)) {
                 if ($columnDefineKeyById->has($i)) {
-                    $contentCollection[$i] = in_array($columnDefineKeyById[$i]->type, ['chk', 'files']) ? [] : '';
+                    $normalizedContent[$i] = in_array($columnDefineKeyById[$i]->type, ['chk', 'files'], true) ? [] : '';
                 } else {
                     // 他の欠番（削除されたカラム等）も空文字で埋めてインデックスを維持する
-                    $contentCollection[$i] = '';
+                    $normalizedContent[$i] = '';
                 }
             }
         }
@@ -188,7 +198,9 @@ class LedgerDefine extends Model
         // values() は呼び出さず、連想配列（ID => Value）の状態を維持する。
         // これにより、後続の calculateAutoFillValues で ID ベースのアクセスが可能になる。
         // 最終的な添字配列化はモデルのキャスト(AsColumnArrayJson)に任せる。
-        return $contentCollection->sortKeys()->toArray();
+        ksort($normalizedContent, SORT_NUMERIC);
+
+        return $normalizedContent;
     }
 
     /**

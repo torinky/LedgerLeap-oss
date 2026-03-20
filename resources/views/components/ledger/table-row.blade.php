@@ -93,12 +93,49 @@
             @elseif($isAttachmentColumn)
                 @php
                     $files = [];
+                    $prepareStartedAt = microtime(true);
+                    $lookupDurationMs = 0.0;
+                    $routeDurationMs = 0.0;
+                    $payloadDurationMs = 0.0;
+                    $fileBuildDurationMs = 0.0;
+                    $fallbackBuildDurationMs = 0.0;
+                    $filenameMapBuildDurationMs = 0.0;
                     // ここでは、既に $allAttachments は親（RecordsTable）から渡されており、
                     // [ledger_id => attachments[]] の形でグループ化されている。
                     $columnId = $columnDefine->id ?? null;
+                    $lookupStartedAt = microtime(true);
                     $attached = $allAttachments->get($ledgerRecord->id, collect())->where('column_id', $columnId);
+                    $lookupDurationMs += (microtime(true) - $lookupStartedAt) * 1000;
+
+                    $originalFilenameMap = [];
+                    if (! empty($ledgerRecord->content)) {
+                        $filenameMapStartedAt = microtime(true);
+                        foreach ($ledgerRecord->content as $columnContent) {
+                            if (! is_array($columnContent)) {
+                                continue;
+                            }
+
+                            foreach ($columnContent as $hashedbasename => $originalName) {
+                                if (is_string($originalName) && $originalName !== '') {
+                                    $originalFilenameMap[$hashedbasename] = $originalName;
+                                }
+                            }
+                        }
+                        $filenameMapBuildDurationMs += (microtime(true) - $filenameMapStartedAt) * 1000;
+                    }
+
+                    $filesStartedAt = microtime(true);
+                    $downloadBundleDurationMs = 0.0;
+                    $scalarFieldDurationMs = 0.0;
+                    $hitFlagDurationMs = 0.0;
+                    $filenameResolveDurationMs = 0.0;
+                    $filenameOriginalDurationMs = 0.0;
+                    $filenameAttachedLookupDurationMs = 0.0;
+                    $filenameBasenameDurationMs = 0.0;
+                    $arrayAssemblyDurationMs = 0.0;
                     foreach ($attached as $af) {
                         // Download Logic (Same as ColumnHtmlService)
+                        $routeStartedAt = microtime(true);
                         $mainDownloadUrl = route('file.download', [
                             'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
@@ -110,6 +147,7 @@
                                 'thumbnail' => true,
                             ])
                             : null;
+                        $downloadBundleStartedAt = microtime(true);
                         $originalDownloadUrl = route('file.download', [
                             'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
@@ -119,7 +157,9 @@
                             'tenant' => $currentTenantId,
                             'attachedFile' => $af->id,
                         ]);
+                        $routeDurationMs += (microtime(true) - $routeStartedAt) * 1000;
 
+                        $payloadStartedAt = microtime(true);
                         $primaryDownload = null;
                         $secondaryDownload = null;
 
@@ -154,24 +194,60 @@
                                 'icon' => 'fa-download',
                             ];
                         }
+                        $downloadBundleDurationMs += (microtime(true) - $downloadBundleStartedAt) * 1000;
 
+                        $scalarFieldStartedAt = microtime(true);
+                        $statusValue = $af->getDisplayStatus()->value ?? 'completed';
+                        $mimeValue = $af->original_mime_type ?? ($af->mime ?? 'application/octet-stream');
+                        $sizeValue = $af->size;
+                        $createdAtValue = $af->created_at;
+                        $scalarFieldDurationMs += (microtime(true) - $scalarFieldStartedAt) * 1000;
+
+                        $hitFlagStartedAt = microtime(true);
+                        $hitFlagValue = isset($hitHashes[$af->hashedbasename]);
+                        $hitFlagDurationMs += (microtime(true) - $hitFlagStartedAt) * 1000;
+
+                        $filenameStartedAt = microtime(true);
+                        $filenameValue = null;
+                        $filenameOriginalStartedAt = microtime(true);
+                        $originalFilename = $originalFilenameMap[$af->hashedbasename] ?? null;
+                        $filenameOriginalDurationMs += (microtime(true) - $filenameOriginalStartedAt) * 1000;
+                        if ($originalFilename) {
+                            $filenameValue = $originalFilename;
+                        } else {
+                            $filenameAttachedStartedAt = microtime(true);
+                            $attachedName = $ledgerRecord->content[$columnId][$af->hashedbasename] ?? null;
+                            $filenameAttachedLookupDurationMs += (microtime(true) - $filenameAttachedStartedAt) * 1000;
+                            if ($attachedName) {
+                                $filenameValue = $attachedName;
+                            } else {
+                                $filenameBasenameStartedAt = microtime(true);
+                                $filenameValue = basename($af->filename) ?? '';
+                                $filenameBasenameDurationMs += (microtime(true) - $filenameBasenameStartedAt) * 1000;
+                            }
+                        }
+                        $filenameResolveDurationMs += (microtime(true) - $filenameStartedAt) * 1000;
+
+                        $arrayStartedAt = microtime(true);
                         $files[] = [
                             'id' => $af->id,
-                            'filename' =>
-                                $af->original_filename ??
-                                ($ledgerRecord->content[$columnId][$af->hashedbasename] ??
-                                    (basename($af->filename) ?? '')),
-                            'mime' => $af->original_mime_type ?? ($af->mime ?? 'application/octet-stream'),
-                            'status' => $af->getDisplayStatus()->value ?? 'completed',
-                            'size' => $af->size,
+                            'filename' => $filenameValue,
+                            'mime' => $mimeValue,
+                            'status' => $statusValue,
+                            'size' => $sizeValue,
                             'thumbnailUrl' => $thumbnailUrl,
                             'downloadUrl' => $mainDownloadUrl, // Backward compatibility
                             'primary_download' => $primaryDownload,
                             'secondary_download' => $secondaryDownload,
-                            'created_at' => $af->created_at,
-                            'is_hit' => isset($hitHashes[$af->hashedbasename]),
+                            'created_at' => $createdAtValue,
+                            'is_hit' => $hitFlagValue,
                         ];
+                        $arrayAssemblyDurationMs += (microtime(true) - $arrayStartedAt) * 1000;
+                        $payloadDurationMs += (microtime(true) - $payloadStartedAt) * 1000;
                     }
+                    $fileBuildDurationMs += (microtime(true) - $filesStartedAt) * 1000;
+
+                    $fallbackStartedAt = microtime(true);
                     if (
                         empty($files) &&
                         isset($ledgerRecord->content_attached[$columnId]) &&
@@ -202,10 +278,52 @@
                             ];
                         }
                     }
+                    $fallbackBuildDurationMs += (microtime(true) - $fallbackStartedAt) * 1000;
+
+                    \Log::info('[AttachmentHtml] prepareFilesData', [
+                        'source' => 'table-row',
+                        'ledger_id' => $ledgerRecord->id,
+                        'column_id' => $columnId,
+                        'file_count' => count($files),
+                        'attachment_count' => $attached->count(),
+                        'lookup_ms' => round($lookupDurationMs, 2),
+                        'route_build_ms' => round($routeDurationMs, 2),
+                        'download_bundle_ms' => round($downloadBundleDurationMs, 2),
+                        'scalar_field_ms' => round($scalarFieldDurationMs, 2),
+                        'hit_flag_ms' => round($hitFlagDurationMs, 2),
+                        'filename_resolve_ms' => round($filenameResolveDurationMs, 2),
+                        'filename_map_build_ms' => round($filenameMapBuildDurationMs, 2),
+                        'filename_original_ms' => round($filenameOriginalDurationMs, 2),
+                        'filename_attached_lookup_ms' => round($filenameAttachedLookupDurationMs, 2),
+                        'filename_basename_ms' => round($filenameBasenameDurationMs, 2),
+                        'array_assembly_ms' => round($arrayAssemblyDurationMs, 2),
+                        'payload_build_ms' => round($payloadDurationMs, 2),
+                        'file_build_ms' => round($fileBuildDurationMs, 2),
+                        'fallback_build_ms' => round($fallbackBuildDurationMs, 2),
+                        'duration_ms' => round((microtime(true) - $prepareStartedAt) * 1000, 2),
+                    ]);
                 @endphp
                 @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId"
-                        :search="$highlightKeyword" />
+                    @php
+                        $renderStartedAt = microtime(true);
+                        $attachmentListHtml = view('components.ledger.attachment-list', [
+                            'files' => $files,
+                            'mode' => 'compact',
+                            'columnId' => $columnDefine->id,
+                            'tenantId' => $currentTenantId,
+                            'search' => $highlightKeyword,
+                        ])->render();
+
+                        \Log::info('[AttachmentHtml] getFileHtml', [
+                            'source' => 'table-row',
+                            'ledger_id' => $ledgerRecord->id,
+                            'column_id' => $columnId,
+                            'mode' => 'compact',
+                            'file_count' => count($files),
+                            'duration_ms' => round((microtime(true) - $renderStartedAt) * 1000, 2),
+                        ]);
+                    @endphp
+                    {!! $attachmentListHtml !!}
                 @else
                     <div class="text-neutral/50 flex w-full items-center justify-center">
                         <i class="fa-solid fa-cube text-info/50 mr-2"></i>
@@ -239,30 +357,25 @@
                                 $currentTenantId,
                             );
                         $columnHtmlString = $columnHtml->toHtml();
+                        $columnTextLength = mb_strlen(trim(strip_tags($columnHtmlString)));
+                        $showToggleHint = $columnTextLength > 120
+                            || str_contains($columnHtmlString, '<br')
+                            || str_contains($columnHtmlString, '<p')
+                            || str_contains($columnHtmlString, '<ul')
+                            || str_contains($columnHtmlString, '<ol');
                     @endphp
 
-                    <div x-data="expandableContent({ maxHeight: '6rem' })" x-intersect.once.threshold.10="checkOverflow()"
-                        class="relative">
-                        <div x-ref="content" :class="{ 'overflow-hidden': !expanded }" :style="contentStyle"
-                            class="transition-all duration-500">
-                            {!! $columnHtmlString !!}
-                        </div>
-
-                        <button x-show="showToggle" @click="toggle()" type="button"
-                            class="btn btn-sm btn-ghost w-full mt-2 gap-2">
-                            <span x-text="expanded ? '{{ __('ledger.show_less') }}' : '{{ __('ledger.show_more') }}'"></span>
-                            <i class="fas text-sm transition-transform duration-200"
-                                :class="{
-                                    'fa-chevron-up': expanded,
-                                    'fa-chevron-down': !expanded
-                                }"></i>
-                        </button>
-                    </div>
+                    <x-expandable-content
+                        :content="$columnHtmlString"
+                        max-height="6rem"
+                        :show-toggle-hint="$showToggleHint"
+                        skip-measurement
+                    />
                 @endif
             @endif
         </td>
     @endforeach
-    {{--                        <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}} --}}
+        {{--                        <td class="border px-4 py-2 wrap-break-word whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}} --}}
 
 
     <td class="border px-4 py-2 relative">

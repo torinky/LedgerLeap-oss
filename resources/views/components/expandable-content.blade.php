@@ -3,9 +3,15 @@
     'maxHeight' => '6rem',
     'showMoreText' => __('ledger.show_more'),
     'showLessText' => __('ledger.show_less'),
+    'showToggleHint' => null,
+    'skipMeasurement' => false,
 ])
 
-<div x-data="expandableContent({ maxHeight: '{{ $maxHeight }}' })" x-intersect.once.threshold.10="checkOverflow()" class="relative">
+<div x-data="expandableContent({
+    maxHeight: '{{ $maxHeight }}',
+    showToggleHint: @js($showToggleHint),
+    skipMeasurement: @js($skipMeasurement),
+})" @if (! $skipMeasurement) x-intersect.once.threshold.10="checkOverflow()" @endif class="relative">
     <div x-ref="content" :class="{ 'overflow-hidden': !expanded }" :style="contentStyle"
         {{ $attributes->merge(['class' => 'transition-all duration-500']) }}>
         {!! $content !!}

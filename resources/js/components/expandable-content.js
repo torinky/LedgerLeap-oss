@@ -2,9 +2,18 @@ export default (options) => ({
     expanded: false,
     showToggle: false,
     maxHeight: options.maxHeight || '6rem',
+    expandedMaxHeight: options.expandedMaxHeight || '1000rem',
+    showToggleHint: options.showToggleHint ?? null,
+    skipMeasurement: options.skipMeasurement ?? false,
     _measured: false,
 
     init() {
+        if (this.skipMeasurement && this.showToggleHint !== null) {
+            this.showToggle = !!this.showToggleHint;
+            this._measured = true;
+            return;
+        }
+
         // 初回計測はテンプレート側の x-intersect.once から明示的に呼び出し、
         // ここではリサイズ時の再計測のみを担当する。
         // リサイズ時は debounce して再計測
@@ -40,8 +49,7 @@ export default (options) => ({
 
     get contentStyle() {
         if (this.expanded) {
-            const content = this.$refs.content;
-            return `max-height: ${content ? content.scrollHeight : 2000}px`;
+            return `max-height: ${this.expandedMaxHeight}; -webkit-mask-image: none; mask-image: none;`;
         }
 
         const baseStyle = `max-height: ${this.maxHeight}`;

@@ -41,35 +41,43 @@
                 $highlightClass = "bg-primary/{$opacity} border-b-2 border-primary";
             }
         @endphp
-        <th scope="col" class="px-4 py-2 space-y-1 text-center {{ $highlightClass }}"
+        <th scope="col" class="px-4 py-2 text-center align-top {{ $highlightClass }}"
             wire:key="ledger_table_header_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}">
-            <div
-                @if ($orderBy === 'default' && $sortIndex !== null) class="tooltip tooltip-bottom z-50" data-tip="{{ __('ledger.sort_priority') }}: {{ $sortIndex }}" @endif>
-                <span class=" text-accent-content font-bold">
-                    {{ $column_define->name }}
-                </span>
-                <button class="btn btn-xs"
-                    wire:key="ledger_sort_id_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}"
-                    wire:click.stop="$parent.sort('content->{{ (string) $column_define->id }}', '{{ $column_define->name }}')"
-                    wire:loading.attr="disabled" wire:target="$parent.sort">
-                    @if ($orderBy == 'content->' . (string) $column_define->id)
-                        @if ($orderAsc)
-                            <i class="fas fa-sort-down" style="pointer-events: none;"></i>
-                        @else
-                            <i class="fas fa-sort-up" style="pointer-events: none;"></i>
-                        @endif
+            <div class="flex w-full flex-col items-center gap-1">
+                <div
+                    @if ($orderBy === 'default' && $sortIndex !== null)
+                        class="tooltip tooltip-bottom z-50 flex w-full items-center justify-center gap-2"
+                        data-tip="{{ __('ledger.sort_priority') }}: {{ $sortIndex }}"
                     @else
-                        <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
+                        class="flex w-full items-center justify-center gap-2"
                     @endif
-                </button>
+                >
+                    <span class="font-bold text-accent-content">
+                        {{ $column_define->name }}
+                    </span>
+                    <button class="btn btn-xs"
+                        wire:key="ledger_sort_id_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}"
+                        wire:click.stop="$parent.sort('content->{{ (string) $column_define->id }}', '{{ $column_define->name }}')"
+                        wire:loading.attr="disabled" wire:target="$parent.sort">
+                        @if ($orderBy == 'content->' . (string) $column_define->id)
+                            @if ($orderAsc)
+                                <i class="fas fa-sort-down" style="pointer-events: none;"></i>
+                            @else
+                                <i class="fas fa-sort-up" style="pointer-events: none;"></i>
+                            @endif
+                        @else
+                            <i class="fas fa-sort opacity-30" style="pointer-events: none;"></i>
+                        @endif
+                    </button>
+                </div>
+                <input
+                    x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{ $column_define->id }}', $event.target.value, {{ $ledgerDefine->id }})"
+                    value="{{ $this->filter[$column_define->id] ?? '' }}"
+                    wire:key="ledger_filter_id_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}"
+                    type="search"
+                    class="input input-xs w-full max-w-xs"
+                    placeholder="{{ __('ledger.filter') }}..." />
             </div>
-            <input
-                x-on:input.debounce.500ms="$wire.$parent.updateFilterFromChild('{{ $column_define->id }}', $event.target.value, {{ $ledgerDefine->id }})"
-                value="{{ $this->filter[$column_define->id] ?? '' }}"
-                wire:key="ledger_filter_id_{{ $ledgerDefine->id }}_column_{{ $column_define->id }}"
-                type="search"
-                class="input input-xs w-full max-w-xs"
-                placeholder="{{ __('ledger.filter') }}..." />
         </th>
     @endforeach
 

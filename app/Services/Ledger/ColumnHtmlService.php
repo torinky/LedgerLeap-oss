@@ -299,7 +299,17 @@ class ColumnHtmlService
             return '';
         }
 
+        $startedAt = microtime(true);
+
         $files = $this->prepareFilesData($highlight);
+
+        Log::info('[AttachmentHtml] getFileHtml', [
+            'mode' => $mode,
+            'column_id' => $this->getColumnDefineProperty('id'),
+            'file_count' => count($files),
+            'attachment_count' => $this->attachments->count(),
+            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+        ]);
 
         return view('components.ledger.attachment-list', [
             'files' => $files,
@@ -317,16 +327,25 @@ class ColumnHtmlService
      */
     private function prepareFilesData(?string $highlight = null): array
     {
+        $startedAt = microtime(true);
         $files = [];
+        $lookupDurationMs = 0.0;
+        $urlBuildDurationMs = 0.0;
+        $hitDetectionDurationMs = 0.0;
+        $missingAttachmentCount = 0;
 
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
+            $phaseStartedAt = microtime(true);
             $attachment = $this->attachments->get($hashedFilename);
+            $lookupDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             if (! $attachment) {
+                $missingAttachmentCount++;
                 continue;
             }
 
             // ダウンロードURLの構築
+            $phaseStartedAt = microtime(true);
             if (! $this->tenantId) {
                 Log::error('Tenant ID is not provided to ColumnHtmlService.');
                 $mainDownloadUrl = '#';
@@ -343,6 +362,7 @@ class ColumnHtmlService
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
                 $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
             }
+            $urlBuildDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             // ダウンロードリンクの整理
             $primaryDownload = null;
@@ -404,6 +424,7 @@ class ColumnHtmlService
             ];
 
             // 検索ヒット判定を追加
+            $phaseStartedAt = microtime(true);
             if ($highlight) {
                 $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
                 // ファイル名、VLMテキスト、OCR/Tikaテキストで検索ヒット判定
@@ -416,9 +437,21 @@ class ColumnHtmlService
             } else {
                 $fileData['is_hit'] = false;
             }
+            $hitDetectionDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             $files[] = $fileData;
         }
+
+        Log::info('[AttachmentHtml] prepareFilesData', [
+            'column_id' => $this->getColumnDefineProperty('id'),
+            'file_count' => count($files),
+            'attachment_count' => $this->attachments->count(),
+            'missing_attachment_count' => $missingAttachmentCount,
+            'lookup_ms' => round($lookupDurationMs, 2),
+            'url_build_ms' => round($urlBuildDurationMs, 2),
+            'hit_detection_ms' => round($hitDetectionDurationMs, 2),
+            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+        ]);
 
         return $files;
     }
