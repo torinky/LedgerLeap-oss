@@ -21,8 +21,9 @@
         x-transition:leave="transition-opacity duration-300"
         x-transition:leave-start="opacity-100"
         x-transition:leave-end="opacity-0"
-        x-on:livewire:navigated.window.once="hide()"
-        x-on:livewire:load.window.once="hide()"
+        x-on:ledger-init-overlay:timing.window="console.debug('[ledger-init-overlay]', $event.detail)"
+        x-on:livewire:navigated.window.once="hide('livewire:navigated')"
+        x-on:livewire:load.window.once="hide('livewire:load')"
         x-init="startFallbackTimer()"
         class="fixed inset-0 z-[150] bg-base-100/75 backdrop-blur-sm flex items-end justify-center pb-10 pointer-events-none">
         <div class="flex items-center gap-3 bg-base-200/90 backdrop-blur rounded-full px-5 py-2 shadow-lg border border-base-300">
@@ -156,25 +157,36 @@
                             <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
                         @endif
 
-                        {{-- totalRecords: レンダリングをブロックしないように条件分岐 --}}
-                        @if ($this->totalRecords > 0)
-                            <div class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                                data-tip="{{ __('ledger.opened_count') }}">
+                        {{-- totalRecords: 初回未取得時はプレースホルダー、取得後は 0 件でも数値を表示 --}}
+                        <div
+                            wire:ignore
+                            x-data="{
+                                totalRecords: {{ (int) ($this->totalRecords ?? 0) }},
+                                totalRecordsLoaded: {{ $this->totalRecordsLoaded ? 'true' : 'false' }},
+                            }"
+                            @ledger-records-count-updated.window="totalRecords = $event.detail.total; totalRecordsLoaded = true"
+                        >
+                            <div
+                                class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                data-tip="{{ __('ledger.opened_count') }}"
+                                x-show="totalRecordsLoaded"
+                                x-cloak>
                                 <div class="self-center flex items-center gap-2 text-info-content/80">
                                     <i class="fas fa-list opacity-50"></i>
-                                    <span class="font-bold">{{ $this->totalRecords }}</span>
+                                    <span class="font-bold" x-text="totalRecords">{{ $this->totalRecords }}</span>
                                 </div>
                             </div>
-                        @elseif(!empty($search) || !empty($filter))
-                            {{-- 検索・フィルタ中はスケルトンを表示（計算中） --}}
                             <div
-                                class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse">
+                                class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse"
+                                data-tip="{{ __('ledger.opened_count') }}"
+                                x-show="!totalRecordsLoaded"
+                                x-cloak>
                                 <div class="self-center flex items-center gap-2">
                                     <i class="fas fa-list opacity-30"></i>
                                     <span class="font-bold opacity-30">...</span>
                                 </div>
                             </div>
-                        @endif
+                        </div>
 
                         @if ($orderBy === 'composite_score' && !empty($search))
                             <div class="badge badge-primary bg-primary/80 tooltip h-8 flex items-stretch shadow-sm border-none"

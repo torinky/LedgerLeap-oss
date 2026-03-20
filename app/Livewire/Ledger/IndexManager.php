@@ -6,6 +6,7 @@ use App\Http\Requests\Ledger\SearchRequest; // 追加
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HasSortingLabels;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
@@ -20,7 +21,7 @@ use Mary\Traits\Toast;
 
 class IndexManager extends BaseLivewireComponent
 {
-    use HasSortingLabels, InitializesTenantContext, Toast;
+    use HasSortingLabels, InitializesTenantContext, LogPerformance, Toast;
 
     #[Url(as: 'q')]
     public $search = '';
@@ -68,6 +69,8 @@ class IndexManager extends BaseLivewireComponent
     public $synonyms = [];
 
     public $totalRecords = 0;
+
+    public bool $totalRecordsLoaded = false;
 
     public $highlights = [];
 
@@ -141,6 +144,14 @@ class IndexManager extends BaseLivewireComponent
 
     public function mount(SearchRequest $request, $folderId = null, $defineId = null)
     {
+        $startedAt = microtime(true);
+        $selectedFolderCount = is_countable($this->selectedFolderIds)
+            ? count($this->selectedFolderIds)
+            : 0;
+        $selectedLedgerDefineCount = is_countable($this->selectedLedgerDefineIds)
+            ? count($this->selectedLedgerDefineIds)
+            : 0;
+
         $this->currentTenantId = tenant()?->id;
 
         // 初期表示レベルのバリデーション
@@ -192,6 +203,12 @@ class IndexManager extends BaseLivewireComponent
 
         $this->updateSearchMetadata();
         $this->initSearchContext();
+
+        $this->logPerformance('ledger_index_mount', (microtime(true) - $startedAt) * 1000, [
+            'selected_folder_count' => $selectedFolderCount,
+            'selected_ledger_define_count' => $selectedLedgerDefineCount,
+            'search_present' => ! empty($this->search),
+        ]);
     }
 
     public function initSearchContext()
@@ -329,6 +346,7 @@ class IndexManager extends BaseLivewireComponent
     #[On('currentFolderChangeRequested')]
     public function changeCurrentFolder($newFolderId)
     {
+        $startedAt = microtime(true);
         Log::info('[IndexManager] Received currentFolderChangeRequested', ['newFolderId' => $newFolderId]);
         Log::info('[IndexManager] changeCurrentFolder called', ['newFolderId' => $newFolderId]);
         if ($newFolderId == 1) {
@@ -344,18 +362,39 @@ class IndexManager extends BaseLivewireComponent
         }
         $this->currentFolderId = $newFolderId;
         $this->updateSearchMetadata();
+
+        $this->logPerformance('ledger_change_current_folder', (microtime(true) - $startedAt) * 1000, [
+            'new_folder_id' => $newFolderId,
+            'selected_folder_count' => is_countable($this->selectedFolderIds)
+                ? count($this->selectedFolderIds)
+                : 0,
+            'selected_ledger_define_count' => is_countable($this->selectedLedgerDefineIds)
+                ? count($this->selectedLedgerDefineIds)
+                : 0,
+        ]);
     }
 
     #[On('focusLedgerDefineRequested')]
     public function focusLedgerDefine($defineId)
     {
+        $startedAt = microtime(true);
         $this->selectedLedgerDefineIds = [$defineId];
         $this->updateSearchMetadata();
+
+        $this->logPerformance(
+            'ledger_focus_define',
+            (microtime(true) - $startedAt) * 1000,
+            [
+                'define_id' => $defineId,
+                'selected_ledger_define_count' => 1,
+            ]
+        );
     }
 
     #[On('folderIdToggled')]
     public function toggleFolderId($folderId)
     {
+        $startedAt = microtime(true);
         if ($folderId == 1) {
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];
@@ -375,11 +414,26 @@ class IndexManager extends BaseLivewireComponent
         sort($this->selectedLedgerDefineIds);
 
         $this->updateSearchMetadata();
+
+        $this->logPerformance(
+            'ledger_toggle_folder',
+            (microtime(true) - $startedAt) * 1000,
+            [
+                'folder_id' => $folderId,
+                'selected_folder_count' => is_countable($this->selectedFolderIds)
+                    ? count($this->selectedFolderIds)
+                    : 0,
+                'selected_ledger_define_count' => is_countable($this->selectedLedgerDefineIds)
+                    ? count($this->selectedLedgerDefineIds)
+                    : 0,
+            ]
+        );
     }
 
     #[On('ledgerDefineIdToggled')]
     public function toggleLedgerDefineId($ledgerDefineId)
     {
+        $startedAt = microtime(true);
         if (in_array($ledgerDefineId, $this->selectedLedgerDefineIds)) {
             $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, [$ledgerDefineId]));
         } else {
@@ -389,12 +443,21 @@ class IndexManager extends BaseLivewireComponent
         sort($this->selectedLedgerDefineIds);
 
         $this->updateSearchMetadata();
+
+        $this->logPerformance(
+            'ledger_toggle_define',
+            (microtime(true) - $startedAt) * 1000,
+            [
+                'define_id' => $ledgerDefineId,
+                'selected_ledger_define_count' => count($this->selectedLedgerDefineIds),
+            ]
+        );
     }
 
-    #[On('recordsUpdated')]
     public function updateRecordCount($total)
     {
         $this->totalRecords = $total;
+        $this->totalRecordsLoaded = true;
     }
 
     #[On('openPermissionModal')]
@@ -426,6 +489,23 @@ class IndexManager extends BaseLivewireComponent
     {
         $this->filter[$columnId] = $value;
         $this->initSearchContext();
+    }
+
+    protected function getPerformanceContext(): array
+    {
+        $selectedFolderCount = is_countable($this->selectedFolderIds) ? count($this->selectedFolderIds) : 0;
+        $selectedLedgerDefineCount = is_countable($this->selectedLedgerDefineIds) ? count($this->selectedLedgerDefineIds) : 0;
+
+        return [
+            'tenant_id' => $this->currentTenantId ?? tenant()?->id,
+            'current_folder_id' => $this->currentFolderId,
+            'display_level' => $this->displayLevel,
+            'per_page' => $this->perPage,
+            'use_semantic_search' => $this->useSemanticSearch,
+            'selected_folder_count' => $selectedFolderCount,
+            'selected_ledger_define_count' => $selectedLedgerDefineCount,
+            'has_workflow_enabled' => $this->hasWorkflowEnabled,
+        ];
     }
 
     public function render()
