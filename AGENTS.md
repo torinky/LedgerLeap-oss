@@ -46,6 +46,7 @@ When a bug fix, investigation, or sprint proves a reusable pattern:
 ## Domain Entry Points
 - Bug investigation: `/bug-investigation`
 - Bug implementation: `/bug-execution`
+- HAR analysis: `/browser-har-analysis`
 - Git commits: `/git-commit`
 - GitHub issues / PRs: `/github-issue-workflow`
 - CI failures: `/ci-failure-investigation`

@@ -69,6 +69,10 @@ Use `position: fixed` inline style. See [references/drawer-sidebar.md](reference
 After adding new utility classes (`opacity-50`, `group-hover:*`, etc.),
 run `sail npm run build`. New classes are silently ignored without a rebuild.
 
+## Telemetry Pitfall
+
+Do not route client-side loading or init telemetry through `$wire` unless the metric itself is intended to trigger a Livewire update. In LedgerLeap, sending Alpine timing events to a Livewire action can create extra `livewire/update` requests and duplicate rerenders. Prefer browser-side logging or another non-Livewire sink for purely observational metrics.
+
 ## Checklist
 
 - [ ] `wire:loading` always has `wire:target`
@@ -78,3 +82,4 @@ run `sail npm run build`. New classes are silently ignored without a rebuild.
 - [ ] New Tailwind classes → `sail npm run build`
 - [ ] Alpine init overlay: use `x-on:livewire:navigated.window.once` (NOT `@livewire:navigated`)
 - [ ] Alpine `x-data` with methods: register via `Alpine.data()`, not inline shorthand
+- [ ] Timing telemetry that should not rerender components stays off `$wire`

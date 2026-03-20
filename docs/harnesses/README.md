@@ -13,6 +13,9 @@ LedgerLeap の LLM / AI 評価で使う **copyable fixture / harness** をここ
 - [`gemini-clean-room/`](/docs/harnesses/gemini-clean-room/README.md)
   - Gemini CLI の clean-room 評価用 base harness
   - Mac / Windows の配置メモ、sanitized settings template、証跡テンプレートを含む
+- [`browser-har-analysis/`](/docs/harnesses/browser-har-analysis/README.md)
+  - Browser DevTools の HAR を比較するための定型化 harness
+  - `document` / `livewire/update` / static assets の要約スクリプトを含む
 
 ## 位置づけ
 
