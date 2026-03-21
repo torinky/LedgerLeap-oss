@@ -23,6 +23,11 @@
   - 添付ファイル表示の「もっと見る」UIによる遅延問題の特定
   - 遅延初期化とCSS制御による最適化方針の提案
 
+- **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
+  - 常時モニタと調査用メトリクスの分離
+  - 閾値アラートと `performance` ログチャネルの整備
+  - 日常運用向けの確認手順を `docs/operations/ledger-records-performance-monitoring.md` に分離
+
 #### 完了済み (2025-10-11)
 
 以前のドキュメントは、すべて実装・解決済みです。

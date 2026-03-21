@@ -133,6 +133,58 @@ return [
         'log_destination' => env('PERFORMANCE_LOG_DESTINATION', 'both'),
 
         /*
+        |--------------------------------------------------------------------------
+        | 常時モニタ / 調査用メトリクス
+        |--------------------------------------------------------------------------
+        |
+        | always_on_metrics: 回帰検知で常に追う軽量メトリクス
+        | investigation_metrics: 調査時にだけ詳しく追う内部メトリクス
+        | thresholds_ms: 回帰検知の警告閾値（ms）
+        */
+        'monitoring' => [
+            'always_on_metrics' => [
+                'ledger_records_render',
+                'ledger_records_query_prep_ms',
+                'ledger_records_query_paginate_ms',
+                'normalize_ms',
+                'ledger_init_overlay_hidden',
+                'ledger_init_overlay_painted',
+            ],
+
+            'investigation_metrics' => [
+                'prepare_folder_asset_ms',
+                'display_ledger_defines_ms',
+                'display_ledger_defines_query_ms',
+                'display_ledger_defines_load_ms',
+                'breadcrumbs_prepared_ms',
+                'ledger_records_query_ms',
+                'attachments_fetch_ms',
+                'content_normalize_ms',
+                'content_attached_normalize_ms',
+                'search_hit_mark_ms',
+                'current_user_permission_ms',
+                'filtered_column_defines_ms',
+                'score_stats_ms',
+                'grouping_ms',
+                'view_prepare_ms',
+                'ledger_records_query_count_ms',
+                'ledger_records_define_load_ms',
+                'search_target_ledger_define_ids_ms',
+            ],
+
+            'thresholds_ms' => [
+                'ledger_records_render' => 1000,
+                'ledger_records_query_prep_ms' => 250,
+                'ledger_records_query_paginate_ms' => 250,
+                'normalize_ms' => 300,
+                'ledger_init_overlay_hidden' => 300,
+                'ledger_init_overlay_painted' => 350,
+            ],
+
+            'threshold_alert_channel' => env('PERFORMANCE_THRESHOLD_ALERT_CHANNEL', 'performance'),
+        ],
+
+        /*
         | パフォーマンスメトリクスの種類
         |
         | 測定する項目を選択（配列形式）

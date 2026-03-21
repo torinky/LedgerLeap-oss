@@ -87,6 +87,15 @@
 - 推測を含む暫定主張 → `30d`
 - repo 内で完結する運用パターン → `180d`
 
+### Durable learning の具体例
+
+今回の `Issue #114` では、次の分離が再利用可能な運用パターンとして確定した。
+
+- backend の回帰検知: `performance-YYYY-MM-DD.log` / `performance_stats.json`
+- frontend の体感測定: `browser.log` / DevTools Console
+
+この種の分離ルールは、`docs/work/*` に実装根拠を残したうえで、`docs/operations/*` に日常運用手順として反映し、必要なら prompt / skill / runbook に同期する。
+
 ## Step 5 — Sync Neighbors
 
 主反映先を更新したら、次の近接資産を確認する。

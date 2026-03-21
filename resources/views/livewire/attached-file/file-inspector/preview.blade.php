@@ -43,12 +43,6 @@
                                 url: '{{ $this->previewUrl }}',
                                 cached: false
                             });
-
-                            // Livewireコンポーネントのメソッドを呼び出し
-                            $wire.logPerformance('image_preview_load', duration, {
-                                url: '{{ $previewState['previewUrl'] }}',
-                                from_cache: false
-                            });
                         }
                     }
                 }"
