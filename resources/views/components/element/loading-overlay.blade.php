@@ -11,8 +11,8 @@
 
     $overlayClasses = match((int)$tier) {
         1 => 'fixed inset-0 z-[110] bg-base-300/60 backdrop-blur-sm transition-all duration-500 pointer-events-none min-h-screen w-full flex items-center justify-center',
-        2 => ($hasSlot ? 'relative w-full' : 'absolute inset-0 h-full w-full flex items-center justify-center bg-base-100/10 backdrop-blur-sm') . ' z-30 transition-all duration-300 pointer-events-none',
-        default => ($hasSlot ? 'relative w-full' : 'absolute inset-0 h-full w-full flex items-center justify-center bg-base-100/10 backdrop-blur-sm') . ' z-30 transition-all duration-300 pointer-events-none',
+        2 => 'absolute inset-0 z-30 h-full w-full flex items-center justify-center bg-base-100/10 backdrop-blur-sm transition-all duration-300 pointer-events-none',
+        default => 'absolute inset-0 z-30 h-full w-full flex items-center justify-center bg-base-100/10 backdrop-blur-sm transition-all duration-300 pointer-events-none',
     };
 
     $spinnerClasses = match((int)$tier) {

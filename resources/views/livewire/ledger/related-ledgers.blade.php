@@ -133,8 +133,7 @@
                     <h3 class="text-lg font-semibold text-primary-content">{{ $define->title }}</h3>
                     @if ($define->folder)
                         <span class="text-xs text-primary-content/70">
-                            <i class="fas fa-folder mr-1"></i>{{ $define->folder->name }}
-                        </span>
+                            <i class="fas fa-folder mr-1"></i>{{ $define->folder->name }}</span>
                     @endif
                 </div>
 

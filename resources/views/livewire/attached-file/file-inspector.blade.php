@@ -136,16 +136,14 @@
 
                             <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}"
                                         icon="o-document-text"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
-                                @if ($this->isTabLoaded('content'))
-                                    @include('livewire.attached-file.file-inspector.tabs.content')
-                                @endif
+                                @include('livewire.attached-file.file-inspector.tabs.content')
                             </x-mary-tab>
 
                             <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}"
                                         icon="o-information-circle"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
                                 @if ($this->isTabLoaded('details'))
                                     <x-element.loading-overlay tier="2" target="selectedTab" />
@@ -159,14 +157,12 @@
                                     </x-element.loading-overlay>
                                 @endif
 
-                                @if ($this->isTabLoaded('details'))
-                                    @include('livewire.attached-file.file-inspector.tabs.details')
-                                @endif
+                                @include('livewire.attached-file.file-inspector.tabs.details')
                             </x-mary-tab>
 
                             <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}"
                                         icon="o-clock"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
                                 @if ($this->isTabLoaded('history'))
                                     <x-element.loading-overlay tier="2" target="selectedTab" />
@@ -182,14 +178,12 @@
                                     </x-element.loading-overlay>
                                 @endif
 
-                                @if ($this->isTabLoaded('history'))
-                                    @include('livewire.attached-file.file-inspector.tabs.history')
-                                @endif
+                                @include('livewire.attached-file.file-inspector.tabs.history')
                             </x-mary-tab>
 
                             <x-mary-tab name="permissions" label="{{ __('ledger.file_inspector.tabs.permissions') }}"
                                         icon="o-shield-check"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
                                 @if ($this->isTabLoaded('permissions'))
                                     <x-element.loading-overlay tier="2" target="selectedTab" />
@@ -203,9 +197,7 @@
                                     </x-element.loading-overlay>
                                 @endif
 
-                                @if ($this->isTabLoaded('permissions'))
-                                    @include('livewire.attached-file.file-inspector.tabs.permissions')
-                                @endif
+                                @include('livewire.attached-file.file-inspector.tabs.permissions')
                             </x-mary-tab>
                         </x-mary-tabs>
                     </div>
