@@ -26,6 +26,20 @@ What changes when the action completes?
 
 See [references/loading-patterns.md](references/loading-patterns.md) for Tier 1/2/3 examples.
 See [references/alpine-init-overlay.md](references/alpine-init-overlay.md) for Tier 0.5 + pitfalls (since #77).
+See [references/loading-ui-examples.md](references/loading-ui-examples.md) for tab-panel and table-height examples.
+
+## Tab Panel Loading
+
+Tab panels that must stay mounted across tab switches should not gate the body with a single `wire:loading.remove` block.
+
+- Keep the tab content DOM mounted; use an overlay or skeleton on top of it instead of swapping the body in and out.
+- Separate **tab entry** loading from **internal updates** (`displayLevel`, filters, sort, etc.) with different `wire:target` values.
+- If a loading state must show a skeleton, put the skeleton in the `wire:loading` slot of the overlay or in a dedicated `wire:loading` block — do not rely on the same gate that controls tab visibility.
+- When a tab needs both a preserved DOM and a loading skeleton, prefer two layers:
+  1. a lightweight initial tab-entry overlay
+  2. an update-only skeleton/overlay for the inner controls
+
+See [references/loading-ui-examples.md](references/loading-ui-examples.md) for concrete patterns.
 
 ## wire:key Rules
 
@@ -53,11 +67,7 @@ x-show not working (element stays visible)?
 
 Parent element **must** have a height constraint — without it sticky never triggers.
 
-```blade
-<div class="overflow-x-auto max-h-[70vh]">   {{-- height required --}}
-    <table class="table table-pin-rows">...</table>
-</div>
-```
+See [references/loading-ui-examples.md](references/loading-ui-examples.md) for a minimal height-constrained example.
 
 ## Drawer sidebar fixed positioning
 
@@ -83,3 +93,4 @@ Do not route client-side loading or init telemetry through `$wire` unless the me
 - [ ] Alpine init overlay: use `x-on:livewire:navigated.window.once` (NOT `@livewire:navigated`)
 - [ ] Alpine `x-data` with methods: register via `Alpine.data()`, not inline shorthand
 - [ ] Timing telemetry that should not rerender components stays off `$wire`
+- [ ] Tab panels needing both persistence and loading use separate tab-entry and internal-update targets

@@ -24,3 +24,11 @@
 
 - `lazy` / `placeholder()` は初回表示専用、`wire:loading.target` は局所更新専用という役割分担に沿う形で整理した。
 - Sprint3 では `Livewire::withoutLazyLoading()` を活用した最終検証を行う。
+
+## Sprint3 からの学び（再発防止メモ）
+
+- タブ本体を `wire:loading.remove` でまとめて隠すと、**再訪時の一瞬のローディング** と **内部操作時のスケルトン** が同じ gate に吸収されやすい。
+- そのため、タブの初回表示と内部更新は `selectedTab` と `displayLevel` / フィルタ系で **別 target に分ける**。
+- スケルトンを見せたい場合は、`x-element.loading-overlay` の slot か、別の `wire:loading` ブロックに置き、content の表示/非表示と混ぜない。
+- このルールは `livewire-loading-ui` と `livewire.instructions.md` にも反映済み。
+

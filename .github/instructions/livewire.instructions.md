@@ -54,6 +54,7 @@ What changes when action completes?
 - **x-show not working**: check for `display: X !important` CSS conflict; daisyUI injects `display:grid` on `.menu li > div`
 - **table-pin-rows sticky**: parent MUST have height constraint (`max-h-[70vh]`)
 - **After new Tailwind class**: run `sail npm run build`
+- **Tab panels**: keep body DOM mounted and split tab-entry loading from inner-control loading (`selectedTab` vs `displayLevel` / filters) so the skeleton can appear on updates without remounting the whole tab.
 
 ## Parent-Child
 
