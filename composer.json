@@ -115,11 +115,15 @@
     "test:canary:feature": "vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --display-errors",
     "test:coverage": [
       "@test:prepare:local",
-      "vendor/bin/pest --coverage-html coverage"
+      "@test:coverage:unit",
+      "@test:coverage:feature",
+      "@test:coverage:db-migrations"
     ],
-    "test:coverage:unit": "php -d pcov.enabled=1 vendor/bin/pest --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --coverage-html coverage/unit",
-    "test:coverage:unit:parallel": "php -d pcov.enabled=1 vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --coverage-html coverage/unit-parallel",
-    "test:coverage:feature-subset:parallel": "php -d pcov.enabled=1 vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --coverage-html coverage/feature-subset-parallel",
+    "test:coverage:unit": "php -d pcov.enabled=1 vendor/bin/pest --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors --coverage-html coverage/unit",
+    "test:coverage:feature": "php -d pcov.enabled=1 vendor/bin/pest --testsuite=Feature --exclude-group=external --exclude-group=database-migrations --display-errors --coverage-html coverage/feature",
+    "test:coverage:db-migrations": "php -d pcov.enabled=1 vendor/bin/pest --group=database-migrations --display-errors --coverage-html coverage/db-migrations",
+    "test:coverage:unit:parallel": "php -d pcov.enabled=1 vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors --coverage-html coverage/unit-parallel",
+    "test:coverage:feature-subset:parallel": "php -d pcov.enabled=1 vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --display-errors --coverage-html coverage/feature-subset-parallel",
     "test:duplication": "vendor/bin/phpcpd app",
     "test:mutation": "vendor/bin/infection"
   },
