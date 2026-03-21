@@ -126,6 +126,7 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 - `Full: All Tests` は `composer test:full` 相当の補助入口で、`test:prepare:local` や `test:external` を含む分割実行を再現したいときに使う
 - `Coverage: Full` は HTML レポート生成用の入口
 - 実運用としては、**Composer 側の主用途は coverage と scripted な再現実行**と考えてよい
+- 直近の `test:coverage` 調査記録: [`docs/work/testing/2026-03-21_test-coverage-db-recovery-and-tenancy-guidelines.md`](../../../docs/work/testing/2026-03-21_test-coverage-db-recovery-and-tenancy-guidelines.md)
 - Run Configuration は上記 scripts と同じ分割で作る
 - `database-migrations` を通常 Feature 実行や全件 parallel に混ぜない
 - 共有 Run Configuration は `.idea/runConfigurations/` にコミットしてあるため、Composer / PHP interpreter を設定するとそのまま使える

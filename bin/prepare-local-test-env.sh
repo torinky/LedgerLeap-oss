@@ -15,19 +15,47 @@ mysql_root() {
   mysql -h "$DB_HOST" -uroot -p"$MYSQL_ROOT_PASSWORD" --batch --skip-column-names "$@"
 }
 
+drop_database() {
+  local database_name="$1"
+  mysql_root -e "SET FOREIGN_KEY_CHECKS = 0; DROP DATABASE IF EXISTS \`${database_name}\`; SET FOREIGN_KEY_CHECKS = 1;"
+}
+
+table_count() {
+  mysql_root -N -e "SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '${DB_NAME}';" 2>/dev/null || echo "0"
+}
+
 echo "=== ローカルテスト環境準備開始 ==="
 echo "DB_HOST=${DB_HOST}"
 echo "DB_NAME=${DB_NAME}"
 
-echo "[1/5] central / worker DB を再作成中..."
+echo "[1/6] central / worker DB を再作成中..."
 EXISTING_DBS=$(mysql_root -e "SHOW DATABASES LIKE '${DB_NAME}%';" 2>/dev/null || true)
 if [ -n "$EXISTING_DBS" ]; then
   while IFS= read -r db; do
-    [ -z "$db" ] && continue
-    mysql_root -e "SET FOREIGN_KEY_CHECKS = 0; DROP DATABASE IF EXISTS \`${db}\`; SET FOREIGN_KEY_CHECKS = 1;"
+	[ -z "$db" ] && continue
+	drop_database "$db"
   done <<< "$EXISTING_DBS"
 fi
-mysql_root -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+for attempt in $(seq 1 5); do
+  drop_database "$DB_NAME"
+  mysql_root -e "CREATE DATABASE \`${DB_NAME}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+
+  if [ "$(table_count)" = "0" ]; then
+	echo "  ✓ データベース再作成成功（試行回数: ${attempt}回）"
+	break
+  fi
+
+  if [ "$attempt" -lt 5 ]; then
+	echo "    リトライ ${attempt}/5: まだテーブルが残っています。再試行..."
+	sleep 2
+  else
+	echo "  ✗ エラー: 5回試行しましたが central DB のクリーン化に失敗しました"
+	mysql_root -N -e "SELECT table_name FROM information_schema.tables WHERE table_schema = '${DB_NAME}' ORDER BY table_name;"
+	exit 1
+  fi
+done
+
 for i in $(seq 1 "$WORKER_COUNT"); do
   mysql_root -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME}_test_${i}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
 done
@@ -39,14 +67,17 @@ done
 mysql_root -e "GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';"
 mysql_root -e "FLUSH PRIVILEGES;"
 
-echo "[2/5] Laravel キャッシュをクリア中..."
+echo "[2/6] Laravel キャッシュをクリア中..."
 php artisan optimize:clear >/dev/null
 php artisan config:clear >/dev/null
 
-echo "[3/5] central DB を migrate 中..."
-php artisan migrate --env=testing --force
+echo "[3/6] Laravel 接続で DB を wipe 中..."
+php artisan db:wipe --database=mysql_testing --force >/dev/null
 
-echo "[4/5] shared test tenant を作成 / migrate 中..."
+echo "[4/6] central DB を migrate 中..."
+php artisan migrate --database=mysql_testing --force
+
+echo "[5/6] shared test tenant を作成 / migrate 中..."
 php artisan tinker --execute='
 $t = \App\Models\Tenant::firstOrCreate(["id" => "test_tenant_id"]);
 tenancy()->initialize($t);
@@ -54,8 +85,8 @@ tenancy()->initialize($t);
 echo "Tenant ready: " . $t->id . PHP_EOL;
 '
 
-echo "[5/5] migrate 状態を確認中..."
-php artisan migrate:status --env=testing | tail -15
+echo "[6/6] migrate 状態を確認中..."
+php artisan migrate:status --database=mysql_testing | tail -15
 
 echo "=== ローカルテスト環境準備完了 ==="
 

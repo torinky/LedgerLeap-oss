@@ -47,3 +47,9 @@ function something()
 {
     // ..
 }
+
+function tenant_route_url(string $name, array $parameters = []): string
+{
+    return route($name, array_merge(['tenant' => tenant('id')], $parameters));
+}
+

@@ -85,12 +85,12 @@ class AttachedFileDownloadControllerTest extends TestCase
             'status' => AttachedFileStatus::COMPLETED->value,
         ]);
 
-        $response = $this->get(tenant_route('file.download', [
+        $response = $this->get(tenant_route_url('file.download', [
             'attachedFile' => $file->id,
             'thumbnail' => true,
         ]));
 
-        $secondResponse = $this->get(tenant_route('file.download', [
+        $secondResponse = $this->get(tenant_route_url('file.download', [
             'attachedFile' => $file->id,
             'thumbnail' => true,
         ]));
@@ -106,7 +106,3 @@ class AttachedFileDownloadControllerTest extends TestCase
     }
 }
 
-function tenant_route(string $name, array $parameters = []): string
-{
-    return route($name, array_merge(['tenant' => tenant('id')], $parameters));
-}
