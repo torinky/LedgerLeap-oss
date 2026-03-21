@@ -344,6 +344,39 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_tracks_loaded_tabs_and_resets_them_on_close()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertSame(['content'], $component->get('loadedTabs'));
+
+        $component->set('selectedTab', 'details');
+        $component->set('selectedTab', 'history');
+
+        $loadedTabs = $component->get('loadedTabs');
+        $this->assertContains('content', $loadedTabs);
+        $this->assertContains('details', $loadedTabs);
+        $this->assertContains('history', $loadedTabs);
+
+        $component->call('close');
+        $this->assertSame([], $component->get('loadedTabs'));
+
+        $component->call('openInspector', ['id' => $file->id]);
+        $this->assertSame(['content'], $component->get('loadedTabs'));
+    }
+
+    #[Test]
     public function it_dispatches_process_attached_file_on_retry_processing()
     {
         config(['mock.attachment.enabled' => false]);

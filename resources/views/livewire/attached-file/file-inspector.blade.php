@@ -138,28 +138,36 @@
                                         icon="o-document-text"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @php if ($selectedTab === 'content') echo view('livewire.attached-file.file-inspector.tabs.content', get_defined_vars())->render(); @endphp
+                                @if ($this->isTabLoaded('content'))
+                                    @include('livewire.attached-file.file-inspector.tabs.content')
+                                @endif
                             </x-mary-tab>
 
                             <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}"
                                         icon="o-information-circle"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @php if ($selectedTab === 'details') echo view('livewire.attached-file.file-inspector.tabs.details', get_defined_vars())->render(); @endphp
+                                @if ($this->isTabLoaded('details'))
+                                    @include('livewire.attached-file.file-inspector.tabs.details')
+                                @endif
                             </x-mary-tab>
 
                             <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}"
                                         icon="o-clock"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @php if ($selectedTab === 'history') echo view('livewire.attached-file.file-inspector.tabs.history', get_defined_vars())->render(); @endphp
+                                @if ($this->isTabLoaded('history'))
+                                    @include('livewire.attached-file.file-inspector.tabs.history')
+                                @endif
                             </x-mary-tab>
 
                             <x-mary-tab name="permissions" label="{{ __('ledger.file_inspector.tabs.permissions') }}"
                                         icon="o-shield-check"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
-                                @php if ($selectedTab === 'permissions') echo view('livewire.attached-file.file-inspector.tabs.permissions', get_defined_vars())->render(); @endphp
+                                @if ($this->isTabLoaded('permissions'))
+                                    @include('livewire.attached-file.file-inspector.tabs.permissions')
+                                @endif
                             </x-mary-tab>
                         </x-mary-tabs>
                     </div>

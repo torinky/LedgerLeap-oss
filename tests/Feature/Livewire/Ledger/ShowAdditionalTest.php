@@ -167,6 +167,32 @@ class ShowAdditionalTest extends TestCase
         $component->assertSet('selectedTab', 'history');
     }
 
+    #[Test]
+    public function it_tracks_loaded_tabs_across_tab_changes_and_refreshes(): void
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $this->assertSame(['details'], $component->get('loadedTabs'));
+
+        $component->dispatch('navigate-to-ledger-tab', tab: 'history');
+        $component->set('selectedTab', 'permissions');
+
+        $loadedTabs = $component->get('loadedTabs');
+
+        $this->assertContains('details', $loadedTabs);
+        $this->assertContains('history', $loadedTabs);
+        $this->assertContains('permissions', $loadedTabs);
+
+        $this->ledger->update(['status' => WorkflowStatus::PENDING_INSPECTION]);
+        $component->dispatch('workflowUpdated');
+
+        $refreshedTabs = $component->get('loadedTabs');
+        $this->assertContains('history', $refreshedTabs);
+        $this->assertContains('permissions', $refreshedTabs);
+    }
+
     // ===================================================================
     // setDisplayLevel
     // ===================================================================

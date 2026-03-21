@@ -47,6 +47,9 @@ class FileInspector extends BaseLivewireComponent
 
     public string $selectedTab = 'content';
 
+    /** @var array<int, string> */
+    public array $loadedTabs = [];
+
     public ?string $activeSource = null;
 
     public string $searchKeyword = '';
@@ -90,6 +93,9 @@ class FileInspector extends BaseLivewireComponent
         $this->open = false;
         $this->isLoading = false;
         $this->selectedTab = 'content'; // デフォルトは「内容」タブ
+        if (empty($this->loadedTabs)) {
+            $this->loadedTabs = [$this->selectedTab];
+        }
     }
 
     /**
@@ -235,6 +241,8 @@ class FileInspector extends BaseLivewireComponent
         $this->searchKeyword = $search ?? '';
         $this->file = null;
         $this->isLoading = true;
+        $this->selectedTab = 'content';
+        $this->loadedTabs = [$this->selectedTab];
 
         // 実データが存在するかチェック
         $realFileExists = AttachedFile::find($id) !== null;
@@ -385,6 +393,7 @@ class FileInspector extends BaseLivewireComponent
         $this->isLoading = false;
         $this->fileId = null;
         $this->file = null;
+        $this->loadedTabs = [];
         $this->mockData = [];
         $this->activeSource = null;
         $this->searchKeyword = '';
@@ -555,6 +564,23 @@ class FileInspector extends BaseLivewireComponent
 
         // Alpine.jsの状態をリセットするイベントを発行
         $this->dispatch('source-switched');
+    }
+
+    public function updatedSelectedTab(string $tab): void
+    {
+        $this->markTabLoaded($tab);
+    }
+
+    protected function markTabLoaded(string $tab): void
+    {
+        if (! in_array($tab, $this->loadedTabs, true)) {
+            $this->loadedTabs[] = $tab;
+        }
+    }
+
+    public function isTabLoaded(string $tab): bool
+    {
+        return in_array($tab, $this->loadedTabs, true);
     }
 
     /**

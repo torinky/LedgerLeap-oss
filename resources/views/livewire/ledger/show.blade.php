@@ -143,53 +143,54 @@
                     </div>
                 </x-element.loading-overlay>
 
-                {{-- Actual content --}}
-                <div wire:loading.remove wire:target="{{ $tabNavTargets . ',' . $recordFilterTargets }}">
-                    @if ($ledgerRecord->define->workflow_enabled)
-                        <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
-                            wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
-                    @endif
+                @if ($this->isTabLoaded('details'))
+                    {{-- Actual content --}}
+                    <div wire:loading.remove wire:target="{{ $tabNavTargets . ',' . $recordFilterTargets }}">
+                        @if ($ledgerRecord->define->workflow_enabled)
+                            <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
+                                wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
+                        @endif
 
-                    <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
-                        <x-slot:menu>
-                            @php
-                                $displayLevelOptions = [
-                                    ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                                    ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                                    ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                                ];
-                            @endphp
-                            <div class="flex items-center gap-1 mr-2">
-                                <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                                    class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                                    option-label="name" wire:key="details-display-level-group" />
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
-                                    <x-mary-icon name="o-question-mark-circle"
-                                        class="w-4 h-4 text-base-content/40 cursor-help" />
+                        <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
+                            <x-slot:menu>
+                                @php
+                                    $displayLevelOptions = [
+                                        ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                                        ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                                        ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                                    ];
+                                @endphp
+                                <div class="flex items-center gap-1 mr-2">
+                                    <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
+                                        class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
+                                        option-label="name" wire:key="details-display-level-group" />
+                                    <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
+                                        <x-mary-icon name="o-question-mark-circle"
+                                            class="w-4 h-4 text-base-content/40 cursor-help" />
+                                    </div>
                                 </div>
-                            </div>
-                            <div class="flex items-center gap-1 border-l border-base-300 pl-3">
-                                <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
-                                    class="text-xs" />
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
-                                    <x-mary-icon name="o-question-mark-circle"
-                                        class="w-4 h-4 text-base-content/40 cursor-help" />
+                                <div class="flex items-center gap-1 border-l border-base-300 pl-3">
+                                    <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
+                                        class="text-xs" />
+                                    <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
+                                        <x-mary-icon name="o-question-mark-circle"
+                                            class="w-4 h-4 text-base-content/40 cursor-help" />
+                                    </div>
                                 </div>
-                            </div>
-                        </x-slot:menu>
+                            </x-slot:menu>
 
-                        <div class="relative min-h-[300px]">
-                            {{-- Record content only loading is now handled by the parent's skeleton --}}
-                            <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
-                                :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
-                                wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
-                                lazy />
-                        </div>
+                            <div class="relative min-h-[300px]">
+                                {{-- Record content only loading is now handled by the parent's skeleton --}}
+                                <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
+                                    :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
+                                    wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
+                                    lazy />
+                            </div>
 
                         {{-- フッター集約情報（編集者情報・ナッジ） --}}
-                        <div class="mt-6 pt-4 border-t border-base-200">
-                            <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
-                                <div class="space-y-3 bg-base-200/30 p-3 rounded-lg border border-base-300/50">
+                            <div class="mt-6 pt-4 border-t border-base-200">
+                                <div class="flex flex-col md:flex-row md:items-center justify-between gap-4 text-sm">
+                                    <div class="space-y-3 bg-base-200/30 p-3 rounded-lg border border-base-300/50">
                                     {{-- 本バージョンの情報 --}}
                                     <div class="flex items-center gap-3">
                                         <div class="w-28 shrink-0">
@@ -245,22 +246,23 @@
                                     @endif
                                 </div>
 
-                                <div class="flex flex-wrap items-center gap-3">
-                                    {{-- ナッジリンク: 直前比較 --}}
-                                    @if (!$this->isComparingWithPrevious())
-                                        <x-mary-button icon="o-arrow-path" :label="__('ledger.diff.nudge_view_changes')"
-                                            wire:click="activateCompareWithPrevious"
-                                            class="btn-sm btn-ghost text-primary hover:bg-primary/10" />
-                                    @endif
+                                    <div class="flex flex-wrap items-center gap-3">
+                                        {{-- ナッジリンク: 直前比較 --}}
+                                        @if (!$this->isComparingWithPrevious())
+                                            <x-mary-button icon="o-arrow-path" :label="__('ledger.diff.nudge_view_changes')"
+                                                wire:click="activateCompareWithPrevious"
+                                                class="btn-sm btn-ghost text-primary hover:bg-primary/10" />
+                                        @endif
 
-                                    {{-- ナッジリンク: 履歴タブへ --}}
-                                    <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="switchToHistoryTab"
-                                        class="btn-sm btn-ghost text-base-content/60" />
+                                        {{-- ナッジリンク: 履歴タブへ --}}
+                                        <x-mary-button icon="o-clock" :label="__('ledger.diff.nudge_view_history')" wire:click="switchToHistoryTab"
+                                            class="btn-sm btn-ghost text-base-content/60" />
+                                    </div>
                                 </div>
                             </div>
-                        </div>
-                    </x-mary-card>
-                </div>
+                        </x-mary-card>
+                    </div>
+                @endif
 
             </x-mary-tab>
 
@@ -273,8 +275,10 @@
             {{-- ワークフロー履歴タブ --}}
             <x-mary-tab name="history" class="shadow-md relative min-h-[400px]" label="{{ $historyTabTitle }}" icon="o-list-bullet">
                 <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
-                <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
-                    wire:key="history-manager-{{ $ledgerRecord->id }}" />
+                @if ($this->isTabLoaded('history'))
+                    <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
+                        wire:key="history-manager-{{ $ledgerRecord->id }}" />
+                @endif
             </x-mary-tab>
 
 
@@ -296,16 +300,18 @@
                     </div>
                 </div>
 
-                {{-- Actual content --}}
-                <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
-                    {{-- テスト実行時はレンダリングしない --}}
-                    @if (app()->environment() !== 'testing')
-                        <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
-                            :includeRelatedResources="true" :hiddenColumns="['subject']" wire:key="activity-history-{{ $ledgerRecord->id }}" />
-                    @else
-                        <div id="activity-history-placeholder-for-testing"></div>
-                    @endif
-                </div>
+                @if ($this->isTabLoaded('activity'))
+                    {{-- Actual content --}}
+                    <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
+                        {{-- テスト実行時はレンダリングしない --}}
+                        @if (app()->environment() !== 'testing')
+                            <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
+                                :includeRelatedResources="true" :hiddenColumns="['subject']" wire:key="activity-history-{{ $ledgerRecord->id }}" />
+                        @else
+                            <div id="activity-history-placeholder-for-testing"></div>
+                        @endif
+                    </div>
+                @endif
             </x-mary-tab>
 
             {{-- ★★★ アクセスと権限タブ ★★★ --}}
@@ -327,16 +333,18 @@
                     </div>
                 </div>
 
-                {{-- Actual content --}}
-                <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
-                    {{-- テスト実行時はレンダリングしない --}}
-                    @if (app()->environment() !== 'testing')
-                        <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
-                            wire:key="permission-display-{{ $ledgerRecord->id }}" />
-                    @else
-                        <div id="permission-display-placeholder-for-testing"></div>
-                    @endif
-                </div>
+                @if ($this->isTabLoaded('permissions'))
+                    {{-- Actual content --}}
+                    <div wire:loading.remove wire:target="{{ $tabNavTargets }}">
+                        {{-- テスト実行時はレンダリングしない --}}
+                        @if (app()->environment() !== 'testing')
+                            <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
+                                wire:key="permission-display-{{ $ledgerRecord->id }}" />
+                        @else
+                            <div id="permission-display-placeholder-for-testing"></div>
+                        @endif
+                    </div>
+                @endif
             </x-mary-tab>
 
             {{-- ★★★ 関連案件タブ ★★★ --}}
@@ -357,13 +365,15 @@
                     </div>
                 </div>
 
-                <div wire:loading.remove wire:target="{{ $tabNavTargets }},displayLevel">
-                    <livewire:ledger.related-ledgers
-                        :ledgerId="$ledgerRecord->id"
-                        :displayLevel="$displayLevel"
-                        wire:key="related-ledgers-{{ $ledgerRecord->id }}"
-                        lazy />
-                </div>
+                @if ($this->isTabLoaded('related'))
+                    <div wire:loading.remove wire:target="{{ $tabNavTargets }},displayLevel">
+                        <livewire:ledger.related-ledgers
+                            :ledgerId="$ledgerRecord->id"
+                            :displayLevel="$displayLevel"
+                            wire:key="related-ledgers-{{ $ledgerRecord->id }}"
+                            lazy />
+                    </div>
+                @endif
             </x-mary-tab>
 
         </x-mary-tabs>

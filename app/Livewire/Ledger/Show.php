@@ -30,6 +30,9 @@ class Show extends BaseLivewireComponent
     #[Url(as: 'tab')]
     public string $selectedTab = 'details';
 
+    /** @var array<int, string> */
+    public array $loadedTabs = [];
+
     #[Url(as: 'dl')]
     public int $displayLevel = 3;
 
@@ -126,6 +129,10 @@ class Show extends BaseLivewireComponent
         } catch (\Throwable $e) {
             // 件数計算の失敗はサイレントに無視（タブバッジが空のまま → タブを開いたときに更新）
         }
+
+        if (empty($this->loadedTabs)) {
+            $this->loadedTabs = [$this->selectedTab];
+        }
     }
 
     #[On('workflowUpdated')]
@@ -138,6 +145,7 @@ class Show extends BaseLivewireComponent
     public function navigateToTab(string $tab): void
     {
         $this->selectedTab = $tab;
+        $this->markTabLoaded($tab);
     }
 
     #[On('relatedCountUpdated')]
@@ -229,6 +237,24 @@ class Show extends BaseLivewireComponent
     public function switchToHistoryTab(): void
     {
         $this->selectedTab = 'history';
+        $this->markTabLoaded('history');
+    }
+
+    public function updatedSelectedTab(string $tab): void
+    {
+        $this->markTabLoaded($tab);
+    }
+
+    protected function markTabLoaded(string $tab): void
+    {
+        if (! in_array($tab, $this->loadedTabs, true)) {
+            $this->loadedTabs[] = $tab;
+        }
+    }
+
+    public function isTabLoaded(string $tab): bool
+    {
+        return in_array($tab, $this->loadedTabs, true);
     }
 
     #[On('retryProcessingEvent')]
