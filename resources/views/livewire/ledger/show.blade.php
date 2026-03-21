@@ -274,10 +274,17 @@
             @endphp
             {{-- ワークフロー履歴タブ --}}
             <x-mary-tab name="history" class="shadow-md relative min-h-[400px]" label="{{ $historyTabTitle }}" icon="o-list-bullet">
-                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
                 @if ($this->isTabLoaded('history'))
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
                     <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
                         wire:key="history-manager-{{ $ledgerRecord->id }}" />
+                @else
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets">
+                        <div class="space-y-4 p-2 w-full animate-pulse">
+                            <div class="h-8 bg-base-300 rounded-lg w-40 shimmer"></div>
+                            <x-element.skeleton-list items="5" />
+                        </div>
+                    </x-element.loading-overlay>
                 @endif
             </x-mary-tab>
 
@@ -287,18 +294,19 @@
             {{-- ★★★ 総合活動履歴タブ ★★★ --}}
             <x-mary-tab name="activity" label="{{ __('ledger.tab.activity_history') }}" icon="o-clock"
                 class="shadow-md relative min-h-[400px]">
-                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
-
-                {{-- Skeleton for tab switching --}}
-                <div wire:loading wire:target="{{ $tabNavTargets }}">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="h-8 bg-base-300 rounded-lg w-48 shimmer"></div>
-                            <div class="h-8 bg-base-200 rounded-lg w-32 shimmer"></div>
+                @if ($this->isTabLoaded('activity'))
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
+                @else
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets">
+                        <div class="space-y-4 p-2 w-full animate-pulse">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="h-8 bg-base-300 rounded-lg w-48 shimmer"></div>
+                                <div class="h-8 bg-base-200 rounded-lg w-32 shimmer"></div>
+                            </div>
+                            <x-element.skeleton-list items="8" />
                         </div>
-                        <x-element.skeleton-list items="8" />
-                    </div>
-                </div>
+                    </x-element.loading-overlay>
+                @endif
 
                 @if ($this->isTabLoaded('activity'))
                     {{-- Actual content --}}
@@ -317,21 +325,22 @@
             {{-- ★★★ アクセスと権限タブ ★★★ --}}
             <x-mary-tab name="permissions" label="{{ __('ledger.tab.access_and_permissions') }}" icon="o-shield-check"
                 class="shadow-md relative min-h-[400px]">
-                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
-
-                {{-- Skeleton for tab switching --}}
-                <div wire:loading wire:target="{{ $tabNavTargets }}">
-                    <div class="space-y-4">
-                        <div class="flex items-center justify-between mb-4">
-                            <div class="h-8 bg-base-300 rounded-lg w-56 shimmer"></div>
-                            <div class="flex gap-2">
-                                <div class="h-8 bg-base-200 rounded-lg w-24 shimmer"></div>
-                                <div class="h-8 bg-base-200 rounded-lg w-24 shimmer"></div>
+                @if ($this->isTabLoaded('permissions'))
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
+                @else
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets">
+                        <div class="space-y-4 p-2 w-full animate-pulse">
+                            <div class="flex items-center justify-between mb-4">
+                                <div class="h-8 bg-base-300 rounded-lg w-56 shimmer"></div>
+                                <div class="flex gap-2">
+                                    <div class="h-8 bg-base-200 rounded-lg w-24 shimmer"></div>
+                                    <div class="h-8 bg-base-200 rounded-lg w-24 shimmer"></div>
+                                </div>
                             </div>
+                            <x-element.skeleton-table rows="6" cols="4" />
                         </div>
-                        <x-element.skeleton-table rows="6" cols="4" />
-                    </div>
-                </div>
+                    </x-element.loading-overlay>
+                @endif
 
                 @if ($this->isTabLoaded('permissions'))
                     {{-- Actual content --}}
@@ -352,18 +361,19 @@
                 label="{{ __('ledger.tab.related') }}{{ $relatedCount > 0 ? ' · ' . $relatedCount : '' }}"
                 icon="o-link"
                 class="shadow-md relative min-h-[400px]">
-                <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
-
-                {{-- スケルトン（タブ切替 + 表示レベル切替時） --}}
-                <div wire:loading wire:target="{{ $tabNavTargets }},displayLevel" class="w-full block">
-                    <div class="space-y-4 p-2 w-full">
-                        <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
-                            <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
-                            <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
+                @if ($this->isTabLoaded('related'))
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets" />
+                @else
+                    <x-element.loading-overlay tier="2" :target="$tabNavTargets">
+                        <div class="space-y-4 p-2 w-full animate-pulse">
+                            <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
+                                <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
+                                <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
+                            </div>
+                            <x-element.skeleton-table rows="5" cols="5" />
                         </div>
-                        <x-element.skeleton-table rows="5" cols="5" />
-                    </div>
-                </div>
+                    </x-element.loading-overlay>
+                @endif
 
                 @if ($this->isTabLoaded('related'))
                     <div wire:loading.remove wire:target="{{ $tabNavTargets }},displayLevel">

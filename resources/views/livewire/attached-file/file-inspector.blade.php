@@ -148,6 +148,18 @@
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
                                 @if ($this->isTabLoaded('details'))
+                                    <x-element.loading-overlay tier="2" target="selectedTab" />
+                                @else
+                                    <x-element.loading-overlay tier="2" target="selectedTab">
+                                        <div class="space-y-4 p-2 w-full animate-pulse">
+                                            <div class="h-6 bg-base-300 rounded w-40 shimmer"></div>
+                                            <x-element.skeleton-table rows="6" cols="2" />
+                                            <x-element.skeleton-list items="3" />
+                                        </div>
+                                    </x-element.loading-overlay>
+                                @endif
+
+                                @if ($this->isTabLoaded('details'))
                                     @include('livewire.attached-file.file-inspector.tabs.details')
                                 @endif
                             </x-mary-tab>
@@ -157,6 +169,20 @@
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
                                 @if ($this->isTabLoaded('history'))
+                                    <x-element.loading-overlay tier="2" target="selectedTab" />
+                                @else
+                                    <x-element.loading-overlay tier="2" target="selectedTab">
+                                        <div class="space-y-4 p-2 w-full animate-pulse">
+                                            <div class="h-6 bg-base-300 rounded w-44 shimmer"></div>
+                                            <x-element.skeleton-list items="6" />
+                                            <div class="h-px bg-base-200 my-4"></div>
+                                            <div class="h-6 bg-base-300 rounded w-36 shimmer"></div>
+                                            <x-element.skeleton-list items="5" />
+                                        </div>
+                                    </x-element.loading-overlay>
+                                @endif
+
+                                @if ($this->isTabLoaded('history'))
                                     @include('livewire.attached-file.file-inspector.tabs.history')
                                 @endif
                             </x-mary-tab>
@@ -165,6 +191,18 @@
                                         icon="o-shield-check"
                                         class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
                             >
+                                @if ($this->isTabLoaded('permissions'))
+                                    <x-element.loading-overlay tier="2" target="selectedTab" />
+                                @else
+                                    <x-element.loading-overlay tier="2" target="selectedTab">
+                                        <div class="space-y-4 p-2 w-full animate-pulse">
+                                            <div class="h-6 bg-base-300 rounded w-52 shimmer"></div>
+                                            <x-element.skeleton-table rows="4" cols="3" />
+                                            <x-element.skeleton-list items="3" />
+                                        </div>
+                                    </x-element.loading-overlay>
+                                @endif
+
                                 @if ($this->isTabLoaded('permissions'))
                                     @include('livewire.attached-file.file-inspector.tabs.permissions')
                                 @endif
