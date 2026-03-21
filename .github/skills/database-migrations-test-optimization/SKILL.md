@@ -32,6 +32,8 @@ Need tenant context?
 **Why `DatabaseMigrations` is slow**: `migrate:fresh` takes ~13s (Mroonga index rebuild).
 10 test methods = 130s. Also `migrate:rollback` destroys other tests' DB state.
 
+**Environment recovery first**: if `composer test:coverage` fails because tables already exist or `migrations` is missing, fix the test DB with `bin/reset-test-db.sh` and the recorded recovery flow before changing traits.
+
 ## Performance (measured)
 
 | Before | After |

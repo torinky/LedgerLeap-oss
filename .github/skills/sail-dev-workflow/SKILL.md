@@ -21,6 +21,9 @@ CSS/JS changes not visible in browser?
 │
 Test failures with "table not found" or stale tenant data?
 │  FIX: bin/reset-test-db.sh    (drops and recreates test DB)
+│       For coverage runs, follow the recorded flow in
+│       docs/work/testing/2026-03-21_test-coverage-db-recovery-and-tenancy-guidelines.md
+│       and keep `mysql_testing` / `db:wipe` / `migrate` / `tenants:migrate` aligned.
 │
 Tests fail immediately with `mysql_testing -> mysql` name resolution on host PHP?
 │  CAUSE: LedgerLeap test DB host resolution assumes Docker networking.
