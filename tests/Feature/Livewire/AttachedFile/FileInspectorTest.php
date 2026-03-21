@@ -96,6 +96,23 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_constrains_drawer_and_tab_widths_to_prevent_horizontal_scroll()
+    {
+        config(['mock.attachment.enabled' => true]);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => 10001])
+            ->assertSet('open', true)
+            ->assertSeeHtml('fixed inset-y-0 right-0 w-full md:w-[600px]')
+            ->assertSeeHtml('flex flex-col flex-1 h-full min-w-0 overflow-x-hidden')
+            ->assertSeeHtml('bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none relative z-50 isolate min-w-0 overflow-x-hidden')
+            ->assertSeeHtml('tooltip-left')
+            ->assertSeeHtml('flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative min-w-0')
+            ->assertSeeHtml('tabs tabs-lift pl-3')
+            ->assertSeeHtml('tab-content bg-base-100 border-base-300');
+    }
+
+    #[Test]
     public function it_shows_error_when_file_not_found()
     {
         config(['mock.attachment.enabled' => false]);

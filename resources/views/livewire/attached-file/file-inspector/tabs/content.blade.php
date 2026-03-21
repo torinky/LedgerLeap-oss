@@ -1,5 +1,5 @@
 {{-- Content Tab --}}
-<div class="space-y-4 relative" x-data="{
+<div class="space-y-4 relative min-w-0 max-w-full overflow-x-hidden" x-data="{
     viewMode: 'rendered', // 'rendered' or 'raw' (only relevant for VLM)
     rawPreviewText: null,
     rawPreviewLoading: false,
@@ -108,7 +108,7 @@
     @endphp
 
     {{-- HEADER: Search & Source Selector (Tabs) --}}
-    <div class="sticky top-0 z-20 bg-base-100/95 backdrop-blur-xs py-2 border-b border-base-200">
+    <div class="sticky top-0 z-20 bg-base-100/95 backdrop-blur-xs py-2 border-b border-base-200 min-w-0 max-w-full overflow-x-hidden">
         <div class="flex flex-col gap-3">
             {{-- Search Box --}}
             <div class="flex items-center gap-2">
@@ -137,9 +137,9 @@
             </div>
 
             {{-- Source Selector (Explicit Tabs) --}}
-            <div class="flex flex-wrap items-center justify-between gap-y-2 tooltip"
+            <div class="flex flex-wrap items-center justify-between gap-y-2 tooltip min-w-0 max-w-full"
                 data-tip="{{ __('ledger.file_inspector.source.tooltip') }}">
-                <div class="join bg-base-200 rounded-lg overflow-x-auto max-w-full">
+                <div class="join bg-base-200 rounded-lg overflow-x-auto max-w-full min-w-0">
                     {{-- 1. AI Analysis (VLM Rendered) --}}
                     @php
                         $vlmStatus = $this->getSourceStatus('vlm');

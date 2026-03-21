@@ -1,5 +1,5 @@
 {{-- Permissions Tab --}}
-<div class="px-6 py-4 space-y-6 pb-10">
+<div class="px-6 py-4 space-y-6 pb-10 min-w-0 max-w-full overflow-x-hidden">
     {{-- 1. 権限概要 --}}
     <section>
         <h3 class="text-xs font-bold mb-3 flex items-center gap-2 text-base-content/50 uppercase tracking-wider">

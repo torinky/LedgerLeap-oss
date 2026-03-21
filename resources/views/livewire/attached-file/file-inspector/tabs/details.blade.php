@@ -1,5 +1,5 @@
 {{-- Details Tab --}}
-<div class="px-6 py-4 space-y-8 pb-10">
+<div class="px-6 py-4 space-y-8 pb-10 min-w-0 max-w-full overflow-x-hidden">
     {{-- 0. 未最終化ファイル警告 --}}
     @if ($file && !$file->processing_finalized_at)
         <x-mary-alert icon="o-clock" class="alert-warning">

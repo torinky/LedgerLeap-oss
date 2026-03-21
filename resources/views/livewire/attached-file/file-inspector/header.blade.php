@@ -1,6 +1,6 @@
 {{-- Header --}}
 <div class="navbar bg-base-200 border-b border-base-300 min-h-[4rem] px-4 flex-none">
-    <div class="flex-1">
+    <div class="flex-1 min-w-0">
         <div class="flex flex-col gap-1">
             <h2 id="drawer-title" class="text-base font-bold truncate line-clamp-1"
                 title="{{ $file->original_filename ?? ($file->filename ?? __('ledger.file_inspector.title')) }}">
