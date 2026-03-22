@@ -4,6 +4,16 @@ set -euo pipefail
 ROOT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT_DIR"
 
+export APP_ENV=testing
+export DB_CONNECTION=mysql_testing
+
+# Laravel が testing 環境設定を読んでいるか確認する Fail-Safe 
+PHP_DB_NAME=$(php artisan tinker --env=testing --execute='echo config("database.connections.mysql_testing.database", "");' 2>/dev/null || echo "")
+if [[ "$PHP_DB_NAME" == "ledgerleap" || "$PHP_DB_NAME" == "ledgerleap_prod" ]]; then
+    echo "ERROR: Laravel の testing 環境設定が central DB ($PHP_DB_NAME) を指しています。処理を中止します。"
+    exit 1
+fi
+
 DB_HOST=$(grep "^DB_HOST=" .env.testing 2>/dev/null | cut -d '=' -f2 | tr -d '\r\n')
 DB_NAME=$(grep "^DB_DATABASE=" .env.testing 2>/dev/null | cut -d '=' -f2 | tr -d '\r\n')
 DB_HOST=${DB_HOST:-mysql}
@@ -68,17 +78,17 @@ mysql_root -e "GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';"
 mysql_root -e "FLUSH PRIVILEGES;"
 
 echo "[2/6] Laravel キャッシュをクリア中..."
-php artisan optimize:clear >/dev/null
-php artisan config:clear >/dev/null
+php artisan optimize:clear --env=testing >/dev/null
+php artisan config:clear --env=testing >/dev/null
 
 echo "[3/6] Laravel 接続で DB を wipe 中..."
-php artisan db:wipe --database=mysql_testing --force >/dev/null
+php artisan db:wipe --database=mysql_testing --force --env=testing >/dev/null
 
 echo "[4/6] central DB を migrate 中..."
-php artisan migrate --database=mysql_testing --force
+php artisan migrate --database=mysql_testing --force --env=testing
 
 echo "[5/6] shared test tenant を作成 / migrate 中..."
-php artisan tinker --execute='
+php artisan tinker --env=testing --execute='
 $t = \App\Models\Tenant::firstOrCreate(["id" => "test_tenant_id"]);
 tenancy()->initialize($t);
 \Artisan::call("tenants:migrate", ["--tenants" => [$t->id], "--force" => true]);
@@ -86,7 +96,7 @@ echo "Tenant ready: " . $t->id . PHP_EOL;
 '
 
 echo "[6/6] migrate 状態を確認中..."
-php artisan migrate:status --database=mysql_testing | tail -15
+php artisan migrate:status --database=mysql_testing --env=testing | tail -15
 
 echo "=== ローカルテスト環境準備完了 ==="
 

@@ -114,7 +114,6 @@
     "test:canary:unit": "vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors",
     "test:canary:feature": "vendor/bin/pest --parallel --configuration phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --display-errors",
     "test:coverage": [
-      "@test:prepare:local",
       "@test:coverage:unit",
       "@test:coverage:feature",
       "@test:coverage:db-migrations"
