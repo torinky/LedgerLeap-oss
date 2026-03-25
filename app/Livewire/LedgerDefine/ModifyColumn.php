@@ -218,6 +218,11 @@ class ModifyColumn extends BaseLivewireComponent
         })->all();
     }
 
+    public function updatedColumnUploadedFile($value, $key)
+    {
+        $this->isDirty = true;
+    }
+
     public function updatedColumns($value, $key)
     {
         // $key will be in the format "0.type", "1.type", etc.
@@ -381,6 +386,13 @@ class ModifyColumn extends BaseLivewireComponent
     {
         if (! $this->canModifyColumns()) {
             return;
+        }
+
+        // 全てのアップロードされた背景ファイルをストレージに保存する
+        foreach ($this->columns as $column) {
+            if (isset($this->columnUploadedFile[$column['id']])) {
+                $this->storeFile($column['id']);
+            }
         }
 
         // Before saving, ensure all columns are simple associative arrays.

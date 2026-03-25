@@ -313,8 +313,17 @@ class AttachedFile extends Model
     {
         $thumbnailFailed = ($this->status === AttachedFileStatus::THUMBNAIL_FAILED);
 
-        // ステータスをPENDING_INITIAL_PROCESSINGにリセット
+        // ステータスとタイムスタンプをリセット
         $this->status = AttachedFileStatus::PENDING_INITIAL_PROCESSING;
+        $this->tika_processed_at = null;
+        $this->ocr_processed_at = null;
+        $this->ocr_failed_at = null;
+        $this->vlm_processed_at = null;
+        $this->vlm_failed_at = null;
+        $this->processing_finalized_at = null;
+        $this->finalized_source = null;
+        // 注意点として、ファイルのプレビューデータである content_attached 自体は
+        // 新しい処理結果で上書きされるか、あるいは次回利用可能になるまで現状維持とするためクリアしない
         $this->save();
 
         // メインの処理ジョブを再ディスパッチ

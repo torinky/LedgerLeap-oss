@@ -296,11 +296,15 @@ class FinalizeAttachedFileProcessing extends Command
      */
     private function updateContentAttached(AttachedFile $file, array $bestContent): void
     {
-        if (! $file->ledger) {
+        if (! $file->ledger_id) {
             return;
         }
 
-        $ledger = $file->ledger;
+        // 最新のLedgerを悲観的ロック付きで再取得し、バッチ内の他のファイルによる上書きを防ぐ
+        $ledger = Ledger::where('id', $file->ledger_id)->lockForUpdate()->first();
+        if (! $ledger) {
+            return;
+        }
         $contentAttached = $ledger->content_attached ?? [];
         $columnId = $file->column_id;
         $hashedbasename = $file->hashedbasename;

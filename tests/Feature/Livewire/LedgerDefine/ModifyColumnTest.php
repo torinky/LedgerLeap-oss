@@ -325,4 +325,44 @@ class ModifyColumnTest extends TestCase
             $this->assertEquals($offset, $column->options['default_offset'] ?? null, "Failed for offset: {$offset}");
         }
     }
+
+    #[Test]
+    public function it_sets_is_dirty_when_background_file_is_uploaded()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('background.png');
+
+        Livewire::test(ModifyColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ])
+            ->assertSet('isDirty', false)
+            ->set('columnUploadedFile.0', $file)
+            ->assertSet('isDirty', true);
+    }
+
+    #[Test]
+    public function it_stores_uploaded_background_file_on_bulk_save()
+    {
+        \Illuminate\Support\Facades\Storage::fake('public');
+
+        $file = \Illuminate\Http\UploadedFile::fake()->image('background.png');
+
+        Livewire::test(ModifyColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ])
+            ->set('columnUploadedFile.0', $file)
+            ->call('save')
+            ->assertDispatched('ledgerDefineRecordStored')
+            ->assertHasNoErrors();
+
+        $this->ledgerDefine->refresh();
+        $savedFileProperty = $this->ledgerDefine->column_define[0]->file;
+
+        $this->assertIsArray($savedFileProperty);
+        $this->assertEquals('background.png', $savedFileProperty['name']);
+        
+        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($savedFileProperty['path']);
+    }
 }
+
