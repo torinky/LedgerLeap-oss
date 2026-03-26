@@ -20,7 +20,7 @@
 
 1. この `base/` を neutral parent 配下へコピーする
 2. `workspace/.gemini/settings.clean-room.template.jsonc` を `settings.json` に複製する
-3. `httpUrl` / `Authorization` placeholder を環境ごとに埋める
+3. `mcp-remote` 用の URL と `AUTH_HEADER` (bearer token) を環境に合わせて埋める
 4. `gemini-home/` を `GEMINI_CLI_HOME` に設定する
 5. Gemini CLI は `workspace/` を current working directory にして起動する
 

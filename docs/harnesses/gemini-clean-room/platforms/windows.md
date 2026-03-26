@@ -21,9 +21,20 @@ C:\ledgerleap-gemini-eval\issue-106\
 ```
 
 > [!NOTE]
-> `#109` の実装後、clean-room の `settings.json` は
-> **`httpUrl` + `Authorization: Bearer ...`** を使う remote MCP を正本にします。
-> local command MCP は比較用 fallback に留め、通常の clean-room 評価では使いません。
+> Antigravity/Gemini CLI の `mcp_config.json` / `settings.json` は stdio サーバーのみをサポートしています。
+> そのため、remote MCP (HTTP/SSE) を直接 `httpUrl` で指定することはできません。
+> 代わりに **`mcp-remote`** パッケージをプロキシとして使用します。
+> これには Node.js (npx) のインストールが必要です。
+
+## 必須ソフトウェア (Windows)
+
+`mcp-remote` を動かすために Node.js が必要です。
+
+1.  **Node.js のインストール**
+    *   [nodejs.org](https://nodejs.org/) から LTS 版をダウンロードしてインストールする
+    *   または `winget` コマンドを使用: `winget install OpenJS.NodeJS.LTS`
+2.  **npx の確認**
+    *   PowerShell で `npx --version` を実行してバージョンが表示されることを確認してください。
 
 ## 参考コマンド例
 
@@ -95,9 +106,15 @@ $token->plainTextToken;
 {
   "mcpServers": {
     "ledgerleap-api": {
-      "httpUrl": "http://localhost/tenant-a/mcp/ledgerleap",
-      "headers": {
-        "Authorization": "Bearer <replace-with-mcp-token>"
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "http://localhost/tenant-a/mcp/ledgerleap",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        "AUTH_HEADER": "Bearer <replace-with-mcp-token>"
       }
     }
   }

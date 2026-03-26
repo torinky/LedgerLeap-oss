@@ -32,14 +32,25 @@
     "disabled": []
   },
   "mcpServers": {
+    // mcp-remote is an stdio→HTTP proxy that works with any MCP client that only supports stdio.
+    // It proxies to a remote HTTP (StreamableHTTP / SSE) MCP endpoint.
+    // Install requirement: Node.js + npx must be available on PATH.
+    //   Windows: install Node.js from https://nodejs.org/ or via winget (see platforms/windows.md)
+    //   macOS:   install Node.js via Homebrew: brew install node
+    // mcp-remote is fetched automatically by npx on first run (no global install needed).
+    // Avoid spaces inside the --header arg value; put spaces in the env var instead.
     "ledgerleap-api": {
-      "httpUrl": "__LEDGERLEAP_MCP_HTTP_URL__",
-      "headers": {
-        "Authorization": "Bearer __LEDGERLEAP_MCP_BEARER_TOKEN__"
-      },
-      "timeout": 30000,
-      "trust": false,
-      "description": "LedgerLeap remote MCP evaluation server"
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "__LEDGERLEAP_MCP_HTTP_URL__",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        // Replace the token below with a Sanctum token that has mcp:* ability.
+        "AUTH_HEADER": "Bearer __LEDGERLEAP_MCP_BEARER_TOKEN__"
+      }
     }
   }
 }

@@ -20,7 +20,7 @@
 ## 次の手順
 
 - `.gemini/settings.clean-room.template.jsonc` を `settings.json` へ複製
-- `httpUrl` に tenant を解決できる MCP endpoint を設定
-- `headers.Authorization` に `mcp:*` ability を持つ bearer token を設定
+- `mcp-remote` の第2引数に tenant を解決できる MCP endpoint URL を設定
+- `env.AUTH_HEADER` に `Bearer <token>` 形式で bearer token を設定
 - platform note に従って `GEMINI_CLI_HOME` を別ディレクトリへ設定
 
