@@ -470,7 +470,7 @@ class LedgerDiffViewerTest extends TestCase
         $livewire->assertSee('files/', false);
         $livewire->assertSee('/download', false);
         $livewire->assertSee((string) $attachedFile->id, false);
-        $livewire->assertSee('thumbnail=true', false);
+        $livewire->assertSee('thumbnail=1', false);
 
         // ファイル名も表示されていることを確認
         $livewire->assertSee($attachedFile->filename);
