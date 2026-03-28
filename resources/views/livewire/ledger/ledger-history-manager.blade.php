@@ -199,7 +199,7 @@
 
                 {{-- 無限スクロールトリガー --}}
                 @if ($hasMore)
-                    <div x-intersect="$wire.loadMore()" class="p-8 flex justify-center">
+                    <div x-intersect.once="$wire.loadMore()" class="p-8 flex justify-center">
                         <span wire:loading class="loading loading-spinner loading-md text-primary"></span>
                     </div>
                 @else
@@ -216,7 +216,7 @@
         <x-element.loading-overlay tier="2" message="{{ __('ledger.loading') }}" />
 
         {{-- 計算中のスケルトン表示 --}}
-        <div wire:loading class="w-full space-y-6 animate-pulse">
+        <div wire:loading wire:target="toggleSelection,historyDisplayLevel" class="w-full space-y-6 animate-pulse">
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body p-6 space-y-8">
                     {{-- ヘッダー部分のスケルトン --}}
@@ -257,7 +257,7 @@
         </div>
 
         {{-- 通常コンテンツ（読み込み中は非表示） --}}
-        <div wire:loading.remove>
+        <div wire:loading.remove wire:target="toggleSelection,historyDisplayLevel">
             @if ($baseDiff)
                 <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
                     <div class="card-body p-0">

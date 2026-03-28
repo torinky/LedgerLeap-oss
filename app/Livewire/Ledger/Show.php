@@ -245,6 +245,17 @@ class Show extends BaseLivewireComponent
         $this->markTabLoaded($tab);
     }
 
+    /**
+     * Alpine.js のタブ切り替えから非同期で呼び出される。
+     * UI の切り替えは Alpine 側が先行済みのため、
+     * このメソッドは URL 同期と初回コンテンツ DOM 追加のみを担当する。
+     */
+    public function notifyTabChange(string $tab): void
+    {
+        $this->selectedTab = $tab;
+        $this->markTabLoaded($tab);
+    }
+
     protected function markTabLoaded(string $tab): void
     {
         if (! in_array($tab, $this->loadedTabs, true)) {

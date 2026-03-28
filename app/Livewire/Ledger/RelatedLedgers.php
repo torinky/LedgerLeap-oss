@@ -10,8 +10,8 @@ use App\Models\LedgerDefine;
 use App\Services\Ledger\RelatedLedgerService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Lazy;
-use Livewire\Attributes\Reactive;
 use Livewire\WithPagination;
 
 #[Lazy]
@@ -44,7 +44,6 @@ class RelatedLedgers extends BaseLivewireComponent
     public bool $hasAutoNumber = false;
 
     /** 表示レベル（基本情報タブと同期） */
-    #[Reactive]
     public int $displayLevel = 1;
 
     /** 1ページあたりの件数 */
@@ -99,6 +98,12 @@ class RelatedLedgers extends BaseLivewireComponent
     public function updatedShowSemantic(): void
     {
         $this->resetPage('related_page');
+    }
+
+    #[On('displayLevelUpdated')]
+    public function updateDisplayLevel(int $displayLevel): void
+    {
+        $this->displayLevel = $displayLevel;
     }
 
     // ─────────────────────────────────────────────

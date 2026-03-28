@@ -39,6 +39,8 @@ if (is_null($this->tenantId)) {
 CannotMutateReactivePropException? → FIX: pass Collection::make($prop) or clone model
 ```
 
+- **Heavy child components inside tab panels**: if parent tab switching causes the child to rerender expensively (for example history or related lists), avoid `#[Reactive]` for props that only need occasional sync. Prefer `#[On(...)]` + explicit dispatch so the tab body stays mounted and only the required state is updated.
+
 ## Loading UI
 
 ```

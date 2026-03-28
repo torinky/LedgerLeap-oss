@@ -521,6 +521,16 @@ class RelatedLedgersTest extends TestCase
         $this->assertNotContains('semantic', $reasons);
     }
 
+    #[Test]
+    public function it_updates_display_level_from_event(): void
+    {
+        $component = Livewire::test(RelatedLedgers::class, ['ledgerId' => $this->ledger->id]);
+
+        $component->assertSet('displayLevel', 1);
+        $component->dispatch('displayLevelUpdated', displayLevel: 3);
+        $component->assertSet('displayLevel', 3);
+    }
+
     // ─────────────────────────────────────────────
     // Sprint 3: ページング
     // ─────────────────────────────────────────────

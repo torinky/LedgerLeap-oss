@@ -194,6 +194,35 @@ class ShowAdditionalTest extends TestCase
     }
 
     // ===================================================================
+    // notifyTabChange / relatedCountUpdated
+    // ===================================================================
+
+    #[Test]
+    public function it_notifies_tab_changes_from_alpine(): void
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $component->call('notifyTabChange', 'related');
+
+        $component->assertSet('selectedTab', 'related');
+        $this->assertContains('related', $component->get('loadedTabs'));
+    }
+
+    #[Test]
+    public function it_updates_related_count_from_event(): void
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $component->dispatch('relatedCountUpdated', count: 7);
+
+        $component->assertSet('relatedCount', 7);
+    }
+
+    // ===================================================================
     // setDisplayLevel
     // ===================================================================
 

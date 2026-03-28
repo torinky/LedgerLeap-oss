@@ -7,6 +7,10 @@
         $tabSwitchTargets = 'selectedTab';
         // Detail-specific filter targets that should only affect the record content
         $recordFilterTargets = 'displayLevel,showChanges';
+        // ワークフロー履歴タブのタイトル
+        $historyTabTitle = $ledgerRecord->define->workflow_enabled
+            ? __('ledger.tab.workflow_history')
+            : __('ledger.history_title');
     @endphp
 
     {{-- Alpine.store を確実に初期化するためのスクリプト --}}
@@ -86,17 +90,104 @@
 
     {{-- Tier 1: Global Loading removed to keep tab headers interactive during transitions --}}
 
-    <div class="p-0 rounded-b-xl sm:w-full relative"> {{-- パディング調整 + relative --}}
-        {{-- Skeletons/Overlays move inside tab components for more granular feedback --}}
+    <div class="p-0 rounded-b-xl sm:w-full relative"
+         x-data="{
+             activeTab: @js($selectedTab),
+             loadedTabs: @js($loadedTabs),
+             relatedCount: @js($relatedCount),
 
-        {{-- タブ UI の導入 --}}
-        <x-mary-tabs wire:model="selectedTab" activeClass="border-b-0" labelDivClass="tabs tabs-lift tabs-xl ml-4"
-            tabsClass="flex flex-col mb-40" class="w-full">
-            {{-- 下にマージン追加 --}}
+             init() {
+                 {{-- Livewire側でselectedTab / relatedCount が変更された場合にAlpineへ同期する --}}
+                 $wire.$watch('selectedTab', (value) => {
+                     this.activeTab = value;
+                     this.markLoaded(value);
+                     this.updateUrl(value);
+                 });
 
-            {{-- 基本情報タブ --}}
-            <x-mary-tab name="details" label="{{ __('ledger.tab.details') }}" icon="o-document-text"
-                class="shadow-lg space-y-4 relative min-h-[400px]">
+                 $wire.$watch('relatedCount', (value) => {
+                     this.relatedCount = value;
+                 });
+             },
+
+             isLoaded(tab) {
+                 return this.loadedTabs.includes(tab);
+             },
+
+             markLoaded(tab) {
+                 if (!this.loadedTabs.includes(tab)) {
+                     this.loadedTabs.push(tab);
+                 }
+             },
+
+             updateUrl(tab) {
+                 const url = new URL(window.location.href);
+                 url.searchParams.set('tab', tab);
+                 window.history.replaceState({}, '', url);
+             },
+
+             switchTab(tab) {
+                 if (this.activeTab === tab) {
+                     return;
+                 }
+
+                 this.activeTab = tab;
+                 this.updateUrl(tab);
+
+                 if (!this.isLoaded(tab)) {
+                     this.markLoaded(tab);
+                     {{-- 初回訪問時のみ Livewire に通知して DOM を追加する --}}
+                     $wire.call('notifyTabChange', tab);
+                 }
+             }
+         }"
+         x-cloak>
+
+        {{-- タブボタン: wire:ignore でAlpine状態がLivewireのDOM diffingでリセットされるのを防ぐ --}}
+        <div wire:ignore>
+            <div role="tablist" class="tabs tabs-lift tabs-xl ml-4">
+                <button role="tab" class="tab"
+                    :class="{ 'tab-active': activeTab === 'details' }"
+                    @click="switchTab('details')">
+                    <x-mary-icon name="o-document-text" class="mr-1.5 w-4 h-4" />
+                    {{ __('ledger.tab.details') }}
+                </button>
+                <button role="tab" class="tab"
+                    :class="{ 'tab-active': activeTab === 'history' }"
+                    @click="switchTab('history')">
+                    <x-mary-icon name="o-list-bullet" class="mr-1.5 w-4 h-4" />
+                    {{ $historyTabTitle }}
+                </button>
+                <button role="tab" class="tab"
+                    :class="{ 'tab-active': activeTab === 'activity' }"
+                    @click="switchTab('activity')">
+                    <x-mary-icon name="o-clock" class="mr-1.5 w-4 h-4" />
+                    {{ __('ledger.tab.activity_history') }}
+                </button>
+                <button role="tab" class="tab"
+                    :class="{ 'tab-active': activeTab === 'permissions' }"
+                    @click="switchTab('permissions')">
+                    <x-mary-icon name="o-shield-check" class="mr-1.5 w-4 h-4" />
+                    {{ __('ledger.tab.access_and_permissions') }}
+                </button>
+                <button role="tab" class="tab"
+                    :class="{ 'tab-active': activeTab === 'related' }"
+                    @click="switchTab('related')">
+                    <x-mary-icon name="o-link" class="mr-1.5 w-4 h-4" />
+                    <span>{{ __('ledger.tab.related') }}</span>
+                    <span class="badge badge-neutral badge-sm ml-1" x-cloak x-show="relatedCount > 0" x-text="relatedCount"></span>
+                </button>
+            </div>
+        </div>
+
+        {{-- タブコンテンツエリア --}}
+        <div class="flex flex-col mb-40">
+
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            {{-- 基本情報タブ                                                 --}}
+            {{-- 常にロード済み（mount()で loadedTabs に初期追加される）       --}}
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            <div x-show="activeTab === 'details'"
+                 class="shadow-lg space-y-4 relative min-h-[400px]">
                 {{-- Overall tab loading --}}
                 <x-element.loading-overlay tier="2" :target="$recordFilterTargets" :delay="false">
 
@@ -263,36 +354,31 @@
                         </div>
                     </x-mary-card>
                 </div>
+            </div>
 
-            </x-mary-tab>
-
-
-            @php
-                $historyTabTitle = $ledgerRecord->define->workflow_enabled
-                    ? __('ledger.tab.workflow_history')
-                    : __('ledger.history_title');
-            @endphp
-            {{-- ワークフロー履歴タブ --}}
-            <x-mary-tab name="history" class="shadow-md relative min-h-[400px]" label="{{ $historyTabTitle }}" icon="o-list-bullet">
-                @if (! $this->isTabLoaded('history'))
-                    <x-element.loading-overlay tier="2" :target="$tabSwitchTargets" />
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            {{-- ワークフロー履歴タブ                                         --}}
+            {{-- 初回訪問まで DOM に追加しない（@if isTabLoaded）             --}}
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            <div x-show="activeTab === 'history'"
+                 class="shadow-md relative min-h-[400px]">
+                @if ($this->isTabLoaded('history'))
+                    <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
+                        wire:key="history-manager-{{ $ledgerRecord->id }}" />
+                @else
+                    {{-- 初回訪問前はスケルトンローディングを表示 --}}
+                    <x-element.loading-overlay tier="2" :manual="true" />
                 @endif
-                <livewire:ledger.ledger-history-manager :ledgerId="$ledgerRecord->id" :displayLevel="$displayLevel" :highlight="$highlight"
-                    wire:key="history-manager-{{ $ledgerRecord->id }}" />
-            </x-mary-tab>
+            </div>
 
 
-
-
-            {{-- ★★★ 総合活動履歴タブ ★★★ --}}
-            <x-mary-tab name="activity" label="{{ __('ledger.tab.activity_history') }}" icon="o-clock"
-                class="shadow-md relative min-h-[400px]">
-                @if (! $this->isTabLoaded('activity'))
-                    <x-element.loading-overlay tier="2" :target="$tabSwitchTargets" />
-                @endif
-
-                {{-- Actual content --}}
-                <div>
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            {{-- 総合活動履歴タブ                                             --}}
+            {{-- 初回訪問まで DOM に追加しない（@if isTabLoaded）             --}}
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            <div x-show="activeTab === 'activity'"
+                 class="shadow-md relative min-h-[400px]">
+                @if ($this->isTabLoaded('activity'))
                     {{-- テスト実行時はレンダリングしない --}}
                     @if (app()->environment() !== 'testing')
                         <livewire:common.activity-history-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
@@ -300,18 +386,18 @@
                     @else
                         <div id="activity-history-placeholder-for-testing"></div>
                     @endif
-                </div>
-            </x-mary-tab>
-
-            {{-- ★★★ アクセスと権限タブ ★★★ --}}
-            <x-mary-tab name="permissions" label="{{ __('ledger.tab.access_and_permissions') }}" icon="o-shield-check"
-                class="shadow-md relative min-h-[400px]">
-                @if (! $this->isTabLoaded('permissions'))
-                    <x-element.loading-overlay tier="2" :target="$tabSwitchTargets" />
+                @else
+                    <x-element.loading-overlay tier="2" :manual="true" />
                 @endif
+            </div>
 
-                {{-- Actual content --}}
-                <div>
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            {{-- アクセスと権限タブ                                           --}}
+            {{-- 初回訪問まで DOM に追加しない（@if isTabLoaded）             --}}
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            <div x-show="activeTab === 'permissions'"
+                 class="shadow-md relative min-h-[400px]">
+                @if ($this->isTabLoaded('permissions'))
                     {{-- テスト実行時はレンダリングしない --}}
                     @if (app()->environment() !== 'testing')
                         <livewire:common.permission-display :resourceId="$ledgerRecord->id" resourceType="Ledger"
@@ -319,58 +405,38 @@
                     @else
                         <div id="permission-display-placeholder-for-testing"></div>
                     @endif
-                </div>
-            </x-mary-tab>
-
-            {{-- ★★★ 関連案件タブ ★★★ --}}
-            <x-mary-tab name="related"
-                label="{{ __('ledger.tab.related') }}{{ $relatedCount > 0 ? '  ' . $relatedCount : '' }}"
-                icon="o-link"
-                class="shadow-md relative min-h-[400px]">
-                @if ($this->isTabLoaded('related'))
-                    <x-element.loading-overlay tier="2" :target="$tabNavTargets">
-                        <div class="space-y-4 p-2 w-full animate-pulse">
-                            <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
-                                <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
-                                <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
-                            </div>
-                            <x-element.skeleton-table rows="5" cols="5" />
-                        </div>
-                    </x-element.loading-overlay>
                 @else
-                    <x-element.loading-overlay tier="2" :target="$tabNavTargets">
-                        <div class="space-y-4 p-2 w-full animate-pulse">
-                            <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
-                                <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
-                                <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
-                            </div>
-                            <x-element.skeleton-table rows="5" cols="5" />
-                        </div>
-                    </x-element.loading-overlay>
+                    <x-element.loading-overlay tier="2" :manual="true" />
                 @endif
+            </div>
 
-                <div wire:loading wire:target="displayLevel" class="w-full block">
-                    <div class="space-y-4 p-2 w-full">
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            {{-- 関連案件タブ                                                 --}}
+            {{-- @if isTabLoaded + defer: DOM追加と同時に即時ロード開始        --}}
+            {{-- 2回目以降は x-show のみで切替（Livewireリクエスト不要）      --}}
+            {{-- ═══════════════════════════════════════════════════════════ --}}
+            <div x-show="activeTab === 'related'"
+                 class="shadow-md relative min-h-[400px]">
+                @if ($this->isTabLoaded('related'))
+                    {{-- defer: DOMに追加された瞬間に即時ロード開始（lazy とは異なりビューポート不要） --}}
+                    <livewire:ledger.related-ledgers
+                        :ledgerId="$ledgerRecord->id"
+                        :displayLevel="$displayLevel"
+                        wire:key="related-ledgers-{{ $ledgerRecord->id }}"
+                        defer />
+                @else
+                    {{-- 初回訪問前のスケルトン --}}
+                    <div class="space-y-4 p-2 w-full animate-pulse">
                         <div class="flex items-center gap-4 p-3 bg-base-200/40 rounded-lg">
                             <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
                             <div class="h-8 bg-base-300 rounded-full w-32 shimmer"></div>
                         </div>
                         <x-element.skeleton-table rows="5" cols="5" />
                     </div>
-                </div>
-
-                @if ($this->isTabLoaded('related'))
-                    <div wire:loading.remove wire:target="{{ $tabNavTargets }},displayLevel">
-                        <livewire:ledger.related-ledgers
-                            :ledgerId="$ledgerRecord->id"
-                            :displayLevel="$displayLevel"
-                            wire:key="related-ledgers-{{ $ledgerRecord->id }}"
-                            lazy />
-                    </div>
                 @endif
-            </x-mary-tab>
+            </div>
 
-        </x-mary-tabs>
+        </div>{{-- end タブコンテンツエリア --}}
 
         {{-- フッターパネル (アクションボタン集約) --}}
         <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">
@@ -382,28 +448,13 @@
                     @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], 'workflow-comment-modal-show')
 
 
-                    {{-- 戻し理由入力モーダル --}}
-                    {{--
-        <x-mary-modal wire:model="returnToDraftModal"
-          title="{{ __('ledger.workflow.return_to_draft_reason') }}">
-        <x-mary-textarea label="{{ __('ledger.workflow.comments') }}" wire:model="returnComment"
-                 placeholder="{{ __('ledger.workflow.return_reason_placeholder') }}"
-                 hint="{{ __('ledger.workflow.optional_comment') }}" rows="3"/>
-        <x-slot:actions>
-        <x-mary-button label="{{ __('actions.cancel') }}" @click="$wire.returnToDraftModal = false"/>
-        <x-mary-button label="{{ __('ledger.workflow.return_to_draft') }}" class="btn-warning"
-                   wire:click="returnTaskToDraft" spinner/>
-        </x-slot:actions>
-        </x-mary-modal>
-        --}}
-
-
                 </div>
 
             </div>
 
         </div>
     </div>
+
     {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
     <livewire:attached-file.file-inspector :isInLedgerDetailPage="true" />
 
