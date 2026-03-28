@@ -10,9 +10,9 @@
     <th scope="col" class="w-10 text-center px-4 py-2 tracking-wider bg-accent/30 bg-opacity-30">
         @if (!empty($defaultSortColumns) && $orderBy !== 'default')
             {{-- デフォルト順に戻すボタン --}}
-            <button type="button" class="btn btn-square btn-warning" wire:click.stop="$parent.sort('default')"
-                wire:loading.attr="disabled" wire:target="$parent.sort" aria-label="{{ __('ledger.actions.reset_sort') }}">
-                <i class="fas fa-arrow-path"></i>
+            <button type="button" class="btn btn-square btn-warning tooltip tooltip-right" wire:click.stop="$parent.sort('default')"
+                wire:loading.attr="disabled" wire:target="$parent.sort" aria-label="{{ __('ledger.actions.reset_sort') }}" data-tip="{{ __('ledger.actions.reset_sort') }}">
+                <i class="fas fa-arrow-rotate-left"></i>
             </button>
         @else
             {{-- 通常のアクションアイコン --}}
