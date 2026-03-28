@@ -8,6 +8,8 @@
     'qrCode' => null,
     'downloadName' => 'qr-code.svg',
     'copySuccessMessage' => __('ledger.qr_share.copy_success'),
+    'qrCodeUnavailableTitle' => __('ledger.qr_share.qr_code_unavailable_title'),
+    'qrCodeUnavailableMessage' => __('ledger.qr_share.qr_code_unavailable'),
 ])
 
 @php
@@ -90,7 +92,7 @@
     async downloadQRCode() {
         const svgElement = this.$root.querySelector('.qr-svg-container svg');
         if (!svgElement) {
-            this.notify(@js(__('ledger.qr_share.qr_code_unavailable_title')), 'error');
+            this.notify(@js($qrCodeUnavailableTitle), 'error');
             return;
         }
 
@@ -191,8 +193,8 @@
                     </div>
                 @else
                     <div class="alert alert-warning text-sm w-full shadow-sm">
-                        <x-mary-icon name="o-exclamation-triangle" class="w-5 h-5 shrink-0" />
-                        <span>{{ __('ledger.qr_share.qr_code_unavailable') }}</span>
+                        <x-mary-icon name="o-exclamation-triangle" class="w-5 h-4 shrink-0" />
+                        <span>{{ $qrCodeUnavailableMessage }}</span>
                     </div>
                 @endif
             </div>
@@ -213,21 +215,9 @@
 
             <div class="flex flex-wrap justify-center sm:justify-end gap-3 w-full sm:w-auto">
                 <x-mary-button
-                    type="button"
-                    class="btn-ghost btn-sm border border-base-300 hover:bg-base-200"
-                    @click="downloadQRCode()"
-                    x-bind:disabled="actionState.download.loading"
-                    :disabled="!$qrCodeAvailable"
-                >
-                    <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
-                    <x-mary-icon x-show="!actionState.download.loading" name="o-arrow-down-tray" class="w-4 h-4" />
-                    <span>{{ __('ledger.qr_share.download_qr') }}</span>
-                </x-mary-button>
-
-                <x-mary-button
-                    class="btn-primary btn-sm px-6 shadow-md"
-                    @click="copyToClipboard()"
-                    x-bind:disabled="actionState.copy.loading"
+                        class="btn-primary btn-sm px-6 shadow-md"
+                        @click="copyToClipboard()"
+                        x-bind:disabled="actionState.copy.loading"
                 >
                     <span x-show="actionState.copy.loading" class="loading loading-spinner loading-xs" x-cloak></span>
                     <template x-if="actionState.copy.success">
@@ -237,6 +227,18 @@
                         <x-mary-icon name="o-clipboard-document" class="w-4 h-4" />
                     </template>
                     <span>{{ __('ledger.qr_share.copy_to_clipboard') }}</span>
+                </x-mary-button>
+
+                <x-mary-button
+                    type="button"
+                    class="btn-ghost btn-sm border border-base-300 hover:bg-base-200"
+                    @click="downloadQRCode()"
+                    x-bind:disabled="actionState.download.loading"
+                    :disabled="!$qrCodeAvailable"
+                >
+                    <span x-show="actionState.download.loading" class="loading loading-spinner loading-xs" x-cloak></span>
+                    <x-mary-icon x-show="!actionState.download.loading" name="o-arrow-down-tray" class="w-4 h-4" />
+                    <span>{{ __('ledger.qr_share.download_qr') }}</span>
                 </x-mary-button>
 
                 @if(isset($closeButton))

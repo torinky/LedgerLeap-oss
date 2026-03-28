@@ -29,6 +29,8 @@
             :qrCode="$this->prefillQRCode"
             :downloadName="$this->prefillDownloadFileName"
             copySuccessMessage="{{ __('ledger.prefill.copy_success') }}"
+            qrCodeUnavailableTitle="{{ __('ledger.prefill.qr_code_unavailable_title') }}"
+            qrCodeUnavailableMessage="{{ __('ledger.prefill.qr_code_unavailable') }}"
         >
             <x-slot:warnings>
                 @if($this->prefillUrlIsLong)
