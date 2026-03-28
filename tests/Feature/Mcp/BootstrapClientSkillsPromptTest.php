@@ -47,8 +47,8 @@ class BootstrapClientSkillsPromptTest extends TestCase
             ['client_type', 'role_profile', 'model_profile', 'language'],
             array_column($prompt['arguments'], 'name')
         );
-        $this->assertTrue($prompt['arguments'][0]['required']);
-        $this->assertTrue($prompt['arguments'][1]['required']);
+        $this->assertFalse($prompt['arguments'][0]['required']);
+        $this->assertFalse($prompt['arguments'][1]['required']);
         $this->assertFalse($prompt['arguments'][2]['required']);
         $this->assertFalse($prompt['arguments'][3]['required']);
     }
@@ -88,6 +88,28 @@ class BootstrapClientSkillsPromptTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_default_content_when_no_arguments_provided(): void
+    {
+        $response = $this->runServerMethod('prompts/get', [
+            'name' => 'bootstrap-client-skills',
+        ]);
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('messages', $response['result']);
+        $this->assertCount(2, $response['result']['messages']);
+
+        $combined = collect($response['result']['messages'])
+            ->map(fn (array $message) => $message['content']['text'] ?? '')
+            ->implode("\n");
+
+        // Defaults: client_type=copilot, role_profile=operator, model_profile=general-local, language=ja
+        $this->assertStringContainsString('クライアント: GitHub Copilot', $combined);
+        $this->assertStringContainsString('役割: 実務担当者', $combined);
+        $this->assertStringContainsString('今日対応すべき承認待ちを見せて。', $combined);
+        $this->assertStringContainsString('ledgerleap://bootstrap/copilot', $combined);
+    }
+
+    #[Test]
     public function it_validates_supported_prompt_arguments(): void
     {
         LedgerLeapServer::prompt(BootstrapClientSkillsPrompt::class, [
@@ -124,6 +146,15 @@ class BootstrapClientSkillsPromptTest extends TestCase
             $response = $server->runForTest($request);
         } catch (JsonRpcException $exception) {
             return $exception->toJsonRpcResponse()->toArray();
+        } catch (\Throwable $exception) {
+            // Convert generic exception to JsonRpcResponse if possible, or rethrow
+            return [
+                'id' => $request->id,
+                'error' => [
+                    'code' => -32603,
+                    'message' => $exception->getMessage(),
+                ],
+            ];
         }
 
         if (is_iterable($response)) {

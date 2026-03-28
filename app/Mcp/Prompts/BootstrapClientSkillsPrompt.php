@@ -21,21 +21,18 @@ use Laravel\Mcp\Server\Prompts\Argument;
 )]
 class BootstrapClientSkillsPrompt extends Prompt
 {
-    /**
-     * @return array<int, Argument>
-     */
     public function arguments(): array
     {
         return [
             new Argument(
                 name: 'client_type',
-                description: 'Client type: copilot, claude-code, gemini-cli, or openai-agents.',
-                required: true,
+                description: 'Client type: copilot, claude-code, gemini-cli, or openai-agents. Defaults to copilot.',
+                required: false,
             ),
             new Argument(
                 name: 'role_profile',
-                description: 'Role profile: operator, administrator, or field-leader.',
-                required: true,
+                description: 'Role profile: operator, administrator, or field-leader. Defaults to operator.',
+                required: false,
             ),
             new Argument(
                 name: 'model_profile',
@@ -50,15 +47,12 @@ class BootstrapClientSkillsPrompt extends Prompt
         ];
     }
 
-    /**
-     * @return array<int, Response>
-     */
     public function handle(Request $request): array
     {
         $input = $request->validate(
             [
-                'client_type' => ['required', 'string', Rule::in(ClientSkillBootstrapService::SUPPORTED_CLIENTS)],
-                'role_profile' => ['required', 'string', Rule::in(array_keys(BootstrapManifestService::ROLE_PROFILES))],
+                'client_type' => ['sometimes', 'string', Rule::in(ClientSkillBootstrapService::SUPPORTED_CLIENTS)],
+                'role_profile' => ['sometimes', 'string', Rule::in(array_keys(BootstrapManifestService::ROLE_PROFILES))],
                 'model_profile' => [
                     'sometimes',
                     'string',
@@ -67,17 +61,15 @@ class BootstrapClientSkillsPrompt extends Prompt
                 'language' => ['sometimes', 'string', Rule::in(['ja', 'en'])],
             ],
             [
-                'client_type.required' => 'client_type は必須です。例: copilot',
                 'client_type.in' => 'client_type は copilot, claude-code, gemini-cli, openai-agents のいずれかを指定してください。',
-                'role_profile.required' => 'role_profile は必須です。例: operator',
                 'role_profile.in' => 'role_profile は operator, administrator, field-leader のいずれかを指定してください。',
                 'model_profile.in' => 'model_profile は small-local, general-local, remote-capable のいずれかを指定してください。',
                 'language.in' => 'language は ja または en を指定してください。',
             ]
         );
 
-        $clientType = (string) $input['client_type'];
-        $roleProfile = (string) $input['role_profile'];
+        $clientType = (string) ($input['client_type'] ?? 'copilot');
+        $roleProfile = (string) ($input['role_profile'] ?? 'operator');
         $modelProfile = (string) ($input['model_profile'] ?? 'general-local');
         $language = (string) ($input['language'] ?? 'ja');
 
