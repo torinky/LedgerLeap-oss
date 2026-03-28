@@ -211,7 +211,31 @@ class LedgerHistoryManager extends BaseLivewireComponent
             ->orderBy('id', 'desc');
 
         $totalCount = $diffsQuery->count();
-        $diffs = $diffsQuery->take($this->perPage * $this->pageCount)->get();
+        $allFetchedDiffs = $diffsQuery->take($this->perPage * $this->pageCount)->get();
+
+        // 連続する冗長な履歴エントリをフィルタリング（同じバージョン、ステータス、更新者、コメントが連続する場合）
+        $diffs = $allFetchedDiffs->filter(function ($diff, $key) use ($allFetchedDiffs) {
+            // 前のエントリ（時系列ではより新しいもの）と比較
+            $prev = $allFetchedDiffs->get($key - 1);
+
+            if ($prev) {
+                // コメントを正規化（null と "" を同一視し、前後の空白を除去）
+                $isSameComment = trim((string)$prev->comments) === trim((string)$diff->comments);
+
+                if (
+                    $prev->version === $diff->version &&
+                    ($prev->status?->value ?? null) === ($diff->status?->value ?? null) &&
+                    $prev->modifier_id === $diff->modifier_id &&
+                    $isSameComment
+                ) {
+                    return false;
+                }
+            }
+
+            return true;
+        })->values();
+
+        \Illuminate\Support\Facades\Log::info("Ledger History Filter: Initial count " . $allFetchedDiffs->count() . " -> Filtered count " . $diffs->count() . " for Ledger " . $this->ledgerId, []);
 
         $this->hasMore = $diffs->count() < $totalCount;
 

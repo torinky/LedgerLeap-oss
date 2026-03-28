@@ -116,7 +116,7 @@ class LedgerDiffProcessor
                 $status = 'added';
 
                 return [
-                    'column_define' => is_array($colDef) ? $colDef : $colDef->toArray(),
+                    'column_define' => (is_object($colDef) && method_exists($colDef, 'toArray')) ? $colDef->toArray() : (is_array($colDef) ? $colDef : []),
                     'current_value' => $value,
                     'old_value' => $value, // 比較がない場合は同じ値
                     'status' => $status,
@@ -187,7 +187,7 @@ class LedgerDiffProcessor
             }
 
             $colDefForInfo = $currentColDef ?? $oldColDef;
-            $colDefArray = $colDefForInfo ? (is_array($colDefForInfo) ? $colDefForInfo : $colDefForInfo->toArray()) : [];
+            $colDefArray = $colDefForInfo ? ((is_object($colDefForInfo) && method_exists($colDefForInfo, 'toArray')) ? $colDefForInfo->toArray() : (is_array($colDefForInfo) ? $colDefForInfo : [])) : [];
 
             $contentChanges[$columnId] = [
                 'column_define' => $colDefArray,

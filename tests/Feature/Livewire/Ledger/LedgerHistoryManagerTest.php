@@ -316,4 +316,43 @@ class LedgerHistoryManagerTest extends TestCase
                 return $attachments !== null && $attachments->count() === 1;
             });
     }
+
+    #[Test]
+    public function it_filters_redundant_sequential_entries()
+    {
+        // 既存の diff3 にコメントとステータスを設定
+        $this->diff3->update([
+            'comments' => 'Redundant test',
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
+        ]);
+
+        // 冗長なエントリを作成（同じバージョン、ステータス、更新者、コメント）
+        // IDがより大きい（＝より新しい）ものが優先的に残るため、これを作成
+        $redundantDiff = LedgerDiff::create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'version' => 3,
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'content' => [['0' => 'Value 3.1']], // 内容が違っていても、リスト上のメタデータが同じならフィルタリングされる
+            'column_define' => $this->ledgerDefine->column_define,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+            'modifier_id' => $this->user->id,
+            'creator_id' => $this->user->id,
+            'comments' => 'Redundant test',
+            'created_at' => now()->addMinute(),
+        ]);
+
+        // コンポーネント実行
+        Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
+            ->assertViewHas('history', function ($history) use ($redundantDiff) {
+                // 元々3件（diff1, diff2, diff3）あったところに1件追加したが、
+                // diff3 と redundantDiff が重複するので、結果として3件になるはず。
+                // また、より新しい redundantDiff が残っているはず。
+                return $history->count() === 3 
+                    && $history->contains('id', $redundantDiff->id)
+                    && !$history->contains('id', $this->diff3->id);
+            });
+    }
 }
