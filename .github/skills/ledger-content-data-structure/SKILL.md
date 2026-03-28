@@ -8,7 +8,7 @@ compatibility: LedgerLeap (AsColumnArrayJson cast, LedgerDefine column_define, L
 
 ## Decision Tree
 
-```
+```mermaid
 content[n] returns null or wrong value?
 │
 ├─ Is test data created with Ledger::factory()->create() directly?
@@ -30,7 +30,7 @@ content[n] returns null or wrong value?
 
 ## content Storage Pipeline
 
-```
+```text
 Livewire input : [1 => 'text', 3 => 'val']         ← column IDs as keys
 normalizeByColumnDefine() : [0=>'', 1=>'text', 2=>'', 3=>'val']
 AsColumnArrayJson::set() : array_values() → ["","text","","val"]  ← stored JSON
@@ -54,7 +54,29 @@ AsColumnArrayJson::get() : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
 - [ ] `content_attached` includes `0 => []`
 - [ ] `latest_diff_id` set explicitly with `$ledger->update()`
 - [ ] `$ledger->fresh()` called after `update()` when referencing relations
+**Pattern — Defensive Check:**
+
+```php
+$columnDefine = $item->column_define;
+if (is_string($columnDefine)) {
+    $columnDefine = json_decode($columnDefine, true) ?? [];
+}
+// Now safe to map/toArray
+collect($columnDefine)->map(...)
+```
+
+**Pattern — Cast Enhancement:**
+
+Ensure `AsColumnDefinesArrayJson` (and similar casts) handles non-array inputs gracefully in the `get` method:
+
+```php
+public function get($model, string $key, $value, array $attributes)
+{
+    if (is_array($value)) return $value;
+    if (empty($value)) return [];
+    return json_decode($value, true) ?? [];
+}
+```
 
 See [references/test-data-patterns.md](references/test-data-patterns.md) for code examples.
 See [references/cast-internals.md](references/cast-internals.md) for AsColumnArrayJson details.
-

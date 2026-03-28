@@ -64,3 +64,34 @@ What changes when action completes?
 - See `.github/skills/livewire-computed-properties/SKILL.md` for test patterns
 - See `.github/skills/livewire-loading-ui/SKILL.md` for loading tier examples
 
+## Redundant Data Filtering (UI Optimization)
+
+When displaying audit trails or history lists (e.g., `LedgerDiff`), sequential entries may share the same state (version, status, modifier, comments) due to multiple saves or system updates.
+
+**Pattern — Filtering in `render()`:**
+```php
+public function render()
+{
+    $items = $this->ledger->history()->latest()->get()
+        ->reduce(function ($carry, $item) {
+            if ($carry->isEmpty()) {
+                return $carry->push($item);
+            }
+            $prev = $carry->last();
+            // Check redundancy criteria
+            $isRedundant = $item->version === $prev->version
+                && $item->status === $prev->status
+                && $item->modifier_id === $prev->modifier_id
+                && trim($item->comments ?? '') === trim($prev->comments ?? '');
+
+            return $isRedundant ? $carry : $carry->push($item);
+        }, collect())
+        ->values(); // Re-index for Livewire
+
+    return view('livewire.my-component', ['items' => $items]);
+}
+```
+
+- **Why in `render()`?** Preserves DB audit integrity while improving UX.
+- **Re-indexing**: Always call `->values()` on filtered collections to avoid "undefined array key" errors in Livewire's internal tracking.
+

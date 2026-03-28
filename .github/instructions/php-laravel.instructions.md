@@ -12,6 +12,16 @@ applyTo: "app/**/*.php"
 | Cast columns | Never call `json_encode()` on `files`, `chk`, or other cast-array columns |
 | `content_attached` | Requires `[0 => []]` sentinel at index 0 |
 | `latest_diff_id` | Must be set explicitly; factory does NOT cascade |
+| Defensive Casting | Always check `is_array()` before `toArray()` on JSON columns |
+
+```
+toArray() on string?
+├─ column_define or other JSON column returning string or null?
+│   → FIX: use is_array() check or wrap in ArrayCast with type safety.
+│   ```php
+│   $data = is_array($value) ? $value : json_decode($value ?? '[]', true);
+│   ```
+```
 
 ```
 content[n] returns null?
