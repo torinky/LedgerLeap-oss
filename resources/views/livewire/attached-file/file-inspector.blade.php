@@ -98,7 +98,7 @@
                  x-transition:leave="transition ease-in duration-150"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                  class="flex flex-col flex-1 h-full min-w-0 overflow-hidden"
+                  class="flex flex-col flex-1 h-full min-w-0 overflow-x-hidden"
                  x-cloak>
                 @include('livewire.attached-file.file-inspector.header')
 
