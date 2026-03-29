@@ -410,9 +410,22 @@
 
 #### 6.4.2 Sprint 4-2: イベントと復元方針
 
-- `open-file-inspector` の payload に、復帰に必要な最小情報を定義する
-- 開いたファイルから台帳レコードを逆引きできる導線を定める
-- close 時のフォールバックと再選択の挙動を決める
+- `open-file-inspector` の payload は `id` を必須、`column_id` と `search` を任意とする
+- `selectedFileId` は `id` から復元し、`selectedLedgerId` は `AttachedFile::ledger_id` から導出する
+- `selectedColumnId` は payload の `column_id` を優先し、未指定なら `AttachedFile::column_id` から導出する
+- close 時は FileInspector のローカル状態を解放しつつ、一覧側へ「復元対象の破棄」を通知する
+- 一覧側は `selectedFileId` を受けて、対象行が画面内にあればスクロール・強調、未描画なら状態だけ保持する
+
+**決定理由:**
+- 複数添付・複数カラムに対応するため、ファイル単位の選択だけでなく列情報も復元に必要だから
+- ただし列情報はファイルの属する文脈であり、永続URLキーとして独立させず、導出状態として扱う方が責務が明確だから
+- close は「開閉の終了」であり、共有状態の破棄と一覧側の復元解除を同時に行うのが自然だから
+- `search` は FileInspector の補助表示であり、選択復元の主キーにはしない
+
+**最小復元イベントの考え方:**
+- open: `id`, `column_id`, `search`
+- close: `selectedFileId` の破棄通知のみ
+- 一覧側復元: `selectedFileId` から `selectedLedgerId` / `selectedColumnId` を導出して行・セルへ反映
 
 #### 6.4.3 Sprint 4-3: 一覧可視化
 
