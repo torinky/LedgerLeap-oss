@@ -12,6 +12,7 @@ use App\Services\PermissionService;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
 
 class FileInspector extends BaseLivewireComponent
@@ -41,6 +42,7 @@ class FileInspector extends BaseLivewireComponent
 
     public bool $isLoading = false;
 
+    #[Url(as: 'file')]
     public ?int $fileId = null;
 
     public ?AttachedFile $file = null;
@@ -95,6 +97,10 @@ class FileInspector extends BaseLivewireComponent
         $this->selectedTab = 'content'; // デフォルトは「内容」タブ
         if (empty($this->loadedTabs)) {
             $this->loadedTabs = [$this->selectedTab];
+        }
+
+        if ($this->fileId !== null) {
+            $this->openInspector($this->fileId);
         }
     }
 
@@ -219,10 +225,12 @@ class FileInspector extends BaseLivewireComponent
     {
         $id = null;
         $search = null;
+        $column_id = null;
 
         if (is_array($payload)) {
             $id = $payload['id'] ?? null;
             $search = $payload['search'] ?? null;
+            $column_id = $payload['column_id'] ?? null;
             // column_idは送信されても使用しない（AttachedFile IDは一意のため）
         } else {
             $id = $payload;
@@ -244,11 +252,21 @@ class FileInspector extends BaseLivewireComponent
         $this->selectedTab = 'content';
         $this->loadedTabs = [$this->selectedTab];
 
+        $this->dispatch(
+            'file-inspector-selection-changed',
+            selectedFileId: $this->fileId,
+            selectedColumnId: $column_id,
+            isOpen: true,
+        );
+
         // 実データが存在するかチェック
         $realFileExists = AttachedFile::find($id) !== null;
 
         // 実データが存在する場合は実データを優先、存在しない場合でモックモードが有効なら場合モックデータを使用
-        if (! $realFileExists && $id >= 10001 && $id <= 10012 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+        if (! $realFileExists
+            && $id >= 10001
+            && $id <= 10012
+            && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
             // 開発環境でローディングUIを確認できるように僅かな遅延を入れる
             if (app()->environment('local')) {
                 usleep(800000); // 0.8秒
@@ -408,7 +426,15 @@ class FileInspector extends BaseLivewireComponent
             'previewUrl' => null,
         ];
         $this->clearPreviewCache(); // WBS 5.2.1: キャッシュクリア
+
+        $this->dispatch(
+            'file-inspector-selection-changed',
+            selectedFileId: null,
+            selectedColumnId: null,
+            isOpen: false,
+        );
     }
+
 
     /**
      * サムネイルの存在を確認し、なければ生成ジョブをディスパッチ

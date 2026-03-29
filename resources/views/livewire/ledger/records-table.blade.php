@@ -15,7 +15,8 @@
     $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 
-<div class="relative">
+<div class="relative" x-data="{}"
+    x-on:file-inspector-selection-applied.window="if ($event.detail.selectedLedgerId) { $nextTick(() => { const row = document.getElementById('ledger-row-' + $event.detail.selectedLedgerId); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.focus({ preventScroll: true }); } }); }">
 
     {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">
@@ -87,7 +88,9 @@
                                             @foreach ($ledgerDefineAndRecords as $ledgerRecordValues)
                                                 <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search"
                                                     :canUpdate="$canUpdate" :canView="$canView" :allAttachments="$allAttachments"
-                                                    :filteredColumnDefines="$displayColumnsWithMock" :currentTenantId="$currentTenantId" />
+                                                    :filteredColumnDefines="$displayColumnsWithMock" :currentTenantId="$currentTenantId"
+                                                    :selectedFileId="$selectedFileId" :selectedLedgerId="$selectedLedgerId"
+                                                    :selectedColumnId="$selectedColumnId" />
                                             @endforeach
                                         </tbody>
                                     </table>

@@ -8,6 +8,9 @@
     'filteredColumnDefines' => [],
     'currentTenantId' => null,
     'relatedBadge' => null,
+    'selectedFileId' => null,
+    'selectedLedgerId' => null,
+    'selectedColumnId' => null,
 ])
 @php
     use App\Helpers\SearchHelper;
@@ -32,7 +35,12 @@
         }
     }
 @endphp
-<tr class="hover group hover:bg-accent/20" wire:key="ledger-row-{{ $ledgerRecord->id }}">
+@php
+    $isSelectedLedger = $selectedLedgerId !== null && (int) $selectedLedgerId === (int) $ledgerRecord->id;
+@endphp
+<tr id="ledger-row-{{ $ledgerRecord->id }}" tabindex="-1"
+    class="hover group hover:bg-accent/20 focus:outline-none {{ $isSelectedLedger ? 'ring-2 ring-primary/40 bg-primary/5' : '' }}"
+    wire:key="ledger-row-{{ $ledgerRecord->id }}">
     <th scope="row" class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
             @if ($canUpdate && !$ledgerRecord->isLocked())
@@ -63,7 +71,11 @@
     </th>
 
     @foreach ($filteredColumnDefines as $cKey => $columnDefine)
-        <td class="hover:bg-accent/20 border px-4 py-2">
+        @php
+            $isSelectedColumn = $selectedColumnId !== null && (int) $selectedColumnId === (int) ($columnDefine->id ?? -1);
+        @endphp
+        <td id="ledger-cell-{{ $ledgerRecord->id }}-{{ $columnDefine->id ?? 'na' }}"
+            class="hover:bg-accent/20 border px-4 py-2 transition-colors {{ $isSelectedColumn ? 'ring-2 ring-primary/40 bg-primary/5' : '' }}">
             @php
                 $isAttachmentColumn =
                     in_array($columnDefine->type ?? null, ['file', 'files']) ||
@@ -85,11 +97,11 @@
                     unset($mf); // 参照を解除してサイドエフェクトを防ぐ
                 @endphp
                 <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
-                    :search="$highlightKeyword" />
+                    :search="$highlightKeyword" :selected-file-id="$selectedFileId" />
                 <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
-                    :search="$highlightKeyword" />
+                    :search="$highlightKeyword" :selected-file-id="$selectedFileId" />
                 <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
-                    :search="$highlightKeyword" />
+                    :search="$highlightKeyword" :selected-file-id="$selectedFileId" />
             @elseif($isAttachmentColumn)
                 @php
                     $files = [];
@@ -312,6 +324,7 @@
                             'columnId' => $columnDefine->id,
                             'tenantId' => $currentTenantId,
                             'search' => $highlightKeyword,
+                            'selectedFileId' => $selectedFileId,
                         ])->render();
 
                         \Log::info('[AttachmentHtml] getFileHtml', [

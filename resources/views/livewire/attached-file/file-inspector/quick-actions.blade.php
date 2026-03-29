@@ -83,6 +83,13 @@
     @endphp
 
 
+    <button type="button"
+        class="btn btn-sm btn-square btn-ghost tooltip tooltip-right z-50"
+        data-tip="{{ __('ledger.page_qr_code.modal_title') }}"
+        @click="const url = window.location.href; open = false; $wire.close(); $dispatch('open-page-qr-code-from-inspector', { url })">
+        <i class="fa-solid fa-qrcode"></i>
+    </button>
+
     {{-- オリジナルファイルダウンロード & リンクコピー --}}
     <div class="join flex-1">
         <a href="{{ $downloadUrl }}"

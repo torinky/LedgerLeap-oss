@@ -5,7 +5,7 @@
     'filteredColumnDefines' => [],
     'defaultSortColumns' => [],
 ])
-<tr class="hover z-30" wire:key="ledger_table_header_{{ $ledgerDefine->id }}">
+<tr class="hover " wire:key="ledger_table_header_{{ $ledgerDefine->id }}">
     {{-- アクションボタン用の列 --}}
     <th scope="col" class="w-10 text-center px-4 py-2 tracking-wider bg-accent/30 bg-opacity-30">
         @if (!empty($defaultSortColumns) && $orderBy !== 'default')

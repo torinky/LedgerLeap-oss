@@ -3,6 +3,7 @@
     'index' => 0,
     'displayLimit' => 8,
     'search' => null,
+    'selectedFileId' => null,
 ])
 
 @php
@@ -29,6 +30,7 @@
     $label = $file['filename'] ?? 'file';
     $fileId = (int) ($file['id'] ?? 0);
     $fileColumnId = $file['column_id'] ?? null;
+    $isSelectedFile = $selectedFileId !== null && (int) $selectedFileId === $fileId;
     $fileSize = $file['size'] ?? null;
 
     $formattedSize = '';
@@ -118,7 +120,7 @@
     x-transition:leave-end="opacity-0 scale-95"
     data-tip="{{ $fullTooltip }}">
 
-    <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} group cursor-pointer h-full flex flex-col"
+    <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} {{ $isSelectedFile ? 'ring-2 ring-primary/60 bg-primary/5 border-primary/40' : '' }} group cursor-pointer h-full flex flex-col"
         role="listitem" x-data="{ imageLoading: true, imageError: false }"
         x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
         aria-label="{{ $label }} ({{ $statusLabel }})">

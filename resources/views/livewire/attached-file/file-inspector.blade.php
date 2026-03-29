@@ -63,6 +63,7 @@
      x-init="$watch('isLoading', (value) => { if (!value && performanceMetrics.drawerOpenStart) { measureDrawerOpened(); } })"
      @endif
      @keydown.escape.window="open = false; $wire.close()"
+     @file-inspector-selection-changed.window="const url = new URL(window.location.href); if ($event.detail.selectedFileId) { url.searchParams.set('file', $event.detail.selectedFileId); } else { url.searchParams.delete('file'); } window.history.replaceState({}, '', url);"
      @open-file-inspector.window="
         open = true;
         isLoading = true;

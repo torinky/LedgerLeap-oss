@@ -96,6 +96,71 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_auto_opens_when_the_selected_file_is_present_in_the_query_string(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'query_file.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        Livewire::withQueryParams(['file' => $file->id])
+            ->test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->assertSet('fileId', $file->id)
+            ->assertSet('open', true)
+            ->assertSet('isLoading', false)
+            ->assertSee('query_file.pdf');
+    }
+
+
+    #[Test]
+    public function it_dispatches_selection_sync_events_when_opening_and_closing(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'column_id' => 0,
+            'filename' => 'sync_target.pdf',
+            'mime' => 'application/pdf',
+            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', [
+                'id' => $file->id,
+                'column_id' => $file->column_id,
+                'search' => 'sync',
+            ])
+            ->assertDispatched('file-inspector-selection-changed',
+                selectedFileId: $file->id,
+                selectedColumnId: $file->column_id,
+                isOpen: true,
+            )
+            ->call('close')
+            ->assertDispatched('file-inspector-selection-changed',
+                selectedFileId: null,
+                selectedColumnId: null,
+                isOpen: false,
+            );
+    }
+
+    #[Test]
     public function it_constrains_drawer_and_tab_widths_to_prevent_horizontal_scroll()
     {
         config(['mock.attachment.enabled' => true]);
@@ -105,6 +170,7 @@ class FileInspectorTest extends TestCase
             ->assertSet('open', true)
             ->assertSeeHtml('fixed inset-y-0 right-0 w-full md:w-[600px]')
             ->assertSeeHtml('flex flex-col flex-1 h-full min-w-0 overflow-x-hidden')
+            ->assertSeeHtml('file-inspector-selection-changed.window')
             ->assertSeeHtml('bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none relative z-50 isolate min-w-0 overflow-x-hidden')
             ->assertSeeHtml('tooltip-left')
             ->assertSeeHtml('flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative min-w-0')

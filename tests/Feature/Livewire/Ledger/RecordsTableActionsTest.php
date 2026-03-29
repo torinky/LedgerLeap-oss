@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\RecordsTable;
+use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -97,6 +98,55 @@ class RecordsTableActionsTest extends TestCase
             columnName: 'updated_at',
             columnLabel: '更新日時'
         );
+    }
+
+    #[Test]
+    public function file_selection_updates_derived_state_and_dispatches_focus_event(): void
+    {
+        $fileLedgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $fileLedgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $fileLedgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $component = Livewire::test(RecordsTable::class, array_merge($this->mountProps, [
+            'selectedLedgerDefineIds' => [$fileLedgerDefine->id],
+        ]));
+
+        $component
+            ->call('syncFileInspectorSelection', $file->id, null, true)
+            ->assertSet('selectedFileId', $file->id)
+            ->assertSet('selectedLedgerId', $ledger->id)
+            ->assertSet('selectedColumnId', 0)
+            ->assertSet('isFileInspectorOpen', true)
+            ->assertDispatched('file-inspector-selection-applied',
+                selectedFileId: $file->id,
+                selectedLedgerId: $ledger->id,
+                selectedColumnId: 0,
+                isOpen: true,
+            );
+
+        $html = $component->html();
+
+        $this->assertStringContainsString('id="ledger-row-'.$ledger->id.'"', $html);
+        $this->assertStringContainsString('id="ledger-cell-'.$ledger->id.'-0"', $html);
+        $this->assertStringContainsString('ring-2 ring-primary/40 bg-primary/5', $html);
+        $this->assertStringContainsString('ring-2 ring-primary/60 bg-primary/5', $html);
     }
 
     #[Test]

@@ -4,6 +4,7 @@
     'tenantId' => null,
     'search' => null,
     'columnId' => null, // カラムID
+    'selectedFileId' => null,
 ])
 
 @php
@@ -118,6 +119,7 @@
                     $label = $file['filename'] ?? 'file';
                     $fileId = (int) ($file['id'] ?? 0);
                     $fileColumnId = $file['column_id'] ?? ($columnId ?? null);
+                    $isCurrentSelectedFile = $selectedFileId !== null && (int) $selectedFileId === $fileId;
                     $fileSize = $file['size'] ?? null;
 
                     // ファイルサイズフォーマット (Laravel 10+ Number::fileSize 対応)
@@ -208,7 +210,8 @@
                     {{-- Icon Only モード: 一覧画面用極小表示 --}}
                     <div class="relative group inline-flex items-center"
                         x-show="showAll || {{ $index }} < displayLimit"
-                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})">
+                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
+                        :class="{ 'ring-2 ring-primary/60 bg-primary/5 rounded-md': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
                             aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
@@ -251,7 +254,8 @@
                 @elseif($isCompact)
                     {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
                     <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
-                        x-show="showAll || {{ $index }} < displayLimit">
+                        x-show="showAll || {{ $index }} < displayLimit"
+                        :class="{ 'ring-2 ring-primary/60 bg-primary/5': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
 
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
@@ -318,7 +322,7 @@
                 @else
                     {{-- Full モード: 詳細画面用のカード表示 --}}
                     <div x-show="showAll || {{ $index }} < displayLimit">
-                        <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" />
+                        <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" :selected-file-id="$selectedFileId" />
                     </div>
                 @endif
 

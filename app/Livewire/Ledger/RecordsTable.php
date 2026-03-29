@@ -118,6 +118,14 @@ class RecordsTable extends BaseLivewireComponent
     #[Reactive]
     public array $defaultSortColumns = []; // 追加: デフォルトソートカラムを保持
 
+    public ?int $selectedFileId = null;
+
+    public ?int $selectedLedgerId = null;
+
+    public ?int $selectedColumnId = null;
+
+    public bool $isFileInspectorOpen = false;
+
     /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
@@ -161,6 +169,72 @@ class RecordsTable extends BaseLivewireComponent
             'selected_ledger_define_count' => $selectedLedgerDefineCount,
             'has_workflow_enabled' => $this->hasWorkflowEnabled,
         ]);
+    }
+
+    #[On('file-inspector-selection-changed')]
+    public function syncFileInspectorSelection(
+        ?int $selectedFileId = null,
+        ?int $selectedColumnId = null,
+        bool $isOpen = false,
+    ): void {
+        $this->selectedFileId = $selectedFileId;
+        $this->selectedColumnId = $selectedColumnId;
+        $this->isFileInspectorOpen = $isOpen;
+
+        if ($selectedFileId === null) {
+            $this->selectedLedgerId = null;
+
+            $this->dispatch(
+                'file-inspector-selection-applied',
+                selectedFileId: null,
+                selectedLedgerId: null,
+                selectedColumnId: null,
+                isOpen: false,
+            );
+
+            return;
+        }
+
+        $attachment = AttachedFile::find($selectedFileId);
+
+        $this->selectedLedgerId = $attachment?->ledger_id;
+
+        if ($this->selectedColumnId === null) {
+            $this->selectedColumnId = $attachment?->column_id;
+        }
+
+        $this->dispatch(
+            'file-inspector-selection-applied',
+            selectedFileId: $this->selectedFileId,
+            selectedLedgerId: $this->selectedLedgerId,
+            selectedColumnId: $this->selectedColumnId,
+            isOpen: $this->isFileInspectorOpen,
+        );
+    }
+
+    protected function resolveFileSelectionState($allAttachments): void
+    {
+        $this->selectedLedgerId = null;
+
+        if (! $this->selectedFileId) {
+            return;
+        }
+
+        foreach ($allAttachments as $ledgerId => $attachments) {
+            foreach ($attachments as $attachment) {
+                if ((int) $attachment->id !== (int) $this->selectedFileId) {
+                    continue;
+                }
+
+                $this->selectedLedgerId = (int) $ledgerId;
+
+                if ($this->selectedColumnId === null) {
+                    $this->selectedColumnId = (int) ($attachment->column_id ?? 0) ?: null;
+                }
+
+                return;
+            }
+        }
     }
 
     /**
@@ -634,6 +708,8 @@ class RecordsTable extends BaseLivewireComponent
             ->get()
             ->groupBy('ledger_id'); // ledger_id ごとにグループ化
         $attachmentsFetchDurationMs = (microtime(true) - $attachmentsFetchStartedAt) * 1000;
+
+        $this->resolveFileSelectionState($allAttachments);
 
         // 検索結果のフラグを設定
         $normalizeStartedAt = microtime(true);

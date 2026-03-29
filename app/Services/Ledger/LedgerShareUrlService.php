@@ -68,6 +68,7 @@ class LedgerShareUrlService
                 'f',
                 'cf',
                 'dl',
+                'file',
                 'sort',
                 'dir',
                 'status',
@@ -84,6 +85,7 @@ class LedgerShareUrlService
                 'td',
                 'bd',
                 'highlight',
+                'file',
             ],
             default => [],
         };

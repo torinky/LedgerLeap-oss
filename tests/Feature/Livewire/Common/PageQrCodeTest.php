@@ -36,7 +36,10 @@ class PageQrCodeTest extends TestCase
     {
         Livewire::test(PageQrCode::class, ['triggerType' => 'mary'])
             ->assertStatus(200)
-            ->assertSee(__('ledger.page_qr_code.modal_title'));
+            ->assertSee(__('ledger.page_qr_code.modal_title'))
+            ->assertSeeHtml('backdrop-blur z-70')
+            ->assertSeeHtml('max-w-4xl z-80')
+            ->assertSeeHtml('open-page-qr-code-from-inspector.window');
     }
 
     #[Test]
@@ -97,6 +100,7 @@ class PageQrCodeTest extends TestCase
             'highlight' => 'keyword',
             'tab' => 'history',
             'sc' => 1,
+            'file' => 123,
         ]);
 
         $component = Livewire::test(PageQrCode::class)
@@ -106,6 +110,7 @@ class PageQrCodeTest extends TestCase
 
         $this->assertSame($expected, $component->instance()->url);
         $this->assertStringContainsString('highlight=keyword', $component->instance()->url);
+        $this->assertStringContainsString('file=123', $component->instance()->url);
     }
 
     #[Test]
@@ -136,6 +141,7 @@ class PageQrCodeTest extends TestCase
             'f' => [$folder->id],
             'cf' => $folder->id,
             'tt' => false,
+            'file' => 456,
         ]);
 
         $component = Livewire::test(PageQrCode::class)
@@ -148,6 +154,7 @@ class PageQrCodeTest extends TestCase
         $this->assertStringContainsString('l%5B0%5D='.$ledgerDefine->id, $component->instance()->url);
         $this->assertStringContainsString('f%5B0%5D='.$folder->id, $component->instance()->url);
         $this->assertStringContainsString('cf='.$folder->id, $component->instance()->url);
+        $this->assertStringContainsString('file=456', $component->instance()->url);
     }
 
     #[Test]

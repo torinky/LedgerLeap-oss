@@ -429,15 +429,33 @@
 
 #### 6.4.3 Sprint 4-3: 一覧可視化
 
-- `RecordsTable` / `table-row` に、対象レコードの強調と画面内フォーカスを反映する
-- 一覧内に存在する場合は自動スクロール、外れる場合は案内表示にするかを決める
+- `RecordsTable` は `selectedFileId` から `selectedLedgerId` / `selectedColumnId` を導出して一覧へ渡す
+- `table-row` は `ledger-row-{{id}}` と `ledger-cell-{{ledgerId}}-{{columnId}}` を持ち、行・セル・ファイルカードへ選択強調を付ける
+- 画面内に対象行が存在する場合のみ browser event で `scrollIntoView({ block: 'center' })` と `focus()` を行う
+- 対象が未描画でも `selectedFileId` は保持し、再描画後に同じ復帰イベントで再試行できるようにする
 - 既存 canonical state と衝突しない補助表示として実装する
+
+**決定理由:**
+- ユーザーは「どのレコードのどのカラムのどのファイルか」を見て共有したいので、ファイル単位の選択だけでなく行・列・ファイルの3層強調が必要だから
+- `content_attached` は列単位で複数ファイルを持てるため、セル強調がないと文脈が失われやすいから
+- 画面内に無い場合は無理にスクロールせず、次回描画で復帰可能にする方が UI の安定性が高いから
+
+**実装メモ:**
+- `RecordsTable` で `file-inspector-selection-applied` を受けた後、一覧側の browser event を1回だけ発火する
+- `records-table.blade.php` は受信して行へスクロールし、`table-row` は props で見た目だけを決める
+- `attachment-list` / `attachment-card` は `selectedFileId` だけで選択強調を描画する
 
 #### 6.4.4 Sprint 4-4: テスト整備
 
 - FileInspector の open / close で共有状態が更新されるテストを追加する
 - 一覧側で対象レコードが強調・スクロール対象になるテストを追加する
 - モック添付ファイルと実データの両方で回帰を確認する
+
+**運用メモ:**
+- FileInspector からの QR 起動は、トップメニュー導線と分離して扱う
+- インスペクタ表示中に QR を開く場合は、先にドロワーを閉じてからページ共有ダイアログを開く
+- QR ダイアログへ渡す URL は、ブラウザのアドレス欄に同期済みの `file` クエリ付き URL を正とする
+- `requestPageQrCode()` のような Livewire 中継は使わず、ブラウザイベントで直接 QR ダイアログを開く
 
 ---
 
