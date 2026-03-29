@@ -381,9 +381,32 @@
 
 #### 6.4.1 Sprint 4-1: 状態設計
 
-- FileInspector の `open` / `fileId` / `selectedTab` を画面内状態として整理する
-- 一覧側の共有状態として `selectedFileId` / `selectedLedgerId` / `isFileInspectorOpen` のどれを持つか確定する
-- URL に残すか、Livewire の一時状態に留めるかを決める
+- FileInspector の `open` / `selectedTab` / 展開・プレビュー系の状態はローカル状態として扱う
+- `FileInspector::$fileId` はコンポーネント内部キー、`selectedFileId` はその共有URLキーとして扱う
+- `selectedLedgerId` は `selectedFileId` から導出されるフォーカス対象 ID とし、別の永続キーとしては持たない
+- `selectedColumnId` は `selectedFileId` と `column_id` の組み合わせから導出する補助状態として扱う
+- `isFileInspectorOpen` は `selectedFileId` の有無から導出できる補助状態として扱う
+- 共有状態は URL に載せる最小単位を `selectedFileId` に絞り、他は Livewire の一時状態に留める
+
+| 状態 | 所有先 | URL 化 | 役割 |
+| :--- | :--- | :---: | :--- |
+| `open` | FileInspector | - | ファイルインスペクタの開閉 |
+| `fileId` | FileInspector | - | 現在開いている添付ファイルの内部キー |
+| `selectedTab` | FileInspector | - | content / details / history / permissions の表示切替 |
+| `selectedFileId` | URL / 一覧の一時状態 | ✅ | 共有URLと一覧復帰に使う添付ファイルID |
+| `selectedLedgerId` | 一覧の一時状態 | - | 画面内へ戻す台帳レコード |
+| `selectedColumnId` | 一覧の一時状態 | - | 強調すべき台帳カラム |
+| `isFileInspectorOpen` | 一覧の一時状態 | - | ファイルインスペクタ開閉の同期フラグ |
+
+**決定理由:**
+- 実務担当者・現場リーダーは「添付資料を見ながら判断する」「チーム内の情報（台帳、添付ファイル）を共有する」ため、ファイル単位の共有導線が必要だから
+- `selectedLedgerId` / `selectedColumnId` はファイル→台帳・列の逆引き結果なので、永続キーではなく導出状態として扱うのが自然だから
+- `isFileInspectorOpen` は `selectedFileId` の有無で復元できるため、独立した共有キーにする必要がないから
+
+**再評価メモ:**
+- `selectedFileId` を共有しない場合、包含する台帳レコードの特定に追加操作が必要になる
+- 共有したい本体は「ファイル」だが、台帳リストへ戻すための最小共有単位としても `fileId` が必要
+- したがって、Sprint 4-1 では `selectedFileId` を URL 化し、`selectedLedgerId` / `selectedColumnId` / `isFileInspectorOpen` は派生状態として扱う
 
 #### 6.4.2 Sprint 4-2: イベントと復元方針
 
