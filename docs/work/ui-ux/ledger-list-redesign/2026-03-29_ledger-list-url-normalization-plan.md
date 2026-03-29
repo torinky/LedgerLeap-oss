@@ -457,6 +457,11 @@
 - QR ダイアログへ渡す URL は、ブラウザのアドレス欄に同期済みの `file` クエリ付き URL を正とする
 - `requestPageQrCode()` のような Livewire 中継は使わず、ブラウザイベントで直接 QR ダイアログを開く
 
+**Sprint 4 完了メモ:**
+- `FileInspector` の選択状態と一覧側の視点復帰は URL 正本と衝突しない補助状態として実装済み
+- QR 共有はトップメニュー導線と FileInspector 導線で役割分担し、前面表示と URL 一致を回復済み
+- FileInspector 起点の QR 起動は、今後も「閉じてから開く」順序を維持する
+
 ---
 
 ## 7. テスト計画
@@ -529,7 +534,7 @@
 1. Issue #121 の内容を確認する
 2. canonical URL の採用方針に最終合意する
 3. Sprint 0 の要件凍結から着手する
-4. Sprint 4 の FileInspector 連携要件を別途整理する
+4. Sprint 4 の FileInspector 連携は完了済みのため、以後は回帰テストと運用記録を参照する
 
 ---
 
