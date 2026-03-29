@@ -12,11 +12,23 @@
                 </h3>
                 <div class="space-y-3">
                     @foreach ($group['links'] as $link)
-                        {{-- 変更箇所: hover:bg-primary の代わりにカスタムクラスを適用します --}}
+                        @php
+                            $iconColor = match ($link['color'] ?? 'primary') {
+                                'primary' => 'rgba(var(--primary-500), 1)',
+                                'secondary' => 'rgba(var(--gray-500), 1)',
+                                'danger' => 'rgba(var(--danger-600), 1)',
+                                'warning' => '#d97706',
+                                'success' => '#16a34a',
+                                'info' => '#0ea5e9',
+                                default => 'rgba(var(--c-500), 1)',
+                            };
+                        @endphp
                         <a href="{{ $link['url'] }}"
                            class="flex items-center p-2 rounded-lg transition-colors duration-200 bg-gray-100/10 link-hover-color-{{ $link['color'] ?? 'primary' }}"
                         >
-                            @svg($link['icon'], 'w-5 h-5 me-3 text-' . $link['color'] . '-500')
+                            <span class="me-3 shrink-0" style="color: {{ $iconColor }}">
+                                @svg($link['icon'], 'w-5 h-5')
+                            </span>
                             <span
                                     class="text-gray-700 dark:text-gray-500">{{ $link['title'] }}</span>
                         </a>
