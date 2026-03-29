@@ -93,7 +93,7 @@ class LedgerLookupControllerTest extends TestCase
         ]);
 
         $this->get('/'.$this->tenant->id.'/l/unique-id-123')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger/'.$ledger->id.'?highlight=unique-id-123');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger/'.$ledger->id);
     }
 
     #[Test]
@@ -110,14 +110,14 @@ class LedgerLookupControllerTest extends TestCase
         ]);
 
         $this->get('/'.$this->tenant->id.'/l/common-term')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=common-term&highlight=common-term&l=&f=');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=common-term');
     }
 
     #[Test]
     public function it_redirects_to_index_on_zero_matches()
     {
         $this->get('/'.$this->tenant->id.'/l/non-existent')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=non-existent&highlight=non-existent&l=&f=');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=non-existent');
     }
 
     #[Test]
@@ -130,6 +130,6 @@ class LedgerLookupControllerTest extends TestCase
         ]);
 
         $this->get('/'.$this->tenant->id.'/l/unique-id-for-list?mode=list')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=unique-id-for-list&highlight=unique-id-for-list&l=&f=');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=unique-id-for-list');
     }
 }

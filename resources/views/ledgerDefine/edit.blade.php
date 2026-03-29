@@ -70,7 +70,7 @@
                                     label="{{__('ledger.go_to')}}"
                                     icon="o-arrow-right-circle"
                                     class="btn btn-sm btn-neutral mr-4"
-                                    link="{{ route('ledger.index', ['tenant' => tenant()?->id, 'l[0]' => $ledgerDefineRecord->id]) }}"
+                                    link="{{ route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $ledgerDefineRecord->id]) }}"
                             />
 
                             <label for="delete-modal" class="btn btn-outline btn-error btn-sm ml-5">
@@ -86,7 +86,7 @@
                 <template x-teleport="body">
                     <div>
                         <input type="checkbox" id="delete-modal" class="modal-toggle"/>
-                        <div class="modal !z-[9999]" role="dialog">
+                        <div class="modal z-9999!" role="dialog">
                             <div class="modal-box bg-error/70 text-error-content">
                                 <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}
                                 </h3>

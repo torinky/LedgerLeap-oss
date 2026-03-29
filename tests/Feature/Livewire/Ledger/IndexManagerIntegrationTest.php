@@ -149,6 +149,33 @@ class IndexManagerIntegrationTest extends TestCase
     }
 
     #[Test]
+    public function it_syncs_canonical_display_and_sort_query_parameters()
+    {
+        Livewire::withQueryParams([
+            'q' => 'search-term',
+            'dl' => 2,
+            'sort' => 'created_at',
+            'dir' => 1,
+            'status' => 'pending_approval',
+            'pp' => 25,
+            'sem' => 1,
+            'syn' => 0,
+            'tt' => 0,
+            'filter' => ['1' => 'foo'],
+        ])
+            ->test(IndexManager::class)
+            ->assertSet('search', 'search-term')
+            ->assertSet('displayLevel', 2)
+            ->assertSet('orderBy', 'created_at')
+            ->assertSet('orderAsc', true)
+            ->assertSet('filterStatus', 'pending_approval')
+            ->assertSet('perPage', 25)
+            ->assertSet('useSemanticSearch', true)
+            ->assertSet('useSynonym', false)
+            ->assertSet('useTechnicalTerm', false);
+    }
+
+    #[Test]
     public function it_handles_current_folder_change_event()
     {
         $otherFolder = Folder::factory()->create(['title' => 'Event Folder', 'parent_id' => $this->rootFolder->id]);

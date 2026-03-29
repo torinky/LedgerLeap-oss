@@ -3,6 +3,7 @@
 namespace App\Livewire\Common;
 
 use App\Livewire\BaseLivewireComponent;
+use App\Services\Ledger\LedgerShareUrlService;
 use App\Services\QrCodeDownloadFileNameService;
 use Filament\Actions\Action;
 use Filament\Actions\Concerns\InteractsWithActions;
@@ -40,8 +41,9 @@ class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
      */
     protected function resolveCurrentUrl(): string
     {
-        // AJAXリクエストの場合はRefererヘッダーから、そうでない場合は現在のURLを取得
-        return request()->header('Referer') ?? request()->fullUrl();
+        $url = request()->header('Referer') ?? request()->fullUrl();
+
+        return app(LedgerShareUrlService::class)->canonicalize($url);
     }
 
     /**
@@ -55,10 +57,11 @@ class PageQrCode extends BaseLivewireComponent implements HasActions, HasForms
             return;
         }
 
-        $this->url = $url !== null && $url !== ''
-            ? $url
-            : $this->resolveCurrentUrl();
+        $this->url = app(LedgerShareUrlService::class)->canonicalize(
+            $url !== null && $url !== '' ? $url : $this->resolveCurrentUrl()
+        );
         $this->showModal = true;
+        $this->dispatch('page-qr-code-url-synced', url: $this->url);
     }
 
     /**

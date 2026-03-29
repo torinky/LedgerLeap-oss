@@ -258,6 +258,26 @@ class ShowTest extends TestCase
     }
 
     #[Test]
+    public function it_restores_canonical_detail_state_from_query_parameters()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::withQueryParams([
+            'tab' => 'history',
+            'dl' => 2,
+            'sc' => 1,
+            'td' => $this->ledger->latestDiff->id,
+            'bd' => $this->ledger->latestDiff->id,
+        ])
+            ->test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->assertSet('selectedTab', 'history')
+            ->assertSet('displayLevel', 2)
+            ->assertSet('showChanges', true)
+            ->assertSet('targetDiffId', $this->ledger->latestDiff->id)
+            ->assertSet('baseDiffId', $this->ledger->latestDiff->id);
+    }
+
+    #[Test]
     public function it_passes_highlight_to_ledger_diff_viewer()
     {
         $this->actingAs($this->user);

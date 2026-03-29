@@ -26,13 +26,16 @@ class IndexManager extends BaseLivewireComponent
     #[Url(as: 'q')]
     public $search = '';
 
+    #[Url(as: 'sort')]
     public $orderBy = 'composite_score';
 
+    #[Url(as: 'dir')]
     public $orderAsc = false;
 
+    #[Url(as: 'status')]
     public $filterStatus = '';
 
-    #[Url(as: 'fi')]
+    #[Url(as: 'filter')]
     public $filter = [];
 
     #[Url(as: 'l')]
@@ -47,13 +50,16 @@ class IndexManager extends BaseLivewireComponent
     #[Url(as: 'dl')]
     public int $displayLevel = 1;
 
+    #[Url(as: 'pp')]
     public $perPage = 100;
 
     #[Url(as: 'sem', history: true)]
     public bool $useSemanticSearch = false;
 
+    #[Url(as: 'syn')]
     public $useSynonym = true;
 
+    #[Url(as: 'tt')]
     public $useTechnicalTerm = true;
 
     public string $orderByLabel = '';

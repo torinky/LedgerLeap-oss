@@ -98,7 +98,7 @@ class LedgerLookupControllerTest extends TestCase
         // 単一結果のリダイレクトと、URL形式の正しさを同時に検証
         $query = 'XYZ-9999';
         $baseUrl = config('ledgerleap.auto_links.base_url', config('app.url'));
-        $path = route('ledger.show', ['tenant' => $this->tenant2->id, 'ledgerId' => $this->ledger2->id, 'highlight' => $query], false);
+        $path = route('ledger.show', ['tenant' => $this->tenant2->id, 'ledgerId' => $this->ledger2->id], false);
         $expectedUrl = rtrim($baseUrl, '/').$path;
 
         $response = $this->actingAs($this->user)->get("/ledgers/lookup/{$query}");
@@ -110,7 +110,7 @@ class LedgerLookupControllerTest extends TestCase
         $redirectUrl = $response->headers->get('Location');
         $this->assertStringStartsWith($baseUrl, $redirectUrl, 'URL should start with base URL');
         $this->assertStringContainsString('/tenant2/ledger/', $redirectUrl, 'URL should contain tenant path');
-        $this->assertStringContainsString('highlight='.$query, $redirectUrl, 'URL should contain highlight parameter');
+        $this->assertStringNotContainsString('highlight=', $redirectUrl, 'URL should not contain highlight parameter');
 
         // 誤ったパターン（http://tenant2/tenant2/...）ではないことを確認
         $this->assertStringNotContainsString('://tenant2/', $redirectUrl, 'URL should not have tenant as hostname');
@@ -148,7 +148,7 @@ class LedgerLookupControllerTest extends TestCase
                     return false;
                 }
                 // 誤ったパターンではないことを確認
-                if (str_contains($result['url'], '://tenant1/') || str_contains($result['url'], '://tenant2/')) {
+                if (str_contains($result['url'], 'highlight=') || str_contains($result['url'], '://tenant1/') || str_contains($result['url'], '://tenant2/')) {
                     return false;
                 }
             }
@@ -190,5 +190,6 @@ class LedgerLookupControllerTest extends TestCase
 
         // カスタムベースURLが使用されていることを確認
         $this->assertStringStartsWith('http://test-base-url.example.com', $redirectUrl, 'URL should use configured base URL');
+        $this->assertStringNotContainsString('highlight=', $redirectUrl, 'URL should not contain highlight parameter');
     }
 }

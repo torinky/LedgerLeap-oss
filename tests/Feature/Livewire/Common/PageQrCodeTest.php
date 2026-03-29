@@ -10,6 +10,7 @@ use App\Models\User;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 use Livewire\Livewire;
+use App\Services\Ledger\LedgerShareUrlService;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -57,11 +58,96 @@ class PageQrCodeTest extends TestCase
             ->call('openModal', $url)
             ->assertSet('showModal', true)
             ->assertSet('url', $url)
+            ->assertDispatched('page-qr-code-url-synced', url: $url)
             ->assertSeeHtml('<svg') // QR code SVG
             ->assertSeeHtml('timeout: 2400')
             ->assertSee(__('ledger.qr_share.url_label'))
             ->assertDontSee(__('ledger.prefill.url_label'))
             ->assertSee($url);
+    }
+
+    #[Test]
+    public function it_canonicalizes_known_ledger_urls_before_showing_qr_code()
+    {
+        $folder = Folder::factory()->create([
+            'title' => '共有フォルダ',
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'title' => '契約台帳',
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $url = route('ledger.show', [
+            'tenant' => $this->getTenant()->id,
+            'ledgerId' => $ledger->id,
+            'highlight' => 'keyword',
+            'tab' => 'history',
+            'sc' => 1,
+        ]);
+
+        $component = Livewire::test(PageQrCode::class)
+            ->call('openModal', $url);
+
+        $expected = app(LedgerShareUrlService::class)->canonicalize($url);
+
+        $this->assertSame($expected, $component->instance()->url);
+        $this->assertStringContainsString('highlight=keyword', $component->instance()->url);
+    }
+
+    #[Test]
+    public function it_preserves_list_scope_selection_parameters_when_opening_qr_code()
+    {
+        $folder = Folder::factory()->create([
+            'title' => '共有フォルダ',
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'title' => '共有台帳',
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->getTenant()->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        $url = route('ledger.index', [
+            'tenant' => $this->getTenant()->id,
+            'q' => 'search-term',
+            'dir' => true,
+            'dl' => 3,
+            'sort' => 'content->2',
+            'l' => [$ledgerDefine->id],
+            'f' => [$folder->id],
+            'cf' => $folder->id,
+            'tt' => false,
+        ]);
+
+        $component = Livewire::test(PageQrCode::class)
+            ->call('openModal', $url);
+
+        $this->assertSame(
+            app(LedgerShareUrlService::class)->canonicalize($url),
+            $component->instance()->url,
+        );
+        $this->assertStringContainsString('l%5B0%5D='.$ledgerDefine->id, $component->instance()->url);
+        $this->assertStringContainsString('f%5B0%5D='.$folder->id, $component->instance()->url);
+        $this->assertStringContainsString('cf='.$folder->id, $component->instance()->url);
     }
 
     #[Test]

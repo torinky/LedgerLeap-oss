@@ -1,4 +1,4 @@
-<div>
+<div x-data x-on:page-qr-code-url-synced.window="window.history.replaceState({}, '', $event.detail.url)">
     @if($triggerType === 'mary')
         <x-mary-button 
             icon="o-qr-code" 

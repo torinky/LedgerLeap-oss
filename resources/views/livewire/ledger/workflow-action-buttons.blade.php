@@ -103,7 +103,7 @@
                     label="{{ __('ledger.back_to_list') }}"
                     icon="o-list-bullet"
                     class="btn-sm btn-outline"
-                    onclick="window.open('{{ route('ledger.index', ['tenant' => tenant('id'), 'l' => [$ledgerRecord->define->id], 'cf' => $ledgerRecord->define->folder_id ])}}', 'ledger-list');"
+                    onclick="window.open('{{ route('ledgersByDefineId', ['tenant' => tenant('id'), 'defineId' => $ledgerRecord->define->id ])}}', 'ledger-list');"
             />
             <x-ledger.close-window-button/>
         </div>
