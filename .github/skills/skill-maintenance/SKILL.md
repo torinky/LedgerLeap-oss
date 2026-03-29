@@ -28,6 +28,7 @@ A new learning was proven?
 - Keep one source of truth per rule; replace duplicates with links.
 - If a prompt and skill cover the same domain, make them cross-reference each other.
 - If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
+- Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
 - When a task proves that an MCP / API tool description is carrying too much workflow guidance, route the workflow to `resources/ai/capabilities/*.yaml` or discovery docs, and keep the tool description contract-centered.
 - Do not approve guidance removal until the receiver asset preserves equivalent client-facing information for generated skills, prompts, or bootstrap flows.
 - Every durable learning must point to traceable evidence: link the repo proof in `docs/work/*` or the official source in `references/*.md` before treating it as reusable guidance.
