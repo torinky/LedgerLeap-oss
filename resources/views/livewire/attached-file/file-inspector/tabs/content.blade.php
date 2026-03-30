@@ -315,18 +315,18 @@
                     copy: { loading: false, success: false },
                     download: { loading: false, success: false }
                 },
-            
+
                 async performAction(type, actionFn) {
                     if (this.actionState[type].loading) return;
-            
+
                     this.actionState[type].loading = true;
                     this.actionState[type].success = false;
-            
+
                     try {
                         // Simulate interaction delay for UI feedback consistency
                         await new Promise(r => setTimeout(r, 600));
                         await actionFn();
-            
+
                         this.actionState[type].success = true;
                         // Unified toast message
                         this.notify(
@@ -334,23 +334,23 @@
                             '{{ __('ledger.vlm.copied_short') }}' :
                             '{{ __('ledger.file_inspector.actions.download_complete') }}'
                         );
-            
+
                         setTimeout(() => {
                             this.actionState[type].success = false;
                         }, 2000);
-            
+
                     } catch (e) {
                         this.notify('Error', 'error');
                     } finally {
                         this.actionState[type].loading = false;
                     }
                 },
-            
+
                 copyText(targetId) {
                                 this.rawPreviewLoading = true;
                                 $wire.requestPreviewText('copy');
                 },
-            
+
                 fallbackCopy(text) {
                     const ta = document.createElement('textarea');
                     ta.value = text;
@@ -361,15 +361,15 @@
                     document.execCommand('copy');
                     document.body.removeChild(ta);
                 },
-            
+
                 downloadFile(type) {
                                 this.rawPreviewLoading = true;
                                 $wire.requestPreviewText('download:' + type);
                 }
             }">
             {{-- Content Body --}}
-            <div class="overflow-y-auto min-h-[300px] p-4 text-sm leading-relaxed relative transition-all duration-700 ease-in-out"
-                :class="[$wire.isExpanded ? 'max-h-[5000px]' : 'max-h-[500px]']"
+            <div class="overflow-y-auto p-4 text-sm leading-relaxed relative transition-all duration-700 ease-in-out max-h-[450px] "
+                :class="[$wire.isExpanded ? '' : 'overflow-y-hidden']"
                 style="scrollbar-width: thin;" id="{{ $contentAreaId }}">
 
                 @if ($activeSource === 'structured')
