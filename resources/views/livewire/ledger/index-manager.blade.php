@@ -86,7 +86,7 @@
         </x-slot:drawer>
 
         {{-- Always visible search section moved from RecordsTable --}}
-        <div class="px-4 pt-4 sticky top-0 z-10 bg-base-200/80 backdrop-blur-md pb-4 rounded-b-2xl">
+        <div class="px-4 pt-4 sticky z-10 bg-base-200/80 backdrop-blur-md pb-4 rounded-2xl">
             <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch"
                 :defaultSortColumns="$defaultSortColumns" />
         </div>
