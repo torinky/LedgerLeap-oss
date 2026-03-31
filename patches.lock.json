@@ -1,1 +1,29 @@
-{}
+{
+    "_hash": "61e70a44b01658c00a1348e6aa276643d96044aecd91a994992f0da49df04ee4",
+    "patches": {
+        "laravel/boost": [
+            {
+                "package": "laravel/boost",
+                "description": "Fix MCP tools schema for Laravel 12",
+                "url": "patches/fix_mcp_tools_schema.patch",
+                "sha256": "7f3b8736ca9ac821ce56effedc4fd8753c86bcb8cc69c0e1e9dbeb04dcd28196",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ],
+        "stancl/tenancy": [
+            {
+                "package": "stancl/tenancy",
+                "description": "Fix PHP 8.4 static trait property deprecation",
+                "url": "patches/fix_tenancy_php84_trait_property.patch",
+                "sha256": "7d252f8fb13ee5a9d45de3e6c50aa08b988cfed8e6afc29f00851c65aa867774",
+                "depth": 1,
+                "extra": {
+                    "provenance": "root"
+                }
+            }
+        ]
+    }
+}

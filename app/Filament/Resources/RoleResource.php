@@ -2,7 +2,7 @@
 
 namespace App\Filament\Resources;
 
-use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleResource;
+use Filament\Resources\Resource;
 use App\Enums\FolderPermissionType;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderPermissionRelationManager;
@@ -25,7 +25,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-class RoleResource extends BaseRoleResource
+class RoleResource extends Resource
 {
     use HasPermissionMetadata;
 
@@ -60,6 +60,16 @@ class RoleResource extends BaseRoleResource
     public static function getPluralLabel(): string
     {
         return __('ledger.settings.roles');
+    }
+
+    public static function getNavigationGroup(): ?string
+    {
+        return __(config('filament-spatie-roles-permissions.navigation_section_group', 'ledger.setting'));
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return config('filament-spatie-roles-permissions.sort.role_navigation', 1);
     }
 
     public static function form(Form $form): Form
@@ -178,15 +188,15 @@ class RoleResource extends BaseRoleResource
 
     public static function table(Table $table): Table
     {
-        $parentTable = parent::table($table);
-        $columns = $parentTable->getColumns();
-
         $allFolderTree = Folder::get()->toTree();
         $allFolderList = Folder::treeList($allFolderTree);
 
         return $table
             ->columns([
-                ...$columns,
+                Tables\Columns\TextColumn::make('name')
+                    ->label(__('role.name'))
+                    ->searchable()
+                    ->sortable(),
                 Tables\Columns\TextColumn::make('folders')
                     ->label(__('ledger.folder.scoped'))
                     ->getStateUsing(function ($record): array {
@@ -227,6 +237,7 @@ class RoleResource extends BaseRoleResource
                     ->badge(),
 
                 Tables\Columns\TextColumn::make('guard_name')
+                    ->label(__('role.guard_name'))
                     ->badge(),
                 Tables\Columns\TextColumn::make('description')
                     ->label(__('ledger.description'))
@@ -234,9 +245,18 @@ class RoleResource extends BaseRoleResource
                     ->searchable(),
 
             ])
-            ->filters($parentTable->getFilters())
-            ->actions($parentTable->getActions())
-            ->bulkActions($parentTable->getBulkActions());
+            ->filters([
+                //
+            ])
+            ->actions([
+                Tables\Actions\EditAction::make(),
+                Tables\Actions\DeleteAction::make(),
+            ])
+            ->bulkActions([
+                Tables\Actions\BulkActionGroup::make([
+                    Tables\Actions\DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
     public static function getRelations(): array
