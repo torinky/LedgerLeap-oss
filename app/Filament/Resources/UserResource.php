@@ -8,6 +8,7 @@ use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Role;
 use App\Models\User;
 use Filament\Forms;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -60,7 +61,7 @@ class UserResource extends Resource
     {
         return $schema
             ->schema([
-                Forms\Components\Section::make(__('user.user_details')) // セクション追加
+                Section::make(__('user.user_details')) // セクション追加
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -73,7 +74,7 @@ class UserResource extends Resource
                         Forms\Components\DateTimePicker::make('email_verified_at'),
                     ])->columns(2), // 2カラムレイアウト
 
-                Forms\Components\Section::make(__('user.password_settings')) // セクション追加
+                Section::make(__('user.password_settings')) // セクション追加
                     ->schema([
                         Forms\Components\TextInput::make('password')
                             ->password()
@@ -91,7 +92,7 @@ class UserResource extends Resource
                             ->dehydrated(false),
                     ])->columns(2), // 2カラムレイアウト
 
-                Forms\Components\Section::make(__('user.roles_and_permissions')) // セクション追加
+                Section::make(__('user.roles_and_permissions')) // セクション追加
                     ->schema([
                         Forms\Components\Select::make('roles')
                             ->multiple()
