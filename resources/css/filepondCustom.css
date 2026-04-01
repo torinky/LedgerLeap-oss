@@ -1,3 +1,5 @@
+
+
 .filepond--credits {
     display: none;
 }
@@ -39,7 +41,7 @@
 /* 2. アイコン表示用（メタデータ data-is-icon="true" が付与された場合） */
 .filepond--item[data-is-icon="true"] .filepond--file-poster {
     /* アイコンを中央に配置、containで縦横比を維持しつつカード内に収める */
-    background-size: contain !important;
+    /*background-size: contain !important;*/
     background-repeat: no-repeat !important;
     background-position: center !important;
 
@@ -60,8 +62,8 @@
     height: auto !important;
     width: auto !important;
     /* max-widthとmax-heightを両方設定して、どちらかの制限内に収める */
-    max-width: 110px !important;
-    max-height: 120px !important;
+    max-width: 80px !important;
+    max-height: 90px !important;
     min-height: 0 !important;
 
     /* 中央配置 */
