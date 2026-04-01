@@ -9,7 +9,7 @@ use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -27,7 +27,7 @@ class FolderResource extends Resource
 
     protected static ?string $model = Folder::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-folder';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-folder';
 
     public static function getLabel(): string
     {
@@ -58,9 +58,9 @@ class FolderResource extends Resource
         ];
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make(__('ledger.basic_information'))
                     ->schema([

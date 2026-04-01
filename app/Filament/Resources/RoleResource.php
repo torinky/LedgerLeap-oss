@@ -18,7 +18,7 @@ use Filament\Forms\Components\Grid;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
@@ -31,7 +31,7 @@ class RoleResource extends Resource
 
     protected static ?string $model = Role::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -72,13 +72,13 @@ class RoleResource extends Resource
         return config('filament-spatie-roles-permissions.sort.role_navigation', 1);
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
         // --- 既存の parentForm と components の取得は不要になる ---
         // $parentForm = parent::form($form);
         // $components = $parentForm->getComponents();
 
-        return $form
+        return $schema
             ->schema([
                 Section::make()
                     ->schema([

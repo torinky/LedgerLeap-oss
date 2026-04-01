@@ -8,7 +8,7 @@ use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Role;
 use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -39,7 +39,7 @@ class UserResource extends Resource
 
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user';
 
     public static function getTitle($ownerRecord, string $pageClass): string
     {
@@ -56,9 +56,9 @@ class UserResource extends Resource
         return __('ledger.user');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Section::make(__('user.user_details')) // セクション追加
                     ->schema([

@@ -4,7 +4,7 @@ namespace App\Filament\Resources\OrganizationResource\RelationManagers;
 
 use App\Models\User; // 追加
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Columns\ToggleColumn; // 追加
@@ -31,10 +31,10 @@ class UserRelationManager extends RelationManager
         return __('ledger.user');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         // EditActionでは中間テーブルの情報(is_primary)のみを編集
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Toggle::make('is_primary')
                     ->label(__('ledger.organizations.primary'))

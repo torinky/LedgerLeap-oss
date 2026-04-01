@@ -13,5 +13,5 @@ class TechnicalTermGroups extends Page implements HasForms
 
     protected static string $resource = TechnicalTermGroupResource::class;
 
-    protected static string $view = 'filament.resources.synonym.technical-term-group-resource.pages.technical-term-groups';
+    protected string $view = 'filament.resources.synonym.technical-term-group-resource.pages.technical-term-groups';
 }

@@ -16,7 +16,7 @@ use Filament\Forms\Components\CheckboxList;
 // ★ Toggle を使う方がシンプル
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 // ★ カスタムアクション用に Action を使う
 // use Filament\Tables\Actions\AttachAction; // ★ AttachAction は使わない
@@ -380,9 +380,9 @@ class NotificationSettingsRelationManager extends RelationManager
     }
 
     // form() メソッドは空のままで良い
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->schema([]);
     }
 
     // --- 権限チェック ---

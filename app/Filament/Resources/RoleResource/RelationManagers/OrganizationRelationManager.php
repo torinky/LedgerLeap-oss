@@ -5,7 +5,7 @@ namespace App\Filament\Resources\RoleResource\RelationManagers;
 // 追加
 use CodeWithDennis\FilamentSelectTree\SelectTree; // 追加
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\Action; // 変更
 use Filament\Tables\Actions\DetachAction;
@@ -41,10 +41,10 @@ class OrganizationRelationManager extends RelationManager
         return __('ledger.organization');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         // このフォームはAttach/Detachのみのため、直接は使用されない
-        return $form
+        return $schema
             ->schema([
                 TextInput::make('name')
                     ->label(__('ledger.organizations.name')),

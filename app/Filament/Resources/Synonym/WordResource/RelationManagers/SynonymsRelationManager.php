@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Synonym\WordResource\RelationManagers;
 use App\Filament\Resources\Synonym\SynonymResource;
 use App\Models\Synonym\Word;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -38,9 +38,9 @@ class SynonymsRelationManager extends RelationManager
 
     //    protected static string $relationship = 'synonyms';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('synonym')
                     ->required()

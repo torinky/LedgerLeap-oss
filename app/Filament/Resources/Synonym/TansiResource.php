@@ -5,7 +5,7 @@ namespace App\Filament\Resources\Synonym;
 use App\Filament\Resources\Synonym\TansiResource\Pages;
 use App\Models\Synonym\Tansi;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -14,13 +14,13 @@ class TansiResource extends Resource
 {
     protected static ?string $model = Tansi::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static bool $shouldRegisterNavigation = false;
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Textarea::make('pronunciation1')
                     ->columnSpanFull(),

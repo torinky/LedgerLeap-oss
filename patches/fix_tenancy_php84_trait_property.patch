@@ -1,3 +1,4 @@
+diff --git a/src/Database/TenantScope.php b/src/Database/TenantScope.php
 --- a/src/Database/TenantScope.php
 +++ b/src/Database/TenantScope.php
 @@ -17,7 +17,7 @@ class TenantScope implements Scope
@@ -9,6 +10,7 @@
      }
 
      public function extend(Builder $builder)
+diff --git a/src/Database/Concerns/BelongsToTenant.php b/src/Database/Concerns/BelongsToTenant.php
 --- a/src/Database/Concerns/BelongsToTenant.php
 +++ b/src/Database/Concerns/BelongsToTenant.php
 @@ -16,7 +16,7 @@ trait BelongsToTenant

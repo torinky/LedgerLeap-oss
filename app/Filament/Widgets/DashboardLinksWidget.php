@@ -8,7 +8,7 @@ use Filament\Widgets\Widget;
 
 class DashboardLinksWidget extends Widget
 {
-    protected static string $view = 'filament.widgets.dashboard-links-widget';
+    protected string $view = 'filament.widgets.dashboard-links-widget';
 
     public ?string $from_tenant = null;
 

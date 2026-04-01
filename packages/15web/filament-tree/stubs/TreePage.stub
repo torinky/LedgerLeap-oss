@@ -1,0 +1,35 @@
+<?php
+
+namespace {{ namespace }};
+
+{{ clusterImport }}use Kalnoy\Nestedset\QueryBuilder;
+use Studio15\FilamentTree\Components\TreePage;
+
+class {{ class }} extends TreePage
+{
+    public static function getModel(): string|QueryBuilder
+    {
+        {{ model }}
+    }
+
+    public static function getCreateForm(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getEditForm(): array
+    {
+        return [
+            //
+        ];
+    }
+
+    public static function getInfolistColumns(): array
+    {
+        return [
+            //
+        ];
+    }
+}

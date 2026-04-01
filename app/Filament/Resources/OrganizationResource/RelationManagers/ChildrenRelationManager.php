@@ -6,7 +6,7 @@ use App\Filament\Resources\OrganizationResource;
 use App\Models\Organization;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -32,10 +32,10 @@ class ChildrenRelationManager extends RelationManager
         return __('ledger.organization');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         // このフォームは「新規作成」アクションで使用されます
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('org_id')
                     ->label('Organization ID')

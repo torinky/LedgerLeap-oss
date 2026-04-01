@@ -4,7 +4,7 @@ namespace App\Filament\Resources\UserResource\RelationManagers;
 
 use App\Models\User;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Columns\ToggleColumn;
@@ -34,10 +34,10 @@ class OrganizationRelationManager extends RelationManager
         return __('ledger.organization');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         // この form メソッドは EditAction で使用されます
-        return $form
+        return $schema
             ->schema([
                 // EditAction のフォームでは Select は不要なため、is_primary のみに絞ります
                 Forms\Components\Toggle::make('is_primary')

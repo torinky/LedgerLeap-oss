@@ -11,7 +11,7 @@ use App\Models\RoleFolderPermission;
 use Exception;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables\Actions\Action;
@@ -67,9 +67,9 @@ class FolderPermissionRelationManager extends RelationManager
     }
 
     // ★ 権限編集用のモーダルフォームを定義
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 // ★ フォルダ名は表示専用 (モーダルヘッダーで代替しても良い)
                 // Placeholder::make('folder_name')...

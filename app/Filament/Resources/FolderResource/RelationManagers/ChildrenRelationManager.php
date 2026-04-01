@@ -6,7 +6,7 @@ use App\Filament\Resources\FolderResource;
 use App\Models\Folder;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
-use Filament\Forms\Form;
+use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -32,9 +32,9 @@ class ChildrenRelationManager extends RelationManager
         return __('ledger.folders');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('title')
                     ->label(__('ledger.folder.title'))
