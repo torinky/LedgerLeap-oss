@@ -110,6 +110,34 @@ class BootstrapClientSkillsPromptTest extends TestCase
     }
 
     #[Test]
+    public function it_treats_blank_arguments_as_defaults(): void
+    {
+        $response = $this->runServerMethod('prompts/get', [
+            'name' => 'bootstrap-client-skills',
+            'arguments' => [
+                'client_type' => '',
+                'role_profile' => '',
+                'model_profile' => '',
+                'language' => '',
+            ],
+        ]);
+
+        $this->assertArrayHasKey('result', $response);
+        $this->assertArrayHasKey('messages', $response['result']);
+        $this->assertCount(2, $response['result']['messages']);
+
+        $combined = collect($response['result']['messages'])
+            ->map(fn (array $message) => $message['content']['text'] ?? '')
+            ->implode("\n");
+
+        $this->assertStringContainsString('クライアント: GitHub Copilot', $combined);
+        $this->assertStringContainsString('役割: 実務担当者', $combined);
+        $this->assertStringContainsString('今日対応すべき承認待ちを見せて。', $combined);
+        $this->assertStringContainsString('ledgerleap://bootstrap/copilot', $combined);
+        $this->assertStringNotContainsString('Undefined array key', $combined);
+    }
+
+    #[Test]
     public function it_validates_supported_prompt_arguments(): void
     {
         LedgerLeapServer::prompt(BootstrapClientSkillsPrompt::class, [
