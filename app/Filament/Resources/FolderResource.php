@@ -9,6 +9,7 @@ use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
+use Filament\Panel;
 use Filament\Schemas\Schema;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
@@ -18,7 +19,6 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Routing\Route as RouteAlias;
 use Illuminate\Support\Facades\Route; // 追加
 
 class FolderResource extends Resource
@@ -208,12 +208,30 @@ class FolderResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListFolders::route('/'),
+            'index' => new PageRegistration(
+                Pages\ListFolders::class,
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/', Pages\ListFolders::class)
+                    ->middleware(Pages\ListFolders::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\ListFolders::getWithoutRouteMiddleware($panel))
+            ),
             'tree' => new PageRegistration(
                 Pages\ListFoldersTree::class,
-                fn (): RouteAlias => Route::get('/tree', Pages\ListFoldersTree::class)),
-            'create' => Pages\CreateFolder::route('/create'),
-            'edit' => Pages\EditFolder::route('/{record}/edit'),
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/tree', Pages\ListFoldersTree::class)
+                    ->middleware(Pages\ListFoldersTree::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\ListFoldersTree::getWithoutRouteMiddleware($panel))
+            ),
+            'create' => new PageRegistration(
+                Pages\CreateFolder::class,
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/create', Pages\CreateFolder::class)
+                    ->middleware(Pages\CreateFolder::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\CreateFolder::getWithoutRouteMiddleware($panel))
+            ),
+            'edit' => new PageRegistration(
+                Pages\EditFolder::class,
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/{record}/edit', Pages\EditFolder::class)
+                    ->middleware(Pages\EditFolder::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\EditFolder::getWithoutRouteMiddleware($panel))
+            ),
         ];
     }
 
