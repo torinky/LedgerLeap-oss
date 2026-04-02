@@ -343,6 +343,7 @@ class CreateColumn extends BaseLivewireComponent
             'hashedbasename' => $hashedBasename,
             'path' => $fullPath,
             'mime' => $mimeType,
+            'size' => Storage::disk('public')->size($fullPath),
             //            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
             'status' => AttachedFileStatus::UPLOADED->value,
             //            'contain_content' => ! empty($result->meta->content),

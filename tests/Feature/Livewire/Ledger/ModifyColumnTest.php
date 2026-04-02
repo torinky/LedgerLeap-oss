@@ -103,6 +103,7 @@ class ModifyColumnTest extends TestCase
         $dummyFile = UploadedFile::fake()->image($originalFilename);
         $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
+        $expectedSize = Storage::disk('public')->size($path);
 
         // 添付ファイル情報を持つLedgerレコードを作成
         $ledger = Ledger::factory()->create([
@@ -123,6 +124,7 @@ class ModifyColumnTest extends TestCase
             'column_id' => 0, // 1から0に変更
             'path' => $path, // 生成したパスを設定
             'mime' => 'image/jpeg', // MIMEタイプを明示的に設定
+            'size' => null,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -151,12 +153,14 @@ class ModifyColumnTest extends TestCase
         $firstFile = $filesForColumn[0] ?? null;
         $this->assertNotNull($firstFile, 'File object not found.');
 
-        // 4. sourceとposterのURLが期待通りか厳密に検証
+        // 4. sourceとsize、posterが期待通りか厳密に検証
         $expectedSourceUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id]);
         $expectedPosterUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id, 'thumbnail' => true]);
 
         $this->assertEquals($expectedSourceUrl, $firstFile['source'], 'The file source URL is incorrect.');
-        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'The file poster URL is incorrect.');
+        $this->assertSame($expectedSize, $firstFile['options']['file']['size'], 'File size should be preserved for FilePond.');
+        $this->assertFalse($firstFile['options']['metadata']['is_icon']);
+        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Image poster should point to thumbnail preview.');
     }
 
     #[Test]
@@ -194,6 +198,7 @@ class ModifyColumnTest extends TestCase
             'column_id' => 0,
             'path' => $path,
             'mime' => 'application/pdf',
+            'size' => null,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -212,13 +217,12 @@ class ModifyColumnTest extends TestCase
         $firstFile = $filesForColumn[0] ?? null;
         $this->assertNotNull($firstFile);
 
-        // 1. is_iconフラグがtrueであることを確認（非画像ファイル）
-        $this->assertArrayHasKey('is_icon', $firstFile['options']['metadata']);
-        $this->assertTrue($firstFile['options']['metadata']['is_icon'], 'is_icon should be true for non-image files.');
+        // 1. MIMEアイコン用posterが設定されることを確認
+        $this->assertTrue($firstFile['options']['metadata']['is_icon'], 'Poster should be the file-type icon for non-image files.');
+        $this->assertEquals(route('api.fontawesome.icon.by_mime', ['type' => 'application/pdf']), $firstFile['options']['metadata']['poster']);
 
-        // 2. posterURLがアイコンAPIのルートを指していることを確認
-        $expectedPosterUrl = route('api.fontawesome.icon.by_mime', ['type' => 'application/pdf']);
-        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Poster URL should point to icon API for non-image files.');
+        // 2. 既存ファイルサイズが FilePond に渡ることを確認
+        $this->assertSame(Storage::disk('public')->size($path), $firstFile['options']['file']['size']);
     }
 
     #[Test]
@@ -643,6 +647,7 @@ class ModifyColumnTest extends TestCase
             'path' => 'attachments/'.$hashedBasename,
             'mime' => 'application/pdf',
             'original_mime_type' => 'image/jpeg',
+            'size' => null,
             'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
@@ -729,13 +734,13 @@ class ModifyColumnTest extends TestCase
         $this->assertNotNull($filesForColumn);
         $this->assertCount(3, $filesForColumn, 'Should have 3 files.');
 
-        // すべてのファイルでis_iconがtrueであることを確認
+        // すべてのファイルで poster が MIME アイコンを指し、size が渡ることを確認
         foreach ($filesForColumn as $file) {
             $this->assertArrayHasKey('is_icon', $file['options']['metadata']);
             $this->assertTrue($file['options']['metadata']['is_icon'], "is_icon should be true for {$file['options']['file']['name']}");
-
-            // posterURLがアイコンAPIを指していることを確認
             $this->assertStringContainsString('/icons/mime?type=', $file['options']['metadata']['poster']);
+            $this->assertArrayHasKey('size', $file['options']['file']);
+            $this->assertGreaterThan(0, $file['options']['file']['size'], "File size should be present for {$file['options']['file']['name']}");
         }
     }
 

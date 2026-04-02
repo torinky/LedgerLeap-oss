@@ -5,6 +5,7 @@ namespace App\Mcp\Prompts;
 use App\Services\Ai\BootstrapManifestService;
 use App\Services\Ai\ClientSkillBootstrapService;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Facades\Validator;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;
@@ -49,16 +50,24 @@ class BootstrapClientSkillsPrompt extends Prompt
 
     public function handle(Request $request): array
     {
-        $input = $request->validate(
+        $input = [
+            'client_type' => $this->normalizeArgument($request->get('client_type'), 'copilot'),
+            'role_profile' => $this->normalizeArgument($request->get('role_profile'), 'operator'),
+            'model_profile' => $this->normalizeArgument($request->get('model_profile'), 'general-local'),
+            'language' => $this->normalizeArgument($request->get('language'), 'ja'),
+        ];
+
+        $validated = Validator::make(
+            $input,
             [
-                'client_type' => ['sometimes', 'string', Rule::in(ClientSkillBootstrapService::SUPPORTED_CLIENTS)],
-                'role_profile' => ['sometimes', 'string', Rule::in(array_keys(BootstrapManifestService::ROLE_PROFILES))],
+                'client_type' => ['required', 'string', Rule::in(ClientSkillBootstrapService::SUPPORTED_CLIENTS)],
+                'role_profile' => ['required', 'string', Rule::in(array_keys(BootstrapManifestService::ROLE_PROFILES))],
                 'model_profile' => [
-                    'sometimes',
+                    'required',
                     'string',
                     Rule::in(array_keys(BootstrapManifestService::MODEL_PROFILES)),
                 ],
-                'language' => ['sometimes', 'string', Rule::in(['ja', 'en'])],
+                'language' => ['required', 'string', Rule::in(['ja', 'en'])],
             ],
             [
                 'client_type.in' => 'client_type は copilot, claude-code, gemini-cli, openai-agents のいずれかを指定してください。',
@@ -66,12 +75,12 @@ class BootstrapClientSkillsPrompt extends Prompt
                 'model_profile.in' => 'model_profile は small-local, general-local, remote-capable のいずれかを指定してください。',
                 'language.in' => 'language は ja または en を指定してください。',
             ]
-        );
+        )->validate();
 
-        $clientType = (string) ($input['client_type'] ?? 'copilot');
-        $roleProfile = (string) ($input['role_profile'] ?? 'operator');
-        $modelProfile = (string) ($input['model_profile'] ?? 'general-local');
-        $language = (string) ($input['language'] ?? 'ja');
+        $clientType = (string) $validated['client_type'];
+        $roleProfile = (string) $validated['role_profile'];
+        $modelProfile = (string) $validated['model_profile'];
+        $language = (string) $validated['language'];
 
         return [
             Response::text($this->assistantMessage($clientType, $roleProfile, $modelProfile, $language))->asAssistant(),
@@ -86,7 +95,7 @@ class BootstrapClientSkillsPrompt extends Prompt
         string $language,
     ): string {
         $roleLabel = (string) BootstrapManifestService::ROLE_PROFILES[$roleProfile]['label'];
-        $clientLabel = $this->clientLabel($clientType, $language);
+        $clientLabel = $this->clientLabel($clientType);
         $outputCount = $this->outputCount($modelProfile);
         $clientTip = $this->clientTip($clientType, $language);
 
@@ -290,13 +299,13 @@ class BootstrapClientSkillsPrompt extends Prompt
         return array_slice($actions, 0, $this->outputCount($modelProfile));
     }
 
-    private function clientLabel(string $clientType, string $language): string
+    private function clientLabel(string $clientType): string
     {
         return match ($clientType) {
-            'claude-code' => $language === 'en' ? 'Claude Code' : 'Claude Code',
-            'gemini-cli' => $language === 'en' ? 'Gemini CLI' : 'Gemini CLI',
-            'openai-agents' => $language === 'en' ? 'OpenAI Agents' : 'OpenAI Agents',
-            default => $language === 'en' ? 'GitHub Copilot' : 'GitHub Copilot',
+            'claude-code' => 'Claude Code',
+            'gemini-cli' => 'Gemini CLI',
+            'openai-agents' => 'OpenAI Agents',
+            default => 'GitHub Copilot',
         };
     }
 
@@ -324,6 +333,13 @@ class BootstrapClientSkillsPrompt extends Prompt
             'small-local' => 2,
             default => 3,
         };
+    }
+
+    private function normalizeArgument(mixed $value, string $default): string
+    {
+        $normalized = trim((string) $value);
+
+        return $normalized === '' ? $default : $normalized;
     }
 
     /**

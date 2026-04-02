@@ -149,7 +149,7 @@
                                             @if ($columnDefine->type === 'files')
                                                 <x-ledger.form.files :columnDefine="$columnDefine" :ledgerDefineId="$ledgerDefineId"
                                                     :initialFiles="$filePondInitialFiles[$columnDefine->id] ?? []" multiple allowImagePreview
-                                                    imagePreviewMaxHeight="200" />
+                                                    imagePreviewMaxHeight="150" />
                                             @else
                                                 @php
                                                     $componentName =

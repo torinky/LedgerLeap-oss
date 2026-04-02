@@ -546,9 +546,9 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
+        $mime = strtolower((string) ($this->file->original_mime_type ?? $this->file->mime ?? ''));
         $isImage = str_starts_with($mime, 'image/');
-        $isPdf = $mime === 'application/pdf';
+        $isPdf = $this->isPdf();
         $showPreview = $isImage || $isPdf;
         $shouldUseThumbnail = ! $this->isMockFile() && (($this->file->size ?? 0) >= 1048576);
 
@@ -559,9 +559,12 @@ class FileInspector extends BaseLivewireComponent
 
         if ($showPreview) {
             if ($this->isMockFile()) {
-                $originalUrl = $isImage
-                    ? 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.urlencode($this->file->original_filename ?? 'Image')
-                    : ($isPdf ? '#pdf-preview' : null);
+                if ($isImage) {
+                    $originalUrl = $this->getMockImagePreviewUrl();
+                } elseif ($isPdf) {
+                    $originalUrl = '#pdf-preview';
+                }
+
                 $previewUrl = $originalUrl;
             } else {
                 $originalUrl = $this->getFileRouteUrl();
@@ -1222,9 +1225,12 @@ class FileInspector extends BaseLivewireComponent
         if (! $this->file) {
             return false;
         }
-        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
 
-        return $mime === 'application/pdf';
+        $mime = strtolower((string) ($this->file->original_mime_type ?? $this->file->mime ?? ''));
+        $filename = strtolower((string) ($this->file->original_filename ?? $this->file->filename ?? ''));
+
+        return in_array($mime, ['application/pdf', 'application/x-pdf'], true)
+            || str_ends_with($filename, '.pdf');
     }
 
     /**
@@ -1298,9 +1304,10 @@ class FileInspector extends BaseLivewireComponent
         // モックデータの場合
         if ($this->isMockFile()) {
             if ($this->isImage()) {
-                return 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.
-                    urlencode($this->file->original_filename ?? 'Image');
-            } elseif ($this->isPdf()) {
+                return $this->getMockImagePreviewUrl();
+            }
+
+            if ($this->isPdf()) {
                 return '#pdf-preview';
             }
 
@@ -1315,6 +1322,13 @@ class FileInspector extends BaseLivewireComponent
 
         // 通常はダウンロードルートをそのままプレビューに使う
         return $this->originalUrl();
+    }
+
+    private function getMockImagePreviewUrl(): string
+    {
+        $imageLabel = urlencode($this->file->original_filename ?? 'Image');
+
+        return 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.$imageLabel;
     }
 
     /**

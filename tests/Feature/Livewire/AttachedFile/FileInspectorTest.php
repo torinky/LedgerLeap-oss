@@ -285,6 +285,68 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_pdf_iframe_for_low_id_real_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'id' => 5,
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'low_id_report.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => 'attachments/low_id_report.pdf',
+            'size' => 4096,
+            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertTrue($component->get('isPdf'));
+        $this->assertTrue($component->get('showPreview'));
+        $component->assertSeeHtml('title="PDF Preview"');
+    }
+
+    #[Test]
+    public function it_treats_pdf_extension_as_previewable_when_mime_is_generic()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'id' => 6,
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'mime_generic.pdf',
+            'mime' => 'application/octet-stream',
+            'original_mime_type' => 'application/octet-stream',
+            'path' => 'attachments/mime_generic.pdf',
+            'size' => 4096,
+            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertTrue($component->get('isPdf'));
+        $this->assertTrue($component->get('showPreview'));
+        $this->assertEquals(route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]), $component->get('previewUrl'));
+    }
+
+    #[Test]
     public function it_uses_thumbnail_route_for_large_image_files_when_thumbnail_exists()
     {
         config(['mock.attachment.enabled' => false]);

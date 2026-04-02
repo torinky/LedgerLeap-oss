@@ -15,6 +15,7 @@ use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
@@ -455,27 +456,44 @@ class ModifyColumn extends CreateColumn
                         );
                     }
 
-                    $posterUrl = '';
-                    $isIconFlag = false; // デフォルトはfalse（画像扱い）
-
-                    if ($currentAttachedFile) {
-                        $mimeType = $currentAttachedFile->original_mime_type
-                            ?? $currentAttachedFile->mime
-                            ?? 'application/octet-stream';
-                        $isImage = str_starts_with($mimeType, 'image/');
-
-                        if ($isImage) {
-                            $posterUrl = route('file.download', [
-                                'tenant' => $this->tenantId,
-                                'attachedFile' => $attachmentId,
-                                'thumbnail' => true,
-                            ]);
-                            $isIconFlag = false;
-                        } else {
-                            // 非画像ファイルについては、アイコンURLを直接セットしてリダイレクトを避ける
-                            $posterUrl = route('api.fontawesome.icon.by_mime', ['type' => $mimeType]);
-                            $isIconFlag = true;
+                    $fileSize = $currentAttachedFile?->size;
+                    if (($fileSize === null || $fileSize <= 0) && ! empty($storagePath)) {
+                        $publicDisk = \Illuminate\Support\Facades\Storage::disk('public');
+                        if ($publicDisk->exists($storagePath)) {
+                            $fileSize = $publicDisk->size($storagePath);
                         }
+                    }
+
+                    $mimeType = $currentAttachedFile?->original_mime_type
+                        ?? $currentAttachedFile?->mime
+                        ?? 'application/octet-stream';
+                    $isIconFlag = ! str_starts_with($mimeType, 'image/');
+                    $posterUrl = $isIconFlag
+                        ? route('api.fontawesome.icon.by_mime', ['type' => $mimeType])
+                        : route('file.download', [
+                            'tenant' => $this->tenantId,
+                            'attachedFile' => $attachmentId,
+                            'thumbnail' => true,
+                        ]);
+
+                    $fileOptions = [
+                        'type' => 'local',
+                        'file' => [
+                            'name' => $originalFilename,
+                            'type' => $mimeType,
+                        ],
+                        'metadata' => [
+                            'filename' => $originalFilename,
+                            'hashedBasename' => $hashedBasename,
+                            'poster' => $posterUrl,
+                            'is_icon' => $isIconFlag,
+                            'isExisting' => true, // 既存ファイルフラグ
+                            'attachmentId' => $attachmentId, // ファイルID
+                        ],
+                    ];
+
+                    if ($fileSize !== null) {
+                        $fileOptions['file']['size'] = $fileSize;
                     }
 
                     $fileObject = [
@@ -483,24 +501,7 @@ class ModifyColumn extends CreateColumn
                             'tenant' => $this->tenantId,
                             'attachedFile' => $attachmentId,
                         ]),
-                        'options' => [
-                            'type' => 'local',
-                            'file' => [
-                                'name' => $originalFilename,
-                                'size' => $currentAttachedFile?->size ?? 0,
-                                'type' => $currentAttachedFile?->original_mime_type
-                                    ?? $currentAttachedFile?->mime
-                                    ?? 'application/octet-stream',
-                            ],
-                            'metadata' => [
-                                'filename' => $originalFilename,
-                                'hashedBasename' => $hashedBasename,
-                                'poster' => $posterUrl,
-                                'is_icon' => $isIconFlag,
-                                'isExisting' => true, // 既存ファイルフラグ
-                                'attachmentId' => $attachmentId, // ファイルID
-                            ],
-                        ],
+                        'options' => $fileOptions,
                     ];
                     $filesForColumn[] = $fileObject;
                 }
