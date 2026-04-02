@@ -11,6 +11,11 @@ trait InitializesTenantContext
 {
     public $tenantId;
 
+    public function resolveTenantId(string|int|null $fallbackTenantId = null): string|int|null
+    {
+        return $this->tenantId ?? tenant('id') ?? $fallbackTenantId;
+    }
+
     public function initializeTenantContext(Tenancy $tenancy): void
     {
         // 1. tenantIdがまだセットされていない場合（主に初回リクエスト時）、ルートから取得を試みる
@@ -31,7 +36,10 @@ trait InitializesTenantContext
                 $tenancy->initialize($tenant);
                 Log::info('Tenant re-initialized via InitializesTenantContext trait', ['tenant_id' => $this->tenantId]);
             } else {
-                Log::error('Tenant not found for ID from property in InitializesTenantContext trait', ['tenant_id' => $this->tenantId]);
+                Log::error(
+                    'Tenant not found for ID from property in InitializesTenantContext trait',
+                    ['tenant_id' => $this->tenantId]
+                );
             }
         }
     }

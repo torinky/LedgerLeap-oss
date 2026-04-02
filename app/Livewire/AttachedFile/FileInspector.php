@@ -3,17 +3,29 @@
 namespace App\Livewire\AttachedFile;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Helpers\SearchHelper;
+use App\Jobs\Ledger\GenerateThumbnail;
+use App\Jobs\Ledger\RetryVlmProcessingJob;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\LogPerformance;
 use App\Models\AttachedFile;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\User;
+use App\Services\Ledger\MockAttachmentService;
 use App\Services\PermissionService;
+use App\Services\UserService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
+use Stancl\Tenancy\Tenancy;
 
 class FileInspector extends BaseLivewireComponent
 {
@@ -206,7 +218,7 @@ class FileInspector extends BaseLivewireComponent
 
         // Tikaメタデータをモックとしてシミュレート
         if (isset($data['mock_metadata'])) {
-            $this->file->setRelation('ledger', (new \App\Models\Ledger)->forceFill([
+            $this->file->setRelation('ledger', (new Ledger)->forceFill([
                 'content_attached' => [
                     $this->file->column_id => [
                         $this->file->hashedbasename => [
@@ -240,7 +252,7 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called', [
+        Log::info('FileInspector: openInspector called', [
             'id' => $id,
             'search' => $search,
         ]);
@@ -266,7 +278,7 @@ class FileInspector extends BaseLivewireComponent
         if (! $realFileExists
             && $id >= 10001
             && $id <= 10012
-            && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+            && MockAttachmentService::isEnabled()) {
             // 開発環境でローディングUIを確認できるように僅かな遅延を入れる
             if (app()->environment('local')) {
                 usleep(800000); // 0.8秒
@@ -288,16 +300,16 @@ class FileInspector extends BaseLivewireComponent
     public function loadData(int $id): void
     {
         try {
-            /** @var \App\Models\User|null $currentUser */
+            /** @var User|null $currentUser */
             $currentUser = auth()->user();
             $currentTenant = tenant();
 
-            \Illuminate\Support\Facades\Log::info('FileInspector: loadData started', [
+            Log::info('FileInspector: loadData started', [
                 'id' => $id,
                 'user_id' => $currentUser?->id,
                 'user_email' => $currentUser?->email,
                 'tenant_id' => $currentTenant?->id ?? tenant('id'),
-                'tenancy_initialized' => app(\Stancl\Tenancy\Tenancy::class)->initialized,
+                'tenancy_initialized' => app(Tenancy::class)->initialized,
             ]);
 
             $this->file = AttachedFile::with([
@@ -325,7 +337,7 @@ class FileInspector extends BaseLivewireComponent
                 return;
             }
 
-            \Illuminate\Support\Facades\Log::info('FileInspector: File loaded', [
+            Log::info('FileInspector: File loaded', [
                 'file_id' => $this->file->id,
                 'has_ledger' => $this->file->ledger !== null,
             ]);
@@ -333,7 +345,7 @@ class FileInspector extends BaseLivewireComponent
             // 権限チェック: LedgerPolicy::view を使用
             // AttachedFilePolicyが空実装のため、親である台帳の権限を確認する
             if (! $this->file->ledger) {
-                \Illuminate\Support\Facades\Log::error('FileInspector: Ledger relation is null');
+                Log::error('FileInspector: Ledger relation is null');
                 $this->error(__('ledger.vlm.result_not_found'));
 
                 if (app()->runningUnitTests()) {
@@ -353,14 +365,14 @@ class FileInspector extends BaseLivewireComponent
 
             $this->open = true;
             $this->isLoading = false;
-            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully', [
+            Log::info('FileInspector: Data loaded successfully', [
                 'file_id' => $id,
                 'active_source' => $this->activeSource,
             ]);
 
             $this->preparePreviewState();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed', [
+            Log::error('FileInspector loadData failed', [
                 'id' => $id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -380,7 +392,7 @@ class FileInspector extends BaseLivewireComponent
      */
     private function loadMockData(int $id): void
     {
-        $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+        $mockFiles = MockAttachmentService::getMockFiles();
         $data = null;
         foreach ($mockFiles as $f) {
             if ($f['id'] == $id) {
@@ -398,7 +410,7 @@ class FileInspector extends BaseLivewireComponent
 
         // 利用可能な最初のソースを自動選択
         $this->activeSource = $this->selectFirstAvailableSource();
-        \Illuminate\Support\Facades\Log::info('FileInspector: Mock data loaded', [
+        Log::info('FileInspector: Mock data loaded', [
             'id' => $this->file->id,
             'filename' => $this->file->filename,
             'active_source' => $this->activeSource,
@@ -435,7 +447,6 @@ class FileInspector extends BaseLivewireComponent
         );
     }
 
-
     /**
      * サムネイルの存在を確認し、なければ生成ジョブをディスパッチ
      */
@@ -455,15 +466,15 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(
             $this->file->hashedbasename,
             $this->file->tenant_id
         );
 
         // サムネイルが存在しない場合は、処理中状態へ遷移できたときだけ生成ジョブをディスパッチ
-        if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+        if (! Storage::disk('public')->exists($thumbnailPath)) {
             if ($this->file->status === AttachedFileStatus::OPTIMIZING) {
-                \Illuminate\Support\Facades\Log::info(
+                Log::info(
                     'FileInspector: Thumbnail generation already in progress; skipping dispatch',
                     [
                         'file_id' => $this->file->id,
@@ -476,8 +487,8 @@ class FileInspector extends BaseLivewireComponent
 
             $this->file->update(['status' => AttachedFileStatus::OPTIMIZING->value]);
 
-            \App\Jobs\Ledger\GenerateThumbnail::dispatch($this->file->id);
-            \Illuminate\Support\Facades\Log::info('FileInspector: Dispatched thumbnail generation job', [
+            GenerateThumbnail::dispatch($this->file->id);
+            Log::info('FileInspector: Dispatched thumbnail generation job', [
                 'file_id' => $this->file->id,
                 'filename' => $this->file->filename,
             ]);
@@ -490,7 +501,7 @@ class FileInspector extends BaseLivewireComponent
             return null;
         }
 
-        $tenantId = $this->tenantId ?? tenant('id') ?? $this->file->tenant_id;
+        $tenantId = $this->resolveTenantId($this->file->tenant_id);
         if (! $tenantId) {
             return null;
         }
@@ -518,12 +529,12 @@ class FileInspector extends BaseLivewireComponent
             return null;
         }
 
-        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(
             $this->file->hashedbasename,
             $this->file->tenant_id
         );
 
-        if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
+        if (! Storage::disk('public')->exists($thumbnailPath)) {
             return null;
         }
 
@@ -654,7 +665,7 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        \App\Jobs\Ledger\RetryVlmProcessingJob::dispatch($this->file);
+        RetryVlmProcessingJob::dispatch($this->file);
 
         $this->success(__('ledger.file_inspector.messages.vlm_retry_started'));
 
@@ -691,7 +702,7 @@ class FileInspector extends BaseLivewireComponent
 
         // その他の画面からの場合は、別タブで開くためのイベントをディスパッチ
         $url = route('ledger.show', [
-            'tenant' => tenant('id'),
+            'tenant' => $this->resolveTenantId($this->file->tenant_id),
             'ledgerId' => $this->file->ledger_id,
             'tab' => 'permissions',
         ]);
@@ -741,7 +752,7 @@ class FileInspector extends BaseLivewireComponent
         }
 
         // 管理者権限（manage_attachments）
-        $hasManageAttachment = \Illuminate\Support\Facades\Gate::allows('manage_attachments');
+        $hasManageAttachment = Gate::allows('manage_attachments');
 
         return [
             'read' => Gate::allows('view', $ledger),
@@ -766,7 +777,7 @@ class FileInspector extends BaseLivewireComponent
         }
 
         $params = [
-            'tenant' => tenant('id'),
+            'tenant' => $this->resolveTenantId($this->file->tenant_id),
             'ledgerId' => $this->file->ledger_id,
             'tab' => 'permissions',
         ];
@@ -783,7 +794,7 @@ class FileInspector extends BaseLivewireComponent
      * アクセス可能なロールと権限のリストを取得
      */
     #[Computed]
-    public function accessRoles(): \Illuminate\Support\Collection
+    public function accessRoles(): Collection
     {
         if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
             return collect();
@@ -799,7 +810,7 @@ class FileInspector extends BaseLivewireComponent
      * アクセス可能な組織と権限のリストを取得
      */
     #[Computed]
-    public function accessOrganizations(): \Illuminate\Support\Collection
+    public function accessOrganizations(): Collection
     {
         if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
             return collect();
@@ -812,7 +823,7 @@ class FileInspector extends BaseLivewireComponent
     }
 
     #[Computed]
-    public function accessUsers(): \Illuminate\Support\Collection
+    public function accessUsers(): Collection
     {
         if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
             return collect();
@@ -856,14 +867,14 @@ class FileInspector extends BaseLivewireComponent
 
     public function getFolderPermission(): ?string
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = auth()->user();
         if (! $user || ! $this->file || ! $this->file->ledger?->define?->folder || $this->isMockFile()) {
             return null;
         }
-        /** @var \App\Models\Folder|null $folder */
+        /** @var Folder|null $folder */
         $folder = $this->file->ledger->define->folder;
-        $userService = app(\App\Services\UserService::class);
+        $userService = app(UserService::class);
 
         if ($userService->isManageableFolderForUser($user, $folder)) {
             return 'admin';
@@ -976,7 +987,7 @@ class FileInspector extends BaseLivewireComponent
 
         if (! $text) {
             $duration = (microtime(true) - $startTime) * 1000;
-            \Illuminate\Support\Facades\Log::info('[FileInspector Performance] getPreviewText (no text)', [
+            Log::info('[FileInspector Performance] getPreviewText (no text)', [
                 'duration_ms' => round($duration, 2),
                 'source' => $this->activeSource,
             ]);
@@ -1115,7 +1126,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * 現在表示中のテキストに検索キーワードが含まれているか（キャッシング対応 WBS 5.2.1）
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function hasKeywordHit(): bool
     {
         $startTime = microtime(true);
@@ -1130,7 +1141,7 @@ class FileInspector extends BaseLivewireComponent
             $this->cachedActiveSource === $this->activeSource) {
 
             $duration = (microtime(true) - $startTime) * 1000;
-            \Illuminate\Support\Facades\Log::info('[FileInspector Performance] hasKeywordHit (cache hit)', [
+            Log::info('[FileInspector Performance] hasKeywordHit (cache hit)', [
                 'duration_ms' => round($duration, 2),
                 'result' => $this->cachedHasKeywordHit,
             ]);
@@ -1158,7 +1169,7 @@ class FileInspector extends BaseLivewireComponent
         $this->cachedActiveSource = $this->activeSource;
 
         $duration = (microtime(true) - $startTime) * 1000;
-        \Illuminate\Support\Facades\Log::info('[FileInspector Performance] hasKeywordHit (cache miss)', [
+        Log::info('[FileInspector Performance] hasKeywordHit (cache miss)', [
             'duration_ms' => round($duration, 2),
             'text_length' => mb_strlen($text),
             'keywords_count' => count($keywords),
@@ -1176,7 +1187,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * プレビューテキストを取得（computed property）
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function previewText(): ?string
     {
         return $this->getPreviewText(true);
@@ -1185,7 +1196,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * テキストが長すぎて展開ボタンが必要か判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function canExpand(): bool
     {
         $plainText = $this->getPreviewText(false);
@@ -1196,7 +1207,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * ファイルがプレビュー可能か判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function showPreview(): bool
     {
         return $this->isImage() || $this->isPdf();
@@ -1205,7 +1216,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * ファイルが画像か判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function isImage(): bool
     {
         if (! $this->file) {
@@ -1219,7 +1230,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * ファイルがPDFか判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function isPdf(): bool
     {
         if (! $this->file) {
@@ -1236,7 +1247,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * サムネイルを使用すべきか判定（1MB以上の場合）
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function shouldUseThumbnail(): bool
     {
         if (! $this->file || $this->isMockFile()) {
@@ -1250,7 +1261,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * サムネイル用のURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function thumbnailUrl(): ?string
     {
         return $this->getThumbnailRouteUrl();
@@ -1259,7 +1270,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * オリジナルファイルのURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function originalUrl(): ?string
     {
         if (! $this->file) {
@@ -1276,7 +1287,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * ダウンロード用のURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function downloadUrl(): ?string
     {
         if (! $this->file || $this->isMockFile()) {
@@ -1289,7 +1300,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * プレビュー用のURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function previewUrl(): ?string
     {
         if (! $this->file) {

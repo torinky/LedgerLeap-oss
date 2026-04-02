@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire\AttachedFile;
 use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\GenerateThumbnail;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Jobs\Ledger\RetryVlmProcessingJob;
 use App\Livewire\AttachedFile\FileInspector;
 use App\Models\AttachedFile;
@@ -76,7 +77,7 @@ class FileInspectorTest extends TestCase
             'ledger_define_id' => $this->ledger->ledger_define_id,
             'filename' => 'real_data_test.pdf',
             'mime' => 'application/pdf',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'finalized_source' => 'tika',
             'processing_finalized_at' => now(),
             'tenant_id' => $this->tenant->id,
@@ -121,7 +122,6 @@ class FileInspectorTest extends TestCase
             ->assertSee('query_file.pdf');
     }
 
-
     #[Test]
     public function it_dispatches_selection_sync_events_when_opening_and_closing(): void
     {
@@ -133,7 +133,7 @@ class FileInspectorTest extends TestCase
             'column_id' => 0,
             'filename' => 'sync_target.pdf',
             'mime' => 'application/pdf',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -224,7 +224,7 @@ class FileInspectorTest extends TestCase
             'mime' => 'image/jpeg',
             'original_mime_type' => 'image/jpeg',
             'path' => 'attachments/test_image.jpg',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -260,7 +260,7 @@ class FileInspectorTest extends TestCase
             'mime' => 'application/pdf',
             'original_mime_type' => 'application/pdf',
             'path' => 'attachments/test_document.pdf',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -285,6 +285,44 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_falls_back_to_the_file_tenant_when_livewire_tenant_context_is_missing()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Gate::before(fn () => true);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'fallback_tenant.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => 'attachments/fallback_tenant.pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'ocr_processed_at' => now(),
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        tenancy()->end();
+
+        $expectedOcrPdfUrl = route('file.download-ocr-pdf', [
+            'tenant' => $this->tenant->id,
+            'attachedFile' => $file->id,
+        ]);
+        $expectedPermissionsTabUrl = route('ledger.show', [
+            'tenant' => $this->tenant->id,
+            'ledgerId' => $this->ledger->id,
+            'tab' => 'permissions',
+        ]);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => null])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'details');
+
+        $component->assertSee($expectedOcrPdfUrl);
+        $this->assertSame($expectedPermissionsTabUrl, $component->get('permissionsTabUrl'));
+    }
+
+    #[Test]
     public function it_renders_pdf_iframe_for_low_id_real_files()
     {
         config(['mock.attachment.enabled' => false]);
@@ -298,7 +336,7 @@ class FileInspectorTest extends TestCase
             'original_mime_type' => 'application/pdf',
             'path' => 'attachments/low_id_report.pdf',
             'size' => 4096,
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -329,7 +367,7 @@ class FileInspectorTest extends TestCase
             'original_mime_type' => 'application/octet-stream',
             'path' => 'attachments/mime_generic.pdf',
             'size' => 4096,
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -361,7 +399,7 @@ class FileInspectorTest extends TestCase
             'hashedbasename' => 'large_image.jpg',
             'path' => 'attachments/large_image.jpg',
             'size' => 2 * 1024 * 1024,
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -426,7 +464,7 @@ class FileInspectorTest extends TestCase
             'filename' => 'test_document.docx',
             'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'path' => 'attachments/test_document.docx',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -543,7 +581,7 @@ class FileInspectorTest extends TestCase
             ->call('retryProcessing')
             ->assertDispatched('mary-toast');
 
-        Bus::assertDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class, function ($job) use ($file) {
+        Bus::assertDispatched(ProcessAttachedFile::class, function ($job) use ($file) {
             return $job->attachedFile->id === $file->id;
         });
     }
@@ -603,7 +641,7 @@ class FileInspectorTest extends TestCase
                 return $data['type'] === 'error';
             });
 
-        Bus::assertNotDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class);
+        Bus::assertNotDispatched(ProcessAttachedFile::class);
     }
 
     #[Test]

@@ -58,6 +58,10 @@
         window.URL.revokeObjectURL(url);
     }
 }" @preview-text-ready.window="handlePreviewTextReady($event)">
+    @php
+        $tenantId = $this->resolveTenantId($file?->tenant_id);
+    @endphp
+
     {{-- Tier 2: Loading overlay for search --}}
     <x-element.loading-overlay tier="2" target="searchKeyword" />
 
@@ -235,7 +239,7 @@
                 <div>
                     <h3 class="font-bold text-sm">{{ __('ledger.file_inspector.status.unsupported_format') }}</h3>
                     <p class="text-xs mt-1">{{ __('ledger.file_inspector.status.unsupported_format_message') }}</p>
-                    <a href="{{ route('file.download', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                    <a href="{{ route('file.download', ['tenant' => $tenantId, 'attachedFile' => $file->id]) }}"
                         class="btn btn-xs btn-primary mt-2" download>
                         {{ __('ledger.file_inspector.actions.download') }}
                     </a>
@@ -295,7 +299,7 @@
                             class="text-xs font-medium">{{ __('ledger.file_inspector.status.ocr_pdf_notice') }}</span>
                         {{-- OCR Optimized Download (Only if exists) --}}
                         @if ($file->ocr_pdf_path ?? false)
-                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => $tenantId, 'attachedFile' => $file->id]) }}"
                                 class="btn btn-xs btn-ghost gap-1 self-start" download>
                                 <i class="fa-solid fa-file-pdf text-error"></i>
                                 {{ __('ledger.file_inspector.actions.download_optimized_pdf') }}

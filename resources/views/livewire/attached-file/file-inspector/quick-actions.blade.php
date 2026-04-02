@@ -35,6 +35,10 @@
     }
 }">
     @php
+        $tenantId = $this->resolveTenantId($file?->tenant_id);
+    @endphp
+
+    @php
         // ファイルタイプ判定
         $isImageFile = $file && str_starts_with($file->original_mime_type ?? ($file->mime ?? ''), 'image/');
         $isPdfFile = $file && ($file->original_mime_type ?? ($file->mime ?? '')) === 'application/pdf';
@@ -47,7 +51,7 @@
             : route(
                 'file.download',
                 [
-                    'tenant' => tenant()?->id,
+                    'tenant' => $tenantId,
                     'attachedFile' => $file->id ?? 0,
                     'original' => true,
                 ],
@@ -59,7 +63,7 @@
             : route(
                 'file.download',
                 [
-                    'tenant' => tenant()?->id,
+                    'tenant' => $tenantId,
                     'attachedFile' => $file->id ?? 0,
                     'original' => true,
                 ],
@@ -74,7 +78,7 @@
                 : route(
                     'file.download-ocr-pdf',
                     [
-                        'tenant' => tenant('id'),
+                        'tenant' => $tenantId,
                         'attachedFile' => $file->id,
                     ],
                     true,
