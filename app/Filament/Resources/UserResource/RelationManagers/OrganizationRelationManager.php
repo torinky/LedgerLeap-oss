@@ -84,9 +84,9 @@ class OrganizationRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make()
+                \Filament\Actions\AttachAction::make()
                     ->preloadRecordSelect()
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (\Filament\Actions\AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_primary')
                             ->label(__('ledger.organizations.primary'))
@@ -103,7 +103,7 @@ class OrganizationRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                \Filament\Actions\EditAction::make()
                     // afterコールバック内の排他制御ロジックは引き続き必要
                     ->after(function (Model $record, array $data) {
                         if ($data['is_primary']) {
@@ -112,11 +112,11 @@ class OrganizationRelationManager extends RelationManager
                                 ->update(['is_primary' => false]);
                         }
                     }),
-                Tables\Actions\DetachAction::make(),
+                \Filament\Actions\DetachAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DetachBulkAction::make(),
                 ]),
             ]);
     }

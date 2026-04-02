@@ -62,7 +62,7 @@ class ChildrenRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\Action::make('attach_children')
+                \Filament\Actions\Action::make('attach_children')
                     ->label(__('ledger.attach_existing_folder'))
                     ->icon('heroicon-o-paper-clip')
                     ->form([
@@ -89,13 +89,13 @@ class ChildrenRelationManager extends RelationManager
                             ->update(['parent_id' => $ownerRecord->id]);
                     })
                     ->modalWidth('3xl'),
-                Tables\Actions\CreateAction::make()
+                \Filament\Actions\CreateAction::make()
                     ->icon('heroicon-o-plus'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                \Filament\Actions\EditAction::make()
                     ->url(fn (Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
-                Tables\Actions\Action::make('detach_child')
+                \Filament\Actions\Action::make('detach_child')
                     ->label(__('ledger.detach'))
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
@@ -105,8 +105,8 @@ class ChildrenRelationManager extends RelationManager
                     ->action(fn (Folder $record) => $record->update(['parent_id' => null])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

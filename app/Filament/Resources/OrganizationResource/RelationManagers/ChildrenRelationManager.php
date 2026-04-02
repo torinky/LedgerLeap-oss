@@ -71,7 +71,7 @@ class ChildrenRelationManager extends RelationManager
             ])
             ->headerActions([
                 // 既存の組織を子として紐付けるアクション
-                Tables\Actions\Action::make('attach_children')
+                \Filament\Actions\Action::make('attach_children')
                     ->label(__('ledger.attach_existing_organization')) // 翻訳キーに変更
                     ->icon('heroicon-o-paper-clip')
                     ->form([
@@ -101,15 +101,15 @@ class ChildrenRelationManager extends RelationManager
                     })
                     ->modalWidth('3xl'),
                 // 新しい子組織を作成するアクション
-                Tables\Actions\CreateAction::make(),
+                \Filament\Actions\CreateAction::make(),
             ])
             ->actions([
                 // 子組織の編集画面に直接遷移するアクション
-                Tables\Actions\EditAction::make()
+                \Filament\Actions\EditAction::make()
                     ->url(fn (Organization $record): string => OrganizationResource::getUrl('edit', ['record' => $record])),
 
                 // 紐付けを解除するアクション (parent_idをnullにする)
-                Tables\Actions\Action::make('detach_child')
+                \Filament\Actions\Action::make('detach_child')
                     ->label(__('ledger.detach')) // 翻訳キーに変更
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
@@ -119,8 +119,8 @@ class ChildrenRelationManager extends RelationManager
                     ->action(fn (Organization $record) => $record->update(['parent_id' => null])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

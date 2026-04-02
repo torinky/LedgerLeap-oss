@@ -26,9 +26,7 @@ class AdminPanelProvider extends PanelProvider
     {
         // URLクエリパラメータからfrom_tenantを取得し、セッションに保存
         if ($fromTenantId = request()->query('tenant')) {
-            if (! empty($fromTenantId)) {
-                session()->put('filament_from_tenant_id', $fromTenantId);
-            }
+            session()->put('filament_from_tenant_id', $fromTenantId);
         }
         $fromTenantId = session('filament_from_tenant_id');
 
@@ -39,6 +37,7 @@ class AdminPanelProvider extends PanelProvider
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->plugins([
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
@@ -120,9 +119,6 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-//            ->theme(asset('css/filament/admin/theme.css'))
-
-//            ->viteTheme('resources/css/filament/admin/theme.css')
             ->renderHook(
                 'panels::global-search.after',
                 fn (): string => Blade::render('

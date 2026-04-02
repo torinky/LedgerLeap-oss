@@ -6,7 +6,6 @@ namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 use App\Enums\FolderPermissionType;
 use App\Filament\Traits\HasFolderSelection;
-use App\Models\Folder;
 use App\Models\RoleFolderPermission;
 use Exception;
 use Filament\Forms\Components\CheckboxList;
@@ -14,11 +13,11 @@ use Filament\Forms\Components\Select;
 use Filament\Schemas\Schema;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Actions\Action;
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Grouping\Group;
@@ -161,7 +160,7 @@ class FolderPermissionRelationManager extends RelationManager
                 Action::make('create')
                     ->label(__('permission.attach_folder_permissions'))
                     ->modalHeading(__('permission.attach_folder_modal_heading')) // モーダルタイトル
-                    ->form([ // Create 用のフォーム
+                    ->schema([ // Create 用のフォーム
                         ...$this->getFolderSelectionForm(),
                         CheckboxList::make('permissions') // 権限は複数選択
                             ->label(__('permission.access_permissions'))
@@ -232,21 +231,21 @@ class FolderPermissionRelationManager extends RelationManager
                 EditAction::make()
                     ->label(__('permission.edit_permission'))
                     ->modalHeading(fn (RoleFolderPermission $record) => __('permission.edit_folder_permission_modal_heading', ['folder' => $record->folder?->title]))
-                        // ★ mountUsing で現在の権限をフォームにロード
-                    ->mountUsing(function (Form $form, RoleFolderPermission $record) {
-                        // 同じフォルダの他の権限レコードも取得する必要がある
+                    ->fillForm(function (RoleFolderPermission $record): array {
                         $role = $this->getOwnerRecord();
-                        $currentPermissions = RoleFolderPermission::where('role_id', $role->id)
-                            ->where('folder_id', $record->folder_id) // record から folder_id を取得
-                            ->whereIn('permission', FolderPermissionType::accessPermissionValues())
-                            ->pluck('permission')
-                            ->all(); // semicolon
-                        $form->fill(['permissions' => $currentPermissions]);
+
+                        return [
+                            'permissions' => RoleFolderPermission::where('role_id', $role->id)
+                                ->where('folder_id', $record->folder_id)
+                                ->whereIn('permission', FolderPermissionType::accessPermissionValues())
+                                ->pluck('permission')
+                                ->all(),
+                        ];
                     })
                         // ★ form() メソッドで定義したフォームスキーマを使用
-                    ->form(fn (Form $form) => $this->form($form))
+                    ->schema(fn (Schema $schema) => $this->form($schema))
                         // ★ using で保存処理 (Create と同様)
-                    ->using(function (Model $record, array $data): Model { // $record は RoleFolderPermission
+                    ->using(function (Model $record, array $data): Model {
                         $role = $this->getOwnerRecord();
 
                         $folderId = $record->folder_id; // record から folder_id を取得

@@ -180,18 +180,18 @@ class FolderResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\RestoreAction::make()->visible(fn ($record) => $record->trashed()),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\RestoreAction::make()->visible(fn ($record) => $record->trashed()),
+                \Filament\Actions\DeleteAction::make(),
+                \Filament\Actions\ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-                Tables\Actions\RestoreBulkAction::make(),
-                Tables\Actions\ForceDeleteBulkAction::make(),
+                \Filament\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\RestoreBulkAction::make(),
+                \Filament\Actions\ForceDeleteBulkAction::make(),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                \Filament\Actions\CreateAction::make(),
             ]);
 
     }

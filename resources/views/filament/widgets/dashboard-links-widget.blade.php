@@ -1,13 +1,9 @@
 <x-filament-widgets::widget>
-    @once
-        @vite('resources/sass/filamentCustom.scss')
-    @endonce
-
-    <x-filament::grid :default="1" :sm="2" :md="3" :lg="4" :xl="4" class="gap-4">
+    <div class="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4">
         @foreach ($groups as $group)
-            <x-filament::card>
+            <div class="rounded-xl bg-white p-4 shadow-sm ring-1 ring-gray-950/5 dark:bg-gray-900 dark:ring-white/10">
                 <h3 class="text-lg font-medium mb-4 flex items-center">
-                    @svg($group['icon'], 'w-6 h-6 me-3 text-custom-500')
+                    @svg($group['icon'], 'w-6 h-6 me-3 text-primary-500')
                     <span class="text-gray-900 dark:text-gray-100">{{ $group['title'] }}</span>
                 </h3>
                 <div class="space-y-3">
@@ -34,7 +30,7 @@
                         </a>
                     @endforeach
                 </div>
-            </x-filament::card>
+            </div>
         @endforeach
-    </x-filament::grid>
+    </div>
 </x-filament-widgets::widget>

@@ -300,8 +300,8 @@ class AutoLinkResource extends Resource
                     ->searchable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ReplicateAction::make()
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\ReplicateAction::make()
                     ->beforeReplicaSaved(function (AutoLink $replica) {
                         $originalLabel = $replica->label;
                         $copyCount = 1;
@@ -310,11 +310,11 @@ class AutoLinkResource extends Resource
                         }
                         $replica->label = $originalLabel.' ('.$copyCount.')';
                     }),
-                Tables\Actions\DeleteAction::make(),
+                \Filament\Actions\DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DeleteBulkAction::make(),
                 ]),
             ]);
     }

@@ -74,6 +74,14 @@ class OrganizationResourceTest extends TestCase
         $this->get(OrganizationResource::getUrl('edit', ['record' => $org]))->assertSuccessful();
     }
 
+    #[Test]
+    public function tree_route_renders_successfully(): void
+    {
+        Organization::factory()->create(['name' => 'TreeRootOrg']);
+
+        $this->get(OrganizationResource::getUrl('tree'))->assertSuccessful();
+    }
+
     // ================================================================
     // テーブル（公式: assertCanSeeTableRecords / searchTable）
     // ================================================================

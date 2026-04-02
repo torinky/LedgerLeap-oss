@@ -79,9 +79,9 @@ class UserRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make()
+                \Filament\Actions\AttachAction::make()
                     ->preloadRecordSelect() // 検索パフォーマンス向上のため追加
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (\Filament\Actions\AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->multiple()
                             ->searchable(),
@@ -104,7 +104,7 @@ class UserRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                \Filament\Actions\EditAction::make()
                     // ▼▼▼ afterコールバックを追加して排他制御 ▼▼▼
                     ->after(function (Model $record, array $data) {
                         if ($data['is_primary']) {
@@ -115,11 +115,11 @@ class UserRelationManager extends RelationManager
                                 ->update(['is_primary' => false]);
                         }
                     }),
-                Tables\Actions\DetachAction::make(),
+                \Filament\Actions\DetachAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DetachBulkAction::make(),
                 ]),
             ]);
     }

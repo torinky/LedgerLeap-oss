@@ -47,6 +47,9 @@
 ### ナビゲーション (navigation)
   テナント切り替えメニューなど、システムの主要なナビゲーション機能の改善に関するドキュメント。
 
+- ### Filament テーマ / ダッシュボード
+  - **[Issue #126: Filament テーマ UI スモークチェック記録](./2026-04-02_filament-theme-ui-smoke-report.md)** ✅ 完了: `theme.css` を Filament 5 / Tailwind v4 構成へ整理し、`DashboardLinksWidget` の色クラスを修正。`./vendor/bin/sail npm run build` 成功と簡易 UI チェックで dashboard / tree の見た目不具合が解消したことを確認。
+
 - ### テーブルUI
   - **[台帳テーブルUI モダナイゼーション計画](./2025-10-12_table-ui-modernization-plan.md)** 📝 計画段階: アクション列・スコア列の最適化、統合ツールバーによるソート・フィルタUIの改善計画。
 

@@ -62,8 +62,8 @@ class UserRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make()
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                \Filament\Actions\AttachAction::make()
+                    ->form(fn (\Filament\Actions\AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->multiple() // 複数ユーザーを選択可能にする
                             ->searchable(), // ユーザーを検索可能にする
@@ -71,12 +71,12 @@ class UserRelationManager extends RelationManager
                     ]),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DetachAction::make(),
+                \Filament\Actions\EditAction::make(),
+                \Filament\Actions\DetachAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make(),
+                \Filament\Actions\BulkActionGroup::make([
+                    \Filament\Actions\DetachBulkAction::make(),
                 ]),
             ]);
     }

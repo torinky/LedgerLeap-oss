@@ -33,7 +33,7 @@ class TokensRelationManager extends RelationManager
                     ->dateTime(),
             ])
             ->headerActions([
-                Tables\Actions\Action::make('create')
+                \Filament\Actions\Action::make('create')
                     ->label(__('admin.create_api_token'))
                     ->form([
                         Forms\Components\TextInput::make('name')
@@ -53,7 +53,7 @@ class TokensRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\DeleteAction::make(),
+                \Filament\Actions\DeleteAction::make(),
             ])
             ->bulkActions([]);
     }

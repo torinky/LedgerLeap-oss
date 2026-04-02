@@ -16,6 +16,7 @@ export default defineConfig(({ mode }) => {
                     'resources/sass/ledgerEdit.scss',
                     'resources/sass/ledgerDefineEdit.scss',
                     'resources/sass/ledgerShow.scss',
+                    'resources/css/filament/admin/theme.css',
                     'resources/sass/filamentCustom.scss',
                     'resources/css/tree.css',
                     'resources/js/app.js',

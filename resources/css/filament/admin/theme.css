@@ -1,7 +1,10 @@
-/*@import '../../../../vendor/filament/filament/resources/css/theme.css';*/
-@import '/vendor/filament/filament/resources/css/theme.css';
-@config './tailwind.config.js';
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
 
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/components/**/*';
+@source '../../../../resources/views/livewire/**/*';
+@source '../../../../app/Livewire/**/*';
 
 
 /*

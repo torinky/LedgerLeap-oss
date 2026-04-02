@@ -10,9 +10,7 @@ use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
-use Filament\Infolists\Concerns\InteractsWithInfolists;
-use Filament\Infolists\Contracts\HasInfolists;
-use Filament\Infolists\Infolist;
+use Filament\Schemas\Schema;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Model;
 use Kalnoy\Nestedset\NestedSet;
@@ -28,11 +26,10 @@ use Studio15\FilamentTree\Components\Form\ParentSelect;
 /**
  * Tree node component
  */
-final class Row extends Component implements HasForms, HasActions, HasInfolists
+final class Row extends Component implements HasForms, HasActions
 {
     use InteractsWithActions;
     use InteractsWithForms;
-    use InteractsWithInfolists;
 
     public Model $row;
 
@@ -54,6 +51,16 @@ final class Row extends Component implements HasForms, HasActions, HasInfolists
     public function mount(): void
     {
         $this->parentId = $this->row->getAttribute(NestedSet::PARENT_ID);
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    protected function getForms(): array
+    {
+        return [
+            'infolist',
+        ];
     }
 
     #[Computed]
@@ -124,9 +131,9 @@ final class Row extends Component implements HasForms, HasActions, HasInfolists
             ->labeledFrom('md');
     }
 
-    public function infolist(Infolist $infolist): Infolist
+    public function infolist(Schema $schema): Schema
     {
-        return $infolist
+        return $schema
             ->record($this->row)
             ->schema($this->component::getInfolistColumns())
             ->view('filament-tree::infolist');

@@ -7,8 +7,8 @@ use CodeWithDennis\FilamentSelectTree\SelectTree; // 追加
 use Filament\Forms\Components\TextInput;
 use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Tables\Actions\Action; // 変更
-use Filament\Tables\Actions\DetachAction;
+use Filament\Actions\Action; // 変更
+use Filament\Actions\DetachAction;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
