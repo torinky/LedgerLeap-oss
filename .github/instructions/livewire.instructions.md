@@ -21,6 +21,10 @@ tenant() returns null in render()?
 $currentTenantId = $this->tenantId ?? tenant()?->id ?? $ledger->tenant_id;
 ```
 
+**Shared resolver for Blade / URL helpers:**
+- Prefer `resolveTenantId($model->tenant_id)` from `InitializesTenantContext` when the same tenant fallback is needed in multiple places.
+- Avoid repeating `tenant()?->id ?? $model->tenant_id` inline in Blade partials; route generation should go through the shared resolver.
+
 **Pattern B — #[Lazy] mount() explicit init:**
 ```php
 if (is_null($this->tenantId)) {

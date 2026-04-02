@@ -15,7 +15,7 @@
 - **Tests run in Sail**: Run tests via `./vendor/bin/sail test` / `./vendor/bin/sail pest`. Host-side `php artisan test` / `./vendor/bin/pest` is unsupported.
 - **FTS tests**: Use `DatabaseMigrationsOnce`, not `RefreshDatabase`.
 - **Git after Sail**: Always use `bash -c "cd /path && git ..."`.
-- **`#[Lazy]` + tenant**: In `render()`, fall back to `$model->tenant_id` — never rely only on `tenant()?->id`.
+- **`#[Lazy]` + tenant**: Use the shared Livewire tenant resolver and fall back to `$model->tenant_id`; never rely only on `tenant()?->id`.
 ## Architecture Patterns
 - Business logic: `App\Services`
 - Interactive UI: Livewire with single-source-of-truth state array

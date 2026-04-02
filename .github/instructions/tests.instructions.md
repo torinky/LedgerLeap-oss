@@ -44,6 +44,7 @@ Test fails in 0s? → Previous test's migrate:rollback destroyed DB
 - `assignRole()` / `grantPermission()` MUST be called **before** `actingAs()`
 - After Role/Org change → both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`
 - `tenancy()->initialize($tenant)` MUST be called in every Feature test `setUp()`
+- When a Livewire component builds tenant-scoped URLs in Blade or computed properties, add one regression test for missing tenant context (for example `tenancy()->end()` or `['tenantId' => null]`) and assert the shared tenant resolver falls back to the model `tenant_id`.
 
 ## MCP Tool Test Harness
 

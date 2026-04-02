@@ -58,5 +58,5 @@ When a bug fix, investigation, or sprint proves a reusable pattern:
 - Permission changes require both permission cache and tenant access cache clearing.
 - Mroonga full-text search is single-column only.
 - Livewire public state must stay plain arrays.
-- `#[Lazy]` tenant-aware components need `tenant_id` fallback.
+- `#[Lazy]` tenant-aware components and Livewire URL helpers should follow `.github/skills/livewire-tenant-context/SKILL.md` for the shared tenant resolver and `tenant_id` fallback pattern.
 
