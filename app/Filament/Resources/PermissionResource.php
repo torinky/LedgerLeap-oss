@@ -19,6 +19,8 @@ class PermissionResource extends Resource
 {
     protected static ?string $model = Permission::class;
 
+    public static bool $shouldRegisterNavigation = false;
+
     protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
     public static function getLabel(): string

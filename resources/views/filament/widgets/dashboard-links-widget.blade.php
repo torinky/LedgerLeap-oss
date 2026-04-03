@@ -20,7 +20,7 @@
                             };
                         @endphp
                         <a href="{{ $link['url'] }}"
-                           class="flex items-center p-2 rounded-lg transition-colors duration-200 bg-gray-100/10 link-hover-color-{{ $link['color'] ?? 'primary' }}"
+                           class="flex items-center p-2 rounded-lg transition-all duration-200 bg-gray-100/10 link-hover-color-{{ $link['color'] ?? 'primary' }} hover:bg-amber-100! dark:hover:bg-amber-800/30! hover:shadow-sm"
                         >
                             <span class="me-3 shrink-0" style="color: {{ $iconColor }}">
                                 @svg($link['icon'], 'w-5 h-5')

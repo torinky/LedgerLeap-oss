@@ -28,6 +28,8 @@
   - 閾値アラートと `performance` ログチャネルの整備
   - 日常運用向けの確認手順を `docs/operations/ledger-records-performance-monitoring.md` に分離
 
+- **[Issue #128: Filament UI polish retrospective](./2026-04-04_issue-128_filament-ui-retrospective.md)** ✅ 完了: 移行後 UI 差分のうち、翻訳・権限メニュー・topbar 余白・hover 背景・編集画面幅の戻し方を記録。`PanelsRenderHook::GLOBAL_SEARCH_AFTER` での差し込み、`lang/ja/user.php` の補完、`maxContentWidth(Width::Full)` の採用判断を future maintainer 向けに整理。
+
 #### 完了済み (2025-10-11)
 
 以前のドキュメントは、すべて実装・解決済みです。
