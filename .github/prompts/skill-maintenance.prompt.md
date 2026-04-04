@@ -21,6 +21,8 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 ## When to Run
 
 - バグ修正で再利用可能な原因・回避策・実装パターンが確定したとき
+- issue / sprint 完了後に、学びを整理して残したいとき
+- ユーザーから明示的に「振り返りをしてください」と指示されたとき
 - 既存 instruction / prompt / skill が誤っていたと分かったとき
 - 新しい recurring workflow が 2 回以上出現したとき
 - issue template / runbook / AGENTS の不足が判明したとき
@@ -42,7 +44,7 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 
 ## Maintenance Loop
 
-1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、ワークフローを列挙する
+1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、ワークフローを列挙する。issue / sprint 完了後や retrospective 指示時は、実装結果とは別に「学び」だけを取り出す
 2. **Classify**: 上の routing matrix で primary destination を決める
 3. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
 4. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
