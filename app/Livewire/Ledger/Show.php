@@ -162,6 +162,15 @@ class Show extends BaseLivewireComponent
         }
     }
 
+    #[On('relatedDisplayLevelRequested')]
+    public function syncRelatedDisplayLevel(int $displayLevel): void
+    {
+        if ($this->displayLevel !== $displayLevel) {
+            $this->displayLevel = $displayLevel;
+            $this->dispatch('displayLevelUpdated', displayLevel: $displayLevel);
+        }
+    }
+
     public function updatedDisplayLevel(int $level): void
     {
         // 履歴マネージャなどの非リアクティブコンポーネントのためにイベントを通知します

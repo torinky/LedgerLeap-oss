@@ -51,6 +51,7 @@ class RelatedLedgersTabTest extends TestCase
         Livewire::withQueryParams(['tab' => 'related'])
             ->test(Show::class, ['ledgerId' => $ledger->id])
             ->assertSet('selectedTab', 'related')
+            ->assertSee(__('ledger.loading'))
             ->assertSet('loadedTabs', ['related']);
     }
 }

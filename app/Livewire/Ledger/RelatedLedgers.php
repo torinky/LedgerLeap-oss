@@ -100,11 +100,17 @@ class RelatedLedgers extends BaseLivewireComponent
         $this->resetPage('related_page');
     }
 
+    public function updatedDisplayLevel(int $displayLevel): void
+    {
+        $this->dispatch('relatedDisplayLevelRequested', displayLevel: $displayLevel);
+    }
+
     #[On('displayLevelUpdated')]
     public function updateDisplayLevel(int $displayLevel): void
     {
         $this->displayLevel = $displayLevel;
     }
+
 
     // ─────────────────────────────────────────────
     // 識別番号（auto_number）関連

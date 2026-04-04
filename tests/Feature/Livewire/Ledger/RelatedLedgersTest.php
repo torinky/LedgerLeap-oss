@@ -531,6 +531,17 @@ class RelatedLedgersTest extends TestCase
         $component->assertSet('displayLevel', 3);
     }
 
+    #[Test]
+    public function it_targets_update_display_level_in_loading_overlay(): void
+    {
+        $component = Livewire::withoutLazyLoading()->test(RelatedLedgers::class, ['ledgerId' => $this->ledger->id]);
+
+        $this->assertStringContainsString(
+            'wire:target="showIdentifier,showSemantic,displayLevel"',
+            $component->html()
+        );
+    }
+
     // ─────────────────────────────────────────────
     // Sprint 3: ページング
     // ─────────────────────────────────────────────

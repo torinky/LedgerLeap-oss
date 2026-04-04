@@ -1,5 +1,5 @@
 <div class="space-y-4 p-2">
-    <x-element.loading-overlay tier="2" target="showIdentifier,showSemantic" />
+    <x-element.loading-overlay tier="2" target="showIdentifier,showSemantic,displayLevel" :delay="false" />
 
     {{-- ─────────────────────────────────────────────────── --}}
     {{-- ツールバー: トグル + 件数バッジ + 表示レベル         --}}
@@ -60,7 +60,7 @@
             ];
         @endphp
         <div class="flex items-center gap-1">
-            <x-mary-group wire:model.live="$parent.displayLevel" :options="$displayLevelOptions"
+            <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
                 class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
                 option-value="id" option-label="name"
                 wire:key="related-display-level-group" />

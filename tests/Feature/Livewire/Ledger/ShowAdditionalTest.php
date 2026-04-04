@@ -270,6 +270,20 @@ class ShowAdditionalTest extends TestCase
         $component->assertSet('displayLevel', 2);
     }
 
+    #[Test]
+    public function it_syncs_display_level_requested_from_related_ledgers(): void
+    {
+        $this->actingAs($this->user);
+
+        $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id]);
+
+        $component->dispatch('relatedDisplayLevelRequested', displayLevel: 1);
+
+        $component->assertSet('displayLevel', 1);
+        $component->assertDispatched('displayLevelUpdated', displayLevel: 1);
+    }
+
+
     // ===================================================================
     // updatedShowChanges
     // ===================================================================
