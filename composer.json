@@ -19,22 +19,22 @@
     "ext-pdo": "*",
     "15web/filament-tree": "*",
     "codewithdennis/filament-select-tree": "^4",
-    "darkaonline/l5-swagger": "^9.0",
+    "darkaonline/l5-swagger": "^11.0",
     "directorytree/ldaprecord-laravel": "^3.4",
     "filament/filament": "^5",
     "guzzlehttp/guzzle": "^7",
     "intervention/image": "^2",
     "kalnoy/nestedset": "^6",
-    "laravel/framework": "^12",
+    "laravel/framework": "^13",
     "laravel/mcp": "^0.5",
     "laravel/sanctum": "^4",
-    "laravel/tinker": "^2",
+    "laravel/tinker": "^3",
     "livewire/livewire": "^4",
     "logue/igo-php": "^0.2",
     "maatwebsite/excel": "^3",
     "predis/predis": "^3.0",
     "robsontenorio/mary": "^2",
-    "sebastian/diff": "^6.0",
+    "sebastian/diff": "^7.0",
     "simplesoftwareio/simple-qrcode": "^4.2",
     "spatie/laravel-activitylog": "^4",
     "spatie/laravel-markdown": "^2.7",
@@ -45,7 +45,7 @@
   },
   "require-dev": {
     "ext-json": "*",
-    "barryvdh/laravel-debugbar": "^3",
+    "barryvdh/laravel-debugbar": "^4.2.3",
     "barryvdh/laravel-ide-helper": "^3",
     "bottelet/translation-checker": "^1",
     "cweagans/composer-patches": "^2.0",
@@ -53,19 +53,19 @@
     "infection/infection": "^0.32.4",
     "laravel-lang/attributes": "^2",
     "laravel-lang/common": "*",
-    "laravel/boost": "^1.8",
+    "laravel/boost": "^2.0",
     "laravel/breeze": "^2",
     "laravel/pint": "^1",
     "laravel/sail": "*",
     "mockery/mockery": "^1",
     "nunomaduro/collision": "^8",
-    "pestphp/pest": "^3",
-    "pestphp/pest-plugin-laravel": "^3.2",
-    "phpunit/phpunit": "^11",
+    "pestphp/pest": "^4.4",
+    "pestphp/pest-plugin-laravel": "^4.1",
+    "phpunit/phpunit": "^12",
     "roave/security-advisories": "dev-latest",
     "spatie/laravel-ignition": "^2",
     "squizlabs/php_codesniffer": "3.*",
-    "systemsdk/phpcpd": "^8.0"
+    "systemsdk/phpcpd": "^8.3.0"
   },
   "autoload": {
     "psr-4": {
@@ -138,9 +138,6 @@
       "dont-discover": []
     },
     "patches": {
-      "laravel/boost": {
-        "Fix MCP tools schema for Laravel 12": "patches/fix_mcp_tools_schema.patch"
-      },
       "stancl/tenancy": {
         "Fix PHP 8.4 static trait property deprecation": "patches/fix_tenancy_php84_trait_property.patch"
       }

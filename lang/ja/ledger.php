@@ -1,11 +1,11 @@
-<?php return [
+<?php return array(
     'Impersonate' => 'なりすまし',
     'Impersonation' => 'なりすまし',
     'access_and_permissions' =>
-        [
+        array(
             'check_details_below' => '詳細については以下のリストを確認してください。',
             'column' =>
-                [
+                array(
                     'email' => 'メールアドレス',
                     'organization_name' => '組織名',
                     'organizations' => '所属組織',
@@ -14,7 +14,7 @@
                     'roles' => 'ロール',
                     'source' => 'ソース',
                     'user_name' => 'ユーザー名',
-                ],
+                ),
             'direct_role' => '直接割り当てられたロール',
             'inherited_from_parent' => '親フォルダ/定義から継承',
             'inherited_role' => '組織から継承されたロール',
@@ -30,15 +30,15 @@
             'roles_with_access' => 'アクセス権限を持つロール',
             'search_users_placeholder' => 'ユーザー名またはメールアドレスで検索...',
             'source' =>
-                [
+                array(
                     'folder' => 'フォルダ',
                     'ledger_define' => '台帳定義',
                     'unknown' => '不明',
-                ],
+                ),
             'title' => 'アクセスと権限',
             'users_with_access' => 'アクセス可能なユーザー',
             'your_access_level' => 'あなたのアクセスレベル',
-        ],
+        ),
     'action_approval_requested' => 'の承認を依頼しました',
     'action_approved' => 'を承認しました',
     'action_attached' => 'を割り当てました',
@@ -56,13 +56,13 @@
     'action_task_claimed' => 'を引き継ぎました',
     'action_updated' => 'を更新しました。',
     'actions' =>
-        [
+        array(
             'reset_sort' => 'ソート順をリセット',
-        ],
+        ),
     'activity' =>
-        [
+        array(
             'changes' =>
-                [
+                array(
                     'after_change' => '変更後',
                     'attached' => '関連付け',
                     'attribute' => '属性',
@@ -75,9 +75,9 @@
                     'password_changed' => 'パスワードが変更されました',
                     'related_entity_of' => ':relation の関連エンティティ',
                     'removed' => '削除されました',
-                ],
+                ),
             'column' =>
-                [
+                array(
                     'causer' => '操作者',
                     'changes' => '変更内容',
                     'comment' => 'コメント',
@@ -85,9 +85,9 @@
                     'operation' => '操作内容',
                     'subject' => '対象リソース',
                     'time' => '日時',
-                ],
+                ),
             'event' =>
-                [
+                array(
                     'attached' => '関連付けられました。',
                     'created' => '作成されました。',
                     'deleted' => '削除されました。',
@@ -131,14 +131,14 @@
                     'user_roles_detached' => ':resource からロール「:related_entity」が削除されました。',
                     'user_updated' => 'ユーザー情報が更新されました。',
                     'viewed_thumbnail' => 'サムネイルを表示しました。',
-                ],
+                ),
             'filter' =>
-                [
+                array(
                     'end_date' => '終了日',
                     'start_date' => '開始日',
-                ],
+                ),
             'model_name' =>
-                [
+                array(
                     'attached_file' => '添付ファイル',
                     'folder' => 'フォルダ',
                     'ledger' => '台帳レコード',
@@ -149,20 +149,20 @@
                     'role' => 'ロール',
                     'role_folder_permission' => 'フォルダ権限',
                     'user' => 'ユーザー',
-                ],
+                ),
             'no_activities_found' => '該当する活動履歴はありません。',
             'no_permission' => '活動履歴の閲覧権限がありません。',
             'subject' =>
-                [
+                array(
                     'unknown' => '不明なリソース',
                     'unknown_folder' => '不明なフォルダ',
                     'unknown_role' => '不明なロール',
-                ],
+                ),
             'system_user' => 'システム',
             'title' => '活動履歴',
             'unknown_user' => '不明なユーザー',
             'workflow' =>
-                [
+                array(
                     'approved' => ':resource が承認されました。',
                     'edited_while_pending' => ':resource が承認フロー中に編集され、下書きに戻されました。',
                     'inspection_completed' => ':resource の点検が完了し、承認が依頼されました。',
@@ -170,8 +170,8 @@
                     'requested_inspection' => ':resource の点検が依頼されました。',
                     'returned_to_draft' => ':resource が下書きに戻されました。',
                     'task_claimed' => ':resource の担当タスクが引き継がれました。',
-                ],
-        ],
+                ),
+        ),
     'ad_last_synced_at' => 'AD最終同期日時',
     'ad_sync_status_title' => 'AD連携ステータス',
     'add' => '追加する',
@@ -196,16 +196,16 @@
     'attach_existing_folder' => '既存のフォルダーを紐付ける',
     'attach_existing_organization' => '既存組織を紐付け',
     'attached_file' =>
-        [
+        array(
             'badge' =>
-                [
+                array(
                     'ocr_tooltip' => 'OCRで抽出されたテキストです',
                     'tika_tooltip' => 'Apache Tikaで抽出されたテキストです',
                     'vlm_high_quality' => '高精度なVLM抽出結果です',
                     'vlm_low_quality' => '低精度のVLM抽出結果です',
                     'vlm_medium_quality' => '中精度のVLM抽出結果です',
-                ],
-        ],
+                ),
+        ),
     'attribute' => '属性',
     'auto_sync_enabled' => '自動同期中',
     'back' => '戻る',
@@ -233,42 +233,42 @@
     'collapse' => '折りたたむ',
     'collapse_all' => 'すべて折りたたむ',
     'column' =>
-        [
+        array(
             'add' => '列を追加',
             'auto_number' =>
-                [
+                array(
                     'digits' => '桁数',
                     'digits_hint' => '連番の桁数 (例: 3の場合 001, 010, 100)',
                     'prefix' => '接頭辞',
                     'prefix_hint' => '例: DOC-, PROJ- (連番の前に付く文字列)',
                     'revision' => '版記号',
                     'revision_hint' => '例: A, NC (連番の後に付く文字列)',
-                ],
+                ),
             'bg_file' => '背景画像',
             'collapse_all' => 'すべて折りたたむ',
             'count_unit' => '項目',
             'custom_column_sort' => '項目指定',
             'date' =>
-                [
+                array(
                     'default_offset' => '自動入力・デフォルト日付',
                     'default_offset_combined_hint' => '値を入力すると自動項目になり、入力フォームで非表示となります。(例: 0d=今日, 1d=翌日)',
                     'default_offset_hint' => '入力時のデフォルト日付 (例: 0d=今日, 1d=明日, -1w=1週間前, 1M=1ヶ月後, 1y=1年後)',
                     'overwrite_existing' => '常に最新の日時をセット',
                     'overwrite_existing_hint' => 'ON:保存の度に更新 / OFF:初回のみセット',
-                ],
+                ),
             'delete_confirm' => '本当にこのファイルを削除しますか？この操作は元に戻せません。',
             'delete_file' => 'ファイルを削除',
             'delete_file_message' => '「:name」の背景画像を削除します。この操作は元に戻せません。',
             'drag2sort' => 'ドラッグして並び替え',
             'expand_all' => 'すべて展開',
             'file' =>
-                [
+                array(
                     'upload' => 'ファイルをアップロード',
-                ],
+                ),
             'group_title' => '台帳の列',
             'hint' => 'ヒント',
             'history' =>
-                [
+                array(
                     'activity' => 'ユーザーアクティビティ',
                     'mock_notice' => 'モックデータのため、履歴情報は表示されません。',
                     'no_system_logs' => 'システム処理ログはありません。',
@@ -282,9 +282,9 @@
                     'uploaded' => 'ファイルアップロード',
                     'vlm_analysis' => 'VLM解析',
                     'vlm_failed' => 'VLM処理失敗',
-                ],
+                ),
             'number' =>
-                [
+                array(
                     'max' => '最大値',
                     'max_placeholder' => '例: 100',
                     'min' => '最小値',
@@ -293,14 +293,14 @@
                     'step_placeholder' => '例: 1 (整数), 0.1 (小数点第一位)',
                     'unit' => '単位',
                     'unit_placeholder' => '例: ℃, mm',
-                ],
+                ),
             'phone' =>
-                [
+                array(
                     'allow_extension' => '内線・記号を許可',
                     'allow_extension_hint' => '内線, +, (), スペースを許容します',
                     'normalize' => '数字のみ保存',
                     'normalize_hint' => '保存時に記号を除去して数字のみにします',
-                ],
+                ),
             'remove' => 'この列を削除',
             'remove_message' => '「:name」の列を削除します',
             'required' => '必須入力',
@@ -315,7 +315,7 @@
             'type' => '入力形式',
             'unique' => '重複を禁止',
             'user_name' =>
-                [
+                array(
                     'edit_mode' => '編集時の動作',
                     'edit_mode_append' => '追記（重複除く）',
                     'edit_mode_overwrite' => '上書き',
@@ -326,9 +326,9 @@
                     'organization_prefix_bottom_3_levels' => '下3階層の組織',
                     'organization_prefix_bottom_only' => '最下層組織のみ',
                     'organization_prefix_none' => '表示しない',
-                ],
+                ),
             'will_ledger_delete_message' => '登録されたこの列の内容も削除します！',
-        ],
+        ),
     'column_deleted' => 'カラム削除 (:id)',
     'column_saved' => 'カラムを保存しました。',
     'comment' => 'コメントする',
@@ -344,13 +344,13 @@
     'create_title' => '台帳に新規追加',
     'created_at' => '作成日',
     'creator' =>
-        [
+        array(
             'name' => '作成者',
-        ],
+        ),
     'current_tenant' => '現在のテナント',
     'default_sort_order' => 'デフォルト順',
     'define' =>
-        [
+        array(
             'basic_setting' => '基本設定',
             'cannot_modify_while_workflow' => 'この台帳でワークフローが進行中（点検待ち・承認待ち）のため、列定義を変更できません。ワークフローが完了してから再度お試しください。',
             'create' => '台帳の枠組みを新規作成',
@@ -374,7 +374,7 @@
             'setting' => '台帳／フォルダ設定の管理',
             'title' => '台帳名',
             'title_input' => '台帳名を入力',
-        ],
+        ),
     'delete' => '削除する',
     'delete_confirm' => '削除する',
     'descending' => '降順',
@@ -385,7 +385,7 @@
     'detailed_information_title' => '詳細情報',
     'details' => '詳細',
     'diff' =>
-        [
+        array(
             'added' => '追加',
             'base' => '基準',
             'compare_to' => '比較先',
@@ -410,7 +410,7 @@
             'selection_added' => 'バージョン :version を選択しました',
             'selection_removed' => 'バージョン :version の選択を解除しました',
             'version_label' => 'バージョン :version、:date、:user',
-        ],
+        ),
     'disable' => '無効にする',
     'disable_notification' => '通知を無効にする',
     'disable_notification_confirm' => 'このフォルダーの通知設定を削除しますか？',
@@ -431,23 +431,23 @@
     'empty' => 'データなし',
     'enable' => '有効にする',
     'error' =>
-        [
+        array(
             'approval_processing_failed' => '承認処理に失敗しました',
             'invalid_action' => '無効なアクションです',
             'ledger_id_required' => '台帳IDが必要です',
             'ledger_not_found' => '台帳が見つかりません',
             'occurred_with_message' => 'エラーが発生しました: :message',
             'operation_failed' => '操作に失敗しました',
-        ],
+        ),
     'errors' =>
-        [
+        array(
             'already_assignee' => 'あなたは既にこのタスクの担当者です。',
             'applicant_cannot_claim' => '申請者自身はタスクを引き継げません。',
             'cannot_claim_not_pending_task' => '進行中ではないタスクは引き継げません。',
             'cannot_execute_action' => '処理を実行できませんでした。',
             'latest_diff_not_found' => '最新の履歴が見つからず、処理を続行できませんでした。',
             'no_permission_to_claim' => 'このタスクを引き継ぐ権限がありません。',
-        ],
+        ),
     'expand' => '拡大する',
     'expand_all' => 'すべて展開',
     'explanation' => '説明',
@@ -456,24 +456,24 @@
     'export_finished' => 'エクスポート完了',
     'exporting' => 'エクスポート中です。お待ちください・・・',
     'field' =>
-        [
+        array(
             'creator' => '作成者',
             'folder' => 'フォルダ',
             'status' => 'ステータス',
             'title' => '台帳',
             'updated_at' => '更新日時',
-        ],
+        ),
     'filament' =>
-        [
+        array(
             'manageableFolders' => '管理フォルダー',
             'readableFolders' => '読み込みフォルダー',
             'writableFolders' => '書き込みフォルダー',
-        ],
+        ),
     'file' => 'ファイル',
     'file_inspector' =>
-        [
+        array(
             'access' =>
-                [
+                array(
                     'admin' => '管理',
                     'delete' => '削除',
                     'download' => 'ダウンロード',
@@ -486,9 +486,9 @@
                     'view' => '閲覧',
                     'write' => '編集',
                     'your_permissions' => 'あなたの権限',
-                ],
+                ),
             'actions' =>
-                [
+                array(
                     'contact_support' => 'サポートに連絡',
                     'copy' => 'クリップボードにコピー',
                     'copy_json' => 'JSONをコピー',
@@ -524,10 +524,10 @@
                     'vlm_retry' => 'AI解析（VLM）のみを再実行',
                     'vlm_retry_description' => '構造化データと要約をAIで再生成します。',
                     'zoom' => '拡大表示',
-                ],
+                ),
             'close' => '閉じる',
             'history' =>
-                [
+                array(
                     'activity' => 'アクティビティ',
                     'downloaded' => 'ダウンロード',
                     'edited' => '編集',
@@ -551,9 +551,9 @@
                     'vlm_failed' => 'VLM処理失敗',
                     'waiting_finalization' => '最終化待ち',
                     'yesterday' => '昨日',
-                ],
+                ),
             'info' =>
-                [
+                array(
                     'benchmarks' => '処理所要時間',
                     'confidence' => '信頼度',
                     'creator' => 'アップロード者',
@@ -577,10 +577,10 @@
                     'uploaded' => 'アップロード',
                     'uploaded_at' => 'アップロード日時',
                     'uploaded_by' => 'アップロード者',
-                ],
+                ),
             'loading' => '読み込み中...',
             'messages' =>
-                [
+                array(
                     'copy_failed' => 'コピーに失敗しました',
                     'download_failed' => 'ダウンロードに失敗しました',
                     'json_copied' => 'JSONをコピーしました',
@@ -594,9 +594,9 @@
                     'text_copied' => 'テキストをコピーしました',
                     'vlm_retry_confirm' => 'AI解析（VLM）を再度実行しますか？',
                     'vlm_retry_started' => 'AI解析の再処理を開始しました。完了までしばらくお待ちください。',
-                ],
+                ),
             'ocr' =>
-                [
+                array(
                     'converted_pdf' => 'PDF変換ファイル',
                     'download_optimized' => '最適化PDFをダウンロード',
                     'download_pdf' => 'PDFをダウンロード',
@@ -608,36 +608,36 @@
                     'optimized_pdf_title' => 'OCR最適化PDF',
                     'pdf_info' => 'OCRmyPDFで最適化しました。ファイルサイズの削減とテキスト検索の精度が向上しています。',
                     'preview' => 'プレビュー',
-                ],
+                ),
             'permissions' =>
-                [
+                array(
                     'delete_notice' => 'ファイルの削除は台帳詳細画面から行ってください。履歴保持のため本画面からは削除できません。',
-                ],
+                ),
             'preview' =>
-                [
+                array(
                     'open_new_tab' => '新しいタブで開く',
                     'pdf_preview' => 'PDFプレビュー',
                     'thumbnail_hint' => '表示を高速化するためにサムネイルを表示しています。拡大ボタンでオリジナルを確認できます。',
-                ],
+                ),
             'search' =>
-                [
+                array(
                     'hit' => 'ヒットしました',
                     'label' => '検索',
                     'no_hit' => '一致なし',
                     'placeholder' => 'テキスト内を検索...',
-                ],
+                ),
             'source' =>
-                [
+                array(
                     'markdown' => 'Markdown',
                     'ocr' => '文字認識',
                     'structured' => 'JSON',
                     'tika' => 'テキスト抽出',
                     'tooltip' => '生成AIと従来AIで抽出します。出力内容を切り替えできます。',
                     'vlm' => 'AI解析',
-                ],
+                ),
             'source_label' => '表示ソース',
             'status' =>
-                [
+                array(
                     'all_failed_message' => 'このファイルからテキストを抽出できませんでした。ファイルが破損しているか、対応していない形式の可能性があります。',
                     'all_failed_title' => 'テキスト抽出に失敗しました',
                     'completed' => '完了',
@@ -658,32 +658,32 @@
                     'timeout_suggestion' => '処理時間が制限を超えました。ファイルサイズが大きすぎる可能性があります。ファイルを分割するか、解像度を下げてください。',
                     'unsupported_format' => '非対応のファイル形式',
                     'unsupported_format_message' => 'このファイル形式はテキスト抽出に対応していません。ファイル名とダウンロードのみ可能です。',
-                ],
+                ),
             'tabs' =>
-                [
+                array(
                     'content' => '内容',
                     'details' => '詳細',
                     'history' => '履歴',
                     'permissions' => '権限',
-                ],
+                ),
             'title' => 'ファイル詳細',
-        ],
+        ),
     'file_list' => '添付ファイル一覧',
     'file_status' =>
-        [
+        array(
             'completed' => '完了',
             'could_not_load_image' => '画像を読み込めません',
             'error' => 'エラー',
             'processing' => '処理中',
             'processing_failed' => '処理に失敗しました',
             'unknown_error' => '不明なエラー',
-        ],
+        ),
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',
     'files' => 'ファイル',
     'filter' => 'フィルタ',
     'filter_expired_users' => '期限切れユーザーをフィルタ',
     'folder' =>
-        [
+        array(
             'collapse' => '折りたたむ',
             'containing' => '所属するフォルダ',
             'create' => 'フォルダーを新規作成',
@@ -692,20 +692,20 @@
             'expand' => '展開する',
             'fix' => 'ツリー構造を修復する',
             'form' =>
-                [
+                array(
                     'header' =>
-                        [
+                        array(
                             'create' => 'フォルダを新規作成',
                             'edit' => 'フォルダ編集',
                             'edit_name' => 'フォルダ編集: :name',
-                        ],
+                        ),
                     'label' =>
-                        [
+                        array(
                             'parent_id' => '親フォルダ',
                             'title' => 'フォルダ名',
-                        ],
+                        ),
                     'message' =>
-                        [
+                        array(
                             'confirm_delete_body' => '本当にこのフォルダ「:name」を削除してもよろしいですか？元に戻すことはできません。',
                             'created_successfully' => 'フォルダを作成しました。',
                             'created_successfully_name' => 'フォルダ「:name」を作成しました。',
@@ -715,25 +715,25 @@
                             'first_folder_is_root' => '最初のフォルダはルートフォルダとして作成されます。',
                             'updated_successfully' => 'フォルダを更新しました。',
                             'updated_successfully_name' => 'フォルダ「:name」を更新しました。',
-                        ],
+                        ),
                     'modal_title' =>
-                        [
+                        array(
                             'confirm_delete' => 'フォルダ削除の確認',
-                        ],
+                        ),
                     'option' =>
-                        [
+                        array(
                             'no_parent' => '（親フォルダなし - ルート）',
-                        ],
+                        ),
                     'placeholder' =>
-                        [
+                        array(
                             'select_parent_or_null' => 'ルートフォルダにする場合は選択解除',
                             'select_roles' => 'ロールを検索または選択...',
-                        ],
+                        ),
                     'warning' =>
-                        [
+                        array(
                             'cannot_delete_if_children_exist' => '子フォルダや、このフォルダに属する台帳定義が存在する場合は削除できません。',
-                        ],
-                ],
+                        ),
+                ),
             'goto_ledger' => '同じ階層の台帳リストに移動',
             'ledger_count' => '台帳定義数',
             'manageable' => '管理できます',
@@ -752,14 +752,14 @@
             'title' => 'フォルダー名',
             'will_remove_message' => 'このフォルダーに含まれる台帳／フォルダは直上のフォルダー階層に移動します',
             'writable' => '書き込み可能',
-        ],
+        ),
     'folder_permission_editable' => '編集可能',
     'folder_permission_manageable' => '管理可能',
     'folder_permission_readable' => '閲覧可能',
     'folders' => 'フォルダー',
     'folders_to_attach_under' => '配下に紐付けるフォルダー',
     'form' =>
-        [
+        array(
             'auto_number' => '自動採番',
             'auto_numbering' => '自動採番',
             'check' => '複数選択',
@@ -768,11 +768,11 @@
             'datetime' => '日時',
             'display_level' => '表示レベル',
             'display_level_options' =>
-                [
+                array(
                     1 => 'Lv1: 概要',
                     2 => 'Lv2: 詳細',
                     3 => 'Lv3: 全項目',
-                ],
+                ),
             'files' => 'ファイル添付',
             'group_default' => 'その他',
             'group_name' => 'グループ名',
@@ -784,7 +784,7 @@
             'textarea' => '複数行テキスト',
             'upload' => 'ファイル添付',
             'user_name' => '入力者名',
-        ],
+        ),
     'go_home' => '設定を終了',
     'go_to' => 'この台帳のリスト表示へ移動',
     'go_to_folder_button' => 'フォルダへ移動',
@@ -819,9 +819,9 @@
     'log_in' => 'ログイン',
     'log_out' => 'ログアウト',
     'mail' =>
-        [
+        array(
             'action' =>
-                [
+                array(
                     'view_approval_tasks' => '承認タスクを確認する',
                     'view_approved_ledger' => '承認された台帳を確認する',
                     'view_claimed_task' => '引き継がれたタスクを確認する',
@@ -831,11 +831,11 @@
                     'view_ledger_status' => '台帳の状況を確認する',
                     'view_task_details' => 'タスク詳細を確認する',
                     'view_tasks' => 'タスク一覧を確認する',
-                ],
+                ),
             'body' =>
-                [
+                array(
                     'line1' =>
-                        [
+                        array(
                             'approval_requested' => '点検者: :inspectorName',
                             'approved' => '承認者: :approverName',
                             'generic' => ':causerName さんが :subjectType (:subjectId) に対してアクションを実行しました。',
@@ -844,20 +844,20 @@
                             'returned' => '操作者: :causerName',
                             'summary' => '現在、あなたに割り当てられている未処理のタスクは以下の通りです。',
                             'task_claimed_common' => '台帳名: :ledgerTitle',
-                        ],
+                        ),
                     'line2' =>
-                        [
+                        array(
                             'inspection_completed' => '承認ステップに進みました。',
                             'summary' => 'ご確認をお願いいたします。',
                             'task_claimed_comment_prefix' => 'コメント:',
-                        ],
-                ],
+                        ),
+                ),
             'footer' =>
-                [
+                array(
                     'thanks' => 'よろしくお願いします。',
-                ],
+                ),
             'greeting' =>
-                [
+                array(
                     'approval_requested' => ':userName さん、以下の台帳の承認依頼が届いています。',
                     'approved' => ':userName さん、申請した台帳が承認されました。',
                     'generic' => 'お知らせがあります。',
@@ -868,16 +868,16 @@
                     'task_claimed_to_applicant' => ':applicantName さん、申請した台帳「:title」の担当者が :originalAssigneeName さんから :newAssigneeName さんに変更されました。',
                     'task_claimed_to_new_assignee' => ':newAssigneeName さん、以下のタスクがあなたに割り当てられました（:claimerName さんによる引き継ぎ）。',
                     'task_claimed_to_original_assignee' => ':originalAssigneeName さん、あなたのタスク「:title」は :claimerName さんに引き継がれました。',
-                ],
+                ),
             'label' =>
-                [
+                array(
                     'comment' => 'コメント',
                     'pending_approval' => '承認待ち',
                     'pending_inspection' => '点検待ち',
                     'total' => '合計',
-                ],
+                ),
             'subject' =>
-                [
+                array(
                     'approval_requested' => '[ :appName ] 台帳「:title」の承認依頼',
                     'approved' => '[ :appName ] 台帳「:title」が承認されました',
                     'generic' => '[ :appName ] お知らせ (:type)',
@@ -886,8 +886,8 @@
                     'returned' => '[ :appName ] 台帳「:title」が「作成中」に戻りました',
                     'summary' => '[ :appName ] 未処理のワークフロータスクがあります (:count 件)',
                     'task_claimed' => '[ :appName ] 台帳「:title」の担当者が変更されました',
-                ],
-        ],
+                ),
+        ),
     'main_abilities_title' => '主なできること',
     'main_role_and_affiliation_title' => '主なロール/担当',
     'manual_sync_enabled' => '手動管理中',
@@ -895,17 +895,17 @@
     'manual_sync_expired_warning_title' => '期限切れの手動管理ユーザー',
     'manual_sync_reason' => '手動管理理由',
     'manual_sync_status' =>
-        [
+        array(
             'active' => '手動管理中 (期限内)',
             'expired' => '期限切れ',
             'none' => '通常 (自動同期)',
-        ],
+        ),
     'manual_sync_status_label' => '組織手動管理ステータス',
     'manual_sync_until' => '(期限: :date)',
     'mark_all_as_read' => 'すべて既読にする',
     'mark_as_read' => '既読にする',
     'mcp' =>
-        [
+        array(
             'approved_locked' => 'この台帳は承認済みのため、初期のMCP更新契約では更新できません。',
             'content_patch_required' => 'content_patch が必要です。',
             'detail_summary' => '台帳「:title」の最新内容を取得しました。現在の状態は :status です。',
@@ -926,29 +926,29 @@
             'workflow_history_next_action_trace_related' => '必要なら、この変更時点に関係する関連レコード調査へ進んでください。',
             'workflow_history_same_diff_not_allowed' => '同じ版同士は比較できません。新しい版と古い版をそれぞれ指定してください。',
             'workflow_history_target_diff_not_found' => '比較対象となる過去版が見つかりませんでした。',
-        ],
+        ),
     'message' => 'お知らせ',
     'messages' =>
-        [
+        array(
             'error' =>
-                [
+                array(
                     'invalid_parent_folder_selection' => '無効な親フォルダが選択されました。',
                     'no_tenant_context' => 'テナントコンテキストが設定されていません。',
                     'parent_folder_not_found' => '親フォルダが見つかりませんでした。',
                     'save_failed' => '保存に失敗しました',
-                ],
-        ],
+                ),
+        ),
     'modifier' =>
-        [
+        array(
             'name' => '最終変更者',
-        ],
+        ),
     'modifies' => '変更履歴を確認',
     'modify_message' => '変更する',
     'more_files' => ':count件の追加ファイル',
     'my_portal_title' => 'マイポータル',
     'name' => '名前',
     'named' =>
-        [
+        array(
             'add' => ':nameを追加',
             'choose' => ':name 個選択してください',
             'create' => ':nameを作成する',
@@ -966,9 +966,9 @@
             'update' => '更新 :name',
             'updated_at' => '更新 : ',
             'view' => ':name を見る',
-        ],
+        ),
     'navigation' =>
-        [
+        array(
             'back_to_tenant' => 'テナントに戻る',
             'go_to_folder_ledgers' => 'フォルダの台帳一覧へ移動',
             'go_to_my_portal' => 'マイポータルへ移動',
@@ -976,16 +976,16 @@
             'logout' => 'ログアウト',
             'my_portal' => 'マイポータル',
             'my_tenants' => '所属テナント',
+            'no_tenant' => 'テナント未選択',
             'notification_settings' => '通知設定',
             'notifications' => '通知',
             'open_folder_tree' => 'フォルダツリーを開く',
             'other_tenants' => 'その他テナント',
-            'no_tenant' => 'テナント未選択',
             'profile' => 'プロフィール',
             'settings' => '設定',
             'toggle_theme' => 'テーマ切り替え',
             'unread_notifications' => '未読の通知',
-        ],
+        ),
     'new' => '新着',
     'new_relation_attach' => '紐付ける',
     'next' => '次へ',
@@ -1015,7 +1015,7 @@
     'not_allow_view' => '閲覧権限がありません',
     'not_found' => '見つかりません',
     'notification' =>
-        [
+        array(
             'bulk_deleted_error' => '通知設定の一括削除に失敗しました。',
             'bulk_deleted_success' => '選択した通知設定を削除しました。',
             'created_error' => '通知設定の作成に失敗しました。',
@@ -1023,16 +1023,16 @@
             'deleted_error' => '通知設定の削除に失敗しました。',
             'deleted_success' => '通知設定を削除しました。',
             'settings' =>
-                [
+                array(
                     'description' => 'ここでは、特定の通知をメールで受け取るかどうかを設定できます。ロールによって設定が強制されている場合、変更することはできません。',
                     'title' => '通知設定',
-                ],
+                ),
             'updated_error' => '通知設定の更新に失敗しました。',
             'updated_success' => '通知設定を更新しました。',
-        ],
+        ),
     'notification_type' => '通知タイプ',
     'notification_types' =>
-        [
+        array(
             'App\\Models\\Folder' => 'フォルダー',
             'App\\Models\\Ledger' => '台帳',
             'App\\Models\\LedgerDefine' => '台帳定義',
@@ -1081,9 +1081,9 @@
             'user_organization_detached' => 'ユーザーが組織から離脱',
             'user_updated' => 'ユーザー情報更新',
             'workflow_summary' => '未処理タスク通知 (担当者向け)',
-        ],
+        ),
     'notification_types_description' =>
-        [
+        array(
             'approval_requested' => '（任意）自分が承認担当者に指定された場合に通知します。',
             'approved' => '申請したレコードが最終承認された場合に通知します。',
             'inspection_completed' => '（任意）申請したレコードの点検が完了し、承認ステップに進んだ場合に通知します。',
@@ -1091,7 +1091,7 @@
             'status_returned_to_draft' => '申請したレコードが点検者・承認者によって作成中に戻された場合に通知します。',
             'task_claimed' => 'ワークフロータスクの担当者が変更（引き継ぎ）された場合に通知します。',
             'workflow_summary' => '担当者に未処理の点検・承認タスクがある場合に定期的に通知します。',
-        ],
+        ),
     'notifications' => '通知',
     'notify' => '通知',
     'of' => 'の',
@@ -1106,26 +1106,26 @@
     'organization_section_description' => 'あなたが所属している組織やプロジェクトの一覧です。',
     'organization_section_title' => '所属組織/プロジェクト',
     'organizations' =>
-        [
+        array(
             'children' => '配下組織',
             'name' => '組織名',
             'parent' => '親組織',
             'primary' => '主所属',
             'scoped' => '保有組織',
-        ],
+        ),
     'organizations_to_attach_under' => '配下に紐付ける組織',
     'original_file' => 'オリジナル',
     'other_affiliations_title' => 'その他の所属',
     'page_qr_code' =>
-        [
+        array(
             'description' => 'QRコードをスキャンして、現在表示している画面をモバイル端末で開くことができます。',
             'modal_title' => 'この画面をモバイルで開く',
             'open_in_mobile' => 'モバイルで開く',
-        ],
+        ),
     'per_page' => '表示件数 / ページ',
     'performed_action' => 'さんが ',
     'period' =>
-        [
+        array(
             'custom' => '指定期間',
             'last_30_days' => '過去30日間',
             'last_7_days' => '過去7日間',
@@ -1141,10 +1141,10 @@
             'this_year' => '今年',
             'today' => '本日',
             'yesterday' => '昨日',
-        ],
+        ),
     'permission' => '権限',
     'permission_description' =>
-        [
+        array(
             'create_folders' => '新しいフォルダーを作成できます。',
             'create_ledger_defines' => '新しい種類の台帳（台帳定義）を作成できます。',
             'create_ledgers' => 'アクセス可能なフォルダ内に新しい台帳を作成できます。',
@@ -1153,9 +1153,9 @@
             'update_folders' => 'フォルダーの情報を更新できます。',
             'update_ledgers' => 'アクセス可能な台帳の情報を更新できます。',
             'view_activity_logs' => 'アクティビティログを閲覧できます。',
-        ],
+        ),
     'prefill' =>
-        [
+        array(
             'auto_copy_failed_description' => 'URLを選択してCmd+C（Mac）またはCtrl+C（Windows）でコピーしてください',
             'auto_copy_failed_title' => 'クリップボードへコピーできませんでした',
             'copy_failed' => 'クリップボードへのコピーに失敗しました',
@@ -1175,21 +1175,21 @@
             'qr_code_unavailable_title' => 'QRコードを生成できませんでした',
             'select_url' => 'URLを全選択',
             'url_label' => '事前入力URL',
-        ],
+        ),
     'preview' => 'プレビュー',
     'price' => '価格',
     'priority' =>
-        [
+        array(
             'high' => '高',
             'label' => '優先度',
             'low' => '低',
             'medium' => '中',
             'overdue' => '期限超過',
             'urgent' => '緊急',
-        ],
+        ),
     'processing_completed_with_action' => '処理が完了しました: :action',
     'qr_share' =>
-        [
+        array(
             'auto_copy_failed_description' => 'URLを選択してCmd+C（Mac）またはCtrl+C（Windows）でコピーしてください',
             'auto_copy_failed_title' => 'クリップボードへコピーできませんでした',
             'copy_success' => 'クリップボードにリンクをコピーしました',
@@ -1197,23 +1197,23 @@
             'download_qr' => 'QRコードをダウンロード',
             'error_generic' => '処理中にエラーが発生しました',
             'filename' =>
-                [
+                array(
                     'contexts' =>
-                        [
+                        array(
                             'page_share' => '画面共有',
                             'prefill' => '事前入力',
-                        ],
+                        ),
                     'screen_types' =>
-                        [
+                        array(
                             'ledger_create' => '台帳作成',
                             'ledger_detail' => '台帳詳細',
                             'ledger_edit' => '台帳編集',
                             'ledger_import' => '台帳インポート',
                             'ledger_list' => '台帳一覧',
                             'page_share' => '画面共有',
-                        ],
+                        ),
                     'suffix' => '用QR',
-                ],
+                ),
             'qr_code_description' => 'スマホでスキャンして共有先の画面を開けます',
             'qr_code_hint' => '※モバイル端末での利用に最適化されています',
             'qr_code_title' => 'QRコード',
@@ -1221,12 +1221,12 @@
             'qr_code_unavailable_title' => 'QRコードを利用できません',
             'url_label' => '共有URL',
             'url_not_found' => '共有するURLが見つかりません',
-        ],
+        ),
     'record' => '記録',
     'records' => '件',
     'records_title' => 'リスト',
     'related' =>
-        [
+        array(
             'both_tooltip' => '識別番号: :keys / 類似度: :score',
             'count_total' => ':count 件',
             'display_level_label' => '表示レベル',
@@ -1246,7 +1246,7 @@
             'score_tooltip' => '類似度: :score',
             'toolbar_identifier' => '識別番号',
             'toolbar_semantic' => '意味検索',
-        ],
+        ),
     'remove' => '削除する',
     'remove_message' => 'この案件の内容は削除されます！ 取り消しできません！',
     'remove_records_message' => 'この台帳のレコードを削除します',
@@ -1258,7 +1258,7 @@
     'reviseCount' => '改訂回数',
     'role' => 'ロール',
     'role_label' =>
-        [
+        array(
             'Editor' => '編集者',
             'Folder Manager' => 'フォルダー管理者',
             'Folder Viewer' => 'フォルダー閲覧者',
@@ -1267,10 +1267,10 @@
             'Super Admin' => 'スーパー管理者',
             'Viewer' => '閲覧者',
             'user' => '一般ユーザー',
-        ],
+        ),
     'roles_and_affiliations_title' => 'ロールと所属',
     'rollback' =>
-        [
+        array(
             'button_label' => 'このバージョンに戻す',
             'default_comment' => 'Ver.:version からロールバック',
             'execute_button' => 'ロールバックを実行',
@@ -1287,7 +1287,7 @@
             'warning_description' => '現在の最新内容は失われません（履歴として残ります）が、台帳のメインデータは指定された過去時点の内容で即座に置き換えられます。',
             'warning_title' => '実行前の最終確認',
             'your_comment' => '入力された理由',
-        ],
+        ),
     'save' => '保存する',
     'save_and_close' => '保存して閉じる',
     'save_and_return' => '保存して戻る',
@@ -1295,7 +1295,7 @@
     'save_changes' => '上書きする',
     'save_draft' => '下書き保存',
     'scoring' =>
-        [
+        array(
             'activity_score' => '活動スコア',
             'avg_score' => '平均',
             'composite_score' => '総合スコア',
@@ -1307,7 +1307,7 @@
             'score_label' => 'スコア:',
             'score_order' => 'スコア順',
             'sorted_by_score' => '検索時は台帳定義をスコア順（平均値の降順）で表示しています',
-        ],
+        ),
     'search' => '検索する',
     'search_message' => 'スペース区切りでキーワードを検索',
     'search_options' => '検索オプション',
@@ -1329,7 +1329,7 @@
     'send' => '送信する',
     'setting' => '設定',
     'settings' =>
-        [
+        array(
             'access_control' => 'アクセス制御',
             'auto_link' => '自動リンク',
             'auto_link_management' => '自動リンク管理',
@@ -1341,7 +1341,7 @@
             'roles' => 'ロール',
             'tenant_management' => 'テナント管理',
             'user_management' => 'ユーザー管理',
-        ],
+        ),
     'show' => '見せる',
     'show_all' => 'すべて表示する',
     'show_details' => '詳細を表示する',
@@ -1352,15 +1352,15 @@
     'sign_in' => 'サインイン',
     'solve' => '解決する',
     'sort' =>
-        [
+        array(
             'high_to_low' => '高い順',
             'low_to_high' => '低い順',
-        ],
+        ),
     'sort_by' => '並び順',
     'sort_priority' => '優先度',
     'start' => '始める',
     'statistics' =>
-        [
+        array(
             'activities_in_period' => ':periodに:count件の活動がありました。',
             'activity_count' => 'アクティビティログ: :count件',
             'count_items' => ':count件',
@@ -1381,14 +1381,14 @@
             'top_defines' => 'トップ台帳定義',
             'top_users' => 'トップユーザー',
             'total_created' => '作成数',
-        ],
+        ),
     'stop' => '停止する',
     'stored' =>
-        [
+        array(
             'fail' => '登録に失敗しました',
             'failed' => '保存に失敗しました',
             'success' => '保存しました',
-        ],
+        ),
     'submit' => '提出する',
     'subscribe' => '購読する',
     'success' => '成功',
@@ -1397,28 +1397,28 @@
     'synonym_disabled_in_semantic_search' => '意味検索では同義語検索は使用されません',
     'system_name' => 'Ledger Leap',
     'tab' =>
-        [
+        array(
             'access_and_permissions' => 'アクセスと権限',
             'activity_history' => '活動履歴',
             'details' => '基本情報',
             'related' => '関連案件',
             'workflow_history' => 'ワークフロー履歴',
-        ],
+        ),
     'tag' =>
-        [
+        array(
             'add' => 'タグを追加',
             'remove' => 'タグを削除',
             'remove_message' => '次のタグを削除します',
             'tag' => 'タグ',
-        ],
+        ),
     'tags' => 'タグ',
     'target_link' =>
-        [
+        array(
             'blank' => '新しいウィンドウで開きます',
             'parent' => '親フレームで開く',
             'self' => '現在のウィンドウで開く',
             'top' => '一番上のフレームで開く',
-        ],
+        ),
     'technical_term' => '技術用語',
     'tenant' => 'テナント',
     'tenant_context_notification_body' => 'テナント「:name」のコンテキストで中央管理画面を表示しています。',
@@ -1429,7 +1429,7 @@
     'tenant_name' => 'テナント名',
     'tenant_settings' => 'テナント設定',
     'text_preview' =>
-        [
+        array(
             'button_tooltip' => '抽出テキストをプレビュー',
             'copy_button' => 'クリップボードにコピー',
             'copy_failed' => 'コピーに失敗しました',
@@ -1438,13 +1438,13 @@
             'download_unavailable_not_vlm' => 'VLM抽出データではないためダウンロードできません',
             'modal_title' => '抽出テキストプレビュー',
             'not_found' => 'プレビュー可能なテキストがありません',
-        ],
+        ),
     'time' =>
-        [
+        array(
             'days' => ':count日',
             'one_day' => '1日',
             'today' => '今日',
-        ],
+        ),
     'title' => '台帳名',
     'title_unknown' => 'タイトル不明',
     'total' => '合計',
@@ -1462,13 +1462,13 @@
     'update' => 'アップデート',
     'update_message' => '更新する',
     'updated' =>
-        [
+        array(
             'fail' => '更新に失敗しました',
             'success' => '更新を完了しました',
-        ],
+        ),
     'updated_at' => '更新日時',
     'uploadedFile' =>
-        [
+        array(
             'download_original_pdf' => 'オリジナルをダウンロード',
             'download_pdf_with_text' => 'テキスト付きPDFをダウンロード',
             'retry' => 'テキスト抽出/OCRを再試行',
@@ -1478,10 +1478,10 @@
             'retry_thumbnail' => 'サムネイル再生成',
             'retry_vlm' => 'VLM処理を再試行',
             'status' =>
-                [
+                array(
                     'completed' => '完了',
                     'detailed' =>
-                        [
+                        array(
                             'analyzing_image' => '画像を解析中',
                             'completed' => '処理が完了しました',
                             'extraction_error' => 'テキストを抽出できませんでした',
@@ -1497,7 +1497,7 @@
                             'vlm_completed' => 'テキストを抽出しました',
                             'vlm_failed' => 'VLM処理に失敗しました',
                             'vlm_high_quality' => '高精度でテキストを抽出しました',
-                        ],
+                        ),
                     'extracted_and_saved' => 'テキスト抽出完了',
                     'extracting' => 'テキスト抽出中',
                     'extraction_failed' => 'テキスト抽出失敗',
@@ -1522,18 +1522,18 @@
                     'uploaded' => 'アップロード済み',
                     'vlm_failed' => 'VLM処理失敗',
                     'vlm_processing' => 'VLM処理中',
-                ],
-        ],
+                ),
+        ),
     'user' => 'ユーザー',
     'user_action_suffix' => ' が ',
     'user_info' =>
-        [
+        array(
             'chat' => 'チャット',
             'chat_link' => 'チャットリンク',
-        ],
+        ),
     'user_object_suffix' => ' を ',
     'validation' =>
-        [
+        array(
             'all_errors_fixed' => 'すべてのバリデーションエラーが解消されました！',
             'errors_fixed' => ':count 個のエラーを修正しました！',
             'failed' => '入力内容に誤りがあります。内容を確認してください。',
@@ -1543,28 +1543,28 @@
             'nav_prev' => '前の項目へ',
             'required_errors' => '必須項目の不足',
             'required_keywords' =>
-                [
+                array(
                     0 => '必須',
                     1 => '入力してください',
                     2 => '選択してください',
-                ],
+                ),
             'show_summary' => 'エラーを確認',
             'show_summary_with_count' => 'エラーを確認 (:count)',
             'summary_hint' => '項目をクリックすると該当箇所へ移動します。Ctrl+E でこのパネルを開閉できます。',
             'summary_title' => 'バリデーションエラー (:count件)',
-        ],
+        ),
     'version' => 'バージョン',
     'view' => 'ビュー',
     'view_content_at_this_point' => 'この時点の内容を見る',
     'view_details' => '詳細確認',
     'view_history' => '変更履歴を見る',
     'views' =>
-        [
+        array(
             'list' => 'リスト表示',
             'tree' => 'ツリー表示',
-        ],
+        ),
     'vlm' =>
-        [
+        array(
             'confidence' => '信頼度',
             'confidence_label' => '信頼度',
             'copied' => 'クリップボードにコピーしました',
@@ -1577,23 +1577,23 @@
             'preview_button' => 'VLM-OCR 結果を表示',
             'preview_title' => 'VLM-OCR 結果',
             'quality' =>
-                [
+                array(
                     'high' => '高精度',
                     'low' => '低精度',
                     'standard' => '標準精度',
-                ],
+                ),
             'result_not_found' => 'VLM-OCR 結果が存在しません',
             'source' =>
-                [
+                array(
                     'label' => '抽出方法',
                     'ocr' => 'OCR',
                     'tika' => 'Tika',
                     'unknown' => '不明',
                     'vlm' => 'VLM (高精度AI)',
-                ],
-        ],
+                ),
+        ),
     'workflow' =>
-        [
+        array(
             'action_at' => '操作日時',
             'action_by' => '操作者',
             'age' => '滞留時間',
@@ -1628,22 +1628,22 @@
             'edit_reason_label' => '編集理由（任意）',
             'enable_description' => '有効にすると、この台帳の登録・更新時に承認フローが必須となります。',
             'error' =>
-                [
+                array(
                     'approve_requires_any_prior_inspection' => '承認の前に、いずれかの必須点検ロールによる点検が必要です',
                     'cannot_approve' => '承認できません',
                     'cannot_return_to_draft' => '作成中に戻すことができません',
                     'invalid_status_for_approve' => '承認できるステータスではありません',
                     'unauthorized_as_approver' => '承認者として認証されていません',
-                ],
+                ),
             'error_approval_not_completed_detail' => '必須承認未完了: :roles',
             'error_inspection_not_completed' => '必須点検ロールの処理が完了していません。',
             'error_inspection_not_completed_detail' => '必須点検未完了: :roles',
             'error_workflow_conditions_not_met' => 'ワークフローの完了条件を満たしていません。',
             'guide' =>
-                [
+                array(
                     'details_compare' => '直前または『更新履歴』タブで選択した過去バージョンと内容を比較表示します。',
                     'display_level' => '表示する項目の細かさを切り替えます（非表示 / 簡略 / すべて表示）。',
-                ],
+                ),
             'history_action' => 'アクティオン/ステータス',
             'history_action_modified' => '内容の変更',
             'history_count_message' => ':ledger_titleのワークフロー履歴が:count件あります',
@@ -1657,10 +1657,10 @@
             'inspector' => '点検者',
             'invalid_assignee' => '有効な担当者を選択してください',
             'label' =>
-                [
+                array(
                     'approver' => '承認者',
                     'editor' => '編集者',
-                ],
+                ),
             'last_updated_at' => '最終更新日時',
             'legend_title' => '凡例',
             'next_approver' => '次の承認者',
@@ -1677,23 +1677,23 @@
             'pending_tasks' => '未処理タスク',
             'pending_tasks_description' => 'あなたの確認や承認を待っているタスクがあります。',
             'reason_legend' =>
-                [
+                array(
                     'authorized' => '権限あり',
                     'frequent' => '実績多数',
                     'past_route' => '過去のルートでの担当者',
                     'recent' => '直近の担当者',
                     'required_role' => '必須ロール担当者',
                     'selected' => '現在選択中',
-                ],
+                ),
             'reason_tooltip' =>
-                [
+                array(
                     'authorized' => '権限あり',
                     'frequent' => '実績多数',
                     'past_route' => '過去のルートでの担当者',
                     'recent' => '直近の担当者',
                     'required_role' => '必須ロール担当者',
                     'selected' => '現在選択中',
-                ],
+                ),
             'recommended_role' => '推奨 (ロール)',
             'recommended_user' => '推奨',
             'record_locked' => 'ロックされています',
@@ -1724,7 +1724,7 @@
             'select_next_inspector' => '点検者を選択してください',
             'send_inspection_request' => '点検依頼を送信',
             'status' =>
-                [
+                array(
                     'approved' => '承認済み',
                     'draft' => '作成中/編集中',
                     'label' => 'ステータス',
@@ -1733,7 +1733,7 @@
                     'none_long' => 'この台帳にはワークフローは適用されていません。',
                     'pending_approval' => '承認待ち',
                     'pending_inspection' => '点検待ち',
-                ],
+                ),
             'summary_notification_message' => '未処理の点検依頼が :inspection_count 件、承認依頼が :approval_count 件あります。',
             'task_claimed_successfully' => 'タスクを引き継ぎました。',
             'task_claimed_successfully_with_details' => ':task_typeを:assigneeが引き継ぎました',
@@ -1744,14 +1744,14 @@
             'tasks_title' => 'ワークフロータスク',
             'title' => '点検/承認',
             'tooltip' =>
-                [
+                array(
                     'approve_requires_any_prior_inspection' => '承認の前に、いずれかの必須点検ロールによる点検が必要です。',
-                ],
+                ),
             'tooltip_conditions_not_met_approval' => '必須点検または必須承認ロールの処理が完了していません。',
             'tooltip_conditions_not_met_inspection' => '必須点検ロールの処理が完了していません。',
             'view_content_at_this_point' => 'この時点の内容を見る',
             'workflow_inactive_at_this_point' => 'この時点ではワークフローは無効でした。',
-        ],
+        ),
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
-];
+);
