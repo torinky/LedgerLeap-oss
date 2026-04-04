@@ -4,7 +4,7 @@
 
     {{-- Search Input Section --}}
     <div class="w-full transition-all duration-300">
-        <x-mary-input wire:model.change="search" type="search" icon="o-magnifying-glass"
+        <x-mary-input wire:model.live.debounce.300ms="search" type="search" icon="o-magnifying-glass"
                       class="input-primary shadow-md text-lg" placeholder="{{ __('ledger.search_message') }}"
                       clearable/>
     </div>
@@ -16,7 +16,7 @@
             {{-- Search Scope Toggles --}}
             <div>
                 <div class="tooltip" data-tip="test">
-                    <x-mary-toggle wire:model.change="useTechnicalTerm" label="{{ __('ledger.search_technical_term') }}"
+                    <x-mary-toggle wire:model.live="useTechnicalTerm" label="{{ __('ledger.search_technical_term') }}"
                                    class="toggle-primary" right/>
                 </div>
             </div>
@@ -24,7 +24,7 @@
             <div>
                 <div class="tooltip"
                      data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym') }}">
-                    <x-mary-toggle wire:model.change="useSynonym" label="{{ __('ledger.search_synonym') }}"
+                    <x-mary-toggle wire:model.live="useSynonym" label="{{ __('ledger.search_synonym') }}"
                                    class="toggle-primary" :disabled="$useSemanticSearch" right/>
                 </div>
             </div>
@@ -59,7 +59,7 @@
                     <div class="label pt-0 pb-1">
                         <span class="label-text font-semibold">{{ __('ledger.sort_by') }}</span>
                     </div>
-                    <select wire:model.change="orderBy" class="select select-primary select-sm">
+                    <select wire:model.live="orderBy" class="select select-primary select-sm">
                         @if ($orderByLabel !== '')
                             <option value="{{ $orderBy }}" selected>{{ $orderByLabel }}</option>
                         @endif
@@ -92,7 +92,7 @@
                         <div class="label pt-0 pb-1">
                             <span class="label-text font-semibold">{{ __('ledger.workflow.status.label') }}</span>
                         </div>
-                        <select wire:model.live="filterStatus" class="select select-primary select-sm w-full">
+                            <select wire:model.live="filterStatus" class="select select-primary select-sm w-full">
                             <option value="">{{ __('ledger.all') }}</option>
                             @foreach (\App\Enums\WorkflowStatus::cases() as $status)
                                 <option value="{{ $status->value }}">{{ $status->label() }}</option>
