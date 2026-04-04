@@ -10,6 +10,9 @@
 - ### [Filament](./filament/README.md)
   Filament の移行・パネル基盤・UI 互換・関連プラグインに関する調査と計画。
 
+- ### [Laravel 13 アップグレード](./2026-04-04_laravel-13-upgrade-plan.md)
+  Laravel 12 → 13 の移行計画、ブロッカー整理、Issue 草案、回帰検証に関する作業メモ。
+
 - ### [データベース (database)](./database/README.md)
   データベースの構成、パフォーマンス最適化、スキーマ設計に関するドキュメント。
 
