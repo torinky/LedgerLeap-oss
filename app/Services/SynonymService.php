@@ -86,7 +86,9 @@ class SynonymService
      */
     public static function wakati($inputText)
     {
-        $igo = new Tagger;
+        $igo = new Tagger([
+            'dict_dir' => base_path('vendor/logue/igo-php/ipadic'),
+        ]);
         //        $str = "これは形態素解析の実験結果です。";
         $result = $igo->parse($inputText);
 
@@ -122,7 +124,9 @@ class SynonymService
     {
         // 文章を形態素に分解
 
-        $igo = new Tagger;
+        $igo = new Tagger([
+            'dict_dir' => base_path('vendor/logue/igo-php/ipadic'),
+        ]);
         $text1Corpus = $igo->wakati($text1);
         $text2Corpus = $igo->wakati($text2);
 
