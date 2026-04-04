@@ -218,6 +218,8 @@ services:
       - RAG_NUM_INTEROP_THREADS=${RAG_NUM_INTEROP_THREADS:-0}
       - RAG_CONVERT_TO_NUMPY=${RAG_CONVERT_TO_NUMPY:-true}
       - RAG_DEVICE=${RAG_DEVICE:-cpu}
+      # 以降の起動ではキャッシュを検出して外部接続なしで起動します。
+      # - EMBEDDING_OFFLINE=${EMBEDDING_OFFLINE}
     networks:
       - sail
     command: ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "8000", "--timeout-keep-alive", "300"]

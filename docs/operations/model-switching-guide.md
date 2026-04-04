@@ -193,6 +193,23 @@ docker exec -it ledgerleap_embedding bash
 python -c "from sentence_transformers import SentenceTransformer; SentenceTransformer('cl-nagoya/ruri-v3-310m')"
 ```
 
+### 外部接続がない環境でコンテナが起動しない（ループする）
+
+**症状:**
+```
+# コンテナが起動しない / ヘルスチェックが繰り返し失敗する
+ConnectionError: Remote end closed connection without response
+```
+
+**原因:**
+- キャッシュが存在しない状態で HuggingFace Hub へのアクセスが発生し、タイムアウト後にリトライを繰り返す
+
+**解決策:**
+1. 外部接続が可能な環境でキャッシュを作成する
+2. `./storage/app/embedding/` ごとプロジェクトを転送する
+
+詳細は → **[Embeddingコンテナのオフライン起動](./embedding-offline-startup.md)**
+
 ### ベクトル次元の不一致
 
 **症状:**
@@ -349,6 +366,7 @@ A:
 - [Phase1実装計画](../work/rag-implementation/2025-10-17-phase1-hybrid-search-plan.md)
 - [RAG技術検討書](../work/rag-implementation/2025-10-16-rag-implementation-study.md)
 - [RagSearchService基本実装](../work/rag-implementation/2025-10-18-wbs-2-1-2-2-completion-report.md)
+- [Embeddingコンテナのオフライン起動](./embedding-offline-startup.md)
 
 ---
 

@@ -41,11 +41,66 @@ def configure_performance():
         torch.set_num_interop_threads(num_interop_threads)
         logger.info(f"Set PyTorch num_interop_threads to: {num_interop_threads}")
 
+# --- Cache Detection ---
+def _is_model_cached(model_name: str, cache_folder: str) -> bool:
+    """
+    HuggingFace キャッシュにモデルが存在するか確認する。
+    huggingface_hub の try_to_load_from_cache を使って config.json の
+    存在をチェックする（軽量なファイルで判定）。
+    
+    Returns:
+        True  → キャッシュ存在 → オフラインで起動可能
+        False → キャッシュなし → HuggingFace Hub からダウンロードが必要
+    """
+    try:
+        from huggingface_hub import try_to_load_from_cache
+        result = try_to_load_from_cache(
+            repo_id=model_name,
+            filename="config.json",
+            cache_dir=cache_folder,
+        )
+        # result が文字列（ファイルパス）の場合はキャッシュが存在する
+        is_cached = isinstance(result, str)
+        if is_cached:
+            logger.info(f"Cache detected: {result}")
+        else:
+            logger.info(f"No cache found for model: '{model_name}'")
+        return is_cached
+    except Exception as e:
+        logger.warning(f"Cache check failed (assuming no cache): {e}")
+        return False
+
+def _resolve_local_files_only(model_name: str, cache_folder: str) -> bool:
+    """
+    EMBEDDING_OFFLINE 環境変数とキャッシュ状態から local_files_only を決定する。
+
+    EMBEDDING_OFFLINE=1   → 強制オフライン（キャッシュがなければ起動失敗）
+    EMBEDDING_OFFLINE=0   → 強制オンライン（常に HF Hub に接続して確認）
+    未設定 or その他      → 自動検出: キャッシュあり→オフライン / なし→オンライン
+    """
+    offline_env = os.getenv('EMBEDDING_OFFLINE', 'auto').strip()
+
+    if offline_env == '1':
+        logger.info("Offline mode: FORCED ON (EMBEDDING_OFFLINE=1)")
+        return True
+
+    if offline_env == '0':
+        logger.info("Offline mode: FORCED OFF (EMBEDDING_OFFLINE=0) → will access HuggingFace Hub")
+        return False
+
+    # auto: キャッシュ存在チェックで自動判定
+    is_cached = _is_model_cached(model_name, cache_folder)
+    if is_cached:
+        logger.info("Offline mode: AUTO → cache found, starting in offline mode (no network needed)")
+    else:
+        logger.info("Offline mode: AUTO → no cache found, downloading from HuggingFace Hub (internet required)")
+    return is_cached
+
 # --- FastAPI App Initialization ---
 app = FastAPI(
     title="Sentence Embedding Service",
     description="A service to generate sentence embeddings using SentenceTransformers.",
-    version="1.1.0"
+    version="1.2.0"
 )
 
 # --- Pydantic Models ---
@@ -63,10 +118,16 @@ async def _load_model():
     """
     The actual model loading logic, designed to be run in the background.
     Updates the global application state based on the outcome.
+
+    オフラインモードの挙動:
+    - キャッシュが存在する場合: HuggingFace Hub に一切接続せずローカルから起動
+    - キャッシュが存在しない場合: HuggingFace Hub からダウンロードしてキャッシュを作成
+    - 次回起動以降は自動的にオフラインモードで動作
     """
     global model, loaded_model_name, app_status, startup_error
     
     app_status = AppStatus.LOADING
+    cache_folder = '/app/models'
     
     try:
         model_name_to_load = os.getenv('EMBEDDING_MODEL', 'intfloat/multilingual-e5-base')
@@ -74,10 +135,14 @@ async def _load_model():
 
         logger.info("--- Background Model Loading Started ---")
         logger.info(f"Attempting to load model: '{model_name_to_load}' on device: {device}")
+
+        # キャッシュ自動検出または環境変数による明示的な制御
+        local_files_only = _resolve_local_files_only(model_name_to_load, cache_folder)
         
         # --- Performance Settings Log ---
         logger.info("Performance settings:")
         logger.info(f"  - Device: {device}")
+        logger.info(f"  - local_files_only: {local_files_only}")
         logger.info(f"  - PyTorch num_threads: {torch.get_num_threads()}")
         logger.info(f"  - PyTorch num_interop_threads: {torch.get_num_interop_threads()}")
         logger.info(f"  - Batch size: {os.getenv('EMBEDDING_BATCH_SIZE', '1')}")
@@ -87,7 +152,8 @@ async def _load_model():
         model = SentenceTransformer(
             model_name_to_load,
             device=device,
-            cache_folder='/app/models'
+            cache_folder=cache_folder,
+            local_files_only=local_files_only,
         )
         loaded_model_name = model_name_to_load
         
