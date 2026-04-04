@@ -8,6 +8,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use Livewire\Features\SupportTesting\Testable;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -51,7 +52,7 @@ class EditTest extends TestCase
     /**
      * set() でコンポーネントの初期状態をセットするヘルパー
      */
-    private function mountedComponent(): \Livewire\Features\SupportTesting\Testable
+    private function mountedComponent(): Testable
     {
         $component = Livewire::test(Edit::class);
         // instance() 経由で Eloquent Model を直接セット（Livewireのシリアライズをバイパス）

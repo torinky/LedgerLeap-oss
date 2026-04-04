@@ -45,9 +45,9 @@ class Edit extends BaseLivewireComponent
      * コンポーネントのさまざまなプロパティを設定します。また、階層的なフォルダデータを処理し、
      * フォルダIDとそれに対応する名前や選択状態のマップを構築します。
      *
-     * @param  \Illuminate\Http\Request  $request  入力やルートデータを含むリクエスト。
+     * @param  Request  $request  入力やルートデータを含むリクエスト。
      */
-    public function mount(request $request)
+    public function mount(Request $request)
     {
         if ($request->input('fromCreate')) {
             $this->dispatch('reloadParentWindow');

@@ -20,44 +20,47 @@
         </div>
     </x-slot>
 
-    <div class="mx-auto px-4 py-6 max-w-[1600px]">
-        @if($ledgerDefineRecord && $ledgerDefineRecord->column_define)
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start mb-20">
+    <div class="mx-auto px-4 py-6 max-w-400">
+        @if($ledgerDefineRecord)
+            <div class="grid grid-cols-1 gap-6 items-start mb-20">
 
-                {{-- 上段: 基本設定 (常に全幅) --}}
-                <div class="lg:col-span-2">
-                    <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden">
-                        <h2 class="card-title font-black bg-primary/5 text-primary px-6 py-4 border-b border-primary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
-                            <x-mary-icon name="o-cog-6-tooth" />
-                            {{__('ledger.define.basic_setting')}}
-                        </h2>
-                        <div class="card-body p-6 md:p-8">
-                            <livewire:ledger-define.edit/>
+                {{-- 上段: 基本設定 (常に表示) --}}
+                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden">
+                    <h2 class="card-title font-black bg-primary/5 text-primary px-6 py-4 border-b border-primary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                        <x-mary-icon name="o-cog-6-tooth" />
+                        {{__('ledger.define.basic_setting')}}
+                    </h2>
+                    <div class="card-body p-6 md:p-8">
+                        <livewire:ledger-define.edit/>
+                    </div>
+                </div>
+
+                @if($ledgerDefineRecord->column_define)
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                        {{-- 下段左: 項目設定 --}}
+                        <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden h-fit">
+                            <h2 class="card-title font-black bg-accent/5 text-accent px-6 py-4 border-b border-accent/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                                <x-mary-icon name="o-queue-list" class="w-5 h-5"/>
+                                {{__('ledger.column.group_title')}}
+                            </h2>
+                            <div class="card-body p-4 md:p-6">
+                                <livewire:ledger-define.modify-column/>
+                            </div>
+                        </div>
+
+                        {{-- 下段右: プレビュー (追従) --}}
+                        <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden lg:sticky lg:top-24 h-fit">
+                            <h2 class="card-title font-black bg-secondary/5 text-secondary px-6 py-4 border-b border-secondary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
+                                <x-mary-icon name="o-magnifying-glass" class="w-5 h-5"/>
+                                {{__('ledger.define.preview')}}
+                            </h2>
+                            <div class="card-body p-4 md:p-6">
+                                <livewire:ledger-define.preview/>
+                            </div>
                         </div>
                     </div>
-                </div>
+                @endif
 
-                {{-- 下段左: 項目設定 --}}
-                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden h-fit">
-                    <h2 class="card-title font-black bg-accent/5 text-accent px-6 py-4 border-b border-accent/50 text-base flex items-center gap-3 uppercase tracking-tighter">
-                        <x-mary-icon name="o-queue-list" class="w-5 h-5"/>
-                        {{__('ledger.column.group_title')}}
-                    </h2>
-                    <div class="card-body p-4 md:p-6">
-                        <livewire:ledger-define.modify-column/>
-                    </div>
-                </div>
-
-                {{-- 下段右: プレビュー (追従) --}}
-                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden lg:sticky lg:top-24 h-fit">
-                    <h2 class="card-title font-black bg-secondary/5 text-secondary px-6 py-4 border-b border-secondary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
-                        <x-mary-icon name="o-magnifying-glass" class="w-5 h-5"/>
-                        {{__('ledger.define.preview')}}
-                    </h2>
-                    <div class="card-body p-4 md:p-6">
-                        <livewire:ledger-define.preview/>
-                    </div>
-                </div>
             </div>
 
             {{-- 画面下部アクションツールバー --}}

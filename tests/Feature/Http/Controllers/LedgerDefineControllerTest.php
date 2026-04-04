@@ -135,6 +135,19 @@ class LedgerDefineControllerTest extends TestCase
             ->assertOk();
     }
 
+    public function test_edit_page_shows_description_editor_even_when_column_define_is_empty()
+    {
+        $emptyLedgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->writableFolder->id,
+            'column_define' => [],
+        ]);
+
+        $this->actingAs($this->writerUser)
+            ->get($this->tenantRoute('ledgerDefine.edit', ['ledgerDefineId' => $emptyLedgerDefine->id]))
+            ->assertOk()
+            ->assertSee(__('ledger.define.create_description'));
+    }
+
     public function test_writer_is_forbidden_to_access_edit_page_for_ledger_define_in_non_writable_folder()
     {
         $this->actingAs($this->writerUser)

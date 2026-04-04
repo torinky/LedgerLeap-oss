@@ -3,8 +3,10 @@
 namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
+use App\Models\User;
 use Filament\Actions;
 use Filament\Actions\Action;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\ListRecords;
 
 class ListUsers extends ListRecords
@@ -22,7 +24,7 @@ class ListUsers extends ListRecords
     {
         parent::mount();
 
-        $expiredCount = \App\Models\User::where('ignore_ad_org_sync_until', '<=', now())->count();
+        $expiredCount = User::where('ignore_ad_org_sync_until', '<=', now())->count();
 
         if ($expiredCount > 0) {
             $expiredUsersUrl = UserResource::getUrl('index', [
@@ -33,7 +35,7 @@ class ListUsers extends ListRecords
                 ],
             ]);
 
-            \Filament\Notifications\Notification::make()
+            Notification::make()
                 ->title(__('ledger.manual_sync_expired_warning_title'))
                 ->body(__('ledger.manual_sync_expired_warning_body', ['count' => $expiredCount]))
                 ->persistent()
