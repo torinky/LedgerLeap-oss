@@ -8,12 +8,13 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Services\Util\HtmlProcessorService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Cache;
 
 class AutoLinkService
 {
-    /** @var array<int, \Illuminate\Support\Collection> リクエスト内フォルダ子孫キャッシュ */
+    /** @var array<int, Collection> リクエスト内フォルダ子孫キャッシュ */
     private array $folderDescendantsCache = [];
 
     public function __construct(
@@ -29,7 +30,7 @@ class AutoLinkService
      * @param  mixed  $context  オプション。適用範囲を絞り込むためのコンテキスト情報（例: Folder モデルのインスタンス、LedgerDefine モデルのインスタンスなど）
      * @return string 変換後のHTML文字列
      */
-    public function convert(string $text, ?ColumnDefine $column = null, $context = null): string
+    public function convert(string $text, ?ColumnDefine $column = null, $context = null, ?string $highlight = null): string
     {
         if (empty($text)) {
             return '';
@@ -37,7 +38,7 @@ class AutoLinkService
 
         return $this->htmlProcessorService->processTextNodes(
             $text,
-            function (\DOMText $textNode, \DOMDocument $dom) use ($context) {
+            function (\DOMText $textNode, \DOMDocument $dom) use ($context, $highlight) {
                 $originalText = $textNode->nodeValue;
 
                 // カスタム定義（仮想リンクを含む）によるリンク変換
@@ -46,7 +47,7 @@ class AutoLinkService
                     return;
                 }
 
-                $this->applyCustomLinks($textNode, $autoLinks, $dom);
+                $this->applyCustomLinks($textNode, $autoLinks, $dom, $highlight);
             }
         );
     }
@@ -63,7 +64,7 @@ class AutoLinkService
         return $this->autoNumberPatternService->generatePattern($options, $isUnique);
     }
 
-    private function getVirtualAutoNumberLinks(): \Illuminate\Support\Collection
+    private function getVirtualAutoNumberLinks(): Collection
     {
         // テナントIDをキャッシュキーに含めてテナント間の混在を防ぐ
         $tenantId = tenant()?->id ?? 'global';
@@ -95,7 +96,7 @@ class AutoLinkService
         });
     }
 
-    private function applyCustomLinks(\DOMText $textNode, $autoLinks, \DOMDocument $dom): void
+    private function applyCustomLinks(\DOMText $textNode, $autoLinks, \DOMDocument $dom, ?string $highlight = null): void
     {
         $currentNode = $textNode;
 
@@ -123,7 +124,7 @@ class AutoLinkService
                 }
 
                 if ($matchIndex < count($matches) && $part === $matches[$matchIndex][0]) {
-                    $linkHtml = $this->createCustomLink($autoLink, $matches[$matchIndex]);
+                    $linkHtml = $this->createCustomLink($autoLink, $matches[$matchIndex], $highlight);
                     $linkFragment = $dom->createDocumentFragment();
                     @$linkFragment->appendXML($linkHtml);
                     $fragment->appendChild($linkFragment);
@@ -140,11 +141,15 @@ class AutoLinkService
         }
     }
 
-    private function createCustomLink(AutoLink $autoLink, array $matches): string
+    private function createCustomLink(AutoLink $autoLink, array $matches, ?string $highlight = null): string
     {
         $url = $autoLink->url_template;
         for ($i = 1, $iMax = count($matches); $i < $iMax; $i++) {
             $url = str_replace('$'.$i, urlencode($matches[$i]), $url);
+        }
+
+        if (! empty($highlight)) {
+            $url = $this->appendHighlightToLookupUrl($url, $highlight);
         }
 
         // リンク先テナントが指定されている場合のみ、完全なURLに書き換える
@@ -174,6 +179,55 @@ class AutoLinkService
         $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
 
         return '<div class="tooltip mx-2" data-tip="'.e($tooltip).'"><a href="'.e($url).'"'.$target.' class="font-bold text-primary-500 hover:underline">'.$iconHtml.' '.e($matches[0]).'</a></div>';
+    }
+
+    private function appendHighlightToLookupUrl(string $url, string $highlight): string
+    {
+        $parts = parse_url($url);
+
+        if ($parts === false) {
+            return $url;
+        }
+
+        $path = $parts['path'] ?? '';
+        if ($path !== '/l' && ! str_starts_with($path, '/l/')) {
+            return $url;
+        }
+
+        $baseHost = parse_url(config('ledgerleap.auto_links.base_url', config('app.url')), PHP_URL_HOST);
+        if (isset($parts['host']) && $baseHost && $parts['host'] !== $baseHost) {
+            return $url;
+        }
+
+        $query = [];
+        if (! empty($parts['query'])) {
+            parse_str($parts['query'], $query);
+        }
+        $query['highlight'] = $highlight;
+
+        $rebuilt = '';
+        if (isset($parts['scheme'])) {
+            $rebuilt .= $parts['scheme'].'://';
+        }
+        if (isset($parts['host'])) {
+            $rebuilt .= $parts['host'];
+        }
+        if (isset($parts['port'])) {
+            $rebuilt .= ':'.$parts['port'];
+        }
+
+        $rebuilt .= $path;
+
+        $queryString = http_build_query($query);
+        if ($queryString !== '') {
+            $rebuilt .= '?'.$queryString;
+        }
+
+        if (! empty($parts['fragment'])) {
+            $rebuilt .= '#'.$parts['fragment'];
+        }
+
+        return $rebuilt;
     }
 
     private function replaceTextNodeWithHtml(\DOMText $textNode, string $html, \DOMDocument $dom): void

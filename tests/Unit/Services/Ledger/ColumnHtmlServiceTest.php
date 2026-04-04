@@ -5,6 +5,7 @@ use App\Models\Ledger;
 use App\Services\AutoLinkService;
 use App\Services\Ledger\ColumnHtmlService;
 use App\Services\Util\HtmlProcessorService;
+use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 use Tests\TestCase;
 
@@ -98,7 +99,7 @@ it('highlight keywords in html output', function () {
     // Expect processTextNodes to be called and simulate its effect
     $mockHtmlProcessor->shouldReceive('processTextNodes')
         ->once()
-        ->with($inputValue, Mockery::type(\Closure::class))
+        ->with($inputValue, Mockery::type(Closure::class))
         ->andReturn($expectedHtml); // For simplicity, we return the final expected HTML.
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
@@ -138,7 +139,7 @@ it('renders textarea with markdown and applies auto links', function () {
 
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')
-        ->with($htmlFromMarkdown, $columnDefine, null)
+        ->with($htmlFromMarkdown, $columnDefine, null, null)
         ->andReturn($linkedHtml);
 
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
@@ -181,7 +182,8 @@ it('renders auto_number with link', function () {
         ->with(
             htmlspecialchars($inputValue, ENT_QUOTES, 'UTF-8'),
             $columnDefine,
-            null // ← record を null に変更
+            null, // ← record を null に変更
+            null
         )
         ->andReturn($expectedLink);
 
@@ -229,7 +231,7 @@ it('renders textarea with expandable content component', function () {
 
     $mockAutoLinkService = mock(AutoLinkService::class);
     $mockAutoLinkService->shouldReceive('convert')
-        ->with($htmlFromMarkdown, $columnDefine, null)
+        ->with($htmlFromMarkdown, $columnDefine, null, null)
         ->andReturn($linkedHtml);
 
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
@@ -305,7 +307,7 @@ it('show accepts array as column define data', function () {
     $result = $columnHtml->show($columnDefineArray, 'hello', true);
 
     // エラーなく処理されれば OK
-    expect($result)->toBeInstanceOf(\Illuminate\Support\HtmlString::class);
+    expect($result)->toBeInstanceOf(HtmlString::class);
 });
 
 // ================================================================
@@ -317,7 +319,7 @@ it('getFileIconClass returns correct class for pdf', function () {
     $mockHtmlProcessor = mock(HtmlProcessorService::class);
 
     $service = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
-    $ref = new \ReflectionClass($service);
+    $ref = new ReflectionClass($service);
     $method = $ref->getMethod('getFileIconClass');
     $method->setAccessible(true);
 
@@ -352,7 +354,7 @@ it('getColumnDefineProperty returns value from array column define', function ()
     $service = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
     $service->mount($columnDefineArray, 'value');
 
-    $ref = new \ReflectionClass($service);
+    $ref = new ReflectionClass($service);
     $method = $ref->getMethod('getColumnDefineProperty');
     $method->setAccessible(true);
 

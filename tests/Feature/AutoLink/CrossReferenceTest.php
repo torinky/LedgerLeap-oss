@@ -1,11 +1,13 @@
 <?php
 
+use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Services\AutoLinkService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cache;
 
 uses(RefreshDatabase::class);
 
@@ -15,7 +17,7 @@ beforeEach(function () {
     tenancy()->initialize($this->tenant);
 
     // キャッシュをクリア
-    \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+    Cache::tags(['auto_links'])->flush();
 
     $this->folder = Folder::factory()->create();
 
@@ -57,7 +59,7 @@ it('creates links for auto_number values in text columns of other ledgers', func
     ]);
 
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]); // 作業内容カラム
+    $columnDefine = new ColumnDefine($this->reportDefine->column_define[1]); // 作業内容カラム
 
     $html = $service->convert(
         htmlspecialchars($report->content[1], ENT_QUOTES, 'UTF-8'),
@@ -91,7 +93,7 @@ it('creates links for multiple auto_number references in textarea', function () 
     ]);
 
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($meetingDefine->column_define[0]);
+    $columnDefine = new ColumnDefine($meetingDefine->column_define[0]);
 
     $html = $service->convert(
         htmlspecialchars($meeting->content[0], ENT_QUOTES, 'UTF-8'),
@@ -104,10 +106,30 @@ it('creates links for multiple auto_number references in textarea', function () 
     expect($html)->toContain('http://localhost/l/SPEC-003');
 });
 
+it('preserves highlight query on auto_number lookup links', function () {
+    $service = app(AutoLinkService::class);
+    $columnDefine = new ColumnDefine($this->reportDefine->column_define[1]);
+
+    $report = Ledger::factory()->create([
+        'ledger_define_id' => $this->reportDefine->id,
+        'content' => ['2025-10-13', 'SPEC-001'],
+    ]);
+
+    $html = $service->convert(
+        htmlspecialchars($report->content[1], ENT_QUOTES, 'UTF-8'),
+        $columnDefine,
+        $report,
+        'SPEC'
+    );
+
+    expect($html)->toContain('http://localhost/l/SPEC-001?highlight=SPEC');
+    expect($html)->toContain('SPEC-001');
+});
+
 test('auto_number column links work through virtual links', function () {
     // 既存の auto_number カラム自体のリンクが仮想リンクを通じて機能することを確認
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($this->specDefine->column_define[0]);
+    $columnDefine = new ColumnDefine($this->specDefine->column_define[0]);
 
     $html = $service->convert(
         htmlspecialchars($this->spec->content[0], ENT_QUOTES, 'UTF-8'),
@@ -147,7 +169,7 @@ it('handles auto_number with revision suffix', function () {
     ]);
 
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($reportDefine2->column_define[0]);
+    $columnDefine = new ColumnDefine($reportDefine2->column_define[0]);
 
     $html = $service->convert(
         htmlspecialchars($report->content[0], ENT_QUOTES, 'UTF-8'),
@@ -162,7 +184,7 @@ it('handles auto_number with revision suffix', function () {
 it('creates cross-tenant lookup link for standalone auto_number value', function () {
     // 単体値のリンク化と、横断検索URLの形式を同時に検証
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+    $columnDefine = new ColumnDefine($this->reportDefine->column_define[1]);
 
     $report = Ledger::factory()->create([
         'ledger_define_id' => $this->reportDefine->id,
@@ -187,7 +209,7 @@ it('creates cross-tenant lookup link for standalone auto_number value', function
 
 it('creates link for auto_number value at the beginning of text', function () {
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+    $columnDefine = new ColumnDefine($this->reportDefine->column_define[1]);
 
     $report = Ledger::factory()->create([
         'ledger_define_id' => $this->reportDefine->id,
@@ -206,7 +228,7 @@ it('creates link for auto_number value at the beginning of text', function () {
 
 it('creates link for auto_number value at the end of text', function () {
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+    $columnDefine = new ColumnDefine($this->reportDefine->column_define[1]);
 
     $report = Ledger::factory()->create([
         'ledger_define_id' => $this->reportDefine->id,
@@ -225,7 +247,7 @@ it('creates link for auto_number value at the end of text', function () {
 
 it('creates links for multiple auto_number values without surrounding text', function () {
     $service = app(AutoLinkService::class);
-    $columnDefine = new \App\Models\ColumnDefine($this->reportDefine->column_define[1]);
+    $columnDefine = new ColumnDefine($this->reportDefine->column_define[1]);
 
     // 追加の仕様書レコード作成
     $spec2 = Ledger::factory()->create([

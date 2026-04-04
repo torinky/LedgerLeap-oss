@@ -2,6 +2,8 @@
 
 namespace App\Services\Ledger;
 
+use App\Enums\AttachedFileStatus;
+use App\Helpers\SearchHelper;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Services\AutoLinkService;
@@ -98,14 +100,14 @@ class ColumnHtmlService
 
         // Mock Attachment Column Support
         $colId = $this->getColumnDefineProperty('id');
-        if (\App\Services\Ledger\MockAttachmentService::isMockColumn($colId) && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
-            $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+        if (MockAttachmentService::isMockColumn($colId) && MockAttachmentService::isEnabled()) {
+            $mockFiles = MockAttachmentService::getMockFiles();
             $mode = $this->attrs['mode'] ?? 'full';
 
             // ヒット判定を追加
-            $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+            $keywords = SearchHelper::extractKeywords($highlight);
             foreach ($mockFiles as &$mf) {
-                $mf['is_hit'] = \App\Helpers\SearchHelper::isFileDataHit($mf, $keywords);
+                $mf['is_hit'] = SearchHelper::isFileDataHit($mf, $keywords);
             }
 
             $html = view('components.ledger.attachment-list', [
@@ -134,7 +136,7 @@ class ColumnHtmlService
             $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
 
             // 2. 自動リンクを適用
-            $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
+            $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
 
             // 3. 展開可能なコンテンツ用のマーカーを追加
             $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
@@ -142,16 +144,16 @@ class ColumnHtmlService
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
             $html = $this->initialValue.' '.$unit;
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record, $highlight);
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record, $highlight);
 
         }
 
         // ハイライト処理
         if ($highlight) {
-            $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+            $keywords = SearchHelper::extractKeywords($highlight);
             if (! empty($keywords)) {
                 $html = $this->htmlProcessorService->processTextNodes(
                     $html,
@@ -160,7 +162,7 @@ class ColumnHtmlService
                         // 既にエスケープされている可能性を考慮せず、textNodeの内容をそのままSearchHelper::highlightに渡す。
                         // SearchHelper::highlightの内部で e() を呼ぶようにしているので、
                         // ここでは TextNode の生の値を渡し、生成されたHTMLをフラグメントとして追加する。
-                        $highlightedHtml = \App\Helpers\SearchHelper::highlight($textNode->nodeValue, $keywords, self::HIGHLIGHT_CLASS_NAME);
+                        $highlightedHtml = SearchHelper::highlight($textNode->nodeValue, $keywords, self::HIGHLIGHT_CLASS_NAME);
 
                         // HTMLを含む文字列をDOMノードに変換
                         $tempDom = new \DOMDocument;
@@ -341,6 +343,7 @@ class ColumnHtmlService
 
             if (! $attachment) {
                 $missingAttachmentCount++;
+
                 continue;
             }
 
@@ -413,7 +416,7 @@ class ColumnHtmlService
                 'column_id' => $attachment->column_id,
                 'filename' => $originalFilename,
                 'mime' => $attachment->original_mime_type ?? $attachment->mime,
-                'status' => $attachment->status instanceof \App\Enums\AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得
+                'status' => $attachment->status instanceof AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得
                 'size' => $attachment->size,
                 'thumbnailUrl' => $thumbnailUrl,
                 'primary_download' => $primaryDownload,
@@ -426,14 +429,14 @@ class ColumnHtmlService
             // 検索ヒット判定を追加
             $phaseStartedAt = microtime(true);
             if ($highlight) {
-                $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+                $keywords = SearchHelper::extractKeywords($highlight);
                 // ファイル名、VLMテキスト、OCR/Tikaテキストで検索ヒット判定
                 $ocrText = $attachment->getOcrTikaFormattedText('ocr');
                 $tikaText = $attachment->getOcrTikaFormattedText('tika');
-                $fileData['is_hit'] = \App\Helpers\SearchHelper::hasHit($originalFilename, $keywords)
-                    || \App\Helpers\SearchHelper::hasHit($attachment->vlm_markdown, $keywords)
-                    || \App\Helpers\SearchHelper::hasHit($ocrText, $keywords)
-                    || \App\Helpers\SearchHelper::hasHit($tikaText, $keywords);
+                $fileData['is_hit'] = SearchHelper::hasHit($originalFilename, $keywords)
+                    || SearchHelper::hasHit($attachment->vlm_markdown, $keywords)
+                    || SearchHelper::hasHit($ocrText, $keywords)
+                    || SearchHelper::hasHit($tikaText, $keywords);
             } else {
                 $fileData['is_hit'] = false;
             }

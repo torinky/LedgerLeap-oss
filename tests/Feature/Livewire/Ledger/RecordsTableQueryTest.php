@@ -3,10 +3,18 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変更
+use App\Livewire\Ledger\RecordsTable;
+use App\Models\AutoLink;
+use App\Models\AutoLinkScope;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Services\RagSearchService;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -23,18 +31,18 @@ class RecordsTableQueryTest extends TestCase
 
     private Folder $folder;
 
-    protected \App\Models\Tenant $tenant;
+    protected Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid('', true)]);
+        $this->tenant = Tenant::create(['id' => 'test-'.uniqid('', true)]);
 
         // Use a unique email for each test to avoid constraint violations
         $this->user = User::factory()->create([
-            'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
+            'email' => 'test.'.Str::random(10).'@example.com',
         ]);
 
         // The component expects a root folder to exist - use factory without fixed ID
@@ -121,7 +129,7 @@ class RecordsTableQueryTest extends TestCase
     {
         Livewire::actingAs($this->user)
             ->test(
-                \App\Livewire\Ledger\RecordsTable::class,
+                RecordsTable::class,
                 [
                     'search' => 'non-existent-term',
                     'selectedFolderIds' => [$this->folder->id],
@@ -182,7 +190,7 @@ class RecordsTableQueryTest extends TestCase
     public function it_displays_auto_links_in_list_view()
     {
         // AutoLinkの準備
-        $autoLink = \App\Models\AutoLink::factory()->create([
+        $autoLink = AutoLink::factory()->create([
             'tenant_id' => $this->tenant->id,
             'label' => 'Test Link',
             'pattern' => '/(SPEC\d{3})/',
@@ -191,14 +199,14 @@ class RecordsTableQueryTest extends TestCase
         ]);
 
         // AutoLinkScopeを作成してフォルダにスコープを限定
-        \App\Models\AutoLinkScope::create([
+        AutoLinkScope::create([
             'auto_link_id' => $autoLink->id,
             'scopeable_type' => (new Folder)->getMorphClass(),
             'scopeable_id' => $this->folder->id,
         ]);
 
         // キャッシュクリア
-        \Illuminate\Support\Facades\Cache::tags('auto_links')->flush();
+        Cache::tags('auto_links')->flush();
 
         // 台帳データの準備
         $autoLinkText = 'これはSPEC007を含むテキストです。';
@@ -209,7 +217,7 @@ class RecordsTableQueryTest extends TestCase
 
         // Livewireコンポーネントのテスト
         $component = Livewire::actingAs($this->user)
-            ->test(\App\Livewire\Ledger\RecordsTable::class, [
+            ->test(RecordsTable::class, [
                 'currentFolderId' => $this->folder->id,
                 'selectedFolderIds' => [$this->folder->id],
                 'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
@@ -217,14 +225,14 @@ class RecordsTableQueryTest extends TestCase
             ]);
 
         $component->assertOk()
-            ->assertSeeHtml('<a href="/l/SPEC007"');
+            ->assertSeeHtml('<a href="/l/SPEC007?highlight=SPEC"');
     }
 
     #[Test]
     public function it_calls_rag_search_service_when_semantic_search_is_selected()
     {
         // RagSearchServiceをモック
-        $mock = $this->mock(\App\Services\RagSearchService::class);
+        $mock = $this->mock(RagSearchService::class);
         $mock->shouldReceive('searchLedgers')
             ->once()
             ->withArgs(function ($query, $limit, $filters) {
@@ -238,7 +246,7 @@ class RecordsTableQueryTest extends TestCase
             ]);
 
         // RecordsTableを直接テスト
-        Livewire::test(\App\Livewire\Ledger\RecordsTable::class, [
+        Livewire::test(RecordsTable::class, [
             'search' => 'semantic query',
             'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
             'selectedFolderIds' => [$this->folder->id],
@@ -258,17 +266,17 @@ class RecordsTableQueryTest extends TestCase
             Ledger::factory()->count(10)->create(['ledger_define_id' => $ld->id]);
         }
 
-        \Illuminate\Support\Facades\DB::enableQueryLog();
+        DB::enableQueryLog();
 
         Livewire::actingAs($this->user)
-            ->test(\App\Livewire\Ledger\RecordsTable::class, [
+            ->test(RecordsTable::class, [
                 'currentFolderId' => $this->folder->id,
                 'selectedFolderIds' => [$this->folder->id],
                 'selectedLedgerDefineIds' => $ledgerDefines->pluck('id')->toArray(),
             ])
             ->assertOk();
 
-        $queryLog = \Illuminate\Support\Facades\DB::getQueryLog();
+        $queryLog = DB::getQueryLog();
         $queryCount = count($queryLog);
 
         // クエリをグループ化して重複を検出
@@ -295,6 +303,6 @@ class RecordsTableQueryTest extends TestCase
         // Phase 4では20件以下を目標とする（さらなるキャッシュ最適化）
         $this->assertLessThanOrEqual(35, $queryCount, "Too many queries detected: {$queryCount}");
 
-        \Illuminate\Support\Facades\DB::disableQueryLog();
+        DB::disableQueryLog();
     }
 }

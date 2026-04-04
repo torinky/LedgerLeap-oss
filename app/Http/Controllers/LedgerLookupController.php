@@ -46,7 +46,8 @@ class LedgerLookupController extends Controller
         if ($results->count() === 1) {
             $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
                 'ledger.show',
-                ['tenant' => tenant()->id, 'ledgerId' => $results->first()->id]
+                ['tenant' => tenant()->id, 'ledgerId' => $results->first()->id],
+                ['highlight' => $query]
             );
 
             return redirect($url);
@@ -74,7 +75,7 @@ class LedgerLookupController extends Controller
         foreach ($tenants as $tenant) {
             $tenant->run(function () use ($query, &$allResults, $tenant) {
                 // 全文検索を実行
-                $ledgers = \App\Models\Ledger::query()->search($query)->with('define')->get();
+                $ledgers = Ledger::query()->search($query)->with('define')->get();
 
                 foreach ($ledgers as $ledger) {
                     // defineリレーションがロードされているか確認
@@ -86,7 +87,8 @@ class LedgerLookupController extends Controller
                             // tenant_route()は誤ったホスト名を生成するため、直接URLを構築
                             $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
                                 'ledger.show',
-                                ['tenant' => $tenant->id, 'ledgerId' => $ledger->id]
+                                ['tenant' => $tenant->id, 'ledgerId' => $ledger->id],
+                                ['highlight' => $query]
                             );
 
                             $allResults->push([

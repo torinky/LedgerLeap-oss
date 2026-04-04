@@ -13,8 +13,12 @@ Issue #133 では、台帳一覧から詳細画面へ遷移する際に消えて
 
 - `resources/views/components/ledger/table-row.blade.php`
   - 詳細リンク生成時に、`highlightKeyword` がある場合だけ `highlight` クエリを付与するよう復元した
+- `app/Services/AutoLinkService.php` / `app/Http/Controllers/LedgerLookupController.php`
+  - 自動リンク経由の `/l/{query}` 遷移でも `highlight` を保持し、検索文脈が詳細画面まで途切れないようにした
 - `tests/Feature/Livewire/Ledger/RecordsTableQueryTest.php`
   - 一覧の強調表示だけでなく、詳細リンク URL に `highlight` が入ることを回帰テストで確認した
+- `tests/Feature/AutoLink/CrossReferenceTest.php`
+  - 自動リンクが検索語付きで詳細へ遷移することを回帰テストで確認した
 - `app/Livewire/Ledger/Show.php`
   - 既存の `#[Url(as: 'highlight')]` 受け口はそのまま活かした
 
