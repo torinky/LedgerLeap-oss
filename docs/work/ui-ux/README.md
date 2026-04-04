@@ -23,6 +23,8 @@
   - 添付ファイル表示の「もっと見る」UIによる遅延問題の特定
   - 遅延初期化とCSS制御による最適化方針の提案
 
+- **[Issue #133 / 台帳一覧→詳細の highlight query 継承 振り返り](./ledger-list-redesign/2026-04-04_issue-133_highlight-query-handoff-retrospective.md)** ✅ 完了: 一覧→詳細リンクで `highlight` を復元し、canonical URL 方針との整合を確認。`RecordsTableQueryTest` に href 検証を追加し、過去実装との差分を記録。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
