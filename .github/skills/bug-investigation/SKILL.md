@@ -26,9 +26,12 @@ Unexpected behavior or error?
 ## Investigation Contract
 
 - Do investigation before code changes.
+- Fix the target layer early (app / Filament / vendor / translation / CSS / test) and confirm who owns it.
 - Compare multiple hypotheses; do not lock on the first plausible cause.
+- Keep a short anti-hypothesis note: what would prove the leading guess wrong?
 - Keep negative results and disproven hypotheses.
 - Distinguish internal evidence from external guidance.
+- Decide the validation gate before implementation when the bug class is already clear.
 - End with response options, verification, and rollback.
 
 ## Minimum Deliverable
