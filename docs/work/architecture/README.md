@@ -13,6 +13,9 @@
 - ### [Laravel 13 アップグレード](./2026-04-04_laravel-13-upgrade-plan.md)
   Laravel 12 → 13 の移行計画、ブロッカー整理、Issue 草案、回帰検証に関する作業メモ。
 
+- ### [Laravel 13 振り返り](./2026-04-04_laravel-13-retrospective.md)
+  Laravel 13 移行完了後の学び、再利用できる運用知見、次回の注意点をまとめた振り返り。
+
 - ### [データベース (database)](./database/README.md)
   データベースの構成、パフォーマンス最適化、スキーマ設計に関するドキュメント。
 
