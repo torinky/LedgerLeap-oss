@@ -29,7 +29,8 @@ A new learning was proven?
 - If a prompt and skill cover the same domain, make them cross-reference each other.
 - If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
 - Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
-- If the user explicitly asks for a retrospective, or an issue / sprint has just completed, extract the learnings even if they are not yet reusable; keep feature-local notes in `docs/work/*` and only promote durable guidance when the pattern is proven.
+- If any task finishes — bug fix, feature review, investigation, sprint, doc update, or user-requested retrospective — extract the learnings even if they are not yet reusable; keep feature-local notes in `docs/work/*` and only promote durable guidance when the pattern is proven.
+- Review learnings in two layers: (1) the process / approach (target selection, evidence order, hypothesis comparison, validation gate, handoff timing) and (2) the concrete technique / implementation detail (commands, config, UI changes, templates, wording, code pattern).
 - When a task proves that an MCP / API tool description is carrying too much workflow guidance, route the workflow to `resources/ai/capabilities/*.yaml` or discovery docs, and keep the tool description contract-centered.
 - Do not approve guidance removal until the receiver asset preserves equivalent client-facing information for generated skills, prompts, or bootstrap flows.
 - Every durable learning must point to traceable evidence: link the repo proof in `docs/work/*` or the official source in `references/*.md` before treating it as reusable guidance.

@@ -43,7 +43,7 @@ When a bug fix, investigation, or sprint proves a reusable pattern:
 3. Remove stale or conflicting guidance.
 4. Run `/skill-maintenance` before considering the work complete.
 
-When an issue or sprint finishes, or the user explicitly asks for a retrospective, use the same loop to collect learnings first and then decide whether they stay in `docs/work/*` or graduate into `.github` assets.
+When any work item finishes — issue, sprint, feature, investigation, documentation, prompt, or skill work — or the user explicitly asks for a retrospective, use the same loop to collect learnings first and then decide whether they stay in `docs/work/*` or graduate into `.github` assets.
 
 ## Domain Entry Points
 - Bug investigation: `/bug-investigation`
