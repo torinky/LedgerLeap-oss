@@ -4,6 +4,7 @@ namespace App\Filament\Resources\UserResource\Pages;
 
 use App\Filament\Resources\UserResource;
 use Filament\Actions;
+use Filament\Actions\Action;
 use Filament\Resources\Pages\ListRecords;
 
 class ListUsers extends ListRecords
@@ -24,16 +25,24 @@ class ListUsers extends ListRecords
         $expiredCount = \App\Models\User::where('ignore_ad_org_sync_until', '<=', now())->count();
 
         if ($expiredCount > 0) {
+            $expiredUsersUrl = UserResource::getUrl('index', [
+                'tableFilters' => [
+                    'manual_sync_status' => [
+                        'status' => 'expired',
+                    ],
+                ],
+            ]);
+
             \Filament\Notifications\Notification::make()
                 ->title(__('ledger.manual_sync_expired_warning_title'))
                 ->body(__('ledger.manual_sync_expired_warning_body', ['count' => $expiredCount]))
                 ->persistent()
                 ->warning()
                 ->actions([
-                    \Filament\Notifications\Actions\Action::make('filter')
+                    Action::make('filter_expired_users')
                         ->button()
                         ->label(__('ledger.filter_expired_users'))
-                        ->url(UserResource::getUrl('index', ['tableFilters[manual_sync_status][status]' => 'expired'])),
+                        ->url($expiredUsersUrl),
                 ])
                 ->send();
         }

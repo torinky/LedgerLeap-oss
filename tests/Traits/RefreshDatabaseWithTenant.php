@@ -151,7 +151,9 @@ trait RefreshDatabaseWithTenant
 
     protected function currentTestingDatabaseName(): string
     {
-        return $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test';
+        return $this->normalizeTestingDatabaseName(
+            $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test'
+        );
     }
 
     protected function currentWorkerDatabaseName(): ?string
@@ -165,12 +167,24 @@ trait RefreshDatabaseWithTenant
         return $this->currentTestingDatabaseName().'_test_'.$token;
     }
 
+    protected function isCiEnvironment(): bool
+    {
+        $value = $_SERVER['CI'] ?? $_ENV['CI'] ?? getenv('CI');
+
+        return filter_var($value, FILTER_VALIDATE_BOOL);
+    }
+
     protected function ensureCurrentTestingDatabaseConnection(): void
     {
         if ($workerDatabase = $this->currentWorkerDatabaseName()) {
             DB::purge('mysql_testing');
             config()->set('database.connections.mysql_testing.database', $workerDatabase);
         }
+    }
+
+    protected function normalizeTestingDatabaseName(string $databaseName): string
+    {
+        return preg_replace('/(?:_test_\d+)+$/', '', $databaseName) ?: $databaseName;
     }
 
     protected static function markMigratedForCurrentProcess(): void
@@ -255,7 +269,7 @@ trait RefreshDatabaseWithTenant
             return;
         }
 
-        if (env('CI')) {
+        if ($this->isCiEnvironment()) {
             // CI の直列実行: ワークフローで migrate --force 実行済みのため何もしない
             return;
         }
@@ -279,7 +293,7 @@ trait RefreshDatabaseWithTenant
      */
     protected function migrateTenantDatabase(): void
     {
-        if (env('CI')) {
+        if ($this->isCiEnvironment()) {
             // CI: ワークフローで tenants:migrate 実行済みのため何もしない
             return;
         }
@@ -302,7 +316,7 @@ trait RefreshDatabaseWithTenant
     {
         $processKey = static::currentProcessKey();
 
-        if (env('CI')) {
+        if ($this->isCiEnvironment()) {
             $candidates = $processKey === 'global'
                 ? ['ci-test-tenant']
                 : ["ci-test-tenant_{$processKey}", 'ci-test-tenant'];

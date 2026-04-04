@@ -80,8 +80,26 @@ class UserResourceTest extends TestCase
     {
         User::factory()->create(['ignore_ad_org_sync_until' => now()->subDays(1)]);
 
+        $expectedUrl = \App\Filament\Resources\UserResource::getUrl('index', [
+            'tableFilters' => [
+                'manual_sync_status' => [
+                    'status' => 'expired',
+                ],
+            ],
+        ]);
+
         Livewire::test(ListUsers::class)
             ->assertSuccessful();
-        // 通知の詳細は確認しないが、エラーなく動作することを確認
+
+        $notification = collect(session('filament.notifications'))->last();
+
+        $this->assertNotNull($notification);
+        $this->assertSame(__('ledger.manual_sync_expired_warning_title'), $notification['title'] ?? null);
+        $this->assertSame(
+            __('ledger.manual_sync_expired_warning_body', ['count' => 1]),
+            $notification['body'] ?? null,
+        );
+        $this->assertSame(__('ledger.filter_expired_users'), $notification['actions'][0]['label'] ?? null);
+        $this->assertSame($expectedUrl, $notification['actions'][0]['url'] ?? null);
     }
 }

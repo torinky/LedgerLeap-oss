@@ -66,6 +66,7 @@ class WorkflowHistoryListTest extends TestCase
             'version' => 1,
             'status' => 'draft',
             'modifier_id' => $this->user->id,
+            'comments' => 'same comments',
             'created_at' => now()->subMinutes(10),
             'id' => 100,
         ]);
@@ -75,6 +76,7 @@ class WorkflowHistoryListTest extends TestCase
             'version' => 1,
             'status' => 'draft',
             'modifier_id' => $this->user->id,
+            'comments' => 'same comments',
             'created_at' => now()->subMinutes(9),
             'id' => 101, // これが残るべき最新の draft (v1)
         ]);

@@ -327,4 +327,136 @@ class TableRowAttachmentLoggingTest extends TestCase
 
         self::assertSame(0, $attachment->originalFilenameAccessCount);
     }
+
+    public function testTableRowFallsBackToScalarContentForAttachmentNames(): void
+    {
+        Log::spy();
+
+        $ledgerRecord = new class
+        {
+            public int $id = 3;
+
+            public object $define;
+
+            public mixed $updated_at;
+
+            public int|float $semantic_score = 0;
+
+            public int|float $composite_score = 0;
+
+            public object $status;
+
+            public array $content;
+
+            public array $content_attached;
+
+            public function __construct()
+            {
+                $this->define = (object) ['id' => 99, 'workflow_enabled' => false];
+                $this->updated_at = now();
+                $this->status = new class
+                {
+                    public function icon(): string
+                    {
+                        return 'fa-solid fa-circle';
+                    }
+
+                    public function colorClass(): string
+                    {
+                        return 'badge-neutral';
+                    }
+
+                    public function label(): string
+                    {
+                        return 'completed';
+                    }
+                };
+                $this->content = [
+                    10 => 'invoice-from-content.pdf',
+                ];
+                $this->content_attached = [];
+            }
+
+            public function isLocked(): bool
+            {
+                return false;
+            }
+        };
+
+        $attachment = new class
+        {
+            public int $id = 125;
+            public int $column_id = 10;
+            public string $original_mime_type = 'application/pdf';
+            public bool $optimized = true;
+            public int $size = 4096;
+            public mixed $created_at;
+            public string $hashedbasename = 'hash-3';
+            public string $filename = 'hash-3.pdf';
+
+            public function __construct()
+            {
+                $this->created_at = now();
+            }
+
+            public function getDisplayStatus(): object
+            {
+                return (object) ['value' => 'completed'];
+            }
+
+            public function __get(string $name): mixed
+            {
+                if ($name === 'original_filename') {
+                    return null;
+                }
+
+                trigger_error(sprintf('Undefined property: %s::$%s', static::class, $name), E_USER_NOTICE);
+
+                return null;
+            }
+
+            public function __set(string $name, mixed $value): void
+            {
+                $this->{$name} = $value;
+            }
+
+            public function __isset(string $name): bool
+            {
+                return $name === 'original_filename' || isset($this->{$name});
+            }
+        };
+
+        $filteredColumnDefines = [
+            (object) [
+                'id' => 10,
+                'type' => 'files',
+                'input_type' => 'files',
+                'name' => '添付',
+                'hint' => null,
+                'required' => false,
+                'group' => '',
+                'order' => 1,
+                'display_level' => 3,
+            ],
+        ];
+
+        $allAttachments = collect([
+            3 => collect([$attachment]),
+        ]);
+
+        $view = $this->blade(
+            '<x-ledger.table-row '
+                . ':ledgerRecord="$ledgerRecord" '
+                . ':highlightKeyword="null" '
+                . ':canUpdate="false" '
+                . ':canView="true" '
+                . ':allAttachments="$allAttachments" '
+                . ':filteredColumnDefines="$filteredColumnDefines" '
+                . 'currentTenantId="demo-tenant" />',
+            compact('ledgerRecord', 'allAttachments', 'filteredColumnDefines')
+        );
+
+        $view->assertSee('invoice-from-content.pdf');
+        $view->assertSee('direct-download-link');
+    }
 }

@@ -3,7 +3,17 @@
 namespace Tests;
 
 use App\Models\Tenant;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Bootstrap\BootProviders;
+use Illuminate\Foundation\Bootstrap\HandleExceptions;
+use Illuminate\Foundation\Bootstrap\LoadConfiguration;
+use Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables;
+use Illuminate\Foundation\Bootstrap\RegisterFacades;
+use Illuminate\Foundation\Bootstrap\RegisterProviders;
+use Illuminate\Foundation\Bootstrap\SetRequestForConsole;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\ParallelTesting;
 use Illuminate\Support\Facades\Queue;
 
 abstract class TestCase extends BaseTestCase
@@ -101,7 +111,7 @@ abstract class TestCase extends BaseTestCase
     /**
      * Creates the application.
      *
-     * @return \Illuminate\Foundation\Application
+     * @return Application
      */
     public function createApplication()
     {
@@ -109,16 +119,49 @@ abstract class TestCase extends BaseTestCase
 
         // Laravel 10+ の新しいブートストラップ方法
         $app->bootstrapWith([
-            \Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables::class,
-            \Illuminate\Foundation\Bootstrap\LoadConfiguration::class,
-            \Illuminate\Foundation\Bootstrap\HandleExceptions::class,
-            \Illuminate\Foundation\Bootstrap\RegisterFacades::class,
-            \Illuminate\Foundation\Bootstrap\SetRequestForConsole::class,
-            \Illuminate\Foundation\Bootstrap\RegisterProviders::class,
-            \Illuminate\Foundation\Bootstrap\BootProviders::class,
+            LoadEnvironmentVariables::class,
+            LoadConfiguration::class,
+            HandleExceptions::class,
+            RegisterFacades::class,
+            SetRequestForConsole::class,
+            RegisterProviders::class,
+            BootProviders::class,
         ]);
 
+        $this->ensureCurrentTestingDatabaseConnection();
+
         return $app;
+    }
+
+    protected function currentTestingDatabaseName(): string
+    {
+        return $this->normalizeTestingDatabaseName(
+            $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test'
+        );
+    }
+
+    protected function currentWorkerDatabaseName(): ?string
+    {
+        $token = ParallelTesting::token();
+
+        if (! $token) {
+            return null;
+        }
+
+        return $this->currentTestingDatabaseName().'_test_'.$token;
+    }
+
+    protected function ensureCurrentTestingDatabaseConnection(): void
+    {
+        if ($workerDatabase = $this->currentWorkerDatabaseName()) {
+            DB::purge('mysql_testing');
+            config()->set('database.connections.mysql_testing.database', $workerDatabase);
+        }
+    }
+
+    protected function normalizeTestingDatabaseName(string $databaseName): string
+    {
+        return preg_replace('/(?:_test_\d+)+$/', '', $databaseName) ?: $databaseName;
     }
 
     protected function setUp(): void

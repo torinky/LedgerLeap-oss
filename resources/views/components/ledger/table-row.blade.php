@@ -228,7 +228,10 @@
                             $filenameValue = $originalFilename;
                         } else {
                             $filenameAttachedStartedAt = microtime(true);
-                            $attachedName = $ledgerRecord->content[$columnId][$af->hashedbasename] ?? null;
+                            $columnContent = $ledgerRecord->content[$columnId] ?? null;
+                            $attachedName = is_array($columnContent)
+                                ? ($columnContent[$af->hashedbasename] ?? null)
+                                : $columnContent;
                             $filenameAttachedLookupDurationMs += (microtime(true) - $filenameAttachedStartedAt) * 1000;
                             if ($attachedName) {
                                 $filenameValue = $attachedName;
