@@ -160,7 +160,7 @@ class RecordsTableQueryTest extends TestCase
         // テストデータの準備
         $keyword = 'テストキーワード';
         $contentWithKeyword = [0 => 'これは'.$keyword.'を含むテキストです。'];
-        Ledger::factory()->create([
+        $ledger = Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $contentWithKeyword,
         ]);
@@ -174,7 +174,8 @@ class RecordsTableQueryTest extends TestCase
         ])
             ->test(IndexManager::class) // IndexManager を対象に
             ->assertOk()
-            ->assertSeeHtml('<mark class="text-error font-bold text-lg">'.$keyword.'</mark>');
+            ->assertSeeHtml('<mark class="text-error font-bold text-lg">'.$keyword.'</mark>')
+            ->assertSeeHtml('/ledger/'.$ledger->id.'?highlight='.urlencode($keyword));
     }
 
     #[Test]
