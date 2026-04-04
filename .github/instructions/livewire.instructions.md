@@ -44,6 +44,7 @@ CannotMutateReactivePropException? → FIX: pass Collection::make($prop) or clon
 ```
 
 - **Heavy child components inside tab panels**: if parent tab switching causes the child to rerender expensively (for example history or related lists), avoid `#[Reactive]` for props that only need occasional sync. Prefer `#[On(...)]` + explicit dispatch so the tab body stays mounted and only the required state is updated.
+- **`wire:model.change` on custom Blade / MaryUI inputs**: if a custom input does not reflect state reliably, prefer `wire:model.live.debounce.300ms` for search-like fields and `wire:model.live` for small toggles/state. Recheck after Livewire or MaryUI upgrades. Evidence: `docs/work/architecture/2026-04-04_laravel-13-retrospective.md`.
 
 ## Loading UI
 
