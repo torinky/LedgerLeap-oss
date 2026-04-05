@@ -9,6 +9,7 @@ use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
 use App\Mcp\Tools\GetClientBootstrapManifestTool;
+use App\Mcp\Tools\GetFoldersTool;
 use App\Mcp\Tools\GetFolderStatsTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
@@ -16,6 +17,7 @@ use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
 use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetRelatedLedgersTool;
+use App\Mcp\Tools\GetTagsTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
@@ -62,10 +64,12 @@ class LedgerLeapServer extends Server
      */
     protected array $tools = [
         GetClientBootstrapManifestTool::class,
+        GetFoldersTool::class,
         GetLedgerDefinesTool::class,
         GetLedgerDetailTool::class,
         GetRelatedLedgersTool::class,
         GetSearchTermsTool::class,
+        GetTagsTool::class,
         SearchLedgersTool::class,
         CreateLedgerTool::class,
         UpdateLedgerTool::class,

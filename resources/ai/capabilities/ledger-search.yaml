@@ -9,11 +9,18 @@ primary_user_goals:
   - 担当者や更新状況を知りたい
 when_to_use:
   - ユーザーが特定の台帳、会社名、案件名、日付範囲、タグで絞り込みたいとき
+  - ユーザーがタグ名の断片、フォルダ名の断片、台帳名の断片で絞り込みたいとき
+  - ユーザーが folder_id / ledgerDefineId を知らないため、先に候補一覧から ID を探したいとき
+  - ユーザーがタグ断片を候補一覧で先に絞り込みたいとき
   - ユーザーが自然文や同義語で関連情報を探したいとき
   - ユーザーが業務用語や技術用語を含めて検索語を調整したいとき
   - ユーザーが同義語や技術用語の候補だけを先に確認したいとき
   - ユーザーが単一レコード詳細から関連レコード候補を調べたいとき
 recommended_flow:
+  - step: lookup-ids
+    description: folder_id / ledgerDefineId が不明なら、まず候補一覧から ID を探す。フォルダ・台帳定義・タグは正式名の断片で候補を絞り、使える ID を確認してから検索に進む
+  - step: fragment-search
+    description: 正式名を覚えていない場合は、タグ / フォルダ / 台帳の断片から候補を絞り、必要なら GetSearchTermsTool と SearchLedgersTool を組み合わせて検索語を組み立てる
   - step: term-search
     description: 曖昧な語や業務用語の候補を確認したい場合は GetSearchTermsTool で同義語 / 技術用語候補を取り出し、次に SearchLedgersTool で q を組み立てる
   - step: keyword-search
@@ -32,6 +39,7 @@ required_mcp_tools:
   - SearchLedgersTool
   - GetRelatedLedgersTool
 optional_mcp_tools:
+  - GetTagsTool
   - GetSearchTermsTool
   - GetLedgerDetailTool
   - GetActivityLogTool
@@ -47,10 +55,13 @@ key_parameters:
   - q
   - q（同義語展開あり）
   - tags
+  - tags（lookup-first 候補あり）
   - exclude_q
   - exclude_tags
   - folder_id
+  - folder_id（lookup-first 候補配列あり）
   - ledger_define_id
+  - ledger_define_id（lookup-first 候補配列あり）
   - creator_id
   - created_from
   - created_to
@@ -61,6 +72,8 @@ key_parameters:
   - order_by
 success_criteria:
   - 必要な台帳候補を絞り込める
+  - folder_id / ledgerDefineId が不明でも、候補一覧から ID を見つけて検索に進める
+  - 断片的なタグ名、フォルダ名、台帳名から候補を絞れる
   - 検索結果の meta から担当者・保存先・台帳種別を読み取り、次の確認対象を決められる
   - 単一レコードから関連候補を理由付きで確認できる
   - 必要に応じて meta から作成者・フォルダ・台帳定義を読める
@@ -75,8 +88,8 @@ ledgerleap_constraints:
   - MCP 応答の search_trace から original_q / normalized_q / selected_terms / excluded_terms を確認し、必要なら次の q を調整する
   - include_content=false や mode=count を使って段階的に情報取得する
   - 「重要」な対象は tags='重要' の明示検索と、スコア順での優先確認を使い分ける
-  - `tags` と `folder_id` は直接絞り込みに使えるが、`folder name fragment` や `ledger name fragment` は直接フィルタではないため、必要なら `q` や候補解決の導線で補う
-  - タグ名の部分一致を前提にしすぎず、まずは既存の tag / folder / 台帳定義候補を確認する
+  - `tags` と `folder_id` / `ledger_define_id` は直接絞り込みに使えるが、断片入力は lookup-first で候補配列に解決してから渡す
+  - タグ名の部分一致を前提にしすぎず、まずは `GetTagsTool` / `GetFoldersTool` / `GetLedgerDefinesTool` で候補を確認する
 examples:
   - user: 昨日私が作成した日報を見せて
     intent: 作成者と日付で絞った検索

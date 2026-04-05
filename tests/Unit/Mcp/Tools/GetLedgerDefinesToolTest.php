@@ -85,6 +85,50 @@ class GetLedgerDefinesToolTest extends TestCase
     }
 
     #[Test]
+    public function it_filters_ledger_defines_by_partial_title_and_folder_id(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+
+        $lookupFolder = Folder::factory()->create(['title' => 'Lookup Folder']);
+        $otherFolder = Folder::factory()->create(['title' => 'Other Folder']);
+
+        $matchingLedgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $lookupFolder->id,
+            'title' => 'Sales Lookup',
+        ]);
+        LedgerDefine::factory()->create([
+            'folder_id' => $lookupFolder->id,
+            'title' => 'Finance Archive',
+        ]);
+        LedgerDefine::factory()->create([
+            'folder_id' => $otherFolder->id,
+            'title' => 'Sales Lookup Outside',
+        ]);
+
+        $mockRepository = Mockery::mock(WritableFolderRepository::class);
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->with(Mockery::type(User::class))
+            ->andReturn([$lookupFolder->id, $otherFolder->id]);
+
+        $this->app->instance(WritableFolderRepository::class, $mockRepository);
+
+        $tool = new GetLedgerDefinesTool;
+        $request = new Request([
+            'q' => 'Sales',
+            'folder_id' => $lookupFolder->id,
+        ]);
+
+        $response = $tool->handle($request, $mockRepository);
+
+        $this->assertFalse($response->isError());
+
+        $responseData = json_decode($response->content(), true);
+        $this->assertCount(1, $responseData);
+        $this->assertSame($matchingLedgerDefine->id, $responseData[0]['id']);
+        $this->assertSame('Sales Lookup', $responseData[0]['name']);
+    }
+
+    #[Test]
     public function it_returns_empty_array_when_user_has_no_accessible_folders(): void
     {
         putenv("MCP_AUTH_TOKEN={$this->validToken}");

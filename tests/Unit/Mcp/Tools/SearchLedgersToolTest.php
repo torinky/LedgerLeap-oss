@@ -116,6 +116,46 @@ class SearchLedgersToolTest extends TestCase
         $this->assertArrayNotHasKey('__display_fields__', $responseData['ledgers'][0]);
     }
 
+    #[Test]
+    public function it_passes_array_filters_to_the_ledger_service_without_collapsing_them(): void
+    {
+        $params = [
+            'q' => 'array lookup query',
+            'folder_id' => [101, 202],
+            'ledger_define_id' => [303, 404],
+            'tags' => '重要,新規',
+        ];
+
+        $mockTrace = [
+            'original_q' => 'array lookup query',
+            'normalized_q' => 'array lookup query',
+            'keywords' => ['array', 'lookup', 'query'],
+            'tags' => [],
+            'selected_terms' => [
+                ['term' => 'array', 'kind' => 'original'],
+            ],
+            'excluded_terms' => [],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->withArgs(function ($user, $passedParams) use ($params) {
+                return $user->id === $this->user->id
+                    && $passedParams['q'] === $params['q']
+                    && $passedParams['folder_id'] === $params['folder_id']
+                    && $passedParams['ledger_define_id'] === $params['ledger_define_id']
+                    && $passedParams['tags'] === $params['tags'];
+            })
+            ->andReturn(['ledgers' => collect([]), 'meta' => [], 'total' => 0, 'search_trace' => $mockTrace]);
+
+        $response = $this->tool->handle(new Request($params));
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        $this->assertSame($mockTrace, $responseData['search_trace']);
+    }
+
     public function it_returns_summary_format_with_correct_display_fields_and_translation_keys()
     {
         // テストデータ

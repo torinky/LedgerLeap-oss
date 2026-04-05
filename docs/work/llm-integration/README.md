@@ -83,6 +83,8 @@
 - **[update API implementation log](./2026-03-13_Update_API_Implementation_Log.md)**: Issue #90 の実装ログ。`GET/PATCH /api/v1/ledgers/{ledger}` の判断、既存 workflow サービス再利用方針、tag update を見送った理由、公式ドキュメント化の手掛かりを記録する。
 - **[MCP update tools implementation log](./2026-03-13_MCP_Update_Tools_Implementation_Log.md)**: Issue #91 の実装ログ。`GetLedgerDetailTool` / `UpdateLedgerTool` の役割分担、`dry_run` の最小差分設計、テストの責務分離、別スプリントへ切り出した論点を記録する。
 - **[MCP Search / Attachment Feedback Follow-up Plan](./2026-04-05_MCP_Search_Attachment_Feedback_Followup_Plan.md)**: MCP テストで見つかった検索断片 / 同義語 / 複数添付 / 添付詳細出力の 4 論点を、実装スプリントと prompt 改善に分けて整理したフォローアップ計画。MCP では `search_trace` で `original_q` / `selected_terms` / `kind` を確認できる前提で、`GetSearchTermsTool` で候補語を先に取り出してから `SearchLedgersTool` へ渡す流れも含む。Sprint A の tracking issue は #136。A2-4 の実施結果と issue #140 の完了メモも同ページに反映済み。
+- **[Issue #136 Sprint A3: Lookup-First Tag / Folder / Ledger Partial Match Search Plan](./2026-04-05_Issue-136_Sprint_A3_Folder_Ledger_Fragment_Resolution_Plan.md)**: Sprint A の残課題であるタグ / フォルダ名 / 台帳名の部分一致検索を、`folder_id` / `ledgerDefineId` の候補探索から始める lookup-first 導線として、既存契約を壊さずにどう解決するかを整理した A3 の分解計画。実施結果と完走テストの記録も同ページに追記済み。
+  - 連動ツール: `GetTagsTool` / `GetFoldersTool` / `GetLedgerDefinesTool` / `SearchLedgersTool`
 - **[Issue 137 policy memo: synonym / technical-term selection](./2026-04-05_Issue-137_Synonym_Technical_Term_Selection_Policy_Memo.md)**: 同義語と技術用語候補の分離、業務慣熟度ベースの選択ポリシー、既存正規化の非ゴール化をまとめた A2-1 の最終アウトプット。
 - **[Issue 138 policy memo: search query trace explainability](./2026-04-05_Issue-138_Search_Query_Trace_Explainability_Memo.md)**: 検索クエリ trace の最小項目、ユーザー向け要約と開発者向け詳細の分離、後続対話での q 調整に関する A2-2 の最終アウトプット。
 - **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。

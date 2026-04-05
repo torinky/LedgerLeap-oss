@@ -24,6 +24,7 @@ class SearchLedgersTool extends Tool
         Important for Japanese / multi-byte keywords:
         - `q`, `tags`, `exclude_q`, and `exclude_tags` accept Japanese and other multi-byte characters
         - `q` can be expanded with synonyms for business terms when synonym data is available
+        - tag / folder / ledger definition fragments should be resolved first with lookup tools before calling this search tool
 
         Response format:
         - `summary` (default): display-oriented records with `__display_fields__`, `__summary__`, normalized `meta`, and a detail `link` when available
@@ -32,6 +33,8 @@ class SearchLedgersTool extends Tool
         Key parameters:
         - `q`, `tags`, `exclude_q`, `exclude_tags`
         - `folder_id`, `ledger_define_id`, `creator_id`
+        - `folder_id` / `ledger_define_id` accept lookup-first candidate ID arrays resolved by the folder / ledger lookup tools
+        - `tags` remains exact in the search body; resolve tag fragments with the tag lookup tool first
         - `created_from`, `created_to`
         - `order_by`, including `semantic_score` for meaning-based ranking
         - `mode`, `limit`, `offset`, `include_content`, `content_preview_length`
@@ -87,63 +90,52 @@ MARKDOWN;
         $includeContent = $parameters['include_content'] ?? true;
         $contentPreviewLength = $parameters['content_preview_length'] ?? 200;
 
-        $ledgers = collect($results['ledgers'])->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
-            $meta = $results['meta'];
-            $ledger = (object) $ledger; // 配列をオブジェクトに変換
+        $ledgers = collect($results['ledgers'])
+            ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
+                $meta = $results['meta'];
+                $ledger = (object) $ledger;
 
-            // 台帳定義とフォルダ情報を取得
-            $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
+                $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
 
-            // フォルダパスの取得
-            $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
-                ? $meta['folders'][$define['folder_id']]['path']
-                : trans('common.root_folder', [], 'ja');
+                $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
+                    ? $meta['folders'][$define['folder_id']]['path']
+                    : trans('common.root_folder', [], 'ja');
 
-            // ステータスの翻訳
-            $statusValue = is_object($ledger->status) ? $ledger->status->value : $ledger->status;
-            $statusDisplay = trans('ledger.workflow.status.'.$statusValue, [], 'ja');
+                $statusValue = is_object($ledger->status) ? $ledger->status->value : $ledger->status;
+                $statusDisplay = trans('ledger.workflow.status.'.$statusValue, [], 'ja');
 
-            // 日付のフォーマット
-            $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
+                $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
 
-            // __display_fields__ を構築（キーは英語固定）
-            $displayFields = [
-                'title' => $define['name'] ?? trans('common.unknown', [], 'ja'),
-                'folder' => $folderPath,
-                'creator' => $meta['users'][$ledger->creator_id]['name'] ?? trans('common.unknown', [], 'ja'),
-                'workflow_status' => $statusDisplay,
-                'updated_at' => $updatedAtFormatted,
-            ];
+                $displayFields = [
+                    'title' => $define['name'] ?? trans('common.unknown', [], 'ja'),
+                    'folder' => $folderPath,
+                    'creator' => $meta['users'][$ledger->creator_id]['name'] ?? trans('common.unknown', [], 'ja'),
+                    'workflow_status' => $statusDisplay,
+                    'updated_at' => $updatedAtFormatted,
+                ];
 
-            if (isset($ledger->tenant_id) && isset($ledger->id)) {
-                //                $baseUrl = rtrim(config('app.url'), '/');
-                $baseUrl = rtrim(config('ledgerleap.auto_links.base_url'), '/');
-                $displayFields['link'] = "{$baseUrl}/{$ledger->tenant_id}/ledger/{$ledger->id}";
-            }
+                if (isset($ledger->tenant_id) && isset($ledger->id)) {
+                    $baseUrl = rtrim(config('ledgerleap.auto_links.base_url'), '/');
+                    $displayFields['link'] = "{$baseUrl}/{$ledger->tenant_id}/ledger/{$ledger->id}";
+                }
 
-            // contentの処理
-            if (! $includeContent) {
-                // プレビューを生成
-                $displayFields['content_preview'] = $this->generateContentPreview(
-                    $ledger->content ?? [],
-                    $define['column_define'] ?? [],
-                    $contentPreviewLength
-                );
-            }
+                if (! $includeContent) {
+                    $displayFields['content_preview'] = $this->generateContentPreview(
+                        $ledger->content ?? [],
+                        $define['column_define'] ?? [],
+                        $contentPreviewLength
+                    );
+                }
 
-            // __display_fields__をセット
-            $ledger->__display_fields__ = $displayFields;
+                $ledger->__display_fields__ = $displayFields;
 
-            // 添付ファイル情報の追加
-            if (! empty($ledger->content_attached)) {
-                // content_attachedをJSON経由で配列に変換（AsColumnArrayJsonがobjectを返すため）
-                // これにより数値キーが正しく保持される
-                $contentAttached = json_decode(json_encode($ledger->content_attached), true);
-                $ledger->attachments = $this->formatAttachments($contentAttached);
-            }
+                if (! empty($ledger->content_attached)) {
+                    $contentAttached = json_decode(json_encode($ledger->content_attached), true);
+                    $ledger->attachments = $this->formatAttachments($contentAttached);
+                }
 
-            return $ledger;
-        });
+                return $ledger;
+            });
 
         $summary = trans_choice('messages.found_ledgers', $results['total'], ['count' => $results['total']], 'ja');
 
@@ -263,7 +255,7 @@ MARKDOWN;
         $exp = floor(log($bytes) / log(1024));
         $exp = min($exp, count($units) - 1);
 
-        $size = $bytes / pow(1024, $exp);
+        $size = $bytes / (1024 ** $exp);
 
         return round($size, 2).' '.$units[$exp];
     }
@@ -272,18 +264,26 @@ MARKDOWN;
     {
         return [
             'q' => $schema->string('Full-text search keyword. Supports Japanese and multi-byte characters. Examples: "株式会社A商事", "営業日報", "検索機能". Use quotes for exact match: "株式会社A商事". Space-separated for AND: "商事 提案".'),
-            'tags' => $schema->string('Comma-separated tag names to filter by (AND condition). Supports Japanese. Example: "重要,新規" will find ledgers with BOTH tags.'),
-            'folder_id' => $schema->integer('The folder ID to recursively search within. Useful for limiting search scope to a specific department or project folder.'),
-            'ledger_define_id' => $schema->integer('The ledger definition ID to filter by. Use this to search only within a specific type of ledger (e.g., only sales reports).'),
+            'tags' => $schema->string('Comma-separated exact tag names to filter by (AND condition). Resolve tag fragments with the tag lookup tool first. Example: "重要,新規" will find ledgers with BOTH tags.'),
+            'folder_id' => $schema->array(
+                'One or more folder candidate IDs resolved from folder-name fragments. Array-preserving lookup-first input is supported.'
+            )->items($schema->integer()),
+            'ledger_define_id' => $schema->array(
+                'One or more ledger definition candidate IDs resolved from title fragments. Array-preserving lookup-first input is supported.'
+            )->items($schema->integer()),
             'exclude_q' => $schema->string('Keywords to exclude from the results. Supports Japanese. Example: "見送り" will exclude ledgers containing this word.'),
             'exclude_tags' => $schema->string('Comma-separated tag names to exclude. Supports Japanese. Example: "完了,見送り" will exclude ledgers with these tags.'),
-            'mode' => $schema->string('The search mode. "search" (default) returns full ledger data. "count" returns only the total number of matching ledgers (much faster for existence checks or statistics).')->enum(['search', 'count'])->default('search'),
+            'mode' => $schema->string('The search mode. "search" (default) returns full ledger data. "count" returns only the total number of matching ledgers (much faster for existence checks or statistics).')
+                ->enum(['search', 'count'])
+                ->default('search'),
             'limit' => $schema->integer('The maximum number of items to return. Use smaller values (10-20) for quick checks, larger values (50-100) for comprehensive searches.'),
             'offset' => $schema->integer('The number of items to skip for pagination. Use with limit to implement pagination (e.g., offset=20, limit=20 for page 2).'),
             'creator_id' => $schema->integer('The ID of the user who created the ledger. Use this to find all work by a specific person. You can get user IDs from meta.users in previous search results.'),
             'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-01" for records from October 1st onwards.'),
             'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-07" for records up to October 7th. Use with created_from for date range filtering.'),
-            'order_by' => $schema->string('The field to sort results by. "composite_score" (default) sorts by overall importance (activity + freshness + workflow status). "activity_score" shows recently active items. "created_at" shows newest first. "updated_at" shows recently modified.')->enum(['composite_score', 'activity_score', 'created_at', 'updated_at', 'semantic_score'])->default('composite_score'),
+            'order_by' => $schema->string('The field to sort results by. "composite_score" (default) sorts by overall importance (activity + freshness + workflow status). "activity_score" shows recently active items. "created_at" shows newest first. "updated_at" shows recently modified.')
+                ->enum(['composite_score', 'activity_score', 'created_at', 'updated_at', 'semantic_score'])
+                ->default('composite_score'),
             'order_direction' => $schema->string('The sort direction. "desc" (default) shows highest/newest first. "asc" shows lowest/oldest first. Useful with composite_score asc to find neglected items.')->enum(['asc', 'desc'])->default('desc'),
             'format' => $schema->string('The format of the response. "summary" (default) includes display-friendly fields like __display_fields__ and __summary__ with translations. "raw" returns only the normalized data without formatting (faster, use for machine processing).')->enum(['raw', 'summary'])->default('summary'),
             'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to false for quick browsing of many ledgers (only metadata and preview shown). Default: true.')->default(true),

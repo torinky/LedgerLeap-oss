@@ -19,7 +19,8 @@ MCP テストで得られた次の 4 件のフィードバックを、
 ### 2.1 先に結論
 
 - **Item 1**: 既存の `q` / `tags` / `folder_id` で一部は対応済みだが、
-  **「フォルダ名の一部」「台帳名の一部」での絞り込み」まで含めると prompt-only では不足**。
+  **タグの部分一致・フォルダ名の一部・台帳名の一部での絞り込み** に加えて、
+  **`folder_id` / `ledgerDefineId` を知らない前提で候補を先に探す lookup-first 導線** が必要。
   小さな検索契約拡張として扱う。
 - **Item 2**: 既存の `SearchContext` / `SynonymService` はあるが、
   **MCP の検索経路に同義語展開が明示的に入っていない**ため、実装スプリント対象。
@@ -97,9 +98,10 @@ MCP テストで得られた次の 4 件のフィードバックを、
 
 ### 4.2 足りないもの
 
-- SearchLedgersTool の検索経路に、同義語展開を明示的に使う契約がない
+- SearchLedgersTool の検索経路に、タグの部分一致や同義語展開を明示的に使う契約がない
 - `folder_id` はあるが、**folder name fragment** を直接受ける入力はない
 - **ledger name fragment** を検索入力に落とす、明示的な resolver / filter がない
+- `folder_id` / `ledgerDefineId` を知らない前提で、先に候補を探す lookup tool が不足している
 - 複数添付のときに、どの添付が何を根拠にしているかを返す標準化された応答がない
 - per-attachment の位置情報 / 項目対応を返す契約がない
 
@@ -131,13 +133,16 @@ MCP テストで得られた次の 4 件のフィードバックを、
 - 管理者
 
 **やること**
+- `tags` の部分一致を、MCP ツール側の必須導線として扱う
+- `folder_id` / `ledgerDefineId` を知らない前提で、先に候補を探す lookup tool を作る
 - `folder name fragment` と `ledger name fragment` を、検索時に解決できるようにする
 - `q` の自然文検索だけでなく、タグ / フォルダ / 台帳名の候補を明示的に使えるようにする
 - prompt 側には「まず既存の tag / folder / name を優先して絞る」案内を残す
 
 **短期の prompt 改善**
 - `ledger-search` capability に、
-  「タグは `tags`、フォルダは `folder_id`、台帳名の断片はまず `q` で補う」ことを明記する
+  「タグは部分一致検索、フォルダは `folder_id`、台帳名の断片はまず `q` で補う」ことを明記する
+- `folder_id` / `ledgerDefineId` が不明なら、まず候補一覧を出して ID を得る lookup-first を明記する
 - ただし、これは **UI / LLM の使い方の補助**であり、欠けている検索能力そのものの代替にはしない
 
 ### 5.2 Item 2: 同義語検索

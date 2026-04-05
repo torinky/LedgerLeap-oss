@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Enums\WorkflowStatus;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
@@ -106,9 +107,9 @@ class LedgerService
     /**
      * @return Builder[]|Collection
      */
-    public function getLedgers()
+    public function getLedgers(): Collection
     {
-        return Ledger::orderBy('created_at', 'DESC')->get();
+        return Ledger::query()->orderByDesc('created_at')->get();
     }
 
     public function getLedgerForApi(Ledger $ledger): Ledger
@@ -208,11 +209,11 @@ class LedgerService
     /**
      * @return Builder[]|Collection
      */
-    public function searchLedgers(string $keyword)
+    public function searchLedgers(string $keyword): Collection
     {
         //        return Ledger::freeword($keyword)->orderBy('created_at', 'DESC')->get();
         //        var_dump(DB::getQueryLog());
-        return Ledger::search($keyword)->orderBy('created_at', 'DESC')->get();
+        return Ledger::search($keyword)->get()->sortByDesc('created_at')->values();
     }
 
     public function searchLedgersForApi(\App\Models\User $user, array $params)
@@ -223,11 +224,25 @@ class LedgerService
 
         $searchContext = null;
         $searchTrace = $this->buildEmptySearchTrace();
+        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
 
         if (! empty($params['q'])) {
             $searchContext = $this->buildSynonymAwareSearchContext((string) $params['q']);
             $searchTrace = $searchContext->getTrace();
         }
+
+        if (empty($readableFolderIds)) {
+            return [
+                'ledgers' => new Collection,
+                'meta' => $this->buildMetaData(new Collection),
+                'total' => 0,
+                'search_trace' => $searchTrace,
+            ];
+        }
+
+        $ledgerDefineIds = $this->normalizeIdList($params['ledger_define_id'] ?? null);
+        $requestedFolderIds = $this->normalizeIdList($params['folder_id'] ?? null);
+        $resolvedFolderIds = $this->resolveFolderHierarchyIds($requestedFolderIds, $readableFolderIds);
 
         // ▼▼▼ ここから追加 ▼▼▼
         // セマンティック検索の分岐
@@ -247,8 +262,11 @@ class LedgerService
                     'query' => $params['q'],
                     'limit' => $params['limit'] ?? 20,
                     'filters' => [
-                        'ledger_define_id' => $params['ledger_define_id'] ?? null,
-                        'folder_id' => $params['folder_id'] ?? null,
+                        'ledger_define_id' => count($ledgerDefineIds) === 1 ? $ledgerDefineIds[0] : null,
+                        'ledger_define_ids' => ! empty($ledgerDefineIds) ? $ledgerDefineIds : null,
+                        'folder_id' => count($resolvedFolderIds) === 1 ? $resolvedFolderIds[0] : null,
+                        'folder_ids' => ! empty($resolvedFolderIds) ? $resolvedFolderIds : null,
+                        'readable_folder_ids' => $readableFolderIds,
                     ],
                 ]
             );
@@ -280,19 +298,14 @@ class LedgerService
         }
         // ▲▲▲ ここまで追加 ▲▲▲
 
-        // ユーザーが読み取り可能なフォルダIDのリストを取得
-        $startTime = microtime(true);
-        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
-        $folderIdsTime = microtime(true) - $startTime;
         \Log::info('[MCP Search Debug] Readable folder IDs: '.json_encode($readableFolderIds));
-        \Log::info('[MCP Search Debug] Time to get folder IDs: '.round($folderIdsTime * 1000, 2).'ms');
 
         // QueryBuilderが期待する形式にパラメータを変換
         $queryParams = [];
         if (isset($params['creator_id'])) {
             $queryParams['filter']['creator_id'] = $params['creator_id'];
         }
-        if (isset($params['ledger_define_id'])) {
+        if (isset($params['ledger_define_id']) && $params['ledger_define_id'] !== '') {
             $queryParams['filter']['ledger_define_id'] = $params['ledger_define_id'];
         }
         if (isset($params['tags'])) {
@@ -301,7 +314,7 @@ class LedgerService
         if (isset($params['exclude_tags'])) {
             $queryParams['filter']['without_tags'] = $params['exclude_tags'];
         }
-        if (isset($params['folder_id'])) {
+        if (isset($params['folder_id']) && $params['folder_id'] !== '') {
             $queryParams['filter']['folder_hierarchy'] = $params['folder_id'];
         }
         if (isset($params['q'])) {
@@ -330,7 +343,17 @@ class LedgerService
             ->allowedFilters([
                 // 完全一致フィルタ
                 AllowedFilter::exact('creator_id'),
-                AllowedFilter::exact('ledger_define_id'),
+                AllowedFilter::callback('ledger_define_id', function ($query, $value) use ($ledgerDefineIds) {
+                    $ids = $this->normalizeIdList($value);
+
+                    if (empty($ids)) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->whereIn('ledger_define_id', $ids);
+                }),
 
                 // スコープベースフィルタ
                 AllowedFilter::scope('created_between'),
@@ -351,7 +374,28 @@ class LedgerService
                     }
                 }),
                 AllowedFilter::scope('without_tags'),
-                AllowedFilter::scope('folder_hierarchy'),
+                AllowedFilter::callback('folder_hierarchy', function ($query, $value) use ($readableFolderIds) {
+                    $requestedFolderIds = $this->normalizeIdList($value);
+                    $folderIds = $this->resolveFolderHierarchyIds($requestedFolderIds, $readableFolderIds);
+
+                    if (empty($requestedFolderIds) && ! empty($value)) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    if (empty($folderIds)) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->whereHas('define.folder', function (
+                        \Illuminate\Database\Eloquent\Builder $folderQuery
+                    ) use ($folderIds) {
+                        $folderQuery->whereIn('id', $folderIds);
+                    });
+                }),
 
                 // カスタムコールバックフィルタ
                 AllowedFilter::callback('q', function ($query, $value) use ($searchContext) {
@@ -470,6 +514,78 @@ class LedgerService
         $searchContext->setSearch(trim($search));
 
         return $searchContext;
+    }
+
+    /**
+     * @param  mixed  $value
+     * @return array<int, int>
+     */
+    private function normalizeIdList(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        $items = is_array($value)
+            ? $value
+            : preg_split('/[\s,]+/u', trim((string) $value), -1, PREG_SPLIT_NO_EMPTY);
+
+        return collect($items ?? [])
+            ->flatten()
+            ->map(function ($item): ?int {
+                if (is_int($item)) {
+                    return $item > 0 ? $item : null;
+                }
+
+                $item = trim((string) $item);
+                if ($item === '' || ! is_numeric($item)) {
+                    return null;
+                }
+
+                $id = (int) $item;
+
+                return $id > 0 ? $id : null;
+            })
+            ->filter(fn (?int $id): bool => $id !== null)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, int>  $requestedFolderIds
+     * @param  array<int, int>  $readableFolderIds
+     * @return array<int, int>
+     */
+    private function resolveFolderHierarchyIds(array $requestedFolderIds, array $readableFolderIds): array
+    {
+        $requestedFolderIds = collect($requestedFolderIds)
+            ->map(fn ($folderId): int => (int) $folderId)
+            ->filter(fn (int $folderId): bool => $folderId > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($requestedFolderIds)) {
+            return [];
+        }
+
+        $readableFolderIdLookup = collect($readableFolderIds)
+            ->map(fn ($folderId): int => (int) $folderId)
+            ->filter(fn (int $folderId): bool => $folderId > 0)
+            ->unique()
+            ->flip();
+
+        return collect($requestedFolderIds)
+            ->flatMap(function (int $folderId) {
+                return Folder::descendantsAndSelf($folderId)->pluck('id')->all();
+            })
+            ->map(fn ($folderId): int => (int) $folderId)
+            ->filter(fn (int $folderId): bool => $folderId > 0)
+            ->unique()
+            ->filter(fn (int $folderId): bool => $readableFolderIdLookup->has($folderId))
+            ->values()
+            ->all();
     }
 
     /**
