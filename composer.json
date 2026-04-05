@@ -117,10 +117,6 @@
     "test:ci:feature:serial": "vendor/bin/pest --configuration phpunit.xml --testsuite=FeatureSerial --exclude-group=external --exclude-group=database-migrations --display-errors",
     "test:ci:db-migrations": "vendor/bin/pest --configuration phpunit.xml --group=database-migrations --display-errors",
     "test:ci:serial": "vendor/bin/pest --configuration=phpunit.serial.xml --display-errors",
-    "test:parallel:unit": "@test:ci:unit",
-    "test:parallel:feature": "@test:ci:feature",
-    "test:canary:unit": "@test:parallel:unit",
-    "test:canary:feature": "@test:parallel:feature",
     "test:ci:parallel": [
       "@test:ci:unit",
       "@test:ci:feature"

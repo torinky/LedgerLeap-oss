@@ -1,6 +1,6 @@
 # DB トレイト・テナント・マイグレーション管理
 
-**最終更新:** 2026-03-21
+**最終更新:** 2026-04-05
 **元ドキュメント:** Testing-Best-Practices.md（2026-02-22版）より分割
 
 ---
@@ -199,3 +199,23 @@ public function down(): void
 - [ ] `down()` メソッドも冪等性を確保
 - [ ] `comment()` で日本語説明を記述
 
+---
+
+## テスト分類方針
+
+LedgerLeap では、テストを次の4分類で扱う。
+
+| 分類 | 目的 | 代表例 | 実行入口 |
+|---|---|---|---|
+| `parallel-safe` | 並列実行して CPU 時間を短くする | Unit / Livewire / Services | `test:ci:unit`, `test:ci:feature` |
+| `serial-remainder` | 並列化しない残余テスト | `FeatureSerial` に入るテスト | `test:ci:feature:serial` |
+| `database-migrations` | Mroonga / `DatabaseMigrationsOnce` 系 | `SearchApiTest`, `LedgerFullTextSearchTest` | `test:ci:db-migrations` |
+| `external` | 外部コンテナ依存 | VLM / LDAP / Embedding | `test:external` |
+
+### 運用ルール
+
+- `parallel-safe` は `phpunit.parallel.xml` に寄せる
+- `serial-remainder` は `phpunit.xml` の `FeatureSerial` で扱う
+- `database-migrations` は `phpunit.xml` の専用ジョブで直列実行する
+- `external` は通常 CI から除外し、ローカルまたは専用検証で実行する
+- 迷ったら「並列化して安全か」「Mroonga / 外部依存があるか」「残余として直列に残すか」で判断する

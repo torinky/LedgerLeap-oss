@@ -1,5 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Pest: Serial (phpunit.serial.xml)" type="PestRunConfigurationType">
+  <configuration default="false" name="Pest: Main (phpunit.serial.xml)" type="PestRunConfigurationType">
     <CommandLine>
       <PhpTestInterpreterSettings>
         <option name="interpreterName" value="Laravel Sail" />
@@ -9,3 +9,4 @@
     <method v="2" />
   </configuration>
 </component>
+

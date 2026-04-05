@@ -44,7 +44,8 @@
 - `Parallel: Feature Subset` → `composer test:ci:feature`
 - `Feature: Serial Remainder` → `composer test:ci:feature:serial`
 - `Serial: DB Migrations` → `composer test:ci:db-migrations`
-- `Pest: Serial (phpunit.serial.xml)` → 旧来のフル直列 `phpunit.serial.xml`
+- `Pest: Main (phpunit.serial.xml)` → Pest の全件実行（Unit + Feature + 直列対象）
+- `Pest: Serial Remainder (phpunit.xml)` → 並列へ出していない Feature 残余の検証
 - `Pest: Parallel (phpunit.parallel.xml)` → `phpunit.parallel.xml` を使う並列 Pest 実行
 
 ### 全テスト実行（CI と同等）

@@ -1,6 +1,6 @@
 # テストドキュメント 目次
 
-**最終更新:** 2026-03-08
+**最終更新:** 2026-04-05
 
 LedgerLeap のテスト設計・実装に関するドキュメントをトピック別に分割しています。
 新しいテストを書く前に、該当するドキュメントを参照してください。
@@ -49,6 +49,21 @@ LedgerLeap のテスト設計・実装に関するドキュメントをトピッ
 
 ---
 
+## テスト分類の方針（要約）
+
+- `parallel-safe`: Unit / Livewire / Services のうち、`external` や `database-migrations` に依存しないもの
+- `serial-remainder`: `FeatureSerial` に残す、まだ並列化しない残余
+- `database-migrations`: Mroonga / `DatabaseMigrationsOnce` 系
+- `external`: LDAP / VLM / Embedding など外部コンテナ依存
+
+**入口の対応**
+- `test:ci:unit` / `test:ci:feature` → `parallel-safe`
+- `test:ci:feature:serial` → `serial-remainder`
+- `test:ci:db-migrations` → `database-migrations`
+- `test:external` → `external`
+
+---
+
 ## スキル（定型ワークフロー）
 
 より具体的な操作手順は `.github/skills/` のスキルを参照：
@@ -68,8 +83,8 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 
 #### PhpStorm から実行する場合（通常はこちら）
 
-- `Pest: Full (phpunit.xml)`
-- 実測では `phpunit.xml` ベースの全体実行がローカルで完走しており、**普段の全体確認入口として利用可能**
+- `Pest: Main (phpunit.serial.xml)`
+- 実測では `phpunit.serial.xml` ベースの全体実行がローカルで完走しており、**普段の全体確認入口として利用可能**
 - Pest のテストツリーや失敗箇所の追跡もしやすいため、日常運用ではこちらを優先する
 
 #### terminal / Composer から実行する場合
@@ -96,15 +111,15 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 - `test:ci:feature`: Feature + `external` / `database-migrations` 除外
 - `test:ci:db-migrations`: 全文検索・`DatabaseMigrationsOnce` 系を分離実行
 
-### 並列 canary 相当
+### 並列確認
 
 ```bash
-./vendor/bin/sail composer test:canary:unit
-./vendor/bin/sail composer test:canary:feature
+./vendor/bin/sail composer test:ci:unit
+./vendor/bin/sail composer test:ci:feature
 ```
 
-- `test:canary:unit`: CI の parallel unit 相当
-- `test:canary:feature`: `FeatureParallelSubset` のみ並列実行
+- `test:ci:unit`: CI の parallel unit 相当
+- `test:ci:feature`: `FeatureParallelSubset` のみ並列実行
 
 ### 外部コンテナを使う確認（ローカル専用）
 
@@ -122,7 +137,7 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 - PHP interpreter は `docker-compose.yml` の `laravel` service に合わせる
 - ローカルの system PHP / Homebrew PHP を test runner に使わない
 - 通常実行は `phpunit.xml`、並列 canary は `phpunit.parallel.xml` を使う
-- **日常の全体確認は `Pest: Full (phpunit.xml)` を優先**する
+- **日常の全体確認は `Pest: Main (phpunit.serial.xml)` を優先**する
 - `Full: All Tests` は `composer test:full` 相当の補助入口で、`test:prepare:local` や `test:external` を含む分割実行を再現したいときに使う
 - `Coverage: Full` は HTML レポート生成用の入口
 - 実運用としては、**Composer 側の主用途は coverage と scripted な再現実行**と考えてよい
