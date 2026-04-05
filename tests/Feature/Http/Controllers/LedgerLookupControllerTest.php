@@ -93,7 +93,7 @@ class LedgerLookupControllerTest extends TestCase
         ]);
 
         $this->get('/'.$this->tenant->id.'/l/unique-id-123')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger/'.$ledger->id);
+            ->assertRedirect('/'.$this->tenant->id.'/ledger/'.$ledger->id.'?highlight=unique-id-123');
     }
 
     #[Test]
