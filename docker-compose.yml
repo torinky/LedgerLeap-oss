@@ -218,6 +218,11 @@ services:
       - RAG_NUM_INTEROP_THREADS=${RAG_NUM_INTEROP_THREADS:-0}
       - RAG_CONVERT_TO_NUMPY=${RAG_CONVERT_TO_NUMPY:-true}
       - RAG_DEVICE=${RAG_DEVICE:-cpu}
+      # EMBEDDING_OFFLINE の制御:
+      #   未設定(デフォルト) → 自動検出: キャッシュあり=オフライン / なし=HFからダウンロード
+      #   EMBEDDING_OFFLINE=0 → 強制オンライン（モデル更新時など）
+      #   EMBEDDING_OFFLINE=1 → 強制オフライン（キャッシュ必須）
+      # 初回構築時はキャッシュが存在しないため自動的にHF Hubへ接続してダウンロードします。
       # 以降の起動ではキャッシュを検出して外部接続なしで起動します。
       # - EMBEDDING_OFFLINE=${EMBEDDING_OFFLINE}
     networks:
@@ -278,6 +283,4 @@ volumes:
   sail-mysql:
     driver: local
   sail-redis:
-    driver: local
-  sail-meilisearch:
     driver: local
