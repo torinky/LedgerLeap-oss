@@ -116,6 +116,20 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
             {
                 return $word === '請求' ? ['インボイス'] : [];
             }
+
+            public function getSearchTermsFromWord($word, array $options = []): array
+            {
+                if ($word === '請求') {
+                    return [
+                        ['term' => '請求', 'kind' => 'original'],
+                        ['term' => 'インボイス', 'kind' => 'synonym'],
+                    ];
+                }
+
+                return [
+                    ['term' => (string) $word, 'kind' => 'original'],
+                ];
+            }
         });
 
         $ledgerService = app(LedgerService::class);

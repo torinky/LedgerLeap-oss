@@ -83,12 +83,12 @@ ledgerleap_constraints:
   - Mroonga の MATCH AGAINST は単一カラム前提。複合インデックス前提で考えない
   - content は数値インデックス配列。カラム定義を見ずに title/body を決め打ちしない
   - "`semantic_score` を使うときは単語列よりも自然文の問い合わせを優先する"
-  - `q` は同義語データがある場合に展開されるため、現場用語・言い換え・略称を自然文として入力できる
+  - "`q` は同義語データがある場合に展開されるため、現場用語・言い換え・略称を自然文として入力できる"
   - 技術用語は同義語と別扱いで候補化されるため、業務に慣れている場合は正式語をそのまま入れてよい
   - MCP 応答の search_trace から original_q / normalized_q / selected_terms / excluded_terms を確認し、必要なら次の q を調整する
   - include_content=false や mode=count を使って段階的に情報取得する
   - 「重要」な対象は tags='重要' の明示検索と、スコア順での優先確認を使い分ける
-  - `tags` と `folder_id` / `ledger_define_id` は直接絞り込みに使えるが、断片入力は lookup-first で候補配列に解決してから渡す
+  - "`tags` と `folder_id` / `ledger_define_id` は直接絞り込みに使えるが、断片入力は lookup-first で候補配列に解決してから渡す"
   - タグ名の部分一致を前提にしすぎず、まずは `GetTagsTool` / `GetFoldersTool` / `GetLedgerDefinesTool` で候補を確認する
 examples:
   - user: 昨日私が作成した日報を見せて

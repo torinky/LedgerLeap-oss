@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Enums\FolderPermissionType;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Models\Folder;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
@@ -30,6 +33,25 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->user = User::factory()->create([
             'email' => 'test@example.com',
             'name' => 'Test User',
+        ]);
+
+        $folder = Folder::factory()->create([
+            'title' => 'Semantic Search Folder',
+        ]);
+
+        $role = \Spatie\Permission\Models\Role::create([
+            'name' => 'Semantic Search Reader',
+            'guard_name' => 'web',
+        ]);
+
+        $this->user->assignRole($role);
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::READ,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
         ]);
 
         $token = $this->user->createToken('test-token')->plainTextToken;
