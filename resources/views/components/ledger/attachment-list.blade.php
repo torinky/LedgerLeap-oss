@@ -210,6 +210,13 @@
                     {{-- Icon Only モード: 一覧画面用極小表示 --}}
                     <div class="relative group inline-flex items-center"
                         x-show="showAll || {{ $index }} < displayLimit"
+                        x-transition:enter="transition ease-out"
+                        x-transition:enter-start="opacity-0 scale-90"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-90"
+                        :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 40 + 'ms' : ''"
                         x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
                         :class="{ 'ring-2 ring-primary/60 bg-primary/5 rounded-md': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
                         {{-- RPA用: 透過的ダウンロードリンク --}}
@@ -255,6 +262,13 @@
                     {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
                     <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
                         x-show="showAll || {{ $index }} < displayLimit"
+                        x-transition:enter="transition ease-out"
+                        x-transition:enter-start="opacity-0 translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-1"
+                        :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 40 + 'ms' : ''"
                         :class="{ 'ring-2 ring-primary/60 bg-primary/5': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
 
                         {{-- RPA用: 透過的ダウンロードリンク --}}
@@ -321,7 +335,14 @@
                     </div>
                 @else
                     {{-- Full モード: 詳細画面用のカード表示 --}}
-                    <div x-show="showAll || {{ $index }} < displayLimit">
+                    <div x-show="showAll || {{ $index }} < displayLimit"
+                        x-transition:enter="transition ease-out"
+                        x-transition:enter-start="opacity-0 translate-y-2"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-2"
+                        :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 60 + 'ms' : ''">
                         <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" :selected-file-id="$selectedFileId" />
                     </div>
                 @endif

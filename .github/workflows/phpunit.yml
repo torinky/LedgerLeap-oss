@@ -32,9 +32,9 @@ env:
 # ───────────────────────────────────────────────
 jobs:
 
-  # ── ① Unit テスト（外部サービス不要・高速） ──────────────────
+  # ── ① Unit テスト（parallel 標準・外部サービス不要・高速） ──────────────────
   unit:
-    name: Unit Tests
+    name: Unit Tests (parallel)
     runs-on: ubuntu-latest
     timeout-minutes: 30
     services:
@@ -62,17 +62,17 @@ jobs:
         with:
           db_password: ${{ secrets.DB_PASSWORD }}
 
-      - name: Run Unit Tests
+      - name: Run Unit Tests (parallel)
         # external グループ（外部コンテナ依存）は除外する
         # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors
+        run: ./vendor/bin/pest --parallel --configuration=phpunit.parallel.xml --testsuite=Unit --exclude-group=external --exclude-group=database-migrations --display-errors
 
-  # ── ② Feature テスト（DB必須・時間がかかる） ────────────────
-  feature:
-    name: Feature Tests
+  # ── ② Feature 追加並列テスト（parallel-safe subset） ────────────────
+  feature-parallel:
+    name: Feature Tests (parallel subset)
     runs-on: ubuntu-latest
-    timeout-minutes: 40  # 実績 ~24分のため余裕を持たせて40分に設定
+    timeout-minutes: 30
     services:
       mysql:
         image: groonga/mroonga:mysql-8.0-latest
@@ -98,13 +98,47 @@ jobs:
         with:
           db_password: ${{ secrets.DB_PASSWORD }}
 
-      - name: Run Feature Tests
-        # external グループ（VLM/LDAP/ocrmypdf等の外部コンテナ依存）は除外する
-        # database-migrations グループ（DatabaseMigrations使用・他テストのDB状態を破壊）は除外し、専用ジョブで実行する
+      - name: Run Feature Tests (parallel subset)
+        # Livewire / Services の parallel-safe なサブセットのみを並列実行する
         # --display-errors でスタックトレースを出力（デバッグ用）
-        run: ./vendor/bin/pest --testsuite=Feature --exclude-group=external --exclude-group=database-migrations --display-errors
+        run: ./vendor/bin/pest --parallel --configuration=phpunit.parallel.xml --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations --display-errors
 
-  # ── ③ DatabaseMigrations テスト（migrate:fresh が必要なテスト群） ──────
+  # ── ③ Feature 直列残余テスト（parallel に出していないもの） ────────────────
+  feature:
+    name: Feature Tests (serial remainder)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    services:
+      mysql:
+        image: groonga/mroonga:mysql-8.0-latest
+        ports:
+          - 3306:3306
+        env:
+          MYSQL_DATABASE: ledgerleap_test
+          MYSQL_USER: sail
+          MYSQL_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ROOT_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          MYSQL_ALLOW_EMPTY_PASSWORD: 1
+        options: >-
+          --health-cmd "mysqladmin ping"
+          --health-interval 15s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Laravel Test Setup
+        uses: ./.github/actions/laravel-test-setup
+        with:
+          db_password: ${{ secrets.DB_PASSWORD }}
+
+      - name: Run Feature Tests (serial remainder)
+        # database-migrations / external は別ジョブへ分離済み
+        # FeatureSerial は parallel-safe subset を除外した残余だけを実行する
+        run: ./vendor/bin/pest --testsuite=FeatureSerial --exclude-group=external --exclude-group=database-migrations --display-errors
+
+  # ── ④ DatabaseMigrations テスト（migrate:fresh が必要なテスト群） ──────
   #
   # 実行対象（`#[Group('database-migrations')]` を付与したテストのみ）:
   #   - FolderTest                    (マルチテナント境界の検証)

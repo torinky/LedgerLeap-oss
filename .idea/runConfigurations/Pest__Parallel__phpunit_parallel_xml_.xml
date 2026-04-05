@@ -1,0 +1,11 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Pest: Parallel (phpunit.parallel.xml)" type="PestRunConfigurationType">
+    <CommandLine>
+      <PhpTestInterpreterSettings>
+        <option name="interpreterName" value="Laravel Sail" />
+      </PhpTestInterpreterSettings>
+    </CommandLine>
+    <PestRunner configuration_file="$PROJECT_DIR$/phpunit.parallel.xml" directory="$PROJECT_DIR$/tests" method="" scope="ConfigurationFile" use_alternative_configuration_file="true" parallel_testing_enabled="true" />
+    <method v="2" />
+  </configuration>
+</component>

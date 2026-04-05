@@ -1,7 +1,7 @@
 # テスト実行ガイド（並列導入後の標準手順）
 
 - 関連Issue: https://github.com/torinky/LedgerLeap/issues/81
-- 最終更新: 2026-03-07（Sprint 6）
+- 最終更新: 2026-04-05（Sprint 7 / parallel-first CI）
 
 ---
 
@@ -13,37 +13,54 @@
 # 1. コード整形
 ./vendor/bin/sail pint
 
-# 2. 並列テスト（高速・current canary）
-./vendor/bin/sail pest --parallel --testsuite=FeatureParallelSubset \
-  --exclude-group=external \
-  --exclude-group=database-migrations
+# 2. 標準 CI をローカルで再現（parallel-first）
+./vendor/bin/sail composer test:ci
 
-# 3. 直列テスト（Mroonga / DatabaseMigrations 系）
-./vendor/bin/sail test --group=database-migrations
+# 3. parallel 側だけを個別確認
+./vendor/bin/sail composer test:ci:parallel
+
+# 4. serial remainder だけを個別確認
+./vendor/bin/sail composer test:ci:feature:serial
+
+# 5. 旧来の直列実行を丸ごと検証したいときだけ使う
+./vendor/bin/sail composer test:ci:serial
+
+# 6. フル検証（準備 + 標準 CI + external）
+./vendor/bin/sail composer test:full
 ```
 
 **備考**:
+- `composer test:ci` は `parallel → serial remainder → db-migrations` の順で実行する
+- `composer test:ci:serial` は旧来のフル直列実行を残した検証用
 - `--recreate-databases` は使わない
-- 現時点のローカル並列標準は `FeatureParallelSubset`（Feature 全件並列化は未昇格）
+- parallel 標準は `FeatureParallelSubset`（Livewire / Services）
+- serial remainder は `FeatureSerial`（parallel-safe subset を除外した残余）
 - test DB が壊れた場合は `bin/reset-test-db.sh` でリセットしてから再実行する
+
+### PhpStorm の推奨 Run Configuration
+
+- `CI: Standard` → `composer test:ci`
+- `Parallel: Unit (CI)` → `composer test:ci:unit`
+- `Parallel: Feature Subset` → `composer test:ci:feature`
+- `Feature: Serial Remainder` → `composer test:ci:feature:serial`
+- `Serial: DB Migrations` → `composer test:ci:db-migrations`
+- `Pest: Serial (phpunit.serial.xml)` → 旧来のフル直列 `phpunit.serial.xml`
+- `Pest: Parallel (phpunit.parallel.xml)` → `phpunit.parallel.xml` を使う並列 Pest 実行
 
 ### 全テスト実行（CI と同等）
 
 ```bash
-# Unit のみ
-./vendor/bin/sail test --testsuite=Unit \
-  --exclude-group=external \
-  --exclude-group=database-migrations
+# 標準 CI（parallel-first）
+./vendor/bin/sail composer test:ci
 
-# Feature のみ（標準 CI は現時点では直列）
-./vendor/bin/sail test --testsuite=Feature \
-  --exclude-group=external \
-  --exclude-group=database-migrations
+# parallel 側（Unit + Feature subset）
+./vendor/bin/sail composer test:ci:parallel
 
-# Feature の並列カナリア（ローカル確認用）
-./vendor/bin/sail pest --parallel --testsuite=FeatureParallelSubset \
-  --exclude-group=external \
-  --exclude-group=database-migrations
+# serial remainder（FeatureSerial）
+./vendor/bin/sail composer test:ci:feature:serial
+
+# 旧来のフル直列（検証用）
+./vendor/bin/sail composer test:ci:serial
 
 # DatabaseMigrations 系（直列・Mroonga 含む）
 ./vendor/bin/sail test --group=database-migrations
@@ -71,7 +88,8 @@
 
 | グループ | 対象 | 実行方法 |
 |---|---|---|
-| `parallel-safe`（無指定） | 標準 Unit / Feature | `--parallel` 可 |
+| `parallel-safe`（無指定） | standard Unit / `FeatureParallelSubset` | `--parallel` 可 |
+| `serial-remainder` | `FeatureSerial` | serial のみ |
 | `database-migrations` | Mroonga / `DatabaseMigrationsOnce` / `DatabaseMigrations` 使用テスト | 直列のみ・専用ジョブ |
 | `external` | VLM / LDAP / Embedding 等の外部コンテナ依存 | 手動実行のみ |
 
@@ -84,27 +102,28 @@
               ├─ Yes → #[Group('database-migrations')] + DatabaseMigrationsOnce を使う
               └─ No  → 外部コンテナ（VLM/LDAP 等）が必要？
                           ├─ Yes → #[Group('external')] を付与
-                          └─ No  → RefreshDatabaseWithTenant を使う（parallel-safe）
+                          └─ No  → parallel-safe か serial-remainder かを判定する
 ```
 
 ---
 
-## CI ジョブ構成（Sprint 6 時点）
+## CI ジョブ構成（Sprint 7 時点）
 
-### 標準 CI（`phpunit.yml`）— 全 Push / PR で実行
+### 標準 CI（`phpunit.yml`）— parallel-first
 
 | ジョブ | 対象 | タイムアウト |
 |---|---|---|
-| `unit` | `--testsuite=Unit --exclude-group=external --exclude-group=database-migrations` | 30分 |
-| `feature` | `--testsuite=Feature --exclude-group=external --exclude-group=database-migrations` | 40分 |
+| `unit` | `--parallel --testsuite=Unit --exclude-group=external --exclude-group=database-migrations` | 30分 |
+| `feature-parallel` | `--parallel --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations` | 30分 |
+| `feature` | `--testsuite=FeatureSerial --exclude-group=external --exclude-group=database-migrations` | 40分 |
 | `db-migrations` | `--group=database-migrations` | 30分 |
 
-### カナリア CI（`parallel-canary.yml`）— 並走検証中
+### parallel canary（`parallel-canary.yml`）— 手動観測
 
 | ジョブ | 対象 | 備考 |
 |---|---|---|
-| `canary-unit-parallel` | Unit を `--parallel` で実行 | `continue-on-error: true` |
-| `canary-feature-parallel` | `FeatureParallelSubset` を `--parallel` で実行 | `continue-on-error: true` |
+| `canary-unit-parallel` | Unit を `--parallel` で実行 | `workflow_dispatch` のみ |
+| `canary-feature-parallel` | `FeatureParallelSubset` を `--parallel` で実行 | `workflow_dispatch` のみ |
 
 **現在のローカル検証結果（2026-03-07）**:
 - `./vendor/bin/sail pest --parallel --processes=2 --filter="LedgerDiffViewerTest" --testsuite=FeatureParallelSubset --display-errors`
@@ -112,7 +131,7 @@
 - `./vendor/bin/sail pest --parallel --testsuite=FeatureParallelSubset --exclude-group=external --exclude-group=database-migrations`
   - `2 skipped, 461 passed (1105 assertions)` / `498.76s` / `Parallel: 8 processes`
 
-**カナリア昇格基準**: 10 連続成功 & フレーク率 < 1% → Feature 全件並列化 → 標準 CI に統合
+**parallel 昇格基準**: 10 連続成功 & フレーク率 < 1% → Feature 全件の更なる並列化を検討
 
 ### external CI（`external-tests.yml`）— 手動実行のみ
 
@@ -179,8 +198,7 @@ class MyMroongaTest extends TestCase
 
 | 状況 | 対応 |
 |---|---|
-| カナリアのみ失敗 | `parallel-canary.yml` の `on:` を `workflow_dispatch` のみに変更 |
-| 標準 CI が不安定化 | composite action を展開形式に戻す（Runbook Level 2 参照） |
+| parallel canary だけ失敗 | `parallel-canary.yml` を手動運用のまま維持し、必要なら一時停止 |
+| 標準 CI が不安定化 | `feature-parallel` を `workflow_dispatch` のみに切り替えるか、`feature` を旧 serial へ戻す |
 | テナント初期化漏れ | `setUp()` に `tenancy()->initialize(static::getSharedTenantForCurrentProcess())` を追加 |
-| CI 全体ロールバック | `parallel-canary.yml` を削除、`phpunit.yml` を `6df40d8f` に revert |
-
+| CI 全体ロールバック | `phpunit.yml` を `6df40d8f` に revert |
