@@ -65,6 +65,46 @@ class SearchContextTest extends TestCase
         $this->assertNotEmpty($this->context->keywords);
     }
 
+    #[Test]
+    public function setSearchBuildsKindAwareTraceForSynonymsAndTechnicalTerms(): void
+    {
+        $config = new SynonymServiceConfig(['useSynonym' => true, 'useTechnicalTerm' => true]);
+        $synonymService = new class($config) extends SynonymService {
+            public function getSearchTermsFromWord($word, array $options = []): array
+            {
+                if ($word === '請求') {
+                    return [
+                        ['term' => '請求', 'kind' => 'original'],
+                        ['term' => '請求書', 'kind' => 'synonym'],
+                        ['term' => 'インボイス', 'kind' => 'technical'],
+                    ];
+                }
+
+                return [['term' => $word, 'kind' => 'original']];
+            }
+
+            public function getSynonymsFromWord($word, array $options = [])
+            {
+                return ['請求書', 'インボイス'];
+            }
+        };
+
+        $context = new SearchContext($synonymService);
+
+        $context->setSearch('請求 #重要');
+
+        $trace = $context->getTrace();
+
+        $this->assertSame('請求 #重要', $trace['original_q']);
+        $this->assertNotEmpty($trace['normalized_q']);
+        $this->assertSame(['重要'], $trace['tags']);
+        $this->assertContains('請求', array_column($trace['selected_terms'], 'term'));
+        $this->assertContains('請求書', array_column($trace['selected_terms'], 'term'));
+        $this->assertContains('インボイス', array_column($trace['selected_terms'], 'term'));
+        $this->assertContains('synonym', array_column($trace['selected_terms'], 'kind'));
+        $this->assertContains('technical', array_column($trace['selected_terms'], 'kind'));
+    }
+
     // ----------------------------------------------------------------
     // setFilter / setHighlights
     // ----------------------------------------------------------------

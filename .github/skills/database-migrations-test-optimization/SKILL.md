@@ -20,6 +20,8 @@ Need tenant context?
   NO  → RefreshDatabase
 ```
 
+**MCP unit test shortcut**: if a test only verifies MCP tool auth or response shape and does not need to persist tenant-scoped records, prefer an in-memory `User::factory()->make()` plus `Sanctum::actingAs(..., ['mcp:*'])` over `RefreshDatabaseWithTenant`. This avoids unnecessary tenant DB setup and keeps pure tool tests fast.
+
 ## Trait Comparison
 
 | Trait | migrate:fresh | Tenant | Speed | Use case |

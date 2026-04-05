@@ -89,10 +89,18 @@ class SearchLedgersToolTest extends TestCase
             'status' => 'draft',
         ]);
         $mockMeta = ['ledger_defines' => [], 'folders' => [], 'users' => []];
+        $mockTrace = [
+            'original_q' => 'test',
+            'normalized_q' => 'test',
+            'keywords' => ['test'],
+            'tags' => [],
+            'selected_terms' => [['term' => 'test', 'kind' => 'original']],
+            'excluded_terms' => [],
+        ];
 
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
-            ->andReturn(['ledgers' => collect([$mockLedger]), 'meta' => $mockMeta, 'total' => 1]);
+            ->andReturn(['ledgers' => collect([$mockLedger]), 'meta' => $mockMeta, 'total' => 1, 'search_trace' => $mockTrace]);
 
         $request = new Request($params);
         $response = $this->tool->handle($request);
@@ -103,6 +111,7 @@ class SearchLedgersToolTest extends TestCase
         $this->assertArrayHasKey('ledgers', $responseData);
         $this->assertArrayHasKey('meta', $responseData);
         $this->assertArrayHasKey('total', $responseData);
+        $this->assertArrayHasKey('search_trace', $responseData);
         $this->assertArrayNotHasKey('__summary__', $responseData);
         $this->assertArrayNotHasKey('__display_fields__', $responseData['ledgers'][0]);
     }

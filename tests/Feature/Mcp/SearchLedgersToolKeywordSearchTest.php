@@ -8,6 +8,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\LedgerService;
+use App\Services\SynonymService;
 use Laravel\Mcp\Request;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -85,6 +86,56 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
         $this->assertCount(1, $responseData['ledgers']);
         $this->assertEquals(1, $responseData['total']);
         $this->assertStringContainsString('test keyword for search', json_encode($responseData['ledgers'][0]['content']));
+    }
+
+    #[Test]
+    public function testSynonymExpansionSearchesInvoiceContent()
+    {
+        // Arrange
+        $folder = Folder::factory()->create(['title' => 'Finance Folder']);
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
+        $role = \Spatie\Permission\Models\Role::create(['name' => 'Finance Reader']);
+        $this->user->assignRole($role);
+        \App\Models\RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => \App\Enums\FolderPermissionType::READ,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['インボイス対応済み'],
+        ]);
+
+        app()->instance(SynonymService::class, new class extends SynonymService
+        {
+            public function getSynonymsFromWord($word, array $options = [])
+            {
+                return $word === '請求' ? ['インボイス'] : [];
+            }
+        });
+
+        $ledgerService = app(LedgerService::class);
+        $tool = new SearchLedgersTool($ledgerService);
+
+        $request = new Request([
+            'q' => '請求',
+        ]);
+
+        // Act
+        $response = $tool->handle($request);
+
+        // Assert
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content(), true);
+
+        $this->assertArrayHasKey('ledgers', $responseData);
+        $this->assertCount(1, $responseData['ledgers']);
+        $this->assertEquals(1, $responseData['total']);
+        $this->assertSame(['インボイス対応済み'], $responseData['ledgers'][0]['content']);
     }
 
     #[Test]

@@ -13,6 +13,7 @@ use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
+use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetRelatedLedgersTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
@@ -26,6 +27,7 @@ use App\Services\Ai\BootstrapManifestService;
 use App\Services\Ai\CapabilityManifestRepository;
 use App\Services\Ledger\RelatedLedgerService;
 use App\Services\LedgerService;
+use App\Services\SynonymService;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
@@ -146,7 +148,7 @@ class McpToolsAuthenticationTest extends TestCase
     }
 
     #[Test]
-    public function search_ledgers_tool_rejects_authenticated_guard_user_without_mcp_ability_even_with_valid_env_token(): void
+    public function search_ledgers_tool_rejects_guard_user_without_mcp_access_even_with_valid_env_token(): void
     {
         putenv("MCP_AUTH_TOKEN={$this->validToken}");
         Sanctum::actingAs($this->user, ['read-only']);
@@ -274,6 +276,7 @@ class McpToolsAuthenticationTest extends TestCase
             new GetRelatedLedgersTool(Mockery::mock(RelatedLedgerService::class)),
             new GetLedgerDefinesTool,
             new GetPendingApprovalsTool,
+            new GetSearchTermsTool(Mockery::mock(SynonymService::class)),
             new ExecuteApprovalTool,
             new GetWorkflowHistoryTool,
             new ClaimWorkflowTaskTool,

@@ -9,11 +9,15 @@ primary_user_goals:
   - 担当者や更新状況を知りたい
 when_to_use:
   - ユーザーが特定の台帳、会社名、案件名、日付範囲、タグで絞り込みたいとき
-  - ユーザーが自然文で関連情報を探したいとき
+  - ユーザーが自然文や同義語で関連情報を探したいとき
+  - ユーザーが業務用語や技術用語を含めて検索語を調整したいとき
+  - ユーザーが同義語や技術用語の候補だけを先に確認したいとき
   - ユーザーが単一レコード詳細から関連レコード候補を調べたいとき
 recommended_flow:
+  - step: term-search
+    description: 曖昧な語や業務用語の候補を確認したい場合は GetSearchTermsTool で同義語 / 技術用語候補を取り出し、次に SearchLedgersTool で q を組み立てる
   - step: keyword-search
-    description: まず SearchLedgersTool で会社名・案件名・タグ・日付などの分かっている条件から絞り込む
+    description: まず SearchLedgersTool で会社名・案件名・タグ・日付などの分かっている条件から絞り込む。MCP では search_trace で original_q / selected_terms / kind を確認できる
   - step: inspect-meta
     description: 候補が見つかったら meta から作成者・保存先・台帳種別を確認し、次に見る対象を絞る
   - step: record-related-search
@@ -28,6 +32,7 @@ required_mcp_tools:
   - SearchLedgersTool
   - GetRelatedLedgersTool
 optional_mcp_tools:
+  - GetSearchTermsTool
   - GetLedgerDetailTool
   - GetActivityLogTool
 required_rest_endpoints:
@@ -40,6 +45,7 @@ required_guides:
   - ledgerleap://guides/common-usage-basics
 key_parameters:
   - q
+  - q（同義語展開あり）
   - tags
   - exclude_q
   - exclude_tags
@@ -64,8 +70,13 @@ ledgerleap_constraints:
   - Mroonga の MATCH AGAINST は単一カラム前提。複合インデックス前提で考えない
   - content は数値インデックス配列。カラム定義を見ずに title/body を決め打ちしない
   - "`semantic_score` を使うときは単語列よりも自然文の問い合わせを優先する"
+  - `q` は同義語データがある場合に展開されるため、現場用語・言い換え・略称を自然文として入力できる
+  - 技術用語は同義語と別扱いで候補化されるため、業務に慣れている場合は正式語をそのまま入れてよい
+  - MCP 応答の search_trace から original_q / normalized_q / selected_terms / excluded_terms を確認し、必要なら次の q を調整する
   - include_content=false や mode=count を使って段階的に情報取得する
   - 「重要」な対象は tags='重要' の明示検索と、スコア順での優先確認を使い分ける
+  - `tags` と `folder_id` は直接絞り込みに使えるが、`folder name fragment` や `ledger name fragment` は直接フィルタではないため、必要なら `q` や候補解決の導線で補う
+  - タグ名の部分一致を前提にしすぎず、まずは既存の tag / folder / 台帳定義候補を確認する
 examples:
   - user: 昨日私が作成した日報を見せて
     intent: 作成者と日付で絞った検索

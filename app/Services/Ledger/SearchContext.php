@@ -29,6 +29,20 @@ class SearchContext
     public $synonyms = [];
 
     /**
+     * kind 付きの検索候補
+     *
+     * @var array<int, array{term:string, kind:string}>
+     */
+    public array $selectedTerms = [];
+
+    /**
+     * 検索 trace
+     *
+     * @var array<string, mixed>
+     */
+    public array $trace = [];
+
+    /**
      * ハイライト用の語句
      *
      * @var array
@@ -48,6 +62,11 @@ class SearchContext
      * @var array
      */
     public $tags = [];
+
+    /**
+     * 正規化済みの検索文字列
+     */
+    private string $normalizedSearch = '';
 
     private SynonymService $synonymService;
 
@@ -82,6 +101,7 @@ class SearchContext
     {
         $this->keywords = $keywords;
         $this->updateSynonymsAndHighlights();
+        $this->trace = $this->buildTrace();
     }
 
     /**
@@ -109,8 +129,10 @@ class SearchContext
      */
     private function updateContext()
     {
+        $this->normalizedSearch = $this->normalizeSearch($this->search);
         [$this->keywords, $this->tags] = $this->extractKeywordsAndTags($this->search);
         $this->updateSynonymsAndHighlights();
+        $this->trace = $this->buildTrace();
     }
 
     /**
@@ -119,7 +141,19 @@ class SearchContext
     private function updateSynonymsAndHighlights()
     {
         $this->synonyms = $this->findSynonyms($this->keywords);
+        $this->selectedTerms = $this->findSelectedTerms($this->keywords);
         $this->highlights = $this->generateHighlights($this->keywords, $this->synonyms, $this->filter);
+    }
+
+    /**
+     * 検索文字列を正規化する
+     */
+    private function normalizeSearch(string $search): string
+    {
+        $text = mb_convert_kana($search, 'asKV', 'UTF-8');
+        $text = preg_replace('/\s+/u', ' ', trim($text)) ?? '';
+
+        return $text;
     }
 
     /**
@@ -130,11 +164,8 @@ class SearchContext
      */
     private function extractKeywordsAndTags($search)
     {
-        $text = mb_convert_kana($search, 'asKV', 'UTF-8');
-        $text = preg_replace('/\s+/u', ' ', $text);
-
-        $words = explode(' ', $text);
-        $words = array_filter($words, 'strlen');
+        $text = $this->normalizeSearch((string) $search);
+        $words = array_values(array_filter(explode(' ', $text), 'strlen'));
 
         if (empty($words)) {
             return [[], []];
@@ -143,13 +174,22 @@ class SearchContext
         $tags = [];
         $keywords = $words;
 
-        collect($words)->each(function ($word) use ($tags, $keywords) {
+        foreach ($words as $word) {
             if (Str::startsWith($word, '#')) {
                 $tags[] = substr($word, 1);
             } else {
                 $keywords = array_merge($keywords, SynonymService::wakati($word));
             }
-        });
+        }
+
+        $keywords = array_values(array_unique(array_filter(array_map(
+            static fn ($keyword) => trim((string) $keyword),
+            $keywords
+        ), static fn (string $keyword) => $keyword !== '')));
+        $tags = array_values(array_unique(array_filter(array_map(
+            static fn ($tag) => trim((string) $tag),
+            $tags
+        ), static fn (string $tag) => $tag !== '')));
 
         return [$keywords, $tags];
     }
@@ -169,6 +209,37 @@ class SearchContext
         }
 
         return $synonyms;
+    }
+
+    /**
+     * 検索候補を kind 付きで取得する
+     *
+     * @param  array  $keywords
+     * @return array<int, array{term:string, kind:string}>
+     */
+    private function findSelectedTerms(array $keywords): array
+    {
+        $selectedTerms = [];
+
+        foreach ($keywords as $keyword) {
+            $terms = $this->synonymService->getSearchTermsFromWord($keyword);
+
+            foreach ($terms as $term) {
+                $value = trim((string) ($term['term'] ?? ''));
+                if ($value === '') {
+                    continue;
+                }
+
+                if (! isset($selectedTerms[$value])) {
+                    $selectedTerms[$value] = [
+                        'term' => $value,
+                        'kind' => (string) ($term['kind'] ?? 'synonym'),
+                    ];
+                }
+            }
+        }
+
+        return array_values($selectedTerms);
     }
 
     /**
@@ -213,10 +284,17 @@ class SearchContext
      */
     public function __toString()
     {
-        if (empty($this->keywords)) {
+        if (empty($this->selectedTerms)) {
             return '';
         }
-        $result = $this->generateHighlights($this->keywords, $this->synonyms, $this->filter);
+        $result = array_merge(
+            array_map(static fn (array $term) => $term['term'], $this->selectedTerms),
+            $this->filter
+        );
+        $result = array_values(array_unique(array_filter(array_map(
+            static fn ($term) => trim((string) $term),
+            $result
+        ), static fn (string $term) => $term !== '')));
 
         return implode(' ', $result);
     }
@@ -248,5 +326,36 @@ class SearchContext
         $synonyms = $this->synonyms[$keyword] ?? [];
 
         return array_merge([$keyword], $this->flattenSynonyms($synonyms));
+    }
+
+    /**
+     * 検索 trace を返す
+     *
+     * @return array<string, mixed>
+     */
+    public function getTrace(): array
+    {
+        if ($this->trace !== []) {
+            return $this->trace;
+        }
+
+        return $this->buildTrace();
+    }
+
+    /**
+     * 検索 trace を組み立てる
+     *
+     * @return array<string, mixed>
+     */
+    private function buildTrace(): array
+    {
+        return [
+            'original_q' => $this->search ?? '',
+            'normalized_q' => $this->normalizedSearch,
+            'keywords' => $this->keywords,
+            'tags' => $this->tags,
+            'selected_terms' => $this->selectedTerms,
+            'excluded_terms' => [],
+        ];
     }
 }

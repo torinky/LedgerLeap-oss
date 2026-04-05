@@ -19,9 +19,11 @@ class SearchLedgersTool extends Tool
      */
     protected string $description = <<<'MARKDOWN'
         Search for ledgers by keyword, tags, date range, creator, folder, ledger type, or semantic relevance.
+        `q` is synonym-aware, so natural-language search terms can be expanded when synonym data is available.
 
         Important for Japanese / multi-byte keywords:
         - `q`, `tags`, `exclude_q`, and `exclude_tags` accept Japanese and other multi-byte characters
+        - `q` can be expanded with synonyms for business terms when synonym data is available
 
         Response format:
         - `summary` (default): display-oriented records with `__display_fields__`, `__summary__`, normalized `meta`, and a detail `link` when available
@@ -149,6 +151,7 @@ MARKDOWN;
             'ledgers' => $ledgers,
             'total' => $results['total'],
             'meta' => $results['meta'], // meta情報も返す
+            'search_trace' => $results['search_trace'] ?? [],
             '__summary__' => $summary,
         ]);
     }

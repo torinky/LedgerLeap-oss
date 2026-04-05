@@ -49,6 +49,7 @@ Test fails in 0s? → Previous test's migrate:rollback destroyed DB
 ## MCP Tool Test Harness
 
 - MCP unit tests that create tenant-scoped models should prefer `RefreshDatabaseWithTenant`
+- MCP unit tests that only validate tool auth/response shape and do **not** persist tenant-scoped data can skip `RefreshDatabaseWithTenant`; prefer an in-memory `User::factory()->make()` plus `Sanctum::actingAs()` for `mcp:*` auth when tenant DB setup would only add cost
 - When the test creates a `User` and binds `WritableFolderRepository`, stub both
   `clearAllCache()` and `refreshAllCache()` because `User` model events call them
 - For token-authenticated MCP tools, mock permission checks with `Mockery::type(User::class)`

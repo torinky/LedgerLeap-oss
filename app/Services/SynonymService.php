@@ -47,36 +47,80 @@ class SynonymService
      */
     public function getSynonymsFromWord($word, array $options = [])
     {
+        return array_values(array_map(
+            static fn (array $candidate) => $candidate['term'],
+            array_filter(
+                $this->getSearchTermsFromWord($word, $options),
+                static fn (array $candidate) => $candidate['term'] !== $word
+            )
+        ));
+    }
+
+    /**
+     * 指定された単語の検索候補を kind 付きで取得します。
+     *
+     * @param  string  $word  検索候補を取得する単語
+     * @param  array  $options  オプションの配列
+     *                          - 'useSynonym': (bool) 類義語を使用するかどうか。SynonymServiceConfigの値がデフォルト値として使用されます。
+     *                          - 'useTechnicalTerm': (bool) 技術用語を使用するかどうか。SynonymServiceConfigの値がデフォルト値として使用されます。
+     * @return array<int, array{term:string, kind:string}>
+     */
+    public function getSearchTermsFromWord($word, array $options = []): array
+    {
         $useSynonym = $options['useSynonym'] ?? $this->config->useSynonym;
         $useTechnicalTerm = $options['useTechnicalTerm'] ?? $this->config->useTechnicalTerm;
 
-        $initialSynonyms = [$word];
-        $synonyms = [];
+        $candidates = [];
+
+        $addCandidate = function (mixed $term, string $kind) use (&$candidates): void {
+            $term = trim((string) $term);
+            if ($term === '') {
+                return;
+            }
+
+            if (! isset($candidates[$term])) {
+                $candidates[$term] = [
+                    'term' => $term,
+                    'kind' => $kind,
+                ];
+            }
+        };
+
+        $addCandidate($word, 'original');
+
+        $seedTerms = [$word];
 
         if ($useTechnicalTerm) {
             $technicalTermGroups = TechnicalTermGroup::whereJsonContains('synonyms', $word)->get();
             foreach ($technicalTermGroups as $group) {
-                $initialSynonyms = array_merge($initialSynonyms, $group->synonyms);
+                foreach ((array) $group->synonyms as $technicalTerm) {
+                    $addCandidate($technicalTerm, 'technical');
+                    $seedTerms[] = $technicalTerm;
+                }
             }
         }
-        $initialSynonyms = array_unique($initialSynonyms);
+
+        $seedTerms = array_values(array_unique(array_filter(array_map(
+            static fn ($term) => trim((string) $term),
+            $seedTerms
+        ), static fn (string $term) => $term !== '')));
 
         if ($useSynonym) {
-            foreach ($initialSynonyms as $synonym) {
-                $words = self::getWords($synonym);
-                if ($words->isNotEmpty()) {
-                    foreach ($words as $targetWord) {
-                        $synonyms = array_merge($synonyms, $targetWord->synonyms()->pluck('lemma')->toArray());
+            foreach ($seedTerms as $synonymSeed) {
+                $words = self::getWords($synonymSeed);
+                if ($words->isEmpty()) {
+                    continue;
+                }
+
+                foreach ($words as $targetWord) {
+                    foreach ($targetWord->synonyms()->pluck('lemma')->toArray() as $synonym) {
+                        $addCandidate($synonym, 'synonym');
                     }
                 }
             }
-            $synonyms = array_unique($synonyms);
-        } else {
-            $synonyms = $initialSynonyms;
         }
-        $synonyms = array_diff($synonyms, [$word]);
 
-        return $synonyms;
+        return array_values($candidates);
     }
 
     /**

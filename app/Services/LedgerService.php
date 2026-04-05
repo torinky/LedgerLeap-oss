@@ -7,6 +7,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Tag;
+use App\Services\Ledger\SearchContext;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
@@ -220,6 +221,14 @@ class LedgerService
         \Log::info('[MCP Search Debug] User ID: '.$user->id);
         \Log::info('[MCP Search Debug] Input params: '.json_encode($params, JSON_UNESCAPED_UNICODE));
 
+        $searchContext = null;
+        $searchTrace = $this->buildEmptySearchTrace();
+
+        if (! empty($params['q'])) {
+            $searchContext = $this->buildSynonymAwareSearchContext((string) $params['q']);
+            $searchTrace = $searchContext->getTrace();
+        }
+
         // ▼▼▼ ここから追加 ▼▼▼
         // セマンティック検索の分岐
         if (($params['order_by'] ?? null) === 'semantic_score') {
@@ -266,6 +275,7 @@ class LedgerService
                 'ledgers' => $ledgers,
                 'meta' => $meta,
                 'total' => $total,
+                'search_trace' => $searchTrace,
             ];
         }
         // ▲▲▲ ここまで追加 ▲▲▲
@@ -344,10 +354,16 @@ class LedgerService
                 AllowedFilter::scope('folder_hierarchy'),
 
                 // カスタムコールバックフィルタ
-                AllowedFilter::callback('q', function ($query, $value) {
+                AllowedFilter::callback('q', function ($query, $value) use ($searchContext) {
+                    $expandedValue = $searchContext !== null
+                        ? (string) $searchContext
+                        : $this->buildSynonymAwareSearchQuery((string) $value);
                     \Log::info('[MCP Search Debug] Applying full-text search filter with keyword: '.$value);
+                    if ($expandedValue !== (string) $value) {
+                        \Log::info('[MCP Search Debug] Expanded synonym-aware search keyword: '.$expandedValue);
+                    }
                     $searchStartTime = microtime(true);
-                    $query->search($value);
+                    $query->search($expandedValue);
                     $searchTime = microtime(true) - $searchStartTime;
                     \Log::info('[MCP Search Debug] Search scope applied in: '.round($searchTime * 1000, 2).'ms');
                 }),
@@ -439,6 +455,35 @@ class LedgerService
             'ledgers' => $ledgers,
             'meta' => $meta,
             'total' => $total,
+            'search_trace' => $searchTrace,
+        ];
+    }
+
+    private function buildSynonymAwareSearchQuery(string $search): string
+    {
+        return (string) $this->buildSynonymAwareSearchContext($search);
+    }
+
+    private function buildSynonymAwareSearchContext(string $search): SearchContext
+    {
+        $searchContext = new SearchContext(app(SynonymService::class));
+        $searchContext->setSearch(trim($search));
+
+        return $searchContext;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildEmptySearchTrace(): array
+    {
+        return [
+            'original_q' => '',
+            'normalized_q' => '',
+            'keywords' => [],
+            'tags' => [],
+            'selected_terms' => [],
+            'excluded_terms' => [],
         ];
     }
 
