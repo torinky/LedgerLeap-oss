@@ -5,7 +5,7 @@
     }
 @endphp
 
-<li class="ps-4" data-id="{{ $row->getKey() }}">
+<li class="tree-node-{{ $row->depth }}" data-id="{{ $row->getKey() }}" data-depth="{{ $row->depth }}" style="padding-left: {{ (1 + $row->depth) * 1.5 }}rem;">
     <div class="flex flex-row items-center rounded-xl shadow-sm ring-1 dark:ring-gray-950/5 ring-gray-950/5 p-2">
         <div class="tree-row-handler flex flex-row items-center ps-2">
             @if($row->children->isNotEmpty())

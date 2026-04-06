@@ -14,6 +14,7 @@
 - [Issue #126 Sprint 1 Plan: `15web/filament-tree` fork 基盤化](./2026-04-01_issue-126_filament-tree-fork-sprint1-plan.md)
 - [Issue #126 Dependency Inventory & Migration Targets](./2026-04-01_issue-126_dependency-inventory-and-migration-targets.md)
 - [Livewire 4 + Filament 5 Migration Replan](./2026-04-01_livewire4_filament5_replan.md)
+- [Filament Tree Package Override Consolidation](./2026-04-06_filament-tree-package-override-consolidation.md)
 
 ## 位置づけ
 
