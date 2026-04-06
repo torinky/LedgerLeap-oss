@@ -90,7 +90,7 @@ abstract class TreePage extends Page
             : $modelClass::query()->defaultOrder();
 
         return [
-            'tree' => $query->get()->toTree(),
+            'tree' => $query->withDepth()->get()->toTree(),
         ];
     }
 }
