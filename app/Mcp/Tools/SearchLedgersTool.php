@@ -3,8 +3,10 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Models\AttachedFile;
 use App\Services\LedgerService;
 use Carbon\Carbon;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -28,6 +30,7 @@ class SearchLedgersTool extends Tool
 
         Response format:
         - `summary` (default): display-oriented records with `__display_fields__`, `__summary__`, normalized `meta`, and a detail `link` when available
+        - summary records also include `attachment_count` and per-attachment `attachment_id` / `filename` / `role` / `order` / `source`
         - `raw`: normalized `ledgers`, `meta`, and `total` for machine processing
 
         Key parameters:
@@ -86,6 +89,17 @@ MARKDOWN;
             return Response::json($results);
         }
 
+        $ledgers = $results['ledgers'];
+        if ($ledgers instanceof \Illuminate\Support\Collection) {
+            foreach ($ledgers as $ledger) {
+                if ($ledger instanceof Model) {
+                    $ledger->loadMissing([
+                        'attachedFiles' => fn ($query) => $query->orderBy('column_id')->orderBy('id'),
+                    ]);
+                }
+            }
+        }
+
         // summary フォーマットの場合、表示用の加工を行う
         $includeContent = $parameters['include_content'] ?? true;
         $contentPreviewLength = $parameters['content_preview_length'] ?? 200;
@@ -93,6 +107,7 @@ MARKDOWN;
         $ledgers = collect($results['ledgers'])
             ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
                 $meta = $results['meta'];
+                $attachedFiles = $ledger instanceof Model ? ($ledger->getRelation('attachedFiles') ?? []) : [];
                 $ledger = (object) $ledger;
 
                 $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
@@ -129,10 +144,13 @@ MARKDOWN;
 
                 $ledger->__display_fields__ = $displayFields;
 
-                if (! empty($ledger->content_attached)) {
-                    $contentAttached = json_decode(json_encode($ledger->content_attached), true);
-                    $ledger->attachments = $this->formatAttachments($contentAttached);
-                }
+                $contentAttached = json_decode(json_encode($ledger->content_attached ?? []), true);
+                $ledger->attachments = $this->formatAttachments($contentAttached, $attachedFiles);
+                $displayFields['attachment_count'] = count($ledger->attachments);
+                $displayFields['attachment_summary'] = $this->describeAttachmentCount(
+                    $displayFields['attachment_count']
+                );
+                $ledger->__display_fields__ = $displayFields;
 
                 return $ledger;
             });
@@ -198,25 +216,67 @@ MARKDOWN;
      * Format content_attached data into a user-friendly structure.
      *
      * @param  array  $contentAttached  The content_attached array from the ledger
+     * @param  iterable<int, AttachedFile>  $attachedFiles  Related attached file models
      * @return array Array of attachment information
      */
-    private function formatAttachments(array $contentAttached): array
+    private function formatAttachments(array $contentAttached, iterable $attachedFiles = []): array
+    {
+        $normalizedEntries = $this->normalizeAttachmentEntries($contentAttached);
+        $lookup = collect($normalizedEntries)
+            ->keyBy(fn (array $entry): string => $this->attachmentLookupKey($entry['column_id'], $entry['hash']));
+        $orderedEntries = [];
+
+        foreach ($attachedFiles as $attachedFile) {
+            if (! $attachedFile instanceof AttachedFile) {
+                continue;
+            }
+
+            $key = $this->attachmentLookupKey($attachedFile->column_id, $attachedFile->hashedbasename);
+            if ($lookup->has($key)) {
+                $orderedEntries[] = [
+                    'entry' => $lookup->get($key),
+                    'attached_file' => $attachedFile,
+                ];
+                $lookup = $lookup->except([$key]);
+            }
+        }
+
+        foreach ($lookup as $entry) {
+            $orderedEntries[] = [
+                'entry' => $entry,
+                'attached_file' => null,
+            ];
+        }
+
+        $total = count($orderedEntries);
+        $attachments = [];
+        foreach ($orderedEntries as $index => $orderedEntry) {
+            $attachments[] = $this->buildAttachmentRecord(
+                entry: $orderedEntry['entry'],
+                attachedFile: $orderedEntry['attached_file'],
+                order: $index + 1,
+                total: $total,
+            );
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * content_attached を添付レコードとして列挙しやすい形に正規化する。
+     *
+     * @return array<int, array{column_id:int|string, hash:string, file_info:array}>
+     */
+    private function normalizeAttachmentEntries(array $contentAttached): array
     {
         $attachments = [];
 
         foreach ($contentAttached as $columnId => $files) {
-            // 空の配列はスキップ
             if (empty($files) || ! is_array($files)) {
                 continue;
             }
 
-            // filesを配列に変換（オブジェクトの場合に対応）
-            if (is_object($files)) {
-                $files = (array) $files;
-            }
-
             foreach ($files as $hash => $fileInfo) {
-                // fileInfoが配列であることを確認
                 if (! is_array($fileInfo)) {
                     if (is_object($fileInfo)) {
                         $fileInfo = (array) $fileInfo;
@@ -226,17 +286,60 @@ MARKDOWN;
                 }
 
                 $attachments[] = [
-                    'name' => $fileInfo['name'] ?? trans('common.unknown', [], 'ja'),
-                    'size' => $fileInfo['size'] ?? 0,
-                    'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
-                    'mime' => $fileInfo['mime'] ?? 'application/octet-stream',
                     'column_id' => $columnId,
-                    'hash' => $hash,
+                    'hash' => (string) $hash,
+                    'file_info' => $fileInfo,
                 ];
             }
         }
 
         return $attachments;
+    }
+
+    /**
+     * 添付 1 件分の表示データを構築する。
+     */
+    private function buildAttachmentRecord(array $entry, ?AttachedFile $attachedFile, int $order, int $total): array
+    {
+        $fileInfo = $entry['file_info'];
+        $resolvedName = $attachedFile?->filename
+            ?? $fileInfo['name']
+            ?? $fileInfo['filename']
+            ?? trans('common.unknown', [], 'ja');
+
+        $source = $attachedFile?->finalized_source
+            ?? $fileInfo['source']
+            ?? $fileInfo['meta']['source']
+            ?? 'unknown';
+
+        return [
+            'attachment_id' => $attachedFile?->id,
+            'filename' => $resolvedName,
+            'name' => $resolvedName,
+            'role' => $order === 1 ? 'primary' : 'supporting',
+            'order' => $order,
+            'source' => $source,
+            'size' => $fileInfo['size'] ?? 0,
+            'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
+            'mime' => $fileInfo['mime'] ?? $attachedFile?->mime ?? 'application/octet-stream',
+            'column_id' => $entry['column_id'],
+            'hash' => $entry['hash'],
+            'total_attachments' => $total,
+        ];
+    }
+
+    private function attachmentLookupKey(int|string $columnId, string $hash): string
+    {
+        return $columnId.'|'.$hash;
+    }
+
+    private function describeAttachmentCount(int $count): string
+    {
+        return match (true) {
+            $count <= 0 => '添付なし',
+            $count === 1 => '1件の添付',
+            default => $count.'件の添付',
+        };
     }
 
     /**

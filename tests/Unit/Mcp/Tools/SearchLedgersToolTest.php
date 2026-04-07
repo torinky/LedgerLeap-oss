@@ -2,11 +2,13 @@
 
 namespace Tests\Unit\Mcp\Tools;
 
+use App\Models\AttachedFile;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
@@ -368,6 +370,34 @@ class SearchLedgersToolTest extends TestCase
         ]);
         // content_attachedを直接プロパティとして設定（AsColumnArrayJsonの動作を模擬）
         $ledger->content_attached = $contentAttachedObj;
+        $firstAttachment = new AttachedFile([
+                'id' => 11,
+                'ledger_id' => $ledger->id,
+                'column_id' => 1,
+                'filename' => '請求書.pdf',
+                'hashedbasename' => 'abc123hash',
+                'mime' => 'application/pdf',
+                'size' => 524288,
+                'finalized_source' => 'vlm',
+            ]);
+        $firstAttachment->setAttribute('id', 11);
+
+        $secondAttachment = new AttachedFile([
+                'id' => 12,
+                'ledger_id' => $ledger->id,
+                'column_id' => 1,
+                'filename' => '契約書.docx',
+                'hashedbasename' => 'def456hash',
+                'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+                'size' => 1048576,
+                'finalized_source' => 'ocr',
+            ]);
+        $secondAttachment->setAttribute('id', 12);
+
+        $ledger->setRelation('attachedFiles', new EloquentCollection([
+            $firstAttachment,
+            $secondAttachment,
+        ]));
 
         $mockMeta = [
             'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
@@ -388,12 +418,21 @@ class SearchLedgersToolTest extends TestCase
         // attachments キーが含まれることを確認
         $this->assertArrayHasKey('attachments', $responseData['ledgers'][0]);
         $attachments = $responseData['ledgers'][0]['attachments'];
+        $displayFields = $responseData['ledgers'][0]['__display_fields__'];
+
+        $this->assertSame(2, $displayFields['attachment_count']);
+        $this->assertSame('2件の添付', $displayFields['attachment_summary']);
 
         // 2つの添付ファイルがあることを確認
         $this->assertCount(2, $attachments);
 
         // 最初の添付ファイルの内容を確認
+        $this->assertEquals(11, $attachments[0]['attachment_id']);
+        $this->assertEquals('請求書.pdf', $attachments[0]['filename']);
         $this->assertEquals('請求書.pdf', $attachments[0]['name']);
+        $this->assertEquals('primary', $attachments[0]['role']);
+        $this->assertEquals(1, $attachments[0]['order']);
+        $this->assertEquals('vlm', $attachments[0]['source']);
         $this->assertEquals(524288, $attachments[0]['size']);
         $this->assertEquals('512 KB', $attachments[0]['size_formatted']);
         $this->assertEquals('application/pdf', $attachments[0]['mime']);
@@ -401,7 +440,12 @@ class SearchLedgersToolTest extends TestCase
         $this->assertEquals('abc123hash', $attachments[0]['hash']);
 
         // 2番目の添付ファイルの内容を確認
+        $this->assertEquals(12, $attachments[1]['attachment_id']);
+        $this->assertEquals('契約書.docx', $attachments[1]['filename']);
         $this->assertEquals('契約書.docx', $attachments[1]['name']);
+        $this->assertEquals('supporting', $attachments[1]['role']);
+        $this->assertEquals(2, $attachments[1]['order']);
+        $this->assertEquals('ocr', $attachments[1]['source']);
         $this->assertEquals(1048576, $attachments[1]['size']);
         $this->assertEquals('1 MB', $attachments[1]['size_formatted']);
         $this->assertStringContainsString('wordprocessing', $attachments[1]['mime']);
@@ -447,8 +491,66 @@ class SearchLedgersToolTest extends TestCase
         $this->assertFalse($response->isError());
         $responseData = json_decode($response->content()->__toString(), true);
 
-        // attachmentsキーが存在しないことを確認
-        $this->assertArrayNotHasKey('attachments', $responseData['ledgers'][0]);
+        // attachmentsキーは常に返し、空配列であることを確認
+        $this->assertArrayHasKey('attachments', $responseData['ledgers'][0]);
+        $this->assertSame([], $responseData['ledgers'][0]['attachments']);
+        $this->assertSame(0, $responseData['ledgers'][0]['__display_fields__']['attachment_count']);
+        $this->assertSame('添付なし', $responseData['ledgers'][0]['__display_fields__']['attachment_summary']);
+    }
+
+    #[Test]
+    public function it_falls_back_to_content_attached_values_when_attachment_relation_is_missing()
+    {
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $contentAttachedObj = new \stdClass;
+        $contentAttachedObj->{'1'} = [
+            'hash-only' => [
+                'name' => '未確定ファイル.txt',
+                'size' => 128,
+                'mime' => 'text/plain',
+            ],
+        ];
+
+        $ledger = new Ledger([
+            'id' => 2,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'content' => [0 => 'テストコンテンツ'],
+            'updated_at' => now(),
+        ]);
+        $ledger->content_attached = $contentAttachedObj;
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        $attachments = $responseData['ledgers'][0]['attachments'];
+        $this->assertCount(1, $attachments);
+        $this->assertNull($attachments[0]['attachment_id']);
+        $this->assertSame('未確定ファイル.txt', $attachments[0]['filename']);
+        $this->assertSame('primary', $attachments[0]['role']);
+        $this->assertSame(1, $attachments[0]['order']);
+        $this->assertSame('unknown', $attachments[0]['source']);
     }
 
     #[Test]
