@@ -307,6 +307,26 @@ A2-1 の最終アウトプットは `docs/work/llm-integration/2026-04-05_Issue-
 3. 添付別のダウンロード / 取得 API または MCP 契約を分解する
 4. テストデータを整備する
 
+**設計で先に確定する論点**
+- `delivery_mode` は **添付ごと** に決めるのか、**応答全体** の代表モードにするのか
+- `Visual` / `Structured` / `Text` の選択優先順位を、`mime` と Vision 可否の組み合わせで明文化する
+- `attachment_id` / `filename` / `role` / `order` を共通 envelope として固定する
+- 既存の `vlm_markdown` / `vlm_structured_data` を **維持** しつつ、追加メタデータを上乗せする形にする
+- `pages` / `text_blocks` / `key_value_pairs` に加えて、位置情報が必要なら `page_index` / `bbox` / `source_span` のどれを採るか決める
+- 取得失敗、空データ、非対応 MIME の fallback をどこまで許容するか決める
+
+**非ゴール**
+- OCR / VLM モデルそのものの再設計
+- 既存の `vlm_markdown` / `vlm_structured_data` の破壊的変更
+- UI の全面再設計や別系統の閲覧画面の新設
+
+**Sprint C の最小受け入れ条件案**
+- 添付ごとに同じ envelope でデータをたどれる
+- Structured で `key_value_pairs` が失われない
+- Visual を返せる環境では、画像 / PDF に対して意図したモードを選べる
+- fallback 時にも `attachment_id` / `filename` / `role` / `order` が欠けない
+- 既存の VLM ダウンロード経路と矛盾しない
+
 **受け入れ基準**
 - 添付ごとの出力を再現できる
 - ページ位置や項目名との関係を返せる
