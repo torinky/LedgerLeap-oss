@@ -1,7 +1,7 @@
 ---
 name: github-issue-workflow
-description: Manages GitHub issues for LedgerLeap — reading, commenting, updating checklists, sprint planning, and coverage reporting. Use when performing any GitHub issue operation.
-compatibility: LedgerLeap (owner: torinky, repo: LedgerLeap)
+description: Manages GitHub issues for LedgerLeap — drafting, reading, commenting, updating checklists, sprint planning, and coverage reporting. Use when performing any GitHub issue operation.
+compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap)"
 ---
 
 # github-issue-workflow
@@ -28,6 +28,23 @@ Always pass these to every GitHub tool call.
 3. issue_write(method: update, body: <full>)   — checklist checkbox updates (replace entire body)
 4. issue_write(method: update, state: closed)  — when all acceptance criteria are met
 ```
+
+## Issue Drafting Flow
+
+Use this flow for **bugs, improvements, feature additions, refactors, docs, and investigation issues**.
+
+1. **Choose the correct issue form first**
+   - `/.github/ISSUE_TEMPLATE/bug_report.yml` for bugs, regressions, CI failures, and error reports
+   - `/.github/ISSUE_TEMPLATE/issue_request.yml` for improvements, feature additions, investigations, docs, and refactors
+2. **Keep the wording neutral**; describe the problem and goal without presuming the fix.
+3. **Keep the form fields aligned** with the canonical body order in the chosen template.
+4. **Use sprint breakdowns only when the work spans multiple steps** or needs evidence checkpoints.
+5. **Attach concrete evidence**: file paths, test names, coverage, screenshots, logs, and commit refs.
+6. **Add acceptance criteria** that are directly checkable.
+
+### Drafting rule
+
+The issue form is the source of truth for issue structure. Do not duplicate the full body skeleton here; link to the template instead and keep any extra guidance brief.
 
 ## Checklist Update Rule
 

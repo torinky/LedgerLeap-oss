@@ -5,7 +5,8 @@ body:
   - type: markdown
     attributes:
       value: |
-        再現手順、期待値と実際値、ログやスクリーンショット、関連リンクをできるだけ具体的に記入してください。
+        再現手順、期待値と実際値、再現頻度、ログやスクリーンショット、関連リンクをできるだけ具体的に記入してください。
+        CI 失敗なら job 名・run URL・失敗ステップを、回帰なら最後に正常だった branch / commit を添えてください。
         調査時は `/.github/prompts/bug-investigation.prompt.md` と `docs/runbooks/bug-response-playbook.md` を参照します。
 
   - type: textarea
@@ -38,6 +39,19 @@ body:
     validations:
       required: true
 
+  - type: dropdown
+    id: reproducibility
+    attributes:
+      label: 再現頻度
+      options:
+        - 毎回再現する
+        - 時々再現する
+        - 1 回だけ発生した
+        - CI のみで再現する
+        - 不明
+    validations:
+      required: true
+
   - type: textarea
     id: reproduce_steps
     attributes:
@@ -50,6 +64,18 @@ body:
         4. 500 エラーが出る
     validations:
       required: true
+
+  - type: textarea
+    id: workaround
+    attributes:
+      label: 暫定回避策 / 試したこと
+      description: 既に試した対応、回避方法、切り分け結果があれば記入してください。
+      placeholder: |
+        例: 添付ファイルなしだと保存できる。
+        例: 権限を外すと再現しない。
+        例: `php artisan test --filter=...` では同じ失敗が出る。
+    validations:
+      required: false
 
   - type: textarea
     id: logs
