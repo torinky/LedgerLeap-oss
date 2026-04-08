@@ -7,4 +7,3 @@ return [
     'password_confirmation' => 'パスワード確認',
     'roles_and_permissions' => 'ロールと権限',
 ];
-
