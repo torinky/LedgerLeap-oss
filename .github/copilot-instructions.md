@@ -25,7 +25,7 @@
 ## Prompt Shortcuts
 - `/git-commit`, `/github-issue-workflow`, `/ci-failure-investigation`, `/rag-vector-search`, `/bug-investigation`, `/bug-execution`, `/skill-maintenance`
 ## Auto Context
-- Path rules: `.github/instructions/livewire.instructions.md`, `.github/instructions/php-laravel.instructions.md`, `.github/instructions/tests.instructions.md`, `.github/instructions/ai-assets.instructions.md`
+- Path rules: `.github/instructions/livewire.instructions.md`, `.github/instructions/php-laravel.instructions.md`, `.github/instructions/tests.instructions.md`, `.github/instructions/ai-assets.instructions.md`, `.github/instructions/design.instructions.md`
 - Reusable deep knowledge: `.github/skills/*/SKILL.md`
 - Agent-wide routing/meta: `AGENTS.md`
 ## Workflow

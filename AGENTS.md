@@ -61,4 +61,5 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - Mroonga full-text search is single-column only.
 - Livewire public state must stay plain arrays.
 - `#[Lazy]` tenant-aware components and Livewire URL helpers should follow `.github/skills/livewire-tenant-context/SKILL.md` for the shared tenant resolver and `tenant_id` fallback pattern.
+- All UI composition and styling MUST strictly adhere to `/.github/instructions/design.instructions.md`. Prioritize Mary UI components but style them using daisyUI/Tailwind semantics to match the project's vibe.
 

@@ -10,6 +10,7 @@ LedgerLeap の標準運用手順への入口です。
 - [Bug Response Playbook](./bug-response-playbook.md): 不具合の intake → 調査 → 実装 → 検証 → 学び反映
 - [AI Asset Maintenance Playbook](./ai-asset-maintenance-playbook.md): 学びを `.github` / `AGENTS.md` / runbooks へ同期する手順
 - [Browser HAR Analysis Playbook](./browser-har-analysis-playbook.md): HAR 比較 → repeated request 切り分け → 証跡化
+- [UI Migration Playbook](./ui-migration-playbook.md): プロジェクト全画面を統一ルール（Mary UI / daisyUI）に準拠させるためのUI置き換え手順
 
 ## Recommended Flow
 1. 不具合対応は [Bug Response Playbook](./bug-response-playbook.md) を起点に進める
