@@ -252,13 +252,16 @@ services:
     ports:
       - "${VLM_SERVICE_PORT:-8001}:8000"
     volumes:
-      # Note: vlm-cache volume disabled for MinerU (models baked into image)
-      # For PaddleOCR/Marker, models are small enough to download at runtime
+      # Persist PaddleOCR / PaddleOCR-VL caches so startup can reuse downloaded models.
+      - ./storage/vlm-cache/paddleocr:/root/.paddleocr
+      - ./storage/vlm-cache/paddlex:/root/.paddlex
+      - ./storage/vlm-cache/huggingface:/root/.cache/huggingface
       - .:/var/www/html
     environment:
       - PYTHONUNBUFFERED=1
       - VLM_MODEL=${VLM_MODEL:-paddleocr}
       - PADDLEOCR_DEVICE=${PADDLEOCR_DEVICE:-cpu}
+      - VLM_OFFLINE=${VLM_OFFLINE:-auto}
     deploy:
       resources:
         limits:

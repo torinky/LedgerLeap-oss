@@ -22,6 +22,7 @@ LedgerLeap のテスト設計・実装に関するドキュメントをトピッ
 | [05-livewire.md](./05-livewire.md) | Livewireコンポーネントのテストパターン | LivewireコンポーネントのUI実装 |
 | [06-mcp-tools.md](./06-mcp-tools.md) | MCPツールのテストパターン | MCPツール実装 |
 | [07-coverage.md](./07-coverage.md) | カバレッジ測定・目標値・ツール | カバレッジ改善時 |
+| [08-vlm-cache-regression.md](./08-vlm-cache-regression.md) | VLM のキャッシュ判定・オフライン起動の回帰テスト | `docker/paddle/unified_api.py` を触る場合 |
 
 ---
 
@@ -43,6 +44,10 @@ LedgerLeap のテスト設計・実装に関するドキュメントをトピッ
 → **[03-external-dependency-isolation.md](./03-external-dependency-isolation.md)** および
 → **[.github/skills/ci-failure-investigation/SKILL.md](../../../.github/skills/ci-failure-investigation/SKILL.md)**
 
+### VLM の起動前キャッシュ判定や offline mode を確認したいとき
+→ **[08-vlm-cache-regression.md](./08-vlm-cache-regression.md)**
+`docker/paddle/unified_api.py` の `_is_backend_cached()` / `_resolve_offline_mode()` を対象にする。
+
 ### カバレッジが 0% になるとき
 → **[07-coverage.md](./07-coverage.md)**
 `#[CoversClass]` の付与と `instance()` 経由の呼び出しを確認すること。
@@ -55,12 +60,14 @@ LedgerLeap のテスト設計・実装に関するドキュメントをトピッ
 - `serial-remainder`: `FeatureSerial` に残す、まだ並列化しない残余
 - `database-migrations`: Mroonga / `DatabaseMigrationsOnce` 系
 - `external`: LDAP / VLM / Embedding など外部コンテナ依存
+- `vlm-cache-regression`: `docker/paddle/unified_api.py` の純粋ロジック回帰（Python `unittest`、外部コンテナ不要）
 
 **入口の対応**
 - `test:ci:unit` / `test:ci:feature` → `parallel-safe`
 - `test:ci:feature:serial` → `serial-remainder`
 - `test:ci:db-migrations` → `database-migrations`
 - `test:external` → `external`
+- `python3 -m unittest discover -s docker/paddle/tests -p "test_*.py"` → `vlm-cache-regression`
 
 ---
 
@@ -131,6 +138,16 @@ PhpStorm やローカル terminal では、**全件 `--parallel` を直接実行
 - 例: 実 LDAP、実 VLM、RAG 性能確認
 - 通常 CI / canary では除外される
 - Embedding / VLM / LDAP などのコンテナがローカルで利用可能なときだけ実行する
+
+### VLM キャッシュ判定の回帰確認（ローカル / CI 共通）
+
+```bash
+python3 -m unittest discover -s docker/paddle/tests -p "test_*.py"
+```
+
+- `docker/paddle/unified_api.py` のキャッシュマーカー変更や `VLM_OFFLINE` の挙動変更時に実行する
+- FastAPI / 実 OCR / 実コンテナを使わないため高速に回せる
+- CI では `.github/workflows/vlm-cache-regression.yml` で自動実行する
 
 ### PhpStorm 設定の考え方
 

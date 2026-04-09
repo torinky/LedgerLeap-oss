@@ -29,8 +29,120 @@ model_engine = None
 model_type = None
 initialization_error = None
 
+def _normalize_mode(value: Optional[str], default: str = "auto") -> str:
+    return (value if value is not None else default).strip().lower()
+
+def _get_cache_roots() -> list[Path]:
+    """Return candidate cache roots used by PaddleOCR / PaddleOCR-VL."""
+    roots: list[Path] = []
+    for env_name in ("VLM_CACHE_DIR", "PADDLEOCR_CACHE_DIR", "PADDLEX_HOME", "PADDLEOCR_HOME"):
+        env_value = os.environ.get(env_name)
+        if env_value:
+            roots.append(Path(env_value).expanduser())
+
+    home = Path.home()
+    roots.extend([
+        home / ".paddleocr" / "whl",
+        home / ".paddlex" / "official_models",
+    ])
+
+    unique_roots: list[Path] = []
+    seen = set()
+    for root in roots:
+        resolved = root.expanduser()
+        if resolved not in seen:
+            seen.add(resolved)
+            unique_roots.append(resolved)
+    return unique_roots
+
+def _backend_cache_marker_groups(vlm_model: str) -> list[list[Path]]:
+    """Return acceptable marker sets that indicate a backend is already preloaded locally."""
+    if vlm_model == "paddleocr-vl":
+        return [[
+            Path("PaddleOCR-VL/config.json"),
+            Path("PaddleOCR-VL/model.safetensors"),
+            Path("PP-DocLayoutV2/config.json"),
+            Path("PP-DocLayoutV2/model.safetensors"),
+            Path("PP-LCNet_x1_0_doc_ori/config.json"),
+            Path("PP-LCNet_x1_0_doc_ori/model.safetensors"),
+            Path("UVDoc/config.json"),
+            Path("UVDoc/model.safetensors"),
+        ]]
+
+    # PaddleOCR(lang='japan') currently downloads a Japanese PP-OCRv4 recognition model,
+    # while older environments may still hold the previous multilingual PP-OCRv3 cache.
+    # Accept either tarball-based or extracted-model layouts so warmed caches stay reusable.
+    return [
+        [
+            Path("det/ml/Multilingual_PP-OCRv3_det_infer/Multilingual_PP-OCRv3_det_infer.tar"),
+            Path("rec/japan/japan_PP-OCRv4_rec_infer/japan_PP-OCRv4_rec_infer.tar"),
+            Path("cls/ch_ppocr_mobile_v2.0_cls_infer/ch_ppocr_mobile_v2.0_cls_infer.tar"),
+        ],
+        [
+            Path("det/ml/Multilingual_PP-OCRv3_det_infer/inference.pdiparams"),
+            Path("rec/japan/japan_PP-OCRv4_rec_infer/inference.pdiparams"),
+            Path("cls/ch_ppocr_mobile_v2.0_cls_infer/inference.pdiparams"),
+        ],
+        [
+            Path("det/ml/Multilingual_PP-OCRv3_det_infer/Multilingual_PP-OCRv3_det_infer.tar"),
+            Path("rec/ml/Multilingual_PP-OCRv3_rec_infer/Multilingual_PP-OCRv3_rec_infer.tar"),
+            Path("cls/ch_ppocr_mobile_v2.0_cls_infer/ch_ppocr_mobile_v2.0_cls_infer.tar"),
+        ],
+        [
+            Path("det/ml/Multilingual_PP-OCRv3_det_infer/inference.pdiparams"),
+            Path("rec/ml/Multilingual_PP-OCRv3_rec_infer/inference.pdiparams"),
+            Path("cls/ch_ppocr_mobile_v2.0_cls_infer/inference.pdiparams"),
+        ],
+    ]
+
+def _is_backend_cached(vlm_model: str) -> bool:
+    """Detect whether the requested backend has been preloaded locally."""
+    marker_groups = _backend_cache_marker_groups(vlm_model)
+    for root in _get_cache_roots():
+        for markers in marker_groups:
+            if all((root / marker).exists() for marker in markers):
+                logger.info(f"Cache detected for '{vlm_model}': {root}")
+                return True
+
+    logger.info(f"No complete local cache found for '{vlm_model}'")
+    return False
+
+def _resolve_offline_mode(vlm_model: str) -> bool:
+    """Decide whether the backend should be forced into offline/source-check-disabled mode."""
+    mode = _normalize_mode(os.environ.get("VLM_OFFLINE"), "auto")
+    cached = _is_backend_cached(vlm_model)
+
+    if mode in {"1", "true", "yes", "on", "offline"}:
+        if not cached:
+            raise RuntimeError(
+                f"VLM_OFFLINE={mode} but no complete local cache was found for '{vlm_model}'."
+            )
+        logger.info("Offline mode: FORCED ON (VLM_OFFLINE=1) -> using local cache only")
+        return True
+
+    if mode in {"0", "false", "no", "off", "online"}:
+        logger.info("Offline mode: FORCED OFF (VLM_OFFLINE=0) -> source check remains enabled")
+        return False
+
+    if cached:
+        logger.info("Offline mode: AUTO -> cache found, disabling model source check")
+        return True
+
+    logger.info("Offline mode: AUTO -> no cache found, keeping online source check enabled")
+    return False
+
+def _configure_model_source_check(vlm_model: str) -> None:
+    """Set PaddleOCR source-check behavior before model initialization."""
+    disable_source_check = _resolve_offline_mode(vlm_model)
+    os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"] = "True" if disable_source_check else "False"
+    logger.info(
+        "PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK=%s",
+        os.environ["PADDLE_PDX_DISABLE_MODEL_SOURCE_CHECK"],
+    )
+
 def initialize_paddleocr():
     """Initialize PaddleOCR (OCR-only) backend"""
+    _configure_model_source_check("paddleocr")
     from paddleocr import PaddleOCR
     logger.info("Initializing PaddleOCR backend...")
     
@@ -53,6 +165,7 @@ def initialize_paddleocr():
 
 def initialize_paddleocr_vl():
     """Initialize PaddleOCR-VL (advanced document understanding) backend"""
+    _configure_model_source_check("paddleocr-vl")
     from paddleocr import PaddleOCRVL
     logger.info("Initializing PaddleOCR-VL backend...")
     
