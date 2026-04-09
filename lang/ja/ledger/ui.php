@@ -323,4 +323,6 @@ return [
     'view_history' => '変更履歴を見る',
     'yes' => 'はい',
     'your_effective_roles_title' => 'あなたの有効なロール',
+    'action_bar_open' => 'アクションを開く',
+    'action_bar_close' => 'メニューを閉じる',
 ];

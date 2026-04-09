@@ -86,9 +86,8 @@
             overflow-y:auto でツリーが独立スクロールできるようにする。
             サイドバー幅は xl:w-64 / 2xl:w-72 でレスポンシブに変化。
         --}}
-        <div class="drawer-side z-40 xl:w-64 2xl:w-72"
-            style="position: fixed; top: 64px; height: calc(100vh - 64px); overflow-y: auto; overflow-x: clip;">
-            <label for="app-drawer" class="drawer-overlay w-full"></label>
+        <div class="drawer-side z-40 fixed top-16 h-[calc(100vh-4rem)] w-80 md:w-80 xl:w-64 2xl:w-72 overflow-y-auto overflow-x-clip">
+            <label for="app-drawer" class="drawer-overlay w-full" aria-label="Close sidebar"></label>
             {{--
                 overflow-x は hidden から clip に変更。
                 clip は overflow-y: auto との組み合わせで縦スクロールを妨げない。
@@ -96,7 +95,7 @@
                 独立しているため、clip によってクリップされず横スクロールが正常に機能する。
                 hidden は子のスクロールコンテナもブロックするが、clip はそれを許容する。
             --}}
-            <ul class="menu overflow-y-auto h-full xl:w-64 2xl:w-72 p-2" style="overflow-x: clip;">
+            <ul class="menu overflow-y-auto h-full w-80 md:w-80 xl:w-64 2xl:w-72 p-2 bg-base-100 text-base-content overflow-x-clip">
                 {{ $drawer ?? '' }}
             </ul>
         </div>

@@ -147,55 +147,54 @@
         @endif
     </div>
 
-    <div class="z-20 fixed bottom-4 left-0 right-0 mx-auto flex justify-center">
-        <div class="card bg-base-300 opacity-70 hover:opacity-100 transition-opacity">
-            <div class="card-body">
-                <div class="card-actions place-items-center">
+    {{-- 統一アクションバー（透過・ホバー＆スライドアップ対応） --}}
+    <div class="mx-auto w-full lg:w-2/3 fixed bottom-0 lg:bottom-4 inset-x-0 z-50 lg:px-4 transition-transform duration-300 ease-in-out"
+         x-data="{ expanded: false, isLg: window.innerWidth >= 1024 }"
+         @resize.window="isLg = window.innerWidth >= 1024"
+         :style="(!isLg && !expanded) ? 'transform: translateY(calc(100% - 3.5rem));' : 'transform: translateY(0);'"
+         @click.outside="if(!isLg) expanded = false"
+    >
+        <div class="shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-md bg-base-300 transition-opacity duration-300 opacity-100 lg:opacity-[0.65] lg:hover:opacity-100 rounded-t-3xl lg:rounded-box border-t border-base-200 lg:border-none overflow-hidden flex flex-col">
+            {{-- タブレット用引き上げタブ (Edge-to-Edge) --}}
+            <div class="lg:hidden w-full flex flex-col items-center justify-center cursor-pointer h-14 bg-base-300 hover:bg-base-200 active:bg-base-200 transition-colors border-b border-base-content/10 flex-shrink-0" @click="expanded = !expanded">
+                <div class="w-20 h-1.5 bg-base-content/30 rounded-full mb-2"></div>
+                <div class="flex items-center text-base-content/80 text-sm font-bold tracking-wider gap-2">
+                    <i class="fa-solid fa-chevron-up transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                    <span x-text="expanded ? '{{ __('ledger.action_bar_close') }}' : '{{ __('ledger.action_bar_open') }}'"></span>
+                </div>
+            </div>
 
-                    @can('create',$currentFolder)
-                        <a href="{{ route('folder.create',['tenant' => $this->tenantId, 'parentId' => $currentFolderId])}}"
-                           class="btn btn-primary btn-lg mx-3"
-                           target="folderCreate">
-                            <span class="fa-layers fa-fw mr-2">
-                                <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
-                                <i class="fa-solid  fa-plus-circle text-base-100/70"
-                                   data-fa-transform=" right-6 up-10"></i>
-                            </span>
-                            {{__('ledger.folder.create')}}
-                        </a>
-                    @else
-                        <div class="tooltip"
-                             data-tip="{{__('ledger.folder.not_allow_create')}}">
-                            <div
-                                class="btn btn-neutral btn-lg mx-3 opacity-50"
-                            >
-                        <span class="fa-layers fa-fw mr-2">
-                            <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
-                            <i class="fa-solid  fa-plus-circle text-base-100/70"
-                               data-fa-transform=" right-6 up-10"></i>
-                        </span>
+            <div class="p-4 lg:p-4 pb-8 lg:pb-4 overflow-y-auto max-h-[60vh]">
+                <div class="flex flex-col gap-4">
+                    <div class="flex flex-wrap items-center justify-center gap-4">
+                        @can('create',$currentFolder)
+                            <a href="{{ route('folder.create',['tenant' => $this->tenantId, 'parentId' => $currentFolderId])}}"
+                               class="btn btn-primary btn-lg shadow-md px-6"
+                               target="folderCreate">
+                                <span class="fa-layers fa-fw mr-2">
+                                    <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
+                                    <i class="fa-solid  fa-plus-circle text-base-100/70"
+                                       data-fa-transform=" right-6 up-10"></i>
+                                </span>
                                 {{__('ledger.folder.create')}}
+                            </a>
+                        @else
+                            <div class="tooltip" data-tip="{{__('ledger.folder.not_allow_create')}}">
+                                <div class="btn btn-neutral btn-lg opacity-50 shadow-md px-6">
+                                    <span class="fa-layers fa-fw mr-2">
+                                        <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
+                                        <i class="fa-solid  fa-plus-circle text-base-100/70"
+                                           data-fa-transform=" right-6 up-10"></i>
+                                    </span>
+                                    {{__('ledger.folder.create')}}
+                                </div>
                             </div>
-                        </div>
-                    @endcan
+                        @endcan
 
-                    @can('create', [LedgerDefine::class,$currentFolder])
-                        <a href="{{ route('ledgerDefine.createWithFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
-                           class="btn btn-primary btn-lg mx-3"
-                           target="ledgerDefineCreate"
-                        >
-                            <span class="fa-layers fa-fw mr-2">
-                                <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
-                                <i class="fa-solid  fa-plus-circle text-base-100/70"
-                                   data-fa-transform=" right-6 up-10"></i>
-                            </span>
-                            {{__('ledger.define.create')}}
-                        </a>
-                    @else
-                        <div class="tooltip"
-                             data-tip="{{__('ledger.define.not_allow_create')}}">
-                            <div
-                                class="btn btn-neutral btn-lg mx-3 opacity-50"
+                        @can('create', [\App\Models\LedgerDefine::class,$currentFolder])
+                            <a href="{{ route('ledgerDefine.createWithFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
+                               class="btn btn-primary btn-lg shadow-md px-6"
+                               target="ledgerDefineCreate"
                             >
                                 <span class="fa-layers fa-fw mr-2">
                                     <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
@@ -203,18 +202,27 @@
                                        data-fa-transform=" right-6 up-10"></i>
                                 </span>
                                 {{__('ledger.define.create')}}
+                            </a>
+                        @else
+                            <div class="tooltip" data-tip="{{__('ledger.define.not_allow_create')}}">
+                                <div class="btn btn-neutral btn-lg opacity-50 shadow-md px-6">
+                                    <span class="fa-layers fa-fw mr-2">
+                                        <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
+                                        <i class="fa-solid  fa-plus-circle text-base-100/70"
+                                           data-fa-transform=" right-6 up-10"></i>
+                                    </span>
+                                    {{__('ledger.define.create')}}
+                                </div>
                             </div>
-                        </div>
+                        @endcan
 
-                    @endcan
-
-                    <a href="{{ route('ledgersByFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
-                       class="btn btn-outline btn-info btn-sm ml-10"
-                       target="ledgersByFolderId">
-                        <i class="fa-solid fa-arrow-circle-right mr-1"></i>
-                        {{__('ledger.folder.goto_ledger')}}
-                    </a>
-
+                        <a href="{{ route('ledgersByFolderId',['tenant' => $this->tenantId, 'folderId' => $currentFolderId])}}"
+                           class="btn btn-outline btn-info md:ml-6"
+                           target="ledgersByFolderId">
+                            <i class="fa-solid fa-arrow-circle-right mr-1"></i>
+                            {{__('ledger.folder.goto_ledger')}}
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>

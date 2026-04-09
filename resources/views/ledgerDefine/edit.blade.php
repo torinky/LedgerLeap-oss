@@ -63,27 +63,7 @@
 
             </div>
 
-            {{-- 画面下部アクションツールバー --}}
-            <div class="mx-auto md:w-full inset-x-0 fixed bottom-6 z-50 px-4 pointer-events-none">
-                <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity pointer-events-auto">
-                    <div class="card-body p-4">
-                        <div class="card-actions justify-center items-center">
 
-                            <x-mary-button
-                                    label="{{__('ledger.go_to')}}"
-                                    icon="o-arrow-right-circle"
-                                    class="btn btn-sm btn-neutral mr-4"
-                                    link="{{ route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $ledgerDefineRecord->id]) }}"
-                            />
-
-                            <label for="delete-modal" class="btn btn-outline btn-error btn-sm ml-5">
-                                <i class="fa-solid fa-trash mr-2"></i>{{__('ledger.define.remove')}}</label>
-
-                            <x-ledger.close-window-button/>
-                        </div>
-                    </div>
-                </div>
-            </div>
 
             <div x-data>
                 <template x-teleport="body">

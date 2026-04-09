@@ -175,59 +175,74 @@
                 --}}
 
 
-{{-- アクションボタンエリア --}}
-<div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-    <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-        <div class="card-body p-4"> {{-- パディング調整 --}}
-            <div class="flex flex-wrap items-center justify-center gap-4 w-full"> {{-- gap で間隔調整 --}}
+            {{-- 統一アクションバー（透過・ホバー＆スライドアップ対応） --}}
+            <div class="mx-auto w-full lg:w-2/3 fixed bottom-0 lg:bottom-4 inset-x-0 z-50 lg:px-4 transition-transform duration-300 ease-in-out"
+             x-data="{ expanded: false, isLg: window.innerWidth >= 1024 }"
+             @resize.window="isLg = window.innerWidth >= 1024"
+             :style="(!isLg && !expanded) ? 'transform: translateY(calc(100% - 3.5rem));' : 'transform: translateY(0);'"
+             @click.outside="if(!isLg) expanded = false"
+            >
+                <div class="shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-md bg-base-300 transition-opacity duration-300 opacity-100 lg:opacity-[0.65] lg:hover:opacity-100 rounded-t-3xl lg:rounded-box border-t border-base-200 lg:border-none overflow-hidden flex flex-col">
+                    {{-- タブレット用引き上げタブ (Edge-to-Edge) --}}
+                    <div class="lg:hidden w-full flex flex-col items-center justify-center cursor-pointer h-14 bg-base-300 hover:bg-base-200 active:bg-base-200 transition-colors border-b border-base-content/10 flex-shrink-0" @click="expanded = !expanded">
+                        <div class="w-20 h-1.5 bg-base-content/30 rounded-full mb-2"></div>
+                        <div class="flex items-center text-base-content/80 text-sm font-bold tracking-wider gap-2">
+                            <i class="fa-solid fa-chevron-up transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                            <span x-text="expanded ? '{{ __('ledger.action_bar_close') }}' : '{{ __('ledger.action_bar_open') }}'"></span>
+                        </div>
+                    </div>
 
-                {{-- バリデーションエラー再表示ボタン (Issue #49) - 独立したワイドボタンとして配置 --}}
-                <x-mary-button x-show="!validationSummaryOpen && validationErrorCount > 0"
-                    x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
-                    x-transition:enter-start="opacity-0 scale-0 translate-y-12"
-                    x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-cloak icon="o-exclamation-triangle"
-                    class="btn-error btn-wide border-2 border-white/20 animate-pulse relative"
-                    @click="$dispatch('toggle-validation-summary')">
-                    <span>{{ __('ledger.validation.show_summary') }}</span>
-                    <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm"
-                        x-text="validationErrorCount"></div>
-                </x-mary-button>
+                    <div class="p-4 lg:p-4 pb-8 lg:pb-4 overflow-y-auto max-h-[60vh]">
+                        <div class="flex flex-wrap items-center justify-center md:justify-between gap-4">
+                            <div class="flex flex-wrap items-center justify-center gap-2 order-2 md:order-1">
+                                <x-ledger.close-window-button />
+                                <x-mary-button label="{{ __('ledger.prefill.generate_link') }}" icon="o-link"
+                                    class="btn-outline btn-info" wire:click.prevent="generatePrefillLink"
+                                    spinner="generatePrefillLink" />
+                            </div>
+                            <div class="flex flex-wrap items-center justify-center gap-2 order-1 md:order-2">
+                                {{-- バリデーションエラー再表示ボタン --}}
+                                <x-mary-button x-show="!validationSummaryOpen && validationErrorCount > 0"
+                                    x-transition:enter="transition cubic-bezier(0.34, 1.56, 0.64, 1) duration-[500ms]"
+                                    x-transition:enter-start="opacity-0 scale-0 translate-y-12"
+                                    x-transition:enter-end="opacity-100 scale-100 translate-y-0" x-cloak icon="o-exclamation-triangle"
+                                    class="btn-error border-2 border-white/20 animate-pulse relative"
+                                    @click="$dispatch('toggle-validation-summary')">
+                                    <span>{{ __('ledger.validation.show_summary') }}</span>
+                                    <div class="badge badge-white text-error font-black ml-2 border-none shadow-sm"
+                                        x-text="validationErrorCount"></div>
+                                </x-mary-button>
 
-                @if ($ledgerDefineRecord->workflow_enabled)
-                    {{-- 下書き保存ボタン --}}
-                    <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil" class="btn-secondary btn-wide"
-                        wire:click.prevent="saveDraft" spinner="saveDraft"
-                        wire:key="save-draft-button-{{ $ledgerId ?? ($ledgerDefineId ?? 'new') }}" />
+                                @if ($ledgerDefineRecord->workflow_enabled)
+                                    {{-- 下書き保存ボタン --}}
+                                    <x-mary-button label="{{ __('ledger.save_draft') }}" icon="o-pencil" class="btn-secondary btn-lg px-8 tracking-wide shadow-md"
+                                        wire:click.prevent="saveDraft" spinner="saveDraft"
+                                        wire:key="save-draft-button-{{ $ledgerId ?? ($ledgerDefineId ?? 'new') }}" />
 
-                    {{-- ToDo: 将来的に Role 選択も可能にする --}}
-                    {{-- 点検依頼ボタン (モーダルを開く) --}}
-                    {{-- 条件: 新規作成画面 または 編集画面でステータスが DRAFT --}}
-
-                    <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}" icon="o-paper-airplane"
-                        class="btn-success btn-wide" {{-- モーダルを開くメソッドを呼び出す --}} wire:click.prevent="requestInspection"
-                        spinner="requestInspection" />
-                @else
-                    {{-- 直接保存ボタン --}}
-                    <x-mary-button label="{{ __('ledger.save') }}" {{-- 通常の保存ラベル --}} icon="o-pencil"
-                        class="btn-primary btn-wide" wire:click.prevent="saveDirectly" {{-- 直接保存メソッド呼び出し --}}
-                        spinner="saveDirectly" />
-                @endif
+                                    {{-- 点検依頼ボタン --}}
+                                    <x-mary-button label="{{ __('ledger.workflow.request_inspection') }}" icon="o-paper-airplane"
+                                        class="btn-success btn-lg px-8 tracking-wide shadow-md" wire:click.prevent="requestInspection"
+                                        spinner="requestInspection" />
+                                @else
+                                    {{-- 直接保存ボタン --}}
+                                    <x-mary-button label="{{ __('ledger.save') }}" icon="o-pencil"
+                                        class="btn-primary btn-lg px-8 tracking-wide shadow-md" wire:click.prevent="saveDirectly" spinner="saveDirectly" />
+                                @endif
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
-            <div class="flex flex-wrap items-center justify-center w-full gap-2">
-                <x-mary-button label="{{ __('ledger.prefill.generate_link') }}" icon="o-link"
-                    class="btn-outline btn-info" wire:click.prevent="generatePrefillLink"
-                    spinner="generatePrefillLink" />
-                <x-ledger.close-window-button />
-            </div>
+                        </div>
+                    </div>
 
-            {{-- 現在のステータス表示 --}}
-            <div class="text-center text-xs text-base-content/70 mt-2">
-                {{ __('ledger.workflow.current_status') }}:
-                {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
+                    {{-- 現在のステータス表示 --}}
+                    <div class="text-center text-xs text-base-content/70 mt-3 w-full">
+                        {{ __('ledger.workflow.current_status') }}:
+                        {{ $ledgerRecord?->status?->label() ?? __('ledger.workflow.status.draft') }}
+                    </div>
+                </x-mary-card>
             </div>
-        </div>
-    </div>
-</div>
 </x-mary-form>
 
 @endif

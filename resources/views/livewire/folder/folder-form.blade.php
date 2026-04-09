@@ -75,58 +75,67 @@
         </div>
 
         {{--        <x-slot:actions>--}}
-        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3">
-            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                <div class="card-body p-4">
-                    <div class="flex  items-center justify-center gap-4">
-                        @if($formDisabled)
-                            {{-- 削除後は閉じるボタンのみ --}}
-                            <x-mary-button label="{{ __('ledger.close_window') }}" onclick="window.close()"
-                                           class="btn-primary"/>
-                        @else
-                            @if($justSaved && !$isCreating)
-                                {{-- 更新保存直後 --}}
-                                <x-mary-button label="{{ __('ledger.continue_editing') }}"
-                                               class="btn-ghost"
-                                               wire:click="$set('justSaved', false)"/>
-                                <x-ledger.close-window-button/>
-{{--
-                                <x-mary-button label="{{ __('actions.close_window_after_save') }}"
-                                               onclick="window.close()"
-                                               class="btn-primary" icon="o-x-mark"/>
---}}
-                            @elseif($justSaved && $isCreating)
-                                {{-- 新規保存直後 --}}
-                                <x-mary-button label="{{ __('ledger.create_another') }}" class="btn-outline"
-                                               wire:click="resetFormForNew" spinner="resetFormForNew"/>
-                                <x-mary-button label="{{ __('ledger.edit_this_folder') }}"
-                                               wire:click="$set('justSaved', false)" class="btn-ghost"/>
-                                <x-ledger.close-window-button/>
-{{--
-                                <x-mary-button label="{{ __('ledger.close_window_after_save') }}"
-                                               onclick="window.close()"
-                                               class="btn-primary"/>
---}}
-                            @else
-                                {{-- 通常の保存/更新ボタン --}}
-                                <x-mary-button
-                                        label="{{ $isCreating ? __('actions.create') : __('actions.update') }}"
-                                        class="btn-primary md:btn-wide" type="submit" spinner="save"
-                                        icon="o-pencil-square"/>
-                                <x-ledger.close-window-button/>
-{{--
-                                <x-mary-button label="{{ __('ledger.cancel_and_close') }}"
-                                               onclick="window.close()"
-                                               class="btn-ghost" icon="o-x-mark"/>
---}}
-                            @endif
-                        @endif
-                        @if(!$isCreating && $folder->exists && !$formDisabled)
-                            <x-mary-button label="{{ __('actions.delete') }}"
-                                           wire:click="confirmFolderDeletion"
-                                           icon="o-trash" class="btn-error btn-outline"
-                                           spinner="confirmFolderDeletion"/>
-                        @endif
+        {{-- 統一アクションバー（透過・ホバー＆スライドアップ対応） --}}
+        <div class="mx-auto w-full lg:w-2/3 fixed bottom-0 lg:bottom-4 inset-x-0 z-50 lg:px-4 transition-transform duration-300 ease-in-out"
+             x-data="{ expanded: false, isLg: window.innerWidth >= 1024 }"
+             @resize.window="isLg = window.innerWidth >= 1024"
+             :style="(!isLg && !expanded) ? 'transform: translateY(calc(100% - 3.5rem));' : 'transform: translateY(0);'"
+             @click.outside="if(!isLg) expanded = false"
+        >
+            <div class="shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-md bg-base-300 transition-opacity duration-300 opacity-100 lg:opacity-[0.65] lg:hover:opacity-100 rounded-t-3xl lg:rounded-box border-t border-base-200 lg:border-none overflow-hidden flex flex-col">
+                {{-- タブレット用引き上げタブ (Edge-to-Edge) --}}
+                <div class="lg:hidden w-full flex flex-col items-center justify-center cursor-pointer h-14 bg-base-300 hover:bg-base-200 active:bg-base-200 transition-colors border-b border-base-content/10 flex-shrink-0" @click="expanded = !expanded">
+                    <div class="w-20 h-1.5 bg-base-content/30 rounded-full mb-2"></div>
+                    <div class="flex items-center text-base-content/80 text-sm font-bold tracking-wider gap-2">
+                        <i class="fa-solid fa-chevron-up transition-transform duration-300" :class="expanded ? 'rotate-180' : ''"></i>
+                        <span x-text="expanded ? '{{ __('ledger.action_bar_close') }}' : '{{ __('ledger.action_bar_open') }}'"></span>
+                    </div>
+                </div>
+
+                <div class="p-4 lg:p-4 pb-8 lg:pb-4 overflow-y-auto max-h-[60vh]">
+                    <div class="flex flex-col gap-4">
+                        <div class="flex flex-wrap items-center justify-center md:justify-between gap-4">
+                            <div class="flex flex-wrap items-center justify-center gap-2 order-2 md:order-1">
+                                @if($formDisabled)
+                                    {{-- 削除後は閉じるボタンのみ --}}
+                                    <x-mary-button label="{{ __('ledger.close_window') }}" onclick="window.close()" class="btn-primary" icon="o-x-mark"/>
+                                @else
+                                    @if($justSaved && !$isCreating)
+                                        {{-- 更新保存直後 --}}
+                                        <x-mary-button label="{{ __('ledger.continue_editing') }}" class="btn-ghost" wire:click="$set('justSaved', false)"/>
+                                        <x-ledger.close-window-button/>
+                                    @elseif($justSaved && $isCreating)
+                                        {{-- 新規保存直後 --}}
+                                        <x-mary-button label="{{ __('ledger.create_another') }}" class="btn-outline px-4" wire:click="resetFormForNew" spinner="resetFormForNew"/>
+                                        <x-mary-button label="{{ __('ledger.edit_this_folder') }}" wire:click="$set('justSaved', false)" class="btn-ghost"/>
+                                        <x-ledger.close-window-button/>
+                                    @else
+                                        {{-- 通常の閉じるボタン --}}
+                                        <x-ledger.close-window-button/>
+                                    @endif
+                                @endif
+
+                                @if(!$isCreating && $folder->exists && !$formDisabled)
+                                    <label wire:click="confirmFolderDeletion" class="btn btn-outline btn-error font-medium">
+                                        <i class="fa-solid fa-trash mr-1"></i>{{ __('actions.delete') }}
+                                    </label>
+                                @endif
+                            </div>
+                            
+                            <div class="flex flex-wrap items-center justify-center gap-2 order-1 md:order-2">
+                                @if(!$formDisabled)
+                                    @if($justSaved)
+                                        {{-- 保存直後はメインボタンを隠すか、必要なら再表示。今回は元の仕様を尊重しボタン表示なし --}}
+                                    @else
+                                        {{-- 通常の保存/更新ボタン --}}
+                                        <x-mary-button
+                                                label="{{ $isCreating ? __('actions.create') : __('actions.update') }}"
+                                                class="btn-primary btn-lg px-8 tracking-wide shadow-md" type="submit" spinner="save"
+                                                icon="o-pencil-square"/>
+                                    @endif
+                                @endif
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
