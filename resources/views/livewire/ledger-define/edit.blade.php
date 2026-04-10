@@ -122,12 +122,14 @@
                 <div class="flex flex-wrap items-center justify-between gap-4">
                     <div class="flex items-center gap-2">
                         <x-ledger.close-window-button />
-                        <x-mary-button
-                                label="{{__('ledger.go_to')}}"
-                                icon="o-arrow-right-circle"
-                                class="btn-outline btn-neutral h-12"
-                                link="{{ route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $ledgerDefineRecord->id]) }}"
-                        />
+                        @if ($ledgerDefineRecord?->id)
+                            <x-mary-button
+                                    label="{{__('ledger.go_to')}}"
+                                    icon="o-arrow-right-circle"
+                                    class="btn-outline btn-neutral h-12"
+                                    link="{{ route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $ledgerDefineRecord->id]) }}"
+                            />
+                        @endif
                         <label for="delete-modal" class="btn btn-outline btn-error font-medium h-12">
                             <i class="fa-solid fa-trash mr-1"></i>{{__('ledger.define.remove')}}
                         </label>
@@ -138,7 +140,7 @@
                                    type="submit"
                                    spinner="store"/>
                 </div>
-            </x-mary-card>
+            </div>
         </div>
     </x-mary-form>
 </div>
