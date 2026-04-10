@@ -7,7 +7,9 @@ applyTo: "tests/**"
 ## Runtime Rule
 
 - **Tests must run inside Laravel Sail or a Docker-based PhpStorm interpreter.**
-- Host-side commands such as `php artisan test` / `./vendor/bin/pest` are unsupported for LedgerLeap and must be replaced with `./vendor/bin/sail test` / `./vendor/bin/sail pest`.
+- Host-side commands such as `php artisan test` / `./vendor/bin/pest` are unsupported for LedgerLeap and must be replaced.
+- `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → **Identify and run affected tests** (`./vendor/bin/sail test <path>`) → `/git-commit` → `/skill-maintenance`
+- **View changes MUST be verified by rendering tests or browser interaction.** Structural Blade changes often break `route()` generation or variable scopes.
 - Reason: testing DB host resolution (`mysql_testing` → `mysql`) is Docker-network based; host execution causes false-negative infrastructure failures before the actual test logic runs.
 
 ## Database Trait Selection
@@ -74,22 +76,18 @@ $ledger = $ledger->fresh();
 - Test data must fill all indices 0..maxColumnId (no gaps)
 - `content_attached` requires `[0 => []]` sentinel at index 0
 
-## Required Declarations
+## Responsibility on Change
 
-```php
-#[CoversClass(MyComponent::class)]  // Required — PHPUnit won't attribute coverage without it
-class MyTest extends TestCase {}
-```
+- **Any change (Logic, Config, or Views) MUST be validated with relevant tests.**
+- Before committing:
+    1. Identify affected components and their corresponding tests.
+    2. Search for related tests (e.g. `tests/Feature/Livewire/...`).
+    3. Run tests via `./vendor/bin/sail test <path-to-test>`.
+- **View-only changes are NOT exempt.** Structural changes in Blade can break route generation, variable scopes, or Livewire hydration. Verify that the view renders correctly in tests.
+- If a test fails due to a structural change, evaluate if the change is a regression or if the test itself needs an update.
 
-## CI Job Structure
+## Evidence Recording
 
-| Job | Scope |
-|---|---|
-| `unit` | `--exclude-group=external,database-migrations` |
-| `feature` | `--exclude-group=external,database-migrations` |
-| `db-migrations` | `--group=database-migrations` only |
-
-See `.github/skills/database-migrations-test-optimization/SKILL.md` for trait implementation.
-See `.github/skills/test-external-dependency-isolation/SKILL.md` for queue fake patterns.
-See `.github/skills/permission-model/SKILL.md` for ACL cache patterns.
+- Final reports (Walkthroughs) MUST include evidence of successful test execution (logs or browser screenshots).
+- Never report "Completed" without confirming that existing regressions haven't been introduced.
 

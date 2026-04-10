@@ -30,7 +30,8 @@
 - Reusable deep knowledge: `.github/skills/*/SKILL.md`
 - Agent-wide routing/meta: `AGENTS.md`
 ## Workflow
-- `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → `./vendor/bin/sail test` → `/git-commit` → `/skill-maintenance`
+- `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → **Identify and run affected tests** (`./vendor/bin/sail test <path>`) → `/git-commit` → `/skill-maintenance`
+- **MANDATORY**: View changes (Blade) MUST be verified via rendering tests or browser interaction to detect broken `route()` calls or variable scope issues.
 ## Bug Response Principles
 - Investigate before changing code: define expected vs actual behavior, reproduction, impact scope, and rollback constraints.
 - Evidence order: logs / stack traces → related code / tests / recent changes → repo docs / skills → external sources.
