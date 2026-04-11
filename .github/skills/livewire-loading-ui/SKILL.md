@@ -23,6 +23,7 @@ What changes when the action completes?
 ```
 
 **Always specify `wire:target`** — omitting it causes unrelated components to flicker.
+- On list pages that can render multiple ledger cards/blocks, keep light updates (`displayLevel`, `sort`, `filter`, `perPage`) on an opacity overlay and reserve skeleton swaps for structural changes like folder switches or initial load.
 
 See [references/loading-patterns.md](references/loading-patterns.md) for Tier 1/2/3 examples.
 See [references/alpine-init-overlay.md](references/alpine-init-overlay.md) for Tier 0.5 + pitfalls (since #77).
@@ -94,3 +95,4 @@ Do not route client-side loading or init telemetry through `$wire` unless the me
 - [ ] Alpine `x-data` with methods: register via `Alpine.data()`, not inline shorthand
 - [ ] Timing telemetry that should not rerender components stays off `$wire`
 - [ ] Tab panels needing both persistence and loading use separate tab-entry and internal-update targets
+- [ ] Multi-ledger list pages keep light updates mounted and only fade/overlay the content

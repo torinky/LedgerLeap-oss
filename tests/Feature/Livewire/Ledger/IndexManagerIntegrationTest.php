@@ -76,6 +76,16 @@ class IndexManagerIntegrationTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_search_summary_and_display_level_controls()
+    {
+        Livewire::test(IndexManager::class)
+            ->set('currentFolderId', $this->rootFolder->id)
+            ->assertSee(__('ledger.search_options'))
+            ->assertSee(__('ledger.form.display_level'))
+            ->assertSee(__('ledger.opened_count'));
+    }
+
+    #[Test]
     public function it_updates_search_query_reactively()
     {
         $ledger1 = Ledger::factory()->create([
@@ -116,6 +126,16 @@ class IndexManagerIntegrationTest extends TestCase
 
         $keywordsAfterClear = $component->get('keywords');
         $this->assertEmpty($keywordsAfterClear, 'Keywords should be empty when search is cleared');
+    }
+
+    #[Test]
+    public function it_updates_display_level_via_search_options()
+    {
+        Livewire::test(IndexManager::class)
+            ->call('updateDisplayLevel', 2)
+            ->assertSet('displayLevel', 2)
+            ->call('updateDisplayLevel', 9)
+            ->assertSet('displayLevel', 2);
     }
 
     #[Test]
@@ -173,6 +193,28 @@ class IndexManagerIntegrationTest extends TestCase
             ->assertSet('useSemanticSearch', true)
             ->assertSet('useSynonym', false)
             ->assertSet('useTechnicalTerm', false);
+    }
+
+    #[Test]
+    public function it_renders_page_summary_when_multiple_pages_exist()
+    {
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'PagedContent-A']),
+        ]);
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'PagedContent-B']),
+        ]);
+
+        Livewire::withQueryParams([
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->subFolder->id,
+            'f' => [$this->subFolder->id],
+            'pp' => 1,
+        ])->test(IndexManager::class)
+            ->assertSee('1 / 2')
+            ->assertSee(__('ledger.records'));
     }
 
     #[Test]

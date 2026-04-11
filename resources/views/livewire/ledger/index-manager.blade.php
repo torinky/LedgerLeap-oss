@@ -16,16 +16,16 @@
         - x-data内でfunction記法を使用（Bladeコンパイラのクロージャ誤解釈を回避）
     --}}
     <div id="ledger-init-overlay"
-        x-data="ledgerInitOverlay()"
-        x-show="visible"
-        x-transition:leave="transition-opacity duration-300"
-        x-transition:leave-start="opacity-100"
-        x-transition:leave-end="opacity-0"
-        x-on:ledger-init-overlay:timing.window="console.debug('[ledger-init-overlay]', $event.detail)"
-        x-on:livewire:navigated.window.once="hide('livewire:navigated')"
-        x-on:livewire:load.window.once="hide('livewire:load')"
-        x-init="startFallbackTimer()"
-        class="fixed inset-0 z-[150] bg-base-100/75 backdrop-blur-sm flex items-end justify-center pb-10 pointer-events-none">
+         x-data="ledgerInitOverlay()"
+         x-show="visible"
+         x-transition:leave="transition-opacity duration-300"
+         x-transition:leave-start="opacity-100"
+         x-transition:leave-end="opacity-0"
+         x-on:ledger-init-overlay:timing.window="console.debug('[ledger-init-overlay]', $event.detail)"
+         x-on:livewire:navigated.window.once="hide('livewire:navigated')"
+         x-on:livewire:load.window.once="hide('livewire:load')"
+         x-init="startFallbackTimer()"
+         class="fixed inset-0 z-150 bg-base-100/75 backdrop-blur-sm flex items-end justify-center pb-10 pointer-events-none">
         <div class="flex items-center gap-3 bg-base-200/90 backdrop-blur rounded-full px-5 py-2 shadow-lg border border-base-300">
             <span class="loading loading-spinner loading-sm text-primary"></span>
             <span class="text-xs font-bold tracking-wider opacity-75 text-base-content">
@@ -57,10 +57,10 @@
         {{-- Tier 1: Global Loading Overlay --}}
         {{-- .delay.longest (1秒) を使用し、非常に重い通信の時のみ中央にスピナーを表示する --}}
         <div wire:loading.delay.longest wire:target="{{ $allLoadingTargets }}"
-            class="fixed inset-0 z-200 flex items-center justify-center pointer-events-none">
+             class="fixed inset-0 z-200 flex items-center justify-center pointer-events-none">
             {{-- 指定されたコンポーネントを使用。!static !inset-auto で確実に中央へ固定 --}}
             <x-element.loading-overlay tier="1" manual message="{{ __('ledger.loading') }}"
-                class="static! inset-auto! m-0!" />
+                                       class="static! inset-auto! m-0!"/>
         </div>
 
         <x-slot:drawer>
@@ -71,8 +71,9 @@
                 Tree Content: 瞬時に真っ白にならないよう opacity で制御。クリックを妨げない。
             --}}
             <div class="w-full min-w-0" wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
-                <livewire:folder.tree :currentFolderId="$currentFolderId" :selectedFolderIds="$selectedFolderIds" :parentComponentId="$this->getId()"
-                    wire:key="folder-tree-stable" />
+                <livewire:folder.tree :currentFolderId="$currentFolderId" :selectedFolderIds="$selectedFolderIds"
+                                      :parentComponentId="$this->getId()"
+                                      wire:key="folder-tree-stable"/>
             </div>
             {{-- Tree Skeleton: ヘビーな通信中（200ms〜）のみ表示 --}}
             <div wire:loading.delay wire:target="{{ $heavyTargets }}" class="p-4 space-y-3">
@@ -87,129 +88,120 @@
 
         {{-- Always visible search section moved from RecordsTable --}}
         <div class="sticky top-0 z-10 bg-base-100/80 backdrop-blur-sm px-4 pt-2 pb-2">
-            <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch"
-                :defaultSortColumns="$defaultSortColumns" :search="$search" :perPage="$perPage" :useSynonym="$useSynonym"
-                :useTechnicalTerm="$useTechnicalTerm" />
+            <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel"
+                             :useSemanticSearch="$useSemanticSearch"
+                             :defaultSortColumns="$defaultSortColumns" :search="$search" :perPage="$perPage"
+                             :displayLevel="$displayLevel"
+                             :totalRecords="$this->totalRecords" :totalRecordsLoaded="$this->totalRecordsLoaded"
+                             :useSynonym="$useSynonym"
+                             :useTechnicalTerm="$useTechnicalTerm"/>
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">
             {{-- ★★★ Info & Results Section (常に表示、Loading 時に透過) ★★★ --}}
             <div class="px-4" wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
                 <div
-                    class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6">
-                    @php
-                        $displayLevelOptions = [
-                            ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                            ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                            ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                        ];
-                    @endphp
-                    <div class="flex flex-wrap items-center justify-end gap-4">
-                        <div class="flex items-center gap-2">
-                            <span
-                                class="text-xs font-bold opacity-50 uppercase tracking-widest">{{ __('ledger.form.display_level') }}</span>
-                            <div x-data="{ level: {{ $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
-                                <x-mary-group x-model="level" :options="$displayLevelOptions"
-                                    class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
-                                    option-value="id" option-label="name" />
-                            </div>
-                        </div>
-                    </div>
+                        class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6 items-center">
 
-                    @if (!empty($this->highlights))
-                        <div class="flex flex-wrap gap-2 items-center justify-center pt-2">
+                    <div class="grid grid-cols-1 {{ !empty($this->highlights) ? 'md:grid-cols-2' : '' }}">
+
+                        @if (!empty($this->highlights))
+                            <div class="flex flex-wrap gap-2 items-center justify-center pb-2 md:pb-0">
                             <span class="text-xs"><i
-                                    class="fas fa-search mr-1 opacity-50"></i>{{ __('ledger.searched') }}</span>
-                            @foreach ($this->keywords as $keyword)
+                                        class="fas fa-search mr-1 opacity-50"></i>{{ __('ledger.searched') }}</span>
+                                @foreach ($this->keywords as $keyword)
+                                    <div
+                                            class="badge {{ empty($this->synonyms[$keyword]) ? 'badge-neutral' : 'badge-primary' }} badge-md gap-2 py-3 shadow-sm border-none">
+                                        <span class="font-bold">{{ $keyword }}</span>
+                                        @if (!empty($this->synonyms[$keyword]))
+                                            <div class="tooltip tooltip-bottom"
+                                                 data-tip="{{ implode(' / ', $this->synonyms[$keyword]) }}">
+                                                <i class="fas fa-layer-group text-[10px] opacity-70"></i>
+                                            </div>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        <div class="flex justify-center flex-wrap gap-4 items-center pt-1">
+                            @if (!empty($selectedFolderIds))
+                                <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                     data-tip="{{ __('ledger.folder.opened_count') }}">
+                                    <div class="self-center flex items-center gap-2 text-info-content/80">
+                                        <i class="fas fa-folder-open text-info-content/50"></i>
+                                        <span class="font-bold">{{ count($selectedFolderIds) }}</span>
+                                    </div>
+                                </div>
+                                <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
+                            @endif
+
+                            @if (!empty($selectedLedgerDefineIds))
+                                <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                     data-tip="{{ __('ledger.define.opened_count') }}">
+                                    <div class="self-center flex items-center gap-2 text-info-content/80">
+                                        <i class="fas fa-book-open text-info-content/50"></i>
+                                        <span class="font-bold">{{ count($selectedLedgerDefineIds) }}</span>
+                                    </div>
+                                </div>
+                                <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
+                            @endif
+
+                            <div
+                                    wire:ignore
+                                    x-data="{
+                        totalRecords: {{ (int) $totalRecords }},
+                        totalRecordsLoaded: {{ $totalRecordsLoaded ? 'true' : 'false' }},
+                    }"
+                                    @ledger-records-count-updated.window="totalRecords = $event.detail.total; totalRecordsLoaded = true"
+                            >
                                 <div
-                                    class="badge {{ empty($this->synonyms[$keyword]) ? 'badge-neutral' : 'badge-primary' }} badge-md gap-2 py-3 shadow-sm border-none">
-                                    <span class="font-bold">{{ $keyword }}</span>
-                                    @if (!empty($this->synonyms[$keyword]))
-                                        <div class="tooltip tooltip-bottom"
-                                            data-tip="{{ implode(' / ', $this->synonyms[$keyword]) }}">
-                                            <i class="fas fa-layer-group text-[10px] opacity-70"></i>
-                                        </div>
-                                    @endif
+                                        class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
+                                        data-tip="{{ __('ledger.opened_count') }}"
+                                        x-show="totalRecordsLoaded"
+                                        x-cloak>
+                                    <div class="self-center flex items-center gap-2 text-info-content/80">
+                                        <i class="fas fa-list opacity-50"></i>
+                                        <span class="font-bold" x-text="totalRecords">{{ $totalRecords }}</span>
+                                    </div>
                                 </div>
-                            @endforeach
-                        </div>
-                    @endif
+                                <div
+                                        class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse"
+                                        data-tip="{{ __('ledger.opened_count') }}"
+                                        x-show="!totalRecordsLoaded"
+                                        x-cloak>
+                                    <div class="self-center flex items-center gap-2">
+                                        <i class="fas fa-list opacity-30"></i>
+                                        <span class="font-bold opacity-30">...</span>
+                                    </div>
+                                </div>
+                            </div>
 
-                    <div class="flex justify-center flex-wrap gap-4 items-center pt-1">
-                        @if (!empty($selectedFolderIds))
-                            <div class="badge badge-info bg-info/90 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                                data-tip="{{ __('ledger.folder.opened_count') }}">
-                                <div class="self-center flex items-center gap-2 text-info-content/80">
-                                    <i class="fas fa-folder-open text-info-content/50"></i>
-                                    <span class="font-bold">{{ count($selectedFolderIds) }}</span>
+                            @if ($orderBy === 'composite_score' && !empty($search))
+                                <div class="badge badge-primary bg-primary/80 tooltip h-8 flex items-stretch shadow-sm border-none"
+                                     data-tip="{{ __('ledger.scoring.sorted_by_score') }}">
+                                    <div class="self-center flex items-center gap-2 text-primary-content/90">
+                                        <i class="fas fa-sort-amount-down text-[10px]"></i>
+                                        <span class="text-xs font-bold">{{ __('ledger.scoring.score_order') }}</span>
+                                    </div>
                                 </div>
-                            </div>
-                            <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
-                        @endif
+                            @endif
 
-                        @if (!empty($selectedLedgerDefineIds))
-                            <div class="badge badge-info bg-info/60 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                                data-tip="{{ __('ledger.define.opened_count') }}">
-                                <div class="self-center flex items-center gap-2 text-info-content/80">
-                                    <i class="fas fa-book-open text-info-content/50"></i>
-                                    <span class="font-bold">{{ count($selectedLedgerDefineIds) }}</span>
-                                </div>
-                            </div>
-                            <i class="fas fa-filter text-info/30 fa-rotate-270 text-[10px]"></i>
-                        @endif
-
-                        {{-- totalRecords: 初回未取得時はプレースホルダー、取得後は 0 件でも数値を表示 --}}
-                        <div
-                            wire:ignore
-                            x-data="{
-                                totalRecords: {{ (int) ($this->totalRecords ?? 0) }},
-                                totalRecordsLoaded: {{ $this->totalRecordsLoaded ? 'true' : 'false' }},
-                            }"
-                            @ledger-records-count-updated.window="totalRecords = $event.detail.total; totalRecordsLoaded = true"
-                        >
-                            <div
-                                class="badge badge-info bg-info/30 tooltip h-8 flex items-stretch min-w-16 shadow-sm border-none"
-                                data-tip="{{ __('ledger.opened_count') }}"
-                                x-show="totalRecordsLoaded"
-                                x-cloak>
-                                <div class="self-center flex items-center gap-2 text-info-content/80">
-                                    <i class="fas fa-list opacity-50"></i>
-                                    <span class="font-bold" x-text="totalRecords">{{ $this->totalRecords }}</span>
-                                </div>
-                            </div>
-                            <div
-                                class="badge badge-ghost bg-base-300 h-8 flex items-stretch min-w-16 shadow-sm border-none animate-pulse"
-                                data-tip="{{ __('ledger.opened_count') }}"
-                                x-show="!totalRecordsLoaded"
-                                x-cloak>
-                                <div class="self-center flex items-center gap-2">
-                                    <i class="fas fa-list opacity-30"></i>
-                                    <span class="font-bold opacity-30">...</span>
-                                </div>
-                            </div>
+                            @if ($orderBy !== 'default' && !empty($defaultSortColumns))
+                                <x-mary-button wire:click="sort('default')"
+                                               label="{{ __('ledger.actions.reset_sort') }}"
+                                               icon="o-arrow-path" class="btn-xs btn-outline btn-info h-8" spinner/>
+                            @endif
                         </div>
 
-                        @if ($orderBy === 'composite_score' && !empty($search))
-                            <div class="badge badge-primary bg-primary/80 tooltip h-8 flex items-stretch shadow-sm border-none"
-                                data-tip="{{ __('ledger.scoring.sorted_by_score') }}">
-                                <div class="self-center flex items-center gap-2 text-primary-content/90">
-                                    <i class="fas fa-sort-amount-down text-[10px]"></i>
-                                    <span class="text-xs font-bold">{{ __('ledger.scoring.score_order') }}</span>
-                                </div>
-                            </div>
-                        @endif
-
-                        @if ($orderBy !== 'default' && !empty($defaultSortColumns))
-                            <x-mary-button wire:click="sort('default')" label="{{ __('ledger.actions.reset_sort') }}"
-                                icon="o-arrow-path" class="btn-xs btn-outline btn-info h-8" spinner />
-                        @endif
                     </div>
+
                 </div>
 
                 {{-- Breadcrumbs Section --}}
                 <div class="mt-4">
                     <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
-                        <x-ledger.livewire-breadcrumbs :breadcrumbs="$this->breadcrumbs" />
+                        <x-ledger.livewire-breadcrumbs :breadcrumbs="$this->breadcrumbs"/>
                     </div>
                 </div>
 
@@ -217,7 +209,7 @@
                 <div class="relative group/nav min-h-15">
                     {{-- Tier 2 overlay for selection toggles - doesn't hide content --}}
                     <x-element.loading-overlay tier="2"
-                        target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
+                                               target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId"/>
 
                     <div>
                         @if ($this->currentFolder)
@@ -232,31 +224,34 @@
                                             {{ __('ledger.access_and_permissions.your_access_level') }}:
                                             @if ($this->currentUserPermissionForFolder)
                                                 <span
-                                                    class="badge badge-sm badge-{{ $this->currentUserPermissionForFolder->getColor() }} text-{{ $this->currentUserPermissionForFolder->getColor() }}-content font-bold">
+                                                        class="badge badge-sm badge-{{ $this->currentUserPermissionForFolder->getColor() }} text-{{ $this->currentUserPermissionForFolder->getColor() }}-content font-bold">
                                                     {{ $this->currentUserPermissionForFolder->getLabel() }}
                                                 </span>
                                             @else
                                                 <span
-                                                    class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
+                                                        class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
                                             @endif
                                         </p>
                                     </div>
                                     <div class="card-actions">
                                         <x-mary-button
-                                            wire:click="openPermissionModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
-                                            label="{{ __('ledger.access_and_permissions.title') }}"
-                                            icon="o-shield-check" class="btn-sm btn-outline btn-ghost" spinner />
+                                                wire:click="openPermissionModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
+                                                label="{{ __('ledger.access_and_permissions.title') }}"
+                                                icon="o-shield-check" class="btn-sm btn-outline btn-ghost" spinner/>
                                         <x-mary-button
-                                            wire:click="openActivityModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
-                                            label="{{ __('ledger.activity.title') }}" icon="o-clock"
-                                            class="btn-sm btn-outline btn-ghost" spinner />
+                                                wire:click="openActivityModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
+                                                label="{{ __('ledger.activity.title') }}" icon="o-clock"
+                                                class="btn-sm btn-outline btn-ghost" spinner/>
                                     </div>
                                 </div>
                             </div>
                         @endif
 
-                        <x-folder.folder-and-ledger-panels :folderRecords="$this->folderRecords" :selectedFolderIds="$selectedFolderIds" :ledgerDefineRecords="$this->ledgerDefineRecords"
-                            :selectedLedgerDefineIds="$selectedLedgerDefineIds" :currentTenantId="$currentTenantId" />
+                        <x-folder.folder-and-ledger-panels :folderRecords="$this->folderRecords"
+                                                           :selectedFolderIds="$selectedFolderIds"
+                                                           :ledgerDefineRecords="$this->ledgerDefineRecords"
+                                                           :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+                                                           :currentTenantId="$currentTenantId"/>
                     </div>
                 </div>
 
@@ -269,11 +264,17 @@
                 <div wire:loading.remove.delay wire:target="{{ $heavyTargets }}">
                     <div wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $lightTargets }}">
                         <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc"
-                            :filterStatus="$filterStatus" :filter="$filter" :selectedLedgerDefineIds="$selectedLedgerDefineIds" :selectedFolderIds="$selectedFolderIds"
-                            :currentFolderId="$currentFolderId" :displayLevel="$displayLevel" :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym"
-                            :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage" :defaultSortColumns="$defaultSortColumns" :hasWorkflowEnabled="$hasWorkflowEnabled"
-                            :keywords="$this->keywords" :highlights="$this->highlights" :synonyms="$this->synonyms"
-                            wire:key="ledger-records-table-stable" />
+                                                       :filterStatus="$filterStatus" :filter="$filter"
+                                                       :selectedLedgerDefineIds="$selectedLedgerDefineIds"
+                                                       :selectedFolderIds="$selectedFolderIds"
+                                                       :currentFolderId="$currentFolderId" :displayLevel="$displayLevel"
+                                                       :useSemanticSearch="$useSemanticSearch" :useSynonym="$useSynonym"
+                                                       :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage"
+                                                       :defaultSortColumns="$defaultSortColumns"
+                                                       :hasWorkflowEnabled="$hasWorkflowEnabled"
+                                                       :keywords="$this->keywords" :highlights="$this->highlights"
+                                                       :synonyms="$this->synonyms"
+                                                       wire:key="ledger-records-table-stable"/>
                     </div>
                 </div>
 
@@ -296,11 +297,11 @@
                                 <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden">
                                     <div class="card-body pt-0 px-0">
                                         <div
-                                            class="bg-base-300 mt-0 px-4 py-4 rounded-t-box flex items-center gap-4 shimmer">
+                                                class="bg-base-300 mt-0 px-4 py-4 rounded-t-box flex items-center gap-4 shimmer">
                                             <div class="h-8 w-8 bg-base-content/10 rounded-full"></div>
                                             <div class="h-6 bg-base-content/10 rounded-lg w-1/3"></div>
                                         </div>
-                                        <x-element.skeleton-table rows="8" cols="10" />
+                                        <x-element.skeleton-table rows="8" cols="10"/>
                                     </div>
                                 </div>
                             @endforeach

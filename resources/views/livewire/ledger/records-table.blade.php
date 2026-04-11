@@ -98,9 +98,11 @@
                             </div>
                         </div>
                     @endforeach
+{{--
                     <div class="mt-8">
                         {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'bottom']) !!}
                     </div>
+--}}
                 @else
                     @include('components.ledger.alert', [
                         'message' => __('ledger.select_message'),

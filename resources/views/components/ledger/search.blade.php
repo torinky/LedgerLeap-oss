@@ -6,6 +6,8 @@
     'defaultSortColumns' => [],
     'search' => '',
     'perPage' => 100,
+    'displayLevel' => 1,
+    'totalRecordsLoaded' => false,
     'useSynonym' => false,
     'useTechnicalTerm' => false,
 ])
@@ -40,7 +42,7 @@
             --}}
 
             <div class="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.3fr)_minmax(19.5rem,19.5rem)] xl:grid-cols-[minmax(0,1.5fr)_minmax(20.5rem,20.5rem)] items-center">
-                <x-mary-input wire:model.change="search" type="search" icon="o-magnifying-glass"
+                <x-mary-input wire:model.live.change="search" type="search" icon="o-magnifying-glass"
                               class="input-primary input-lg shadow-md" placeholder="{{ __('ledger.search_message') }}"
                               clearable/>
 
@@ -51,18 +53,22 @@
                             <span class="label-text text-sm font-medium text-base-content">{{ __('ledger.sort_by') }}</span>
                         </div>
                         <select wire:model.live="orderBy" class="select select-primary select-sm w-full">
-                            @if ($orderByLabel !== '')
-                                <option value="{{ $orderBy }}" selected>{{ $orderByLabel }}</option>
-                            @endif
-                            @if ($hasDefaultSortOption)
-                                <option value="default">{{ __('ledger.default_sort_order') }}</option>
-                            @endif
+                            <?php
+                                $sortOptions = ['default', 'composite_score', 'created_at', 'updated_at', 'semantic_score'];
+                                $showCurrentSortOption = $orderByLabel !== '' && ! in_array($orderBy, $sortOptions, true);
+                            ?>
+                            <?php if ($showCurrentSortOption): ?>
+                            <option value="{{ $orderBy }}">{{ $orderByLabel }}</option>
+                            <?php endif; ?>
+                            <?php if ($hasDefaultSortOption): ?>
+                            <option value="default">{{ __('ledger.default_sort_order') }}</option>
+                            <?php endif; ?>
                             <option value="composite_score">{{ __('ledger.scoring.score') }}</option>
                             <option value="created_at">{{ __('ledger.created_at') }}</option>
                             <option value="updated_at">{{ __('ledger.updated_at') }}</option>
-                            @if ($useSemanticSearch ?? false)
-                                <option value="semantic_score">{{ __('ledger.semantic_score_sort') }}</option>
-                            @endif
+                            <?php if ($useSemanticSearch ?? false): ?>
+                            <option value="semantic_score">{{ __('ledger.semantic_score_sort') }}</option>
+                            <?php endif; ?>
                         </select>
                     </label>
 
@@ -115,9 +121,16 @@
                 </summary>
 
                 <div class="border-t border-base-300 px-3 pb-1.5 pt-1 sm:px-4">
+                    @php
+                        $displayLevelOptions = [
+                            ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                            ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                            ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                        ];
+                    @endphp
                     <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
                         <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-sm font-medium text-base-content">{{ __('ledger.search_technical_term') }}</span>
+                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_technical_term') }}</span>
                             <div class="tooltip w-full sm:w-auto"
                                  data-tip="{{ __('ledger.search_technical_term_hint') }}">
                                 <x-mary-toggle wire:model.live="useTechnicalTerm" class="toggle-primary toggle-sm"
@@ -125,8 +138,8 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-sm font-medium text-base-content">{{ __('ledger.search_synonym') }}</span>
+                        <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 ">
+                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_synonym') }}</span>
                             <div class="tooltip w-full sm:w-auto"
                                  data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym_hint') }}">
                                 <x-mary-toggle wire:model.live="useSynonym" class="toggle-primary toggle-sm"
@@ -134,8 +147,8 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-sm font-medium text-base-content">{{ __('ledger.semantic_search') }}</span>
+                        <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-1 lg:col-start-3">
+                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.semantic_search') }}</span>
                             <div class="tooltip w-full sm:w-auto"
                                  data-tip="{{ __('ledger.semantic_search_requires_query') }}">
                                 <x-mary-toggle wire:model.live="useSemanticSearch" class="toggle-secondary toggle-sm"
@@ -143,8 +156,17 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-sm font-medium text-base-content">{{ __('ledger.ascending') }} / {{ __('ledger.descending') }}</span>
+                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-span-2">
+                            <span class="text-sm font-medium text-base-content">{{ __('ledger.form.display_level') }}</span>
+                            <div x-data="{ level: {{ (int) $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
+                                <x-mary-group x-model="level" :options="$displayLevelOptions"
+                                    class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
+                                    option-value="id" option-label="name" />
+                            </div>
+                        </div>
+
+                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
+                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.ascending') }} / {{ __('ledger.descending') }}</span>
                             <div class="tooltip w-full sm:w-auto">
                                 <x-mary-toggle wire:model.live="orderAsc" class="toggle-primary toggle-sm" right/>
                             </div>
