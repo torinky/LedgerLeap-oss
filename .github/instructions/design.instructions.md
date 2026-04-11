@@ -6,7 +6,7 @@ This file contains the UI rules for the AI agent to follow when generating or mo
 
 - **Vibe**: Clean, corporate administrative interface. Information density should be managed nicely to ensure maximum readability and operability.
 - **Tech Stack**: daisyUI v5 + Tailwind CSS v4.
-- **Hardcoding Ban**: 
+- **Hardcoding Ban**:
     - NEVER use hardcoded Hex colors (e.g. `text-[#00b900]`), arbitrary pixel values (e.g. `p-[10px]`), or custom CSS components unless absolutely necessary.
     - **NEVER use hardcoded natural language text** (Japanese, English, etc.) for UI labels, button texts, or error messages. Use translation keys (`__('ledger.xxx')`) and manage them via the translation skill workflow.
 
@@ -34,7 +34,7 @@ Use daisyUI semantic colors exclusively to ensure compatibility across themes (`
 
 - **Buttons**: `<x-mary-button class="btn-primary">` (Mary UI). Use `btn-ghost` or `btn-outline` for secondary actions.
 - **Inputs**: `<x-mary-input>` (Mary UI). Add `icon-input` class if an icon prepends it.
-- **Cards**: `<x--marycard>` (Mary UI).
+- **Cards**: `<x-mary-card>` (Mary UI).
 - **Titles**: Use `.ttl_3d5` for decorated headers defined in the project's `app.scss`.
 
 ## 6. Do / Don't
@@ -46,22 +46,107 @@ Use daisyUI semantic colors exclusively to ensure compatibility across themes (`
 
 ## 7. Device & Responsiveness Strategy
 
-現場（タブレット主体）および事務所（ノートPC主体）での利用シナリオを前提に、以下のレスポンシブ指針を遵守します：
+現場（タブレット主体）および事務所（ノートPC主体）での利用シナリオを前提に、以下のレスポンシブ指針を守る。
 
-- **操作性（タブレット想定）**: daisyUIのデフォルト要素サイズを維持し、最低44px程度のタッチターゲットを確保すること。ホバー（hover）のみでしか表示されない重要なアクションは配置しない。
-- **情報密度（ノートPC想定）**: データ一覧やテーブル等では `lg:` （1024px以上）のブレークポイントを活用し、ノートPCの広い画面幅を最大限活かしたレイアウトを行うこと。
-- **グリッドとフレックス**: `md:` (タブレット) と `lg:` (ノートPC) の間で適切に折り返されるよう、必ずTailwindのGrid/Flexレイアウトを使用してコンポーネントを組むこと。
-- **画面下部アクションバー（Sticky Action Bar）**: 各種フォーム保存画面では、マルチウィンドウ（PC）と画面面積（タブレット）に配慮した以下のUIを採用する。
-    - **全デバイス共通**: 画面下部（`fixed bottom-0`）へフローティング配置する。構造として `<x-mary-card>` は意図しない内部余白（Padding）を含むため使用せず、標準の `<div class="shadow-md bg-base-300 rounded-t-3xl overflow-hidden">` による専用ラップ要素を用いて実装すること。
-    - **PC（ `lg:` 以上 ）**: 背後の文字（コンテンツ）がハッキリと読めるように、コンテナ全体の不透明度を一時的に下げるアプローチ（例：`opacity-[0.65]`）をとり、すりガラス等の「ぼかし（blur）」加工は用いない。マウスホバーした際は瞬時に `opacity-100` となり操作に集中できるようにする。
-    - **タブレット・モバイル（ `lg:` 未満 ）**: 透過効果を用いず常に不透明（`opacity-100`）とするが、限られた表示面積を確保するため、**初期状態ではフッターの主要部分を下部に隠す（スライドダウン状態）**。上部をタップした場合に「競り上がる（スライドアップする）」構造（Pull Tab / Bottom Sheet）とすること。
-        - スライドアップを引き起こす「タブ」部分は、カードのパディング内側に配置せず、左右の端まで到達するエッジツーエッジ（Edge-to-Edge）のデザインにする。
-        - タブの最適高は `3.5rem` (`h-14`) 程度とし、`div.p-4` のコンテンツ枠とは完全に分離すること。
-        - CSSによる縦位置調整は、不要な構文エラー（`translate-y-[calc(...)]`等）を避けるため `:style="'transform: translateY(calc(100% - 3.5rem));'"` のようにAlpine.jsのインラインスタイルバインディングを用いて確実に行うこと。
-- **主要ボタンの階層化**: 状態を完全に変更・確定するアクション（「保存する」「変更する」等）は、他のボタン（閉じる、リンク生成、削除等）と比較して**明確に大きく、タップ面積の広いデザイン（例: `btn-lg px-8` 等）** とし、視覚的・操作的な強弱を明確につけること。
+- **操作性（タブレット想定）**: daisyUI のデフォルト要素サイズを維持し、最低 44px 程度のタッチターゲットを確保する。hover のみでしか表示されない重要なアクションは置かない。
+- **情報密度（ノートPC想定）**: 一覧やテーブルでは `lg:`（1024px以上）を活用し、広い画面幅を最大限使う。
+- **グリッドとフレックス**: `md:`（タブレット）と `lg:`（ノートPC）の間で適切に折り返すよう、Tailwind の Grid / Flex レイアウトで組む。
+- **画面下部アクションバー（Sticky Action Bar）**:
+  - 全デバイス共通: 画面下部（`fixed bottom-0`）へフローティング配置する。`<x-mary-card>` は意図しない内部余白を含むため使わず、`<div class="shadow-md bg-base-300 rounded-t-3xl overflow-hidden">` のような専用ラッパーで実装する。
+  - PC（`lg:` 以上）: 背後の文字が読めるように、コンテナ全体の不透明度を一時的に下げる（例: `opacity-[0.65]`）。ぼかし（blur）は使わず、hover 時に `opacity-100` へ戻す。
+  - タブレット・モバイル（`lg:` 未満）: 常に不透明（`opacity-100`）にしつつ、表示面積を確保するため初期状態ではフッターの主要部分を下部に隠す。上部のタブをタップするとスライドアップする構造にする。
+  - 主要ラベルやボタン文言は翻訳キーで管理し、`ledger.action_bar_open` / `ledger.action_bar_close` のようなキーを使う。
 
-## 8. UI変更時のテスト・ロジック保護
+## 8. Icon Usage and Rotation
 
-- **構造変更の罠**: Bladeファイルのタグ構造（ネスト）を変更した際は、見た目だけでなく **「変数のスコープ」** や **「route関数の動的解決」** が壊れていないか必ず検証すること。
-- **テストの実行**: ビューファイルのみの修正であっても、`tests/Feature/Livewire` 下の関連するテストを実行し、レンダリングエラー（500/UrlGenerationException等）が発生しないことを確認すること。
-- **エビデンス**: 変更後のUIが正常に動作し、既存のテストをパスしていることを最終報告（Walkthrough）に含めること。
+1. **優先順位**: FontAwesome (`<i>`) > Heroicons (`<x-mary-icon>`)。
+2. **基本ルール**: `up/down` 等のバリエーションがあるアイコンは、切り替えて使うことを優先する。
+3. **回転アニメーション**: クラスによる回転は、必ず **ラッパー `<span>`** に対して適用する。
+
+```blade
+<span class="inline-flex transition-transform duration-300 ease-in-out" :class="expanded ? 'rotate-180' : 'rotate-0'">
+    <i class="fa-solid fa-chevron-up"></i>
+</span>
+```
+
+## 9. Text Switching (Alpine.js)
+
+`x-text` よりも `x-show` を用いた 2 要素分割方式を推奨する。
+
+```blade
+<span x-show="expanded" x-cloak style="display:none">{{ __('ledger.action_bar_close') }}</span>
+<span x-show="!expanded">{{ __('ledger.action_bar_open') }}</span>
+```
+
+## 10. Text Writing Principles
+
+1. **Buttons** は、できるだけ **動詞を含む短い行動文** にする。ボタンを押したあとに何が起きるかが一目で分かる文言を優先する。
+   - 例: `保存する` / `変更を保存する` / `送信する` / `一覧に戻る` / `詳細を表示する`
+   - 破壊的・不可逆な操作は、対象と結果が分かるようにする。
+   - 例: `台帳を削除する` / `変更を破棄して閉じる`
+2. **Labels** は、原則として **名詞または名詞句** にする。入力項目や対象そのものを示し、文章にしない。
+   - 例: `台帳名` / `承認者` / `検索条件` / `ステータス`
+3. **説明文・補足文** は、ユーザーが次に何をすべきか、何ができるかを示す **短い平易な文** にする。
+   - 可能な限り主語・動作を明確にし、冗長な修飾を避ける。
+   - 1 文で伝わる内容を優先し、長文はヘルプや tooltip に逃がす。
+4. **エラーメッセージ** は、`何が起きたか` / `必要なら原因` / `次にどうするか` を含める。
+   - 例: `保存できませんでした。入力内容を確認して再試行してください。`
+   - 責める言い方や抽象的な言い方は避ける。
+5. **状態表示・件数・短いメタ情報** は、前節のとおり badge-first で見直す。
+6. 文言を迷ったときは、`button = action` / `label = noun` / `description = guidance` / `error = problem + next step` を基準にする。
+7. 日本語のボタン動詞は、`保存する` / `更新する` / `作成する` / `登録する` / `編集する` / `変更する` / `反映する` を文脈で使い分ける。詳細は `docs/work/ui-ux/2026-04-11_text-writing-guidance.md` を参照する。
+
+参考: `docs/work/ui-ux/2026-04-11_text-writing-guidance.md` / `docs/work/ui-ux/2026-04-11_status-badge-pattern-guidance.md`
+
+## 11. Status Badges and Tooltips
+
+1. `x-mary-badge` を使い、ツールチップが必要な場合は daisyUI `tooltip` ラッパーで包む。
+2. 省スペース化が必要な場所では `badge-sm` を使う。
+3. フッター、アクションバー、一覧ヘッダー、サマリーなどの **短い数値 / 状態 / メタ情報** は、単なるテキストのままにせず、**まず badge 化できないかを検討する**。
+4. 目安として、以下に当てはまる場合は `text` より `badge` を優先する。
+   - 1〜数語で読める短い状態名・件数・ラベルである
+   - 一目で認識できることが重要で、補助説明は tooltip に逃がせる
+   - 非操作で、選択 / 解除 / 破棄などのインタラクションを持たない
+   - 色やアイコンで意味を補強できる
+5. 逆に、以下は badge 化せず text や別コンポーネントを維持する。
+   - 長い文章、エラーメッセージ、操作案内、説明文
+   - 選択 / フィルタ / 解除のような操作が主目的のラベル
+   - 句として読む必要があり、アイコン化しても意味が薄くなるもの
+6. フィルタ・選択・解除が主目的のラベルは badge ではなく、必要に応じて chip / tag 相当のインタラクティブ表現を検討する。
+7. 判断に迷う場合は、`badge = 状態を読む` / `chip = 状態を操作する` / `text = 説明を読む` を基準にする。
+
+```blade
+<div class="tooltip tooltip-top" data-tip="{{ __('ledger.workflow.tooltip.current_status_desc') }}">
+    <x-mary-badge :value="$status->label()" :icon="$icon" class="badge-sm font-bold shadow-sm" />
+</div>
+```
+
+参考: `docs/work/ui-ux/2026-04-11_status-badge-pattern-guidance.md`
+
+```php
+$icon = match ($status) {
+    WorkflowStatus::DRAFT => 'o-pencil-square',
+    WorkflowStatus::PENDING_INSPECTION => 'o-magnifying-glass',
+    WorkflowStatus::PENDING_APPROVAL => 'o-clock',
+    WorkflowStatus::APPROVED => 'o-check-badge',
+    default => 'o-document-text',
+};
+```
+
+## 12. daisyUI Swap Component Constraints
+
+daisyUI `swap` は `<input type="checkbox">` の checked 状態でしか安定して動作しない。Alpine.js の `expanded` 変数を外から `swap-active` へ反映する設計は避ける。
+
+```blade
+{{-- ❌ 誤用例: Alpine.js 変数で swap-active を外部制御 --}}
+<label class="swap swap-rotate" :class="{ 'swap-active': expanded }">
+    <input type="checkbox" class="hidden" />
+    ...
+</label>
+```
+
+## 13. UI Change Verification
+
+- Blade のタグ構造を変えたら、見た目だけでなく変数スコープや `route()` の動的解決が壊れていないか確認する。
+- ビュー修正だけでも、関連する Feature テストやレンダリング確認を行う。
+- 変更後の UI が正常に動き、既存テストを通過したことを報告に含める。

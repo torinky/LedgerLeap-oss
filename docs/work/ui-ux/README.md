@@ -57,5 +57,11 @@
 - ### テーブルUI
   - **[台帳テーブルUI モダナイゼーション計画](./2025-10-12_table-ui-modernization-plan.md)** 📝 計画段階: アクション列・スコア列の最適化、統合ツールバーによるソート・フィルタUIの改善計画。
 
+### 状態表示 / バッジ設計
+  - **[Status / Count Display Badge Guidance](./2026-04-11_status-badge-pattern-guidance.md)** 📝 判断基準メモ: フッターやサマリーの短い状態・件数・メタ情報を badge + icon + tooltip へ寄せる基準と、text / chip / tag との使い分けを整理。
+
+### 文言設計 / コピーライティング
+  - **[Text Writing Guidance for Buttons, Labels, and Descriptions](./2026-04-11_text-writing-guidance.md)** 📝 判断基準メモ: ボタンは action、ラベルは noun、説明は guidance、エラーは problem + next step で揃える。
+
 - ### ブラウザ固有の問題
   - **[Safariフリーズ問題](./2025-07-20_safari-freeze-debug-log.md)** ✅ 解決済み: 特定の画面でSafariブラウザがフリーズする問題に関する詳細なデバッグログと調査記録。
