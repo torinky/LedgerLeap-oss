@@ -57,10 +57,10 @@
         {{-- Tier 1: Global Loading Overlay --}}
         {{-- .delay.longest (1秒) を使用し、非常に重い通信の時のみ中央にスピナーを表示する --}}
         <div wire:loading.delay.longest wire:target="{{ $allLoadingTargets }}"
-            class="fixed inset-0 z-[200] flex items-center justify-center pointer-events-none">
+            class="fixed inset-0 z-200 flex items-center justify-center pointer-events-none">
             {{-- 指定されたコンポーネントを使用。!static !inset-auto で確実に中央へ固定 --}}
             <x-element.loading-overlay tier="1" manual message="{{ __('ledger.loading') }}"
-                class="!static !inset-auto !m-0" />
+                class="static! inset-auto! m-0!" />
         </div>
 
         <x-slot:drawer>
@@ -79,16 +79,17 @@
                 @foreach (range(1, 5) as $i)
                     <div class="flex items-center gap-2">
                         <div class="h-4 w-4 bg-base-content/10 rounded shimmer"></div>
-                        <div class="h-4 bg-base-content/10 rounded w-{{ [1, 2, 3][rand(0, 2)] }}/4 shimmer"></div>
+                        <div class="h-4 bg-base-content/10 rounded w-{{ [1, 2, 3][random_int(0, 2)] }}/4 shimmer"></div>
                     </div>
                 @endforeach
             </div>
         </x-slot:drawer>
 
         {{-- Always visible search section moved from RecordsTable --}}
-        <div class="px-4 pt-4 sticky z-10 bg-base-200/80 backdrop-blur-md pb-4 rounded-2xl">
+        <div class="sticky top-0 z-10 bg-base-100/80 backdrop-blur-sm px-4 pt-2 pb-2">
             <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel" :useSemanticSearch="$useSemanticSearch"
-                :defaultSortColumns="$defaultSortColumns" />
+                :defaultSortColumns="$defaultSortColumns" :search="$search" :perPage="$perPage" :useSynonym="$useSynonym"
+                :useTechnicalTerm="$useTechnicalTerm" />
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">
@@ -213,7 +214,7 @@
                 </div>
 
                 {{-- Navigation Panels Section --}}
-                <div class="relative group/nav min-h-[60px]">
+                <div class="relative group/nav min-h-15">
                     {{-- Tier 2 overlay for selection toggles - doesn't hide content --}}
                     <x-element.loading-overlay tier="2"
                         target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId" />
