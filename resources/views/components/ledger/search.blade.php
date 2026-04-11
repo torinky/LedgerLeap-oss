@@ -129,7 +129,7 @@
                         ];
                     @endphp
                     <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
+                        <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
                             <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_technical_term') }}</span>
                             <div class="tooltip w-full sm:w-auto"
                                  data-tip="{{ __('ledger.search_technical_term_hint') }}">
@@ -156,7 +156,7 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-span-2">
+                        <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-span-2">
                             <span class="text-sm font-medium text-base-content">{{ __('ledger.form.display_level') }}</span>
                             <div x-data="{ level: {{ (int) $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
                                 <x-mary-group x-model="level" :options="$displayLevelOptions"
@@ -165,7 +165,7 @@
                             </div>
                         </div>
 
-                        <div class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
+                        <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
                             <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.ascending') }} / {{ __('ledger.descending') }}</span>
                             <div class="tooltip w-full sm:w-auto">
                                 <x-mary-toggle wire:model.live="orderAsc" class="toggle-primary toggle-sm" right/>
@@ -173,8 +173,8 @@
                         </div>
 
                         @if (!empty($hasWorkflowEnabled))
-                            <label class="flex flex-col gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                                <span class="text-sm font-medium text-base-content">{{ __('ledger.workflow.status.label') }}</span>
+                            <label class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 lg:col-start-1 xl:col-start-4">
+                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.workflow.status.label') }}</span>
                                 <select wire:model.live="filterStatus"
                                         class="select select-primary select-xs w-full sm:w-44">
                                     <option value="">{{ __('ledger.all') }}</option>
