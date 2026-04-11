@@ -25,6 +25,8 @@
 
 - **[Issue #133 / 台帳一覧→詳細の highlight query 継承 振り返り](./ledger-list-redesign/2026-04-04_issue-133_highlight-query-handoff-retrospective.md)** ✅ 完了: 一覧→詳細リンクと自動リンク `/l/{query}` の両方で `highlight` を復元し、canonical URL 方針との整合を確認。`RecordsTableQueryTest` と `CrossReferenceTest` に href 検証を追加し、過去実装との差分を記録。
 
+- **[台帳一覧検索ヘッダーのレスポンシブ/スクロール境界メモ](./ledger-list-redesign/2026-04-11_ledger-search-header-responsive-scroll-note.md)** ✅ 完了・skill 化: 検索入力の主役化、`sort_by` / `per_page` の中間幅横並び、sticky ヘッダーのスクロール遮蔽量を減らす余白調整を記録し、`search-header-responsive-layout` skill の evidence として昇格。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
@@ -47,6 +49,7 @@
 ### 台帳リストデザイン再設計 (ledger-list-redesign)
   - **[フォルダツリー固定表示・深い階層対応 改善提案 (2026-02-23)](./ledger-list-redesign/2026-02-23_folder-tree-sticky-improvement-plan.md)** 📝 提案段階: 広い画面でのスクロール時ツリー消失問題の解消と、深い階層・多ノード時のUX向上に向けた4つの改善提案。
     - **[台帳一覧URL正規化 計画書 (2026-03-29)](./ledger-list-redesign/2026-03-29_ledger-list-url-normalization-plan.md)** 🚧 追加スプリント継続中: 共有URLの canonical 化、`l` / `f` / `cf` の短縮クエリ整理、スプリント分解とテスト観点の整理を完了し、FileInspector 連携の追加スプリントを追記。
+  - **[台帳一覧検索ヘッダーのレスポンシブ/スクロール境界メモ](./ledger-list-redesign/2026-04-11_ledger-search-header-responsive-scroll-note.md)** ✅ 完了・skill 化: sticky ヘッダーの余白圧縮、`sort_by` / `per_page` の横並び維持、下の結果一覧が見切れにくい境界を記録し、`search-header-responsive-layout` skill の evidence に昇格。
 
 ### ナビゲーション (navigation)
   テナント切り替えメニューなど、システムの主要なナビゲーション機能の改善に関するドキュメント。

@@ -29,6 +29,7 @@
 | Livewire | `livewire-tenant-context` | tenant() null / #[Lazy] |
 | Livewire | `livewire-loading-ui` | wire:loading / x-show / sticky |
 | Livewire | `livewire-computed-properties` | #[Computed] 0% / #[Url] |
+| UI/UX | `search-header-responsive-layout` | search header / sticky toolbar / responsive breakpoint / scroll occlusion |
 | Data | `ledger-content-data-structure` | content[n] null / index shift |
 | ACL | `permission-model` | 403 / cache stale / Role change |
 | Workflow | `workflow-status-machine` | status stuck / latestDiff null |
