@@ -198,64 +198,80 @@
 
                 </div>
 
-                {{-- Breadcrumbs Section --}}
-                <div class="mt-4">
-                    <div class="bg-base-300 text-base-content/70 rounded-box px-4 mb-4 font-bold">
-                        <x-ledger.livewire-breadcrumbs :breadcrumbs="$this->breadcrumbs"/>
-                    </div>
-                </div>
-
-                {{-- Navigation Panels Section --}}
-                <div class="relative group/nav min-h-15">
-                    {{-- Tier 2 overlay for selection toggles - doesn't hide content --}}
+                {{-- Consolidated Navigation & Folder Info Card --}}
+                <x-mary-card shadow class="bg-base-100 border border-base-300 overflow-visible relative group/nav">
+                    {{-- Tier 2 overlay for stable navigation UX --}}
                     <x-element.loading-overlay tier="2"
-                                               target="selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId"/>
+                                               target="{{ $heavyTargets }},selectedFolderIds,selectedLedgerDefineIds,toggleFolderId,toggleLedgerDefineId"/>
 
-                    <div>
-                        @if ($this->currentFolder)
-                            <div class="card bg-base-200/50 shadow-sm mb-4">
-                                <div class="card-body p-4 flex flex-row items-center justify-between">
-                                    <div>
-                                        <h2 class="card-title text-base-content text-lg">
-                                            <i class="fas fa-folder text-warning"></i>
+                    <x-slot:title>
+                        <div class="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-4 items-start w-full">
+                            {{-- Title & Breadcrumbs Area --}}
+                            <div class="space-y-3 min-w-0">
+                                {{-- Breadcrumbs embedded in card header --}}
+                                <div class="bg-base-200/50 text-base-content/60 rounded-lg px-3 py-1 text-sm font-medium w-fit max-w-full overflow-hidden">
+                                    <x-ledger.livewire-breadcrumbs :breadcrumbs="$this->breadcrumbs" />
+                                </div>
+
+                                {{-- Folder Title & Badge Area --}}
+                                <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
+                                    @if($this->currentFolder)
+                                        <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
+                                            <i class="fas fa-folder text-warning/80"></i>
                                             {{ $this->currentFolder->title }}
                                         </h2>
-                                        <p class="text-sm text-base-content/70">
-                                            {{ __('ledger.access_and_permissions.your_access_level') }}:
+
+                                        <div class="flex items-center gap-1.5 shrink-0">
                                             @if ($this->currentUserPermissionForFolder)
-                                                <span
-                                                        class="badge badge-sm badge-{{ $this->currentUserPermissionForFolder->getColor() }} text-{{ $this->currentUserPermissionForFolder->getColor() }}-content font-bold">
+                                                <div class="badge badge-{{ $this->currentUserPermissionForFolder->getColor() }} badge-md font-bold px-3 py-0.5 shadow-sm">
                                                     {{ $this->currentUserPermissionForFolder->getLabel() }}
-                                                </span>
+                                                </div>
                                             @else
-                                                <span
-                                                        class="badge badge-sm badge-outline">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
+                                                <div class="badge badge-outline badge-md opacity-50 font-medium">
+                                                    {{ __('ledger.access_and_permissions.no_direct_access') }}
+                                                </div>
                                             @endif
-                                        </p>
-                                    </div>
-                                    <div class="card-actions">
-                                        <x-mary-button
-                                                wire:click="openPermissionModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
-                                                label="{{ __('ledger.access_and_permissions.title') }}"
-                                                icon="o-shield-check" class="btn-sm btn-outline btn-ghost" spinner/>
-                                        <x-mary-button
-                                                wire:click="openActivityModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
-                                                label="{{ __('ledger.activity.title') }}" icon="o-clock"
-                                                class="btn-sm btn-outline btn-ghost" spinner/>
-                                    </div>
+                                        </div>
+                                    @else
+                                        <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2">
+                                            <i class="fas fa-home text-primary/80"></i>
+                                            {{ __('ledger.folder.root') }}
+                                        </h2>
+                                    @endif
                                 </div>
                             </div>
-                        @endif
 
+                            {{-- Actions Area --}}
+                            @if($this->currentFolder)
+                                <div class="flex flex-wrap md:flex-nowrap items-center gap-2 pt-1 md:pt-0">
+                                    <x-mary-button
+                                        wire:click="openPermissionModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
+                                        label="{{ __('ledger.access_and_permissions.title') }}"
+                                        icon="o-shield-check"
+                                        class="btn-sm btn-ghost bg-base-200/50 hover:bg-base-300 border-none font-bold"
+                                        spinner />
+                                    <x-mary-button
+                                        wire:click="openActivityModal('Folder', {{ $this->currentFolder->id }}, '{{ $this->currentFolder->title }}')"
+                                        label="{{ __('ledger.activity.title') }}"
+                                        icon="o-clock"
+                                        class="btn-sm btn-ghost bg-base-200/50 hover:bg-base-300 border-none font-bold"
+                                        spinner />
+                                </div>
+                            @endif
+                        </div>
+                    </x-slot:title>
+
+                    {{-- Navigation Panels Area --}}
+                    <div class="mt-2 text-base-content">
                         <x-folder.folder-and-ledger-panels :folderRecords="$this->folderRecords"
                                                            :selectedFolderIds="$selectedFolderIds"
                                                            :ledgerDefineRecords="$this->ledgerDefineRecords"
                                                            :selectedLedgerDefineIds="$selectedLedgerDefineIds"
                                                            :currentTenantId="$currentTenantId"/>
                     </div>
-                </div>
+                </x-mary-card>
 
-                <div class="divider opacity-50"></div>
+                <div class="divider opacity-30 my-6"></div>
             </div>
 
             {{-- Result Area: heavy な時はスケルトン、light な時は透過 --}}
@@ -281,13 +297,24 @@
                 {{-- Mega Skeleton: 通信開始時に即座に表示して視覚的フィードバックを提供（ヘビーな通信のみ） --}}
                 <div wire:loading wire:target="{{ $heavyTargets }}" class="w-full">
                     <div class="px-4">
-                        {{-- Breadcrumb Skeleton --}}
-                        <div class="h-10 bg-base-300 rounded-box w-full shimmer mb-4"></div>
-
-                        {{-- Folder Info Skeleton --}}
-                        <div class="card bg-base-200/50 shadow-sm mb-4">
-                            <div class="card-body p-4">
-                                <div class="h-8 bg-base-content/10 rounded-lg w-1/4 shimmer"></div>
+                        {{-- Unified Navigation Card Skeleton --}}
+                        <div class="card bg-base-100 border border-base-300 shadow-sm mb-6">
+                            <div class="card-body p-6 space-y-6">
+                                <div class="space-y-3">
+                                    {{-- Breadcrumb skeleton --}}
+                                    <div class="h-6 bg-base-300 rounded-lg w-1/3 shimmer"></div>
+                                    {{-- Title & Badge skeleton --}}
+                                    <div class="flex items-center gap-4">
+                                        <div class="h-8 bg-base-300 rounded-lg w-1/2 shimmer"></div>
+                                        <div class="h-6 bg-base-300 rounded-full w-20 shimmer"></div>
+                                    </div>
+                                </div>
+                                {{-- Panel grid skeleton --}}
+                                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                    @foreach(range(1, 4) as $i)
+                                        <div class="h-16 bg-base-200 rounded-xl shimmer"></div>
+                                    @endforeach
+                                </div>
                             </div>
                         </div>
 
