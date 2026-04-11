@@ -147,6 +147,7 @@ return [
         'title' => '点検/承認',
         'tooltip' => [
             'approve_requires_any_prior_inspection' => '承認の前に、いずれかの必須点検ロールによる点検が必要です。',
+            'current_status_desc' => '文書の現在のワークフロー状態を示すステータスです。',
         ],
         'tooltip_conditions_not_met_approval' => '必須点検または必須承認ロールの処理が完了していません。',
         'tooltip_conditions_not_met_inspection' => '必須点検ロールの処理が完了していません。',
