@@ -46,6 +46,17 @@ Before a finding becomes durable guidance:
 - record `status`, `last_confirmed_at`, and `recheck_after` for doc-sensitive claims
 - if `today > last_confirmed_at + recheck_after`, refresh the source before you keep the rule
 
+## Handling user overrides
+
+When the user supersedes an earlier plan, treat the override as the new authoritative scope rather than a side note.
+
+- Update the issue body/comments and the session plan in the same pass.
+- Remove or rewrite stale checklist items instead of leaving both versions visible.
+- Restate the new scope in the next progress note so the user can confirm what changed.
+- Keep the old wording only if it is explicitly marked as superseded.
+
+Evidence anchor: issue `#135` scope was repeatedly re-centered on 2026-04-12, and the stable result came from writing the new scope back into the issue / plan immediately (`https://github.com/torinky/LedgerLeap/issues/135#issuecomment-4230914437`).
+
 ## Step 5 — Quality gate
 
 - [ ] `copilot-instructions.md` stays short and repo-wide

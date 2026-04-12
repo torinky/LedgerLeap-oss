@@ -28,6 +28,7 @@ A new learning was proven?
 - Keep one source of truth per rule; replace duplicates with links.
 - If a prompt and skill cover the same domain, make them cross-reference each other.
 - If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
+- When a user supersedes a prior plan or scope, treat the new instruction as authoritative immediately; sync the plan, issue, and docs in the same pass and remove stale wording instead of keeping both versions active.
 - Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
 - If any task finishes — bug fix, feature review, investigation, sprint, doc update, or user-requested retrospective — extract the learnings even if they are not yet reusable; keep feature-local notes in `docs/work/*` and only promote durable guidance when the pattern is proven.
@@ -45,7 +46,7 @@ A new learning was proven?
 4. Record freshness metadata for claims that may drift over time.
 5. Update the primary file first.
 6. Sync neighbors: prompt ↔ skill ↔ instructions ↔ AGENTS ↔ issue template ↔ runbook.
-7. Remove stale or conflicting text immediately.
+7. Remove stale or conflicting text immediately, especially after a user overrides an earlier plan or scope.
 8. Validate links, line budgets, discovery, slash entrypoints, evidence reachability, and overdue rechecks.
 9. For tool-description slimming, confirm `tool = contract`, `capability = flow`, and `docs/work = rationale` after the update.
 
