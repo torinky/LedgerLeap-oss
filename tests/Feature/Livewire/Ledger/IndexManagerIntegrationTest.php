@@ -86,13 +86,13 @@ class IndexManagerIntegrationTest extends TestCase
     }
 
     #[Test]
-    public function it_updates_search_query_reactively()
+    public function it_updates_search_keywords_reactively()
     {
-        $ledger1 = Ledger::factory()->create([
+        Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'TargetContent']),
         ]);
-        $ledger2 = Ledger::factory()->create([
+        Ledger::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'No Search Match']),
         ]);
@@ -196,6 +196,16 @@ class IndexManagerIntegrationTest extends TestCase
     }
 
     #[Test]
+    public function it_handles_current_folder_change_event()
+    {
+        $otherFolder = Folder::factory()->create(['title' => 'Event Folder', 'parent_id' => $this->rootFolder->id]);
+        Livewire::test(IndexManager::class)
+            ->dispatch('currentFolderChangeRequested', newFolderId: $otherFolder->id)
+            ->assertSet('currentFolderId', $otherFolder->id)
+            ->assertSet('selectedFolderIds', [$otherFolder->id]); // descendantsAndSelf includes the folder itself
+    }
+
+    #[Test]
     public function it_renders_page_summary_when_multiple_pages_exist()
     {
         Ledger::factory()->create([
@@ -215,16 +225,5 @@ class IndexManagerIntegrationTest extends TestCase
         ])->test(IndexManager::class)
             ->assertSee('1 / 2')
             ->assertSee(__('ledger.records'));
-    }
-
-    #[Test]
-    public function it_handles_current_folder_change_event()
-    {
-        $otherFolder = Folder::factory()->create(['title' => 'Event Folder', 'parent_id' => $this->rootFolder->id]);
-
-        Livewire::test(IndexManager::class)
-            ->dispatch('currentFolderChangeRequested', newFolderId: $otherFolder->id)
-            ->assertSet('currentFolderId', $otherFolder->id)
-            ->assertSet('selectedFolderIds', [$otherFolder->id]); // descendantsAndSelf includes the folder itself
     }
 }

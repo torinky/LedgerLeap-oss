@@ -1,10 +1,10 @@
 ## Attachment Delivery Strategy (ADS) 設計仕様書
 
 ### 1. 背景と目的
-添付ファイル（画像、PDF、テキスト、JSON等）の特性と、利用する LLM の能力（Vision/マルチモーダル機能の有無）を考慮し、トークン消費量を抑えつつ、解析精度を最大化するためのデータ提供戦略を確立する。
+添付ファイル（画像、PDF、テキスト、JSON等）の特性と、利用する LLM の能力（Vision/マルチモーダル機能の有無）を考慮し、トークン消費量を抑えつつ、解析精度を最大化するためのデータ提供戦略を確立する。初回は text-first の共通 envelope を返し、`available_formats` で追加取得候補を事前に示す。
 
 ### 2. デリバリー・モード (Delivery Modes)
-添付ファイルの種類および LLM の能力に基づき、以下の 3 つのモードから最適なものを選択してレスポンスを生成する。
+添付ファイルの種類および LLM の能力に基づき、以下の 3 つのモードから最適なものを選択してレスポンスを生成する。初回応答は text-first とし、`available_formats` で markdown / json / structured / visual の候補を提示する。
 
 #### Mode: Text (テキスト・モード)
 - **対象:** `.txt`, `.md`, `.csv` 等のプレーンテキスト形式。
@@ -32,7 +32,8 @@
     - それ以外 $\rightarrow$ **Mode: Text** (Fallback).
 
 ### 4. 実装要件 (Implementation Requirements)
-- 添付ファイル一覧 (`attachments[]`) の各要素に、選択された `delivery_mode` をメタデータとして付与すること。
+- 添付ファイル一覧 (`attachments[]`) の各要素に、初回応答で選択した `delivery_mode` をメタデータとして付与すること。
+- `available_formats` を共通 envelope に含め、処理結果を読む前に LLM が追加取得候補を判断できるようにすること。
 - 構造化モードでは、既設の `key_value_pairs` 構造を維持・拡張し、解析精度を低下させないこと。
 - すべてのモードにおいて、共通の識別子 (`attachment_id`, `filename`, `role`, `order`) を提供すること。
 
@@ -44,8 +45,14 @@
 - `role`: 参照目的や業務上の役割（例: 本文、証憑、補助資料）
 - `order`: レコード内での提示順
 - `delivery_mode`: `text` / `structured` / `visual`
+- `available_formats`: `text` を先頭に、追加取得可能な `markdown` / `json` / `structured` / `visual` を列挙する
+- `routes.download`: tenant-safe なダウンロード URL
+- `routes.inspector`: ファイルインスペクターを開いた状態の URL
 - `mime_type`: 元ファイルの MIME type
 - `source`: どの抽出経路から得たか（例: `vlm_markdown`, `vlm_structured_data`, `original_file`）
+- `payloads.text`: text-first の初回 envelope。`text` / `lines[]` / `truncated` を持つ
+- `payloads.structured`: `pages[]` / `text_blocks[]` / `key_value_pairs[]` を持つ共通 contract
+- `payloads.visual`: `signed_url` / `base64` / `expires_at` を持つ visual contract。C.2 では shape を固定し、値は未取得なら `null` とする
 
 ### 6. モード別ペイロード (Mode Payloads)
 
@@ -53,6 +60,7 @@
 - `lines[]` または `text`
 - 行番号が必要な場合は `line_number` を付与する
 - 長文の場合は、切り詰め位置が分かる `truncated` フラグを持たせる
+- MCP search の summary 応答では、巨大化を避けるため text payload は preview 長に切り詰めてもよい
 
 #### 6.2 Structured
 - `pages[]`
@@ -60,21 +68,31 @@
 - `key_value_pairs[]`
 - 必要に応じて `page_index`、`bbox`、`source_span`、`confidence` を付与する
 - 既存の `key_value_pairs` は削らず、追加情報を外側に拡張する
+- `optional_fields` で `page_index` / `bbox` / `source_span` / `confidence` の採否を明示する
 
 #### 6.3 Visual
 - 直接アクセス可能な `signed_url` または `base64` を返す
 - URL を返す場合は `expires_at` と認可前提を明示する
 - Base64 は内部転送用を優先し、永続保存やログ出力の対象にしない
+- C.2 の summary 応答では `payloads.visual` の shape を固定し、follow-up generator 実装前は `signed_url` / `base64` を `null` としてよい
 
 ### 7. 決定ロジックの補足
-1. まず Vision 可否を確認する
-2. `image/*` と `application/pdf` は、Vision 可であれば Visual を優先する
-3. `application/json` は Structured を優先する
-4. `text/plain` / `text/csv` / `text/markdown` は Text を優先する
-5. 取得失敗、空データ、未対応 MIME の場合は Text fallback とし、共通 envelope は維持する
+1. まず Vision 可否と既存の出力経路を確認する
+2. 初回応答は text-first とし、`available_formats` で後続取得候補を示す
+3. `image/*` と `application/pdf` は、Vision 可であれば Visual を候補に含める
+4. `application/json` は Structured / JSON を候補に含める
+5. `text/plain` / `text/csv` / `text/markdown` は Text を候補に含める
+6. 取得失敗、空データ、未対応 MIME の場合は Text fallback とし、共通 envelope は維持する
 
 ### 8. 制約と注意事項
 - `attachment_id` / `filename` / `role` / `order` は欠損させない
 - 既存の `vlm_markdown` / `vlm_structured_data` と矛盾する再生成は行わない
 - tenant 境界と認可を越える URL は生成しない
 - 大きすぎる添付は切り詰めや分割を前提にする
+
+### 9. C.2 実装確定事項
+- `attachments[]` は mode ごとに同じ `payloads.text` / `payloads.structured` / `payloads.visual` envelope を返す
+- `payloads.text` は text-first preview を返し、`lines[]` は行番号付きで最大行数まで展開する
+- `payloads.structured` は `pages[]` / `text_blocks[]` / `key_value_pairs[]` を固定キーとし、既存データがある場合のみ内容を埋める
+- `page_index` / `bbox` / `source_span` / `confidence` は optional fields として採用し、`optional_fields` で presence を示す
+- `payloads.visual` は visual follow-up の型だけを先に固定し、実 URL / base64 生成は C.6 で進める

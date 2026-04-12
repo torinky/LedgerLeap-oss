@@ -2,14 +2,16 @@
 
 namespace Tests\Unit\Mcp\Tools;
 
-use App\Models\AttachedFile;
+use App\Enums\AttachedFileStatus;
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Models\AttachedFile;
+use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use App\Services\LedgerService;
+use Illuminate\Database\Eloquent\Collection as EloquentCollection;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\PersonalAccessToken;
 use Mockery;
@@ -242,8 +244,8 @@ class SearchLedgersToolTest extends TestCase
             'folder_id' => $folder->id,
         ]);
         $ledgerDefine->column_define = [
-            new \App\Models\ColumnDefine(['id' => 0, 'name' => 'title', 'type' => 'text', 'order' => 0]),
-            new \App\Models\ColumnDefine(['id' => 1, 'name' => 'description', 'type' => 'textarea', 'order' => 1]),
+            new ColumnDefine(['id' => 0, 'name' => 'title', 'type' => 'text', 'order' => 0]),
+            new ColumnDefine(['id' => 1, 'name' => 'description', 'type' => 'textarea', 'order' => 1]),
         ];
 
         $ledger = new Ledger([
@@ -368,30 +370,40 @@ class SearchLedgersToolTest extends TestCase
             'content' => [0 => 'テストコンテンツ'],
             'updated_at' => now(),
         ]);
+        $ledger->setAttribute('tenant_id', $this->getTenant()->id);
         // content_attachedを直接プロパティとして設定（AsColumnArrayJsonの動作を模擬）
         $ledger->content_attached = $contentAttachedObj;
         $firstAttachment = new AttachedFile([
-                'id' => 11,
-                'ledger_id' => $ledger->id,
-                'column_id' => 1,
-                'filename' => '請求書.pdf',
-                'hashedbasename' => 'abc123hash',
-                'mime' => 'application/pdf',
-                'size' => 524288,
-                'finalized_source' => 'vlm',
-            ]);
+            'id' => 11,
+            'ledger_id' => $ledger->id,
+            'column_id' => 1,
+            'filename' => '請求書.pdf',
+            'hashedbasename' => 'abc123hash',
+            'mime' => 'application/pdf',
+            'size' => 524288,
+            'tenant_id' => $this->getTenant()->id,
+            'status' => AttachedFileStatus::COMPLETED,
+            'vlm_markdown' => '# 請求書',
+            'vlm_structured_data' => [
+                'pages' => [
+                    ['page_index' => 1],
+                ],
+            ],
+            'finalized_source' => 'vlm',
+        ]);
         $firstAttachment->setAttribute('id', 11);
 
         $secondAttachment = new AttachedFile([
-                'id' => 12,
-                'ledger_id' => $ledger->id,
-                'column_id' => 1,
-                'filename' => '契約書.docx',
-                'hashedbasename' => 'def456hash',
-                'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                'size' => 1048576,
-                'finalized_source' => 'ocr',
-            ]);
+            'id' => 12,
+            'ledger_id' => $ledger->id,
+            'column_id' => 1,
+            'filename' => '契約書.docx',
+            'hashedbasename' => 'def456hash',
+            'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'size' => 1048576,
+            'tenant_id' => $this->getTenant()->id,
+            'finalized_source' => 'ocr',
+        ]);
         $secondAttachment->setAttribute('id', 12);
 
         $ledger->setRelation('attachedFiles', new EloquentCollection([
@@ -433,11 +445,46 @@ class SearchLedgersToolTest extends TestCase
         $this->assertEquals('primary', $attachments[0]['role']);
         $this->assertEquals(1, $attachments[0]['order']);
         $this->assertEquals('vlm', $attachments[0]['source']);
+        $this->assertEquals('application/pdf', $attachments[0]['mime_type']);
+        $this->assertEquals('text', $attachments[0]['delivery_mode']);
+        $this->assertSame(['text', 'markdown', 'structured', 'json', 'visual'], $attachments[0]['available_formats']);
+        $this->assertArrayHasKey('routes', $attachments[0]);
+        $this->assertSame(route('file.download', [
+            'tenant' => $this->getTenant()->id,
+            'attachedFile' => 11,
+            'original' => true,
+        ]), $attachments[0]['routes']['download']['url']);
+        $this->assertSame(route('ledger.show', [
+            'tenant' => $this->getTenant()->id,
+            'ledgerId' => $ledger->id,
+            'file' => 11,
+        ]), $attachments[0]['routes']['inspector']['url']);
         $this->assertEquals(524288, $attachments[0]['size']);
         $this->assertEquals('512 KB', $attachments[0]['size_formatted']);
         $this->assertEquals('application/pdf', $attachments[0]['mime']);
         $this->assertEquals(1, $attachments[0]['column_id']);
         $this->assertEquals('abc123hash', $attachments[0]['hash']);
+        $this->assertTrue($attachments[0]['payloads']['text']['available']);
+        $this->assertStringContainsString('# 請求書', $attachments[0]['payloads']['text']['text']);
+        $this->assertSame(1, $attachments[0]['payloads']['text']['lines'][0]['line_number']);
+        $this->assertSame('# 請求書', $attachments[0]['payloads']['text']['lines'][0]['text']);
+        $this->assertFalse($attachments[0]['payloads']['text']['truncated']);
+        $this->assertTrue($attachments[0]['payloads']['structured']['available']);
+        $this->assertSame([['page_index' => 1]], $attachments[0]['payloads']['structured']['pages']);
+        $this->assertSame([], $attachments[0]['payloads']['structured']['text_blocks']);
+        $this->assertSame([], $attachments[0]['payloads']['structured']['key_value_pairs']);
+        $this->assertSame([
+            'page_index' => true,
+            'bbox' => false,
+            'source_span' => false,
+            'confidence' => false,
+        ], $attachments[0]['payloads']['structured']['optional_fields']);
+        $this->assertTrue($attachments[0]['payloads']['visual']['available']);
+        $this->assertSame(route('file.download', [
+            'tenant' => $this->getTenant()->id,
+            'attachedFile' => 11,
+        ]), $attachments[0]['payloads']['visual']['signed_url']);
+        $this->assertTrue($attachments[0]['payloads']['visual']['auth_required']);
 
         // 2番目の添付ファイルの内容を確認
         $this->assertEquals(12, $attachments[1]['attachment_id']);
@@ -446,11 +493,28 @@ class SearchLedgersToolTest extends TestCase
         $this->assertEquals('supporting', $attachments[1]['role']);
         $this->assertEquals(2, $attachments[1]['order']);
         $this->assertEquals('ocr', $attachments[1]['source']);
+        $this->assertEquals('application/vnd.openxmlformats-officedocument.wordprocessingml.document', $attachments[1]['mime_type']);
+        $this->assertEquals('text', $attachments[1]['delivery_mode']);
+        $this->assertSame(['text'], $attachments[1]['available_formats']);
+        $this->assertSame(route('file.download', [
+            'tenant' => $this->getTenant()->id,
+            'attachedFile' => 12,
+            'original' => true,
+        ]), $attachments[1]['routes']['download']['url']);
+        $this->assertSame(route('ledger.show', [
+            'tenant' => $this->getTenant()->id,
+            'ledgerId' => $ledger->id,
+            'file' => 12,
+        ]), $attachments[1]['routes']['inspector']['url']);
         $this->assertEquals(1048576, $attachments[1]['size']);
         $this->assertEquals('1 MB', $attachments[1]['size_formatted']);
         $this->assertStringContainsString('wordprocessing', $attachments[1]['mime']);
         $this->assertEquals(1, $attachments[1]['column_id']);
         $this->assertEquals('def456hash', $attachments[1]['hash']);
+        $this->assertTrue($attachments[1]['payloads']['text']['available']);
+        $this->assertNull($attachments[1]['payloads']['text']['text']);
+        $this->assertFalse($attachments[1]['payloads']['structured']['available']);
+        $this->assertFalse($attachments[1]['payloads']['visual']['available']);
     }
 
     #[Test]
@@ -515,6 +579,9 @@ class SearchLedgersToolTest extends TestCase
                 'name' => '未確定ファイル.txt',
                 'size' => 128,
                 'mime' => 'text/plain',
+                'meta' => [
+                    'content' => "1行目\n2行目",
+                ],
             ],
         ];
 
@@ -551,6 +618,123 @@ class SearchLedgersToolTest extends TestCase
         $this->assertSame('primary', $attachments[0]['role']);
         $this->assertSame(1, $attachments[0]['order']);
         $this->assertSame('unknown', $attachments[0]['source']);
+        $this->assertSame('text/plain', $attachments[0]['mime_type']);
+        $this->assertSame('text', $attachments[0]['delivery_mode']);
+        $this->assertSame(['text'], $attachments[0]['available_formats']);
+        $this->assertSame("1行目\n2行目", $attachments[0]['payloads']['text']['text']);
+        $this->assertSame([
+            ['line_number' => 1, 'text' => '1行目'],
+            ['line_number' => 2, 'text' => '2行目'],
+        ], $attachments[0]['payloads']['text']['lines']);
+        $this->assertFalse($attachments[0]['payloads']['text']['truncated']);
+        $this->assertSame([
+            'available' => false,
+            'url' => null,
+        ], $attachments[0]['routes']['download']);
+        $this->assertSame([
+            'available' => false,
+            'url' => null,
+        ], $attachments[0]['routes']['inspector']);
+        $this->assertFalse($attachments[0]['payloads']['structured']['available']);
+        $this->assertFalse($attachments[0]['payloads']['visual']['available']);
+    }
+
+    #[Test]
+    public function it_marks_json_attachments_as_structured_delivery()
+    {
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $contentAttachedObj = new \stdClass;
+        $contentAttachedObj->{'2'} = [
+            'structured-json' => [
+                'name' => 'payload.json',
+                'size' => 4096,
+                'mime' => 'application/json',
+                'pages' => [
+                    ['page_index' => 1],
+                ],
+                'text_blocks' => [
+                    [
+                        'page_index' => 1,
+                        'bbox' => [0, 0, 20, 10],
+                        'source_span' => ['start' => 0, 'end' => 8],
+                        'confidence' => 0.91,
+                        'text' => '請求番号',
+                    ],
+                ],
+                'key_value_pairs' => [
+                    [
+                        'key' => '請求番号',
+                        'value' => 'INV-001',
+                        'page_index' => 1,
+                    ],
+                ],
+            ],
+        ];
+
+        $ledger = new Ledger([
+            'id' => 3,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'content' => [0 => 'テストコンテンツ'],
+            'updated_at' => now(),
+        ]);
+        $ledger->content_attached = $contentAttachedObj;
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        $attachments = $responseData['ledgers'][0]['attachments'];
+        $this->assertCount(1, $attachments);
+        $this->assertSame('payload.json', $attachments[0]['filename']);
+        $this->assertSame('application/json', $attachments[0]['mime_type']);
+        $this->assertSame('text', $attachments[0]['delivery_mode']);
+        $this->assertSame(['text', 'structured', 'json'], $attachments[0]['available_formats']);
+        $this->assertSame('primary', $attachments[0]['role']);
+        $this->assertSame(1, $attachments[0]['order']);
+        $this->assertTrue($attachments[0]['payloads']['text']['available']);
+        $this->assertNull($attachments[0]['payloads']['text']['text']);
+        $this->assertTrue($attachments[0]['payloads']['structured']['available']);
+        $this->assertSame([['page_index' => 1]], $attachments[0]['payloads']['structured']['pages']);
+        $this->assertSame([[
+            'page_index' => 1,
+            'bbox' => [0, 0, 20, 10],
+            'source_span' => ['start' => 0, 'end' => 8],
+            'confidence' => 0.91,
+            'text' => '請求番号',
+        ]], $attachments[0]['payloads']['structured']['text_blocks']);
+        $this->assertSame([[
+            'key' => '請求番号',
+            'value' => 'INV-001',
+            'page_index' => 1,
+        ]], $attachments[0]['payloads']['structured']['key_value_pairs']);
+        $this->assertSame([
+            'page_index' => true,
+            'bbox' => true,
+            'source_span' => true,
+            'confidence' => true,
+        ], $attachments[0]['payloads']['structured']['optional_fields']);
+        $this->assertFalse($attachments[0]['payloads']['visual']['available']);
     }
 
     #[Test]

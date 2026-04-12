@@ -41,6 +41,7 @@ class FileInspectorTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
         // テナント初期化（RefreshDatabaseWithTenant が作成した共有テナントを使用）
         $this->tenant = $this->getTenant();
+        tenancy()->initialize($this->tenant);
 
         // テストユーザー作成とログイン
         $this->user = User::factory()->create();
@@ -282,6 +283,40 @@ class FileInspectorTest extends TestCase
         $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
         $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
         $this->assertEquals($expectedDownloadUrl, $component->get('downloadUrl'));
+    }
+
+    #[Test]
+    public function it_exposes_available_formats_for_vlm_pdf_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'available_formats.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'vlm_markdown' => '# VLM result',
+            'vlm_structured_data' => [
+                'pages' => [
+                    ['page_index' => 1],
+                ],
+            ],
+            'finalized_source' => 'vlm',
+            'processing_finalized_at' => now(),
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertSame(['text', 'markdown', 'structured', 'json', 'visual'], $component->get('availableFormats'));
     }
 
     #[Test]

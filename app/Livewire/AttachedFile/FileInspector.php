@@ -202,6 +202,8 @@ class FileInspector extends BaseLivewireComponent
             'updated_at' => now()->subDays(2),
             'vlm_confidence' => $data['mock_confidence'] ?? $data['confidence'] ?? 0.0,
             'vlm_markdown' => $data['mock_preview_text'] ?? $data['preview_text'] ?? null,
+            'vlm_structured_data' => $data['mock_vlm_structured_data'] ?? $data['vlm_structured_data'] ?? null,
+            'vlm_model' => $data['vlm_model'] ?? null,
             'finalized_source' => strtolower($data['mock_source'] ?? $data['source'] ?? 'tika'),
             'ocr_processed_at' => $data['ocr_processed_at'] ?? null,
             'tika_processed_at' => ($data['created_at'] ?? now()->subDays(10))->addSeconds(5),
@@ -970,7 +972,7 @@ class FileInspector extends BaseLivewireComponent
                 'ocr' => $this->mockData['mock_ocr_text'] ?? ("【文字認識結果】\n".$baseText),
                 'tika' => $this->mockData['mock_tika_text'] ?? ("【システム抽出結果】\n".$baseText),
                 'structured' => isset($this->mockData['mock_vlm_structured_data'])
-                    ? json_encode($this->mockData['mock_vlm_structured_data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    ? collect($this->mockData['mock_vlm_structured_data'])->toJson(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                     : null,
                 default => $baseText,
             };
@@ -979,7 +981,7 @@ class FileInspector extends BaseLivewireComponent
                 'vlm' => $this->file->vlm_markdown,
                 'ocr', 'tika' => $this->file->getOcrTikaFormattedText($this->activeSource),
                 'structured' => $this->file->vlm_structured_data
-                    ? json_encode($this->file->vlm_structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    ? collect($this->file->vlm_structured_data)->toJson(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                     : null,
                 default => null,
             };
@@ -1214,6 +1216,35 @@ class FileInspector extends BaseLivewireComponent
     }
 
     /**
+     * 利用可能な取得形式を返す
+     */
+    #[Computed]
+    public function availableFormats(): array
+    {
+        if (! $this->file) {
+            return ['text'];
+        }
+
+        $formats = ['text'];
+        $mime = strtolower((string) ($this->file->original_mime_type ?? $this->file->mime ?? ''));
+
+        if (! empty($this->file->vlm_markdown)) {
+            $formats[] = 'markdown';
+        }
+
+        if ($this->isStructuredMimeType($mime) || ! empty($this->file->vlm_structured_data)) {
+            $formats[] = 'structured';
+            $formats[] = 'json';
+        }
+
+        if ($this->isVisualMimeType($mime)) {
+            $formats[] = 'visual';
+        }
+
+        return array_values(array_unique($formats));
+    }
+
+    /**
      * ファイルが画像か判定
      */
     #[Computed]
@@ -1242,6 +1273,16 @@ class FileInspector extends BaseLivewireComponent
 
         return in_array($mime, ['application/pdf', 'application/x-pdf'], true)
             || str_ends_with($filename, '.pdf');
+    }
+
+    private function isVisualMimeType(string $mime): bool
+    {
+        return str_starts_with($mime, 'image/') || $mime === 'application/pdf';
+    }
+
+    private function isStructuredMimeType(string $mime): bool
+    {
+        return $mime === 'application/json';
     }
 
     /**

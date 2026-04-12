@@ -4,10 +4,12 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\AttachedFile;
+use App\Models\ColumnDefine;
 use App\Services\LedgerService;
 use Carbon\Carbon;
-use Illuminate\Database\Eloquent\Model;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -15,6 +17,10 @@ use Laravel\Mcp\Server\Tool;
 class SearchLedgersTool extends Tool
 {
     use AuthenticatedMcpTool;
+
+    private const ATTACHMENT_TEXT_PREVIEW_LIMIT = 500;
+
+    private const ATTACHMENT_LINE_PREVIEW_LIMIT = 10;
 
     /**
      * The tool's description.
@@ -26,17 +32,29 @@ class SearchLedgersTool extends Tool
         Important for Japanese / multi-byte keywords:
         - `q`, `tags`, `exclude_q`, and `exclude_tags` accept Japanese and other multi-byte characters
         - `q` can be expanded with synonyms for business terms when synonym data is available
-        - tag / folder / ledger definition fragments should be resolved first with lookup tools before calling this search tool
+        - tag / folder / ledger definition fragments should be resolved first with lookup tools
+          before calling this search tool
 
         Response format:
-        - `summary` (default): display-oriented records with `__display_fields__`, `__summary__`, normalized `meta`, and a detail `link` when available
-        - summary records also include `attachment_count` and per-attachment `attachment_id` / `filename` / `role` / `order` / `source`
+        - `summary` (default): display-oriented records with `__display_fields__`, `__summary__`,
+          normalized `meta`, and a detail `link` when available
+        - summary records also include `attachment_count` and per-attachment `attachment_id` /
+          `filename` / `role` / `order` / `source` / `mime_type` / `delivery_mode` /
+          `available_formats` / `routes` / `payloads`
+        - `delivery_mode` is text-first for the initial envelope; `available_formats`
+          advertises additional follow-up formats such as markdown / json / structured / visual
+          when available
+        - `routes.download` / `routes.inspector` provide tenant-safe download and drawer-open
+          links for every resolved attachment
+        - `payloads.text` / `payloads.structured` / `payloads.visual` keep a stable mode contract
+          so clients can follow the same envelope for each attachment
         - `raw`: normalized `ledgers`, `meta`, and `total` for machine processing
 
         Key parameters:
         - `q`, `tags`, `exclude_q`, `exclude_tags`
         - `folder_id`, `ledger_define_id`, `creator_id`
-        - `folder_id` / `ledger_define_id` accept lookup-first candidate ID arrays resolved by the folder / ledger lookup tools
+        - `folder_id` / `ledger_define_id` accept lookup-first candidate ID arrays resolved by the
+          folder / ledger lookup tools
         - `tags` remains exact in the search body; resolve tag fragments with the tag lookup tool first
         - `created_from`, `created_to`
         - `order_by`, including `semantic_score` for meaning-based ranking
@@ -90,7 +108,7 @@ MARKDOWN;
         }
 
         $ledgers = $results['ledgers'];
-        if ($ledgers instanceof \Illuminate\Support\Collection) {
+        if ($ledgers instanceof Collection) {
             foreach ($ledgers as $ledger) {
                 if ($ledger instanceof Model) {
                     $ledger->loadMissing([
@@ -108,6 +126,7 @@ MARKDOWN;
             ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
                 $meta = $results['meta'];
                 $attachedFiles = $ledger instanceof Model ? ($ledger->getRelation('attachedFiles') ?? []) : [];
+                $ledgerModel = $ledger instanceof Model ? $ledger : null;
                 $ledger = (object) $ledger;
 
                 $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
@@ -144,8 +163,8 @@ MARKDOWN;
 
                 $ledger->__display_fields__ = $displayFields;
 
-                $contentAttached = json_decode(json_encode($ledger->content_attached ?? []), true);
-                $ledger->attachments = $this->formatAttachments($contentAttached, $attachedFiles);
+                $contentAttached = $ledger->content_attached ?? [];
+                $ledger->attachments = $this->formatAttachments($contentAttached, $attachedFiles, $ledgerModel);
                 $displayFields['attachment_count'] = count($ledger->attachments);
                 $displayFields['attachment_summary'] = $this->describeAttachmentCount(
                     $displayFields['attachment_count']
@@ -177,7 +196,7 @@ MARKDOWN;
             }
 
             // ColumnDefineオブジェクトまたは配列に対応
-            if ($column instanceof \App\Models\ColumnDefine) {
+            if ($column instanceof ColumnDefine) {
                 $columnId = $column->id;
                 $columnName = $column->name;
             } else {
@@ -215,12 +234,15 @@ MARKDOWN;
     /**
      * Format content_attached data into a user-friendly structure.
      *
-     * @param  array  $contentAttached  The content_attached array from the ledger
+     * @param  array|object  $contentAttached  The content_attached data from the ledger
      * @param  iterable<int, AttachedFile>  $attachedFiles  Related attached file models
      * @return array Array of attachment information
      */
-    private function formatAttachments(array $contentAttached, iterable $attachedFiles = []): array
-    {
+    private function formatAttachments(
+        array|object $contentAttached,
+        iterable $attachedFiles = [],
+        ?Model $ledger = null
+    ): array {
         $normalizedEntries = $this->normalizeAttachmentEntries($contentAttached);
         $lookup = collect($normalizedEntries)
             ->keyBy(fn (array $entry): string => $this->attachmentLookupKey($entry['column_id'], $entry['hash']));
@@ -236,6 +258,7 @@ MARKDOWN;
                 $orderedEntries[] = [
                     'entry' => $lookup->get($key),
                     'attached_file' => $attachedFile,
+                    'ledger' => $ledger,
                 ];
                 $lookup = $lookup->except([$key]);
             }
@@ -245,6 +268,7 @@ MARKDOWN;
             $orderedEntries[] = [
                 'entry' => $entry,
                 'attached_file' => null,
+                'ledger' => $ledger,
             ];
         }
 
@@ -254,6 +278,7 @@ MARKDOWN;
             $attachments[] = $this->buildAttachmentRecord(
                 entry: $orderedEntry['entry'],
                 attachedFile: $orderedEntry['attached_file'],
+                ledger: $orderedEntry['ledger'],
                 order: $index + 1,
                 total: $total,
             );
@@ -267,7 +292,7 @@ MARKDOWN;
      *
      * @return array<int, array{column_id:int|string, hash:string, file_info:array}>
      */
-    private function normalizeAttachmentEntries(array $contentAttached): array
+    private function normalizeAttachmentEntries(array|object $contentAttached): array
     {
         $attachments = [];
 
@@ -299,13 +324,22 @@ MARKDOWN;
     /**
      * 添付 1 件分の表示データを構築する。
      */
-    private function buildAttachmentRecord(array $entry, ?AttachedFile $attachedFile, int $order, int $total): array
-    {
+    private function buildAttachmentRecord(
+        array $entry,
+        ?AttachedFile $attachedFile,
+        ?Model $ledger,
+        int $order,
+        int $total
+    ): array {
         $fileInfo = $entry['file_info'];
         $resolvedName = $attachedFile?->filename
             ?? $fileInfo['name']
             ?? $fileInfo['filename']
             ?? trans('common.unknown', [], 'ja');
+
+        $mimeType = $this->resolveAttachmentMimeType($fileInfo, $attachedFile);
+        $availableFormats = $this->resolveAttachmentAvailableFormats($fileInfo, $attachedFile, $mimeType);
+        $deliveryMode = $this->resolveAttachmentDeliveryMode($availableFormats);
 
         $source = $attachedFile?->finalized_source
             ?? $fileInfo['source']
@@ -319,13 +353,293 @@ MARKDOWN;
             'role' => $order === 1 ? 'primary' : 'supporting',
             'order' => $order,
             'source' => $source,
+            'mime_type' => $mimeType,
+            'delivery_mode' => $deliveryMode,
+            'available_formats' => $availableFormats,
+            'routes' => $this->buildAttachmentRoutes($ledger, $attachedFile),
+            'payloads' => $this->buildAttachmentPayloads($fileInfo, $attachedFile, $ledger, $mimeType, $availableFormats),
             'size' => $fileInfo['size'] ?? 0,
             'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
-            'mime' => $fileInfo['mime'] ?? $attachedFile?->mime ?? 'application/octet-stream',
+            'mime' => $mimeType,
             'column_id' => $entry['column_id'],
             'hash' => $entry['hash'],
             'total_attachments' => $total,
         ];
+    }
+
+    private function resolveAttachmentMimeType(array $fileInfo, ?AttachedFile $attachedFile): string
+    {
+        return $attachedFile?->original_mime_type
+            ?? $attachedFile?->mime
+            ?? $fileInfo['mime_type']
+            ?? $fileInfo['mime']
+            ?? 'application/octet-stream';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveAttachmentAvailableFormats(
+        array $fileInfo,
+        ?AttachedFile $attachedFile,
+        string $mimeType
+    ): array {
+        $formats = ['text'];
+
+        if ($attachedFile?->hasVlmResult()) {
+            $formats[] = 'markdown';
+        }
+
+        if ($this->isStructuredMimeType($mimeType)
+            || ! empty($attachedFile?->vlm_structured_data)
+            || ! empty($fileInfo['pages'])
+            || ! empty($fileInfo['text_blocks'])
+            || ! empty($fileInfo['key_value_pairs'])) {
+            $formats[] = 'structured';
+            $formats[] = 'json';
+        }
+
+        if ($this->isVisualMimeType($mimeType)) {
+            $formats[] = 'visual';
+        }
+
+        return array_values(array_unique($formats));
+    }
+
+    private function resolveAttachmentDeliveryMode(array $availableFormats): string
+    {
+        return $availableFormats[0] ?? 'text';
+    }
+
+    /**
+     * @param  array<int, string>  $availableFormats
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildAttachmentPayloads(
+        array $fileInfo,
+        ?AttachedFile $attachedFile,
+        ?object $ledger,
+        string $mimeType,
+        array $availableFormats
+    ): array {
+        return [
+            'text' => $this->buildTextPayload($fileInfo, $attachedFile),
+            'structured' => $this->buildStructuredPayload(
+                $fileInfo,
+                $attachedFile,
+                in_array('structured', $availableFormats, true)
+            ),
+            'visual' => $this->buildVisualPayload(
+                $ledger,
+                $attachedFile,
+                $mimeType,
+                in_array('visual', $availableFormats, true)
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildAttachmentRoutes(?Model $ledger, ?AttachedFile $attachedFile): array
+    {
+        $context = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
+        $canBuildDownload = $context['tenant_id'] !== null && $context['attachment_id'] !== null;
+        $canBuildInspector = $canBuildDownload && $context['ledger_id'] !== null;
+
+        return [
+            'download' => [
+                'available' => $canBuildDownload,
+                'url' => $canBuildDownload
+                    ? route('file.download', [
+                        'tenant' => $context['tenant_id'],
+                        'attachedFile' => $context['attachment_id'],
+                        'original' => true,
+                    ])
+                    : null,
+            ],
+            'inspector' => [
+                'available' => $canBuildInspector,
+                'url' => $canBuildInspector
+                    ? route('ledger.show', [
+                        'tenant' => $context['tenant_id'],
+                        'ledgerId' => $context['ledger_id'],
+                        'file' => $context['attachment_id'],
+                    ])
+                    : null,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildTextPayload(array $fileInfo, ?AttachedFile $attachedFile): array
+    {
+        $rawText = $attachedFile?->vlm_markdown
+            ?? $fileInfo['meta']['content']
+            ?? $fileInfo['content']
+            ?? null;
+
+        if (! is_string($rawText) || trim($rawText) === '') {
+            return [
+                'available' => true,
+                'text' => null,
+                'lines' => [],
+                'truncated' => false,
+            ];
+        }
+
+        $normalizedText = trim($rawText);
+        $truncated = mb_strlen($normalizedText) > self::ATTACHMENT_TEXT_PREVIEW_LIMIT;
+        $previewText = mb_substr($normalizedText, 0, self::ATTACHMENT_TEXT_PREVIEW_LIMIT);
+        $previewLines = preg_split('/\R/u', $previewText) ?: [];
+        $lineLimited = count($previewLines) > self::ATTACHMENT_LINE_PREVIEW_LIMIT;
+        $previewLines = array_slice($previewLines, 0, self::ATTACHMENT_LINE_PREVIEW_LIMIT);
+
+        return [
+            'available' => true,
+            'text' => $previewText,
+            'lines' => array_map(
+                static fn (string $line, int $index): array => [
+                    'line_number' => $index + 1,
+                    'text' => $line,
+                ],
+                $previewLines,
+                array_keys($previewLines)
+            ),
+            'truncated' => $truncated || $lineLimited,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildStructuredPayload(array $fileInfo, ?AttachedFile $attachedFile, bool $available): array
+    {
+        $structuredData = is_array($attachedFile?->vlm_structured_data) ? $attachedFile->vlm_structured_data : [];
+
+        $pages = $this->normalizeStructuredPayloadSection(
+            $structuredData['pages'] ?? $fileInfo['pages'] ?? []
+        );
+        $textBlocks = $this->normalizeStructuredPayloadSection(
+            $structuredData['text_blocks'] ?? $fileInfo['text_blocks'] ?? []
+        );
+        $keyValuePairs = $this->normalizeStructuredPayloadSection(
+            $structuredData['key_value_pairs'] ?? $fileInfo['key_value_pairs'] ?? []
+        );
+
+        return [
+            'available' => $available,
+            'pages' => $pages,
+            'text_blocks' => $textBlocks,
+            'key_value_pairs' => $keyValuePairs,
+            'confidence' => $attachedFile?->vlm_confidence,
+            'optional_fields' => [
+                'page_index' => $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'page_index'),
+                'bbox' => $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'bbox'),
+                'source_span' => $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'source_span'),
+                'confidence' => $attachedFile?->vlm_confidence !== null
+                    || $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'confidence'),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildVisualPayload(
+        ?Model $ledger,
+        ?AttachedFile $attachedFile,
+        string $mimeType,
+        bool $available
+    ): array {
+        $context = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
+        $canBuildVisual = $available
+            && $context['tenant_id'] !== null
+            && $context['attachment_id'] !== null;
+
+        return [
+            'available' => $canBuildVisual,
+            'mime_type' => $mimeType,
+            'signed_url' => $canBuildVisual
+                ? route('file.download', [
+                    'tenant' => $context['tenant_id'],
+                    'attachedFile' => $context['attachment_id'],
+                ])
+                : null,
+            'base64' => null,
+            'expires_at' => null,
+            'auth_required' => true,
+        ];
+    }
+
+    /**
+     * @return array{tenant_id:int|string|null, ledger_id:int|string|null, attachment_id:int|string|null}
+     */
+    private function resolveAttachmentRouteContext(?Model $ledger, ?AttachedFile $attachedFile): array
+    {
+        return [
+            'tenant_id' => $ledger?->tenant_id ?? $attachedFile?->tenant_id,
+            'ledger_id' => $ledger?->id ?? $attachedFile?->ledger_id,
+            'attachment_id' => $attachedFile?->id,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeStructuredPayloadSection(mixed $section): array
+    {
+        if (! is_array($section)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            static fn ($item): array => is_array($item) ? $item : (array) $item,
+            array_filter($section, static fn ($item): bool => is_array($item) || is_object($item))
+        ));
+    }
+
+    /**
+     * @param  array<int, array<int, array<string, mixed>>>  $sections
+     */
+    private function sectionContainsField(array $sections, string $field): bool
+    {
+        foreach ($sections as $section) {
+            foreach ($section as $item) {
+                if ($this->arrayContainsField($item, $field)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function arrayContainsField(array $payload, string $field): bool
+    {
+        if (array_key_exists($field, $payload)) {
+            return true;
+        }
+
+        foreach ($payload as $value) {
+            if (is_array($value) && $this->arrayContainsField($value, $field)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isVisualMimeType(string $mimeType): bool
+    {
+        return str_starts_with($mimeType, 'image/') || $mimeType === 'application/pdf';
+    }
+
+    private function isStructuredMimeType(string $mimeType): bool
+    {
+        return $mimeType === 'application/json';
     }
 
     private function attachmentLookupKey(int|string $columnId, string $hash): string
