@@ -20,9 +20,13 @@ class CompareTranslationsCommandTest extends TestCase
 
     private string $originalLedgerPath;
 
+    private string $originalLangPath;
+
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->originalLangPath = $this->app->langPath();
 
         // テスト用の一時ディレクトリを作成
         $this->tempLangPath = storage_path('framework/testing/lang-' . uniqid('', true));
@@ -59,15 +63,28 @@ PHP
         parent::tearDown();
     }
 
+    private function withTemporaryLangPath(callable $callback): mixed
+    {
+        $this->app->useLangPath($this->tempLangPath);
+
+        try {
+            return $callback();
+        } finally {
+            $this->app->useLangPath($this->originalLangPath);
+        }
+    }
+
     #[Test]
     public function dry_run_does_not_modify_json_file(): void
     {
         // json_pathとledger_pathをテスト用のものに差し替える
         $originalContent = File::get($this->originalJsonPath);
 
-        $this->artisan('translations:compare', [
-            '--dry-run' => true,
-        ]);
+        $this->withTemporaryLangPath(function (): void {
+            $this->artisan('translations:compare', [
+                '--dry-run' => true,
+            ]);
+        });
 
         // ファイルは変わっていないはずなので、内容が同一であることを確認
         $this->assertSame($originalContent, File::get($this->originalJsonPath));
@@ -78,11 +95,13 @@ PHP
     {
         // ProductのPHPとJSONファイルのパスは実際のものを使うため、ここでは
         // コマンドの出力をチェックするのみとする（ファイルの差し替えは難しい）
-        $this->artisan('translations:compare', [
-            '--dry-run' => true,
-        ])
-            ->expectsOutputToContain('Changes to be applied')
-            ->assertExitCode(0);
+        $this->withTemporaryLangPath(function (): void {
+            $this->artisan('translations:compare', [
+                '--dry-run' => true,
+            ])
+                ->expectsOutputToContain('Changes to be applied')
+                ->assertExitCode(0);
+        });
     }
 
     /**
