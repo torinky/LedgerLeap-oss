@@ -8,9 +8,11 @@ use App\Livewire\Ledger\Export as LedgerExportComponent;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Storage;
 use Maatwebsite\Excel\Facades\Excel;
 use PHPUnit\Framework\Attributes\CoversClass;
-use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -259,5 +261,46 @@ class LedgerExportTest extends TestCase
         $response = $component->downloadExport();
 
         $this->assertInstanceOf(StreamedResponse::class, $response);
+    }
+
+    public function test_update_export_progress_marks_export_finished_without_toast(): void
+    {
+        Bus::shouldReceive('findBatch')
+            ->once()
+            ->andReturn(new class
+            {
+                public function finished(): bool
+                {
+                    return true;
+                }
+            });
+
+        Livewire::test(
+            LedgerExportComponent::class,
+            [$this->ledgerDefine->id, [], [], $this->ledgerDefine->title]
+        )
+            ->set('batchId', 'batch-1')
+            ->call('updateExportProgress')
+            ->assertSet('exportFinished', true)
+            ->assertSet('exporting', false);
+    }
+
+    public function test_render_shows_exporting_label_then_download_link(): void
+    {
+        $component = Livewire::test(
+            LedgerExportComponent::class,
+            [$this->ledgerDefine->id, [], [], $this->ledgerDefine->title]
+        )
+            ->assertSeeHtml('wire:key="ledger_export_request-')
+            ->assertSeeHtml('wire:key="ledger_export_download-')
+            ->assertSeeHtml('pointer-events-none opacity-50');
+
+        $component->set('exporting', true)
+            ->set('exportFinished', false)
+            ->assertSeeHtml('disabled="disabled"')
+            ->assertSeeHtml('pointer-events-none opacity-50');
+
+        $component->set('exportFinished', true)
+            ->assertDontSeeHtml('pointer-events-none opacity-50');
     }
 }

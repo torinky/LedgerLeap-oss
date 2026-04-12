@@ -94,6 +94,11 @@ class Export extends BaseLivewireComponent
         return Bus::findBatch($this->batchId);
     }
 
+    public function getDownloadUrlProperty(): string
+    {
+        return Storage::disk('public')->url($this->exportFilename);
+    }
+
     public function downloadExport()
     {
         $headers = ['Content-Disposition' => 'attachment; filename="'.$this->exportFilename.'"'];
@@ -103,6 +108,10 @@ class Export extends BaseLivewireComponent
 
     public function updateExportProgress()
     {
+        if ($this->exportFinished) {
+            return;
+        }
+
         $this->exportFinished = $this->exportBatch->finished();
 
         if ($this->exportFinished) {

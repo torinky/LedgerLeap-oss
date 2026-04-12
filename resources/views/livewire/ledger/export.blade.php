@@ -1,20 +1,25 @@
-<div>
-    <a wire:click="export()" class="btn btn-outline btn-secondary w-48"
-       wire:key="ledger_export_request-{{$ledgerDefineId}}"
-       @if($exporting && !$exportFinished) disabled="disabled" @endif
-    ><i class="fas fa-file-csv"></i> {{__('ledger.export_csv')}}</a>
+<div class="flex flex-wrap items-center gap-3">
+    <x-mary-button
+        wire:click="export"
+        icon="o-arrow-down-tray"
+        :label="$exporting && !$exportFinished ? __('ledger.exporting') : __('ledger.export_csv')"
+        class="btn-outline btn-secondary w-48 justify-start"
+        wire:key="ledger_export_request-{{ $ledgerDefineId }}"
+        @if($exporting && !$exportFinished) disabled="disabled" @endif
+        spinner="export"
+    />
 
     @if($exporting && !$exportFinished)
-        <span wire:poll="updateExportProgress" class="flex space-x-5 items-center"
-              wire:key="ledger_export_progress-{{$ledgerDefineId}}">
-            <span class="loading loading-spinner loading-xs mx-2"></span><span>{{__('ledger.exporting')}}</span>
-        </span>
+        <span wire:poll="updateExportProgress" class="sr-only" wire:key="ledger_export_progress-{{ $ledgerDefineId }}"></span>
     @endif
 
-    @if($exportFinished)
-        {{__('ledger.export_finished')}}
-        <a class="btn btn-secondary btn-sm relative inline-flex my-2" wire:click="downloadExport()"
-           wire:key="ledger_export_download-{{$ledgerDefineId}}"
-        >{{__('actions.download')}}</a>
-    @endif
+    <x-mary-button
+        :link="$exportFinished ? $this->downloadUrl : '#'"
+        no-wire-navigate
+        download="{{ $exportFilename }}"
+        icon="o-arrow-down-on-square"
+        :label="__('actions.download')"
+        class="btn-secondary btn-sm{{ $exportFinished ? '' : ' pointer-events-none opacity-50' }}"
+        wire:key="ledger_export_download-{{ $ledgerDefineId }}"
+    />
 </div>
