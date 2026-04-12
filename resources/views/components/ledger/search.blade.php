@@ -16,6 +16,9 @@
     <x-mary-card shadow="sm" class="w-full min-w-0 overflow-hidden border border-base-300 bg-base-100 py-0"
                  body-class="p-0">
         <div class="space-y-2 py-2">
+            @php
+                $currentDisplayLevelLabel = __('ledger.form.display_level_options.' . (int) $displayLevel);
+            @endphp
             {{--
                         <div class="relative overflow-hidden rounded-2xl border border-primary/15 bg-linear-to-r from-primary/10 via-base-100 to-secondary/10 px-3 py-1.5">
                             <div class="absolute inset-y-0 left-0 w-1 bg-primary/60"></div>
@@ -103,6 +106,8 @@
                             <x-mary-badge :value="__('ledger.workflow.status.label')"
                                           class="badge-ghost badge-sm hidden sm:inline-flex"/>
                         @endif
+                        <x-mary-badge :value="__('ledger.form.display_level') . ': ' . $currentDisplayLevelLabel"
+                                      class="badge-info badge-sm hidden sm:inline-flex whitespace-nowrap"/>
                         @if ($useTechnicalTerm)
                             <x-mary-badge :value="__('ledger.search_technical_term')"
                                           class="badge-neutral badge-sm hidden sm:inline-flex"/>

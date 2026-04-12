@@ -82,6 +82,7 @@ class IndexManagerIntegrationTest extends TestCase
             ->set('currentFolderId', $this->rootFolder->id)
             ->assertSee(__('ledger.search_options'))
             ->assertSee(__('ledger.form.display_level'))
+            ->assertSee(__('ledger.form.display_level') . ': ' . __('ledger.form.display_level_options.1'))
             ->assertSee(__('ledger.opened_count'));
     }
 
