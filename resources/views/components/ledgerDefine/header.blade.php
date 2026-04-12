@@ -1,138 +1,147 @@
-@props([
-    'canCreate'=>false,
-    'canView'=>false,
-    'canManage'=>false,
-    'ledgerDefine'=>null,
-    'breadcrumbsPerLedgerDefine'=>[],
-    'keywords'=>[],
-    'filter'=>[],
-    'ledgerDefineId'=>null,
-    'ledgerDefineRecordsKeyById'=>[],
-    'scoreStats'=>null,
-    'currentTenantId' => null,
-])
-<div
-    class="flex flex-row justify-content-between items-center bg-base-300 mt-0 px-4 text-sm rounded-t-box bg-primary/50 ">
-    <h3 class="text-2xl font-medium leading-tight card-title text-primary-content space-x-3 my-2 mr-4">
-        <span><i class="fa-solid fa-book-open mr-2"></i>{{$ledgerDefine->title}}</span>
-        @if($scoreStats && $scoreStats['has_scores'])
-            <span class="text-sm font-normal text-base-content/50 ml-4">
-                @php
-                    $avgScoreClass = match(true) {
-                        $scoreStats['avg_score'] >= 70 => 'badge-success',
-                        $scoreStats['avg_score'] >= 40 => 'badge-primary',
-                        $scoreStats['avg_score'] >= 20 => 'badge-info',
-                        $scoreStats['avg_score'] > 0 => 'badge-ghost',
-                        default => 'badge-ghost'
-                    };
-                @endphp
-                <span class="badge {{ $avgScoreClass }} badge-sm gap-1">
-                    <i class="fas fa-chart-line text-xs"></i>
-                    {{ __('ledger.scoring.avg_score') }}: {{ $scoreStats['avg_score'] }}
-                </span>
-                <span class="badge badge-ghost badge-sm gap-1 ml-1">
-                    <i class="fas fa-arrow-up text-xs"></i>
-                    {{ __('ledger.scoring.max') }}: {{ $scoreStats['max_score'] }}
-                </span>
-                <span class="text-xs text-base-content/50">
-                    ({{ $scoreStats['count'] }}{{ __('ledger.records') }})
-                </span>
-            </span>
-        @endif
-    </h3>
-        <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id] ?? []"
-        />
-    <div class="flex-grow text-right">
-        <x-mary-button
+<x-mary-card shadow class="bg-primary/50 text-primary-content border-none overflow-visible mb-6" body-class="bg-base-100 text-base-content p-4 pt-2">
+    <x-slot:title>
+        <div class="flex flex-col gap-1 -mt-1">
+            <div class="bg-white/10 text-primary-content/80 rounded-lg px-3 py-0.5 text-xs font-medium w-fit max-w-full overflow-hidden">
+                <x-ledger.livewire-breadcrumbs :breadcrumbs="$breadcrumbsPerLedgerDefine[$ledgerDefine->id] ?? []" />
+            </div>
+            <h3 class="text-xl md:text-2xl font-bold tracking-tight flex items-center gap-3">
+                <i class="fa-solid fa-book-open opacity-90"></i>
+                {{$ledgerDefine->title}}
+            </h3>
+        </div>
+    </x-slot:title>
+
+    <x-slot:menu>
+        <div class="flex items-center gap-1">
+            <x-mary-button
                 wire:click="openPermissionModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
-                label="{{ __('ledger.access_and_permissions.title') }}"
+                tooltip-left="{{ __('ledger.access_and_permissions.title') }}"
                 icon="o-shield-check"
-                class="btn-xs btn-ghost"
+                class="btn-xs md:btn-sm btn-ghost hover:bg-white/20 border-none text-primary-content"
                 spinner
-        />
-        <x-mary-button
+            />
+            <x-mary-button
                 wire:click="openActivityModal('LedgerDefine', {{ $ledgerDefineId }}, '{{ $ledgerDefineRecordsKeyById[$ledgerDefineId]->title }}')"
-                label="{{ __('ledger.activity.title') }}"
+                tooltip-left="{{ __('ledger.activity.title') }}"
                 icon="o-clock"
-                class="btn-xs btn-ghost"
+                class="btn-xs md:btn-sm btn-ghost hover:bg-white/20 border-none text-primary-content"
                 spinner
-        />
-        <x-mary-button
+            />
+            <x-mary-button
                 wire:click.prevent="$parent.toggleLedgerDefineId({{ $ledgerDefine->id }})"
                 icon="o-x-mark"
-                class="btn-xs btn-ghost btn-square tooltip"
-                data-tip="{{__('ledger.close')}}"
+                class="btn-xs md:btn-sm btn-ghost btn-square hover:bg-white/20 border-none text-primary-content"
+                tooltip-left="{{__('ledger.close')}}"
                 spinner="$parent.toggleLedgerDefineId"
-        />
-    </div>
-</div>
-<div class="prose text-xs leading-relaxed w-full max-w-none px-4">
-    @php
-        $descriptionHtml = app(App\Services\AutoLinkService::class)->convert(
-            app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''), 
-            null, 
-            $ledgerDefine
-        );
-    @endphp
-    
-    <x-expandable-content 
-        :content="$descriptionHtml"
-        max-height="4.5rem"
-    />
-</div>
+            />
+        </div>
+    </x-slot:menu>
 
-<div class="grid justify-items-end mx-4">
+    <div class="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-x-6 gap-y-4 items-start">
+        {{-- Left: Identity & Functional Actions --}}
+        <div class="space-y-4">
+            {{-- Score Stats --}}
+            @if($scoreStats && $scoreStats['has_scores'])
+                <div class="flex flex-wrap gap-1.5 items-center">
+                    @php
+                        $avgScoreClass = match(true) {
+                            $scoreStats['avg_score'] >= 70 => 'badge-success text-white',
+                            $scoreStats['avg_score'] >= 40 => 'badge-primary text-white',
+                            $scoreStats['avg_score'] >= 20 => 'badge-info text-white',
+                            default => 'badge-ghost'
+                        };
+                    @endphp
+                    <x-mary-badge :value="__('ledger.scoring.avg_score') . ': ' . $scoreStats['avg_score']"
+                                 icon="o-chart-bar"
+                                 class="{{ $avgScoreClass }} badge-sm font-bold shadow-sm" />
+                    
+                    <x-mary-badge :value="__('ledger.scoring.max') . ': ' . $scoreStats['max_score']"
+                                 icon="o-arrow-trending-up"
+                                 class="badge-ghost badge-sm font-medium opacity-70" />
+                    
+                    <div class="text-[10px] text-base-content/40 font-medium px-1">
+                        ({{ $scoreStats['count'] }}{{ __('ledger.records') }})
+                    </div>
+                </div>
+            @endif
 
-    <div class="flex flex-row  space-x-2 place-items-center">
-        @if($canCreate)
-            <a href="{{ route('ledger.create', ['tenant' => $currentTenantId, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
-               class="btn btn-neutral relative inline-flex w-48 "
-               target="ledgerCreate_{{$ledgerDefine->id}}}}"><i class="fas fa-circle-plus mr-1"></i>
-                {{__('ledger.create')}}
-            </a>
-        @else
-            <div class="tooltip" data-tip="{{ __('ledger.not_allow_create') }}">
-                <button class="btn btn-neutral relative inline-flex w-48 " disabled>
-                    <i class="fas fa-circle-plus mr-1"></i>
-                    {{__('ledger.create')}}
-                </button>
+            {{-- Main Actions --}}
+            <div class="flex flex-wrap items-center gap-2">
+                @if($canCreate)
+                    <a href="{{ route('ledger.create', ['tenant' => $currentTenantId, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
+                       class="btn btn-neutral btn-md px-8 shadow-lg hover:scale-105 active:scale-95 transition-all"
+                       target="ledgerCreate_{{$ledgerDefine->id}}}}">
+                        <i class="fas fa-circle-plus"></i>
+                        {{__('ledger.create')}}
+                    </a>
+                @else
+                    <div class="tooltip" data-tip="{{ __('ledger.not_allow_create') }}">
+                        <button class="btn btn-neutral btn-md px-8 opacity-50" disabled>
+                            <i class="fas fa-circle-plus"></i>
+                            {{__('ledger.create')}}
+                        </button>
+                    </div>
+                @endif
+
+                @if($canView)
+                    <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
+                                            :ledgerDefineTitle="$ledgerDefine->title"
+                                            :$keywords
+                                            :$filter
+                                            wire:key="ledger_export-{{ $ledgerDefine->id }}"
+                    />
+                @else
+                    <div class="tooltip" data-tip="{{ __('ledger.not_allow_view') }}">
+                        <button class="btn btn-outline btn-secondary bg-base-200/30 btn-md px-8" disabled>
+                            <i class="fas fa-file-csv"></i>
+                            {{__('ledger.export_csv')}}
+                        </button>
+                    </div>
+                @endif
+
+                @if($canManage)
+                    <a href="{{ route('ledgerDefine.edit', ['tenant' => $currentTenantId, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
+                       class="btn btn-outline btn-primary btn-sm bg-primary/5"
+                       target="ledgerDefineEdit_{{$ledgerDefine->id}}}}">
+                        <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
+                    </a>
+                @else
+                    <div class="tooltip" data-tip="{{ __('ledger.not_allow_manage') }}">
+                        <button class="btn btn-outline btn-primary btn-sm opacity-50" disabled>
+                            <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
+                        </button>
+                    </div>
+                @endif
+            </div>
+        </div>
+
+        {{-- Right: Description Area --}}
+        @if($ledgerDefine->list_description)
+            <div class="w-full">
+                <div class="bg-base-200/40 rounded-xl p-3 border border-base-300/30 shadow-inner">
+                    <div class="prose prose-xs max-w-none text-base-content/70 leading-relaxed custom-scrollbar">
+                        @php
+                            $descriptionHtml = app(App\Services\AutoLinkService::class)->convert(
+                                app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''), 
+                                null, 
+                                $ledgerDefine
+                            );
+                        @endphp
+                        <x-expandable-content 
+                            :content="$descriptionHtml"
+                            max-height="4.5rem"
+                        />
+                    </div>
+                </div>
             </div>
         @endif
-            @if($canView)
-                <livewire:ledger.export :ledgerDefineId="$ledgerDefine->id"
-                                        :ledgerDefineTitle="$ledgerDefine->title"
-                                        :$keywords
-                                        :$filter
-                                        wire:key="ledger_export-{{ $ledgerDefine->id }}"
-                />
-            @else
-                <div class="tooltip" data-tip="{{ __('ledger.not_allow_view') }}">
-                    <button class="btn btn-outline btn-secondary w-48" disabled>
-                        <i class="fas fa-file-csv"></i>
-                        {{__('ledger.export_csv')}}
-                    </button>
-                </div>
-            @endif
-        <div class="w-6"></div>
-            @if($canManage)
-                <a href="{{ route('ledgerDefine.edit', ['tenant' => $currentTenantId, 'ledgerDefineId'=>$ledgerDefine->id]) }}"
-                   class="btn btn-outline btn-primary btn-sm relative inline-flex"
-                   target="ledgerDefineEdit_{{$ledgerDefine->id}}}}">
-                    <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
-                </a>
-            @else
-                <div class="tooltip" data-tip="{{ __('ledger.not_allow_manage') }}">
-                    <button class="btn btn-outline btn-primary btn-sm relative inline-flex" disabled>
-                        <i class="fas fa-gears mr-1"></i> {{__('ledger.setting')}}
-                    </button>
-                </div>
-            @endif
-
     </div>
-</div>
-{{--    <div class="flex flex-row">--}}
+
+    {{-- Footer: Tags --}}
+    <div class="mt-4 pt-3 border-t border-base-200">
         <livewire:ledger-define.tags :ledgerDefineId="$ledgerDefine->id"
                                      :tags="$ledgerDefine->tags"
                                      wire:key="ledger_define_tag-{{ $ledgerDefine->id }}"
         />
-{{--    </div>--}}
+    </div>
+</x-mary-card>
