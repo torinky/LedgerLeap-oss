@@ -3,11 +3,15 @@
 namespace Tests\Feature\Exports;
 
 use App\Exports\LedgerExport;
+use App\Jobs\Ledger\ExportJob;
+use App\Livewire\Ledger\Export as LedgerExportComponent;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Maatwebsite\Excel\Facades\Excel;
 use PHPUnit\Framework\Attributes\CoversClass;
+use Illuminate\Support\Facades\Storage;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -219,5 +223,41 @@ class LedgerExportTest extends TestCase
         Excel::download($export, 'test.csv');
 
         Excel::assertDownloaded('test.csv');
+    }
+
+    public function test_export_job_stores_csv_on_public_disk(): void
+    {
+        Storage::fake('public');
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'exported value'],
+        ]);
+
+        $job = new ExportJob(
+            ledgerDefineId: $this->ledgerDefine->id,
+            keywords: [],
+            filter: [],
+            columnDefines: $this->ledgerDefine->column_define,
+            filename: 'ledger-export.csv',
+        );
+
+        $job->handle();
+
+        Storage::disk('public')->assertExists('ledger-export.csv');
+        $this->assertStringContainsString('exported value', Storage::disk('public')->get('ledger-export.csv'));
+    }
+
+    public function test_download_export_uses_public_disk(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('ledger-export.csv', "dummy\n");
+
+        $component = new LedgerExportComponent();
+        $component->exportFilename = 'ledger-export.csv';
+
+        $response = $component->downloadExport();
+
+        $this->assertInstanceOf(StreamedResponse::class, $response);
     }
 }

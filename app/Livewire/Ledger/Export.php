@@ -2,7 +2,6 @@
 
 namespace App\Livewire\Ledger;
 
-use App\Exports\LedgerExport;
 use App\Jobs\Ledger\ExportJob;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
@@ -33,7 +32,6 @@ class Export extends BaseLivewireComponent
     public ?int $ledgerDefineId = null;
 
     //    protected $listeners = ['refreshChildren' => 'updateFromParent'];
-    private ?LedgerExport $ledgerExport = null;
 
     /**
      * 親からの更新を受け取るメソッド
@@ -73,7 +71,9 @@ class Export extends BaseLivewireComponent
 
     public function export()
     {
-        $columnDefines = LedgerDefine::where('id', $this->ledgerDefineId)->pluck('column_define')->sortBy('order')->all()[0];
+        $columnDefines = LedgerDefine::findOrFail($this->ledgerDefineId)->column_define
+            ->sortBy('order')
+            ->values();
 
         $this->exporting = true;
         $this->exportFinished = false;
@@ -98,7 +98,7 @@ class Export extends BaseLivewireComponent
     {
         $headers = ['Content-Disposition' => 'attachment; filename="'.$this->exportFilename.'"'];
 
-        return Storage::download('public/'.$this->exportFilename, $this->exportFilename, $headers);
+        return Storage::disk('public')->download($this->exportFilename, $this->exportFilename, $headers);
     }
 
     public function updateExportProgress()
