@@ -94,7 +94,7 @@
                              :displayLevel="$displayLevel"
                              :totalRecords="$this->totalRecords" :totalRecordsLoaded="$this->totalRecordsLoaded"
                              :useSynonym="$useSynonym"
-                             :useTechnicalTerm="$useTechnicalTerm"/>
+                             :useTechnicalTerm="$useTechnicalTerm" :orderAsc="$orderAsc" :filterStatus="$filterStatus"/>
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">

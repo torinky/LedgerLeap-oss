@@ -10,6 +10,8 @@
     'totalRecordsLoaded' => false,
     'useSynonym' => false,
     'useTechnicalTerm' => false,
+    'orderAsc' => true,
+    'filterStatus' => '',
 ])
 
 <div class="mt-15 pb-0">
@@ -97,29 +99,54 @@
                         </span>
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-base-content">{{ __('ledger.search_options') }}</div>
-                            <div class="text-xs text-base-content/60 group-open:hidden">{{ __('ledger.show_more') }}</div>
+                            <div class="text-xs text-base-content/60 group-open:hidden whitespace-nowrap overflow-hidden text-ellipsis">{{ __('ledger.show_more') }}</div>
                             <div class="hidden text-xs text-base-content/60 group-open:block">{{ __('ledger.show_less') }}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 text-xs text-base-content/60">
-                        @if (!empty($hasWorkflowEnabled))
-                            <x-mary-badge :value="__('ledger.workflow.status.label')"
-                                          class="badge-ghost badge-sm hidden sm:inline-flex"/>
+                    <div class="flex items-center gap-2 text-xs text-base-content/60 overflow-hidden">
+                        @if (!empty($hasWorkflowEnabled) && !empty($filterStatus))
+                            @php
+                                $statusEnum = \App\Enums\WorkflowStatus::tryFrom($filterStatus);
+                            @endphp
+                            @if ($statusEnum)
+                                <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.workflow.status.label') }}">
+                                    <x-mary-badge :value="$statusEnum->label()"
+                                                  :icon="$statusEnum->heroicon()"
+                                                  class="{{ $statusEnum->colorClass() }} badge-sm hidden sm:inline-flex shadow-xs border-none"/>
+                                </div>
+                            @endif
                         @endif
+
+                        @php
+                            $activeSortLabel = match($orderBy) {
+                                'default' => __('ledger.default_sort_order'),
+                                'composite_score' => __('ledger.scoring.score'),
+                                'created_at' => __('ledger.created_at'),
+                                'updated_at' => __('ledger.updated_at'),
+                                'semantic_score' => __('ledger.semantic_score_sort'),
+                                default => $orderByLabel ?: $orderBy
+                            };
+                        @endphp
+                        <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.sort_by') }}">
+                            <x-mary-badge :value="$activeSortLabel . ': ' . ($orderAsc ? __('ledger.ascending') : __('ledger.descending'))"
+                                          :icon="$orderAsc ? 'o-bars-arrow-up' : 'o-bars-arrow-down'"
+                                          class="badge-ghost badge-sm hidden sm:inline-flex whitespace-nowrap shadow-xs"/>
+                        </div>
+
                         <x-mary-badge :value="__('ledger.form.display_level') . ': ' . $currentDisplayLevelLabel"
-                                      class="badge-info badge-sm hidden sm:inline-flex whitespace-nowrap"/>
+                                      class="badge-info badge-sm hidden sm:inline-flex whitespace-nowrap shadow-xs"/>
                         @if ($useTechnicalTerm)
                             <x-mary-badge :value="__('ledger.search_technical_term')"
-                                          class="badge-neutral badge-sm hidden sm:inline-flex"/>
+                                          class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
                         @endif
                         @if ($useSynonym)
                             <x-mary-badge :value="__('ledger.search_synonym')"
-                                          class="badge-neutral badge-sm hidden sm:inline-flex"/>
+                                          class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
                         @endif
-                        <span class="group-open:hidden inline-flex items-center gap-1">
+                        <span class="group-open:hidden inline-flex items-center gap-1 shrink-0">
                             <x-mary-icon name="o-chevron-down" class="h-4 w-4"/>
                         </span>
-                        <span class="hidden items-center gap-1 group-open:inline-flex">
+                        <span class="hidden items-center gap-1 group-open:inline-flex shrink-0">
                             <x-mary-icon name="o-chevron-up" class="h-4 w-4"/>
                         </span>
                     </div>
@@ -171,13 +198,13 @@
                         </div>
 
                         <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
-                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.ascending') }} / {{ __('ledger.descending') }}</span>
+                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.sort_direction') }}</span>
                             <div class="tooltip w-full sm:w-auto">
                                 <x-mary-toggle wire:model.live="orderAsc" class="toggle-primary toggle-sm" right/>
                             </div>
                         </div>
 
-                        @if (!empty($hasWorkflowEnabled))
+                        {{-- @if (!empty($hasWorkflowEnabled)) --}}
                             <label class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 lg:col-start-1 xl:col-start-4">
                                 <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.workflow.status.label') }}</span>
                                 <select wire:model.live="filterStatus"
@@ -188,7 +215,7 @@
                                     @endforeach
                                 </select>
                             </label>
-                        @endif
+{{--                        @endif--}}
                     </div>
                 </div>
             </details>

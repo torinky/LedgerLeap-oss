@@ -283,6 +283,7 @@ return [
     'sign_in' => 'サインイン',
     'solve' => '解決する',
     'sort_by' => '並び順',
+    'sort_direction' => '昇順 / 降順',
     'sort_priority' => '優先度',
     'start' => '始める',
     'stop' => '停止する',
