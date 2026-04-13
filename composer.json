@@ -145,9 +145,6 @@
       "dont-discover": []
     },
     "patches": {
-      "stancl/tenancy": {
-        "Fix PHP 8.4 static trait property deprecation": "patches/fix_tenancy_php84_trait_property.patch"
-      }
     }
   },
   "config": {

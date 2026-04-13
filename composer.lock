@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "5e61d9a7159408a65019b8431917e2a6",
+    "content-hash": "c18baf40558322abe072a0fff9962cc8",
     "packages": [
         {
             "name": "15web/filament-tree",
@@ -14777,16 +14777,16 @@
         },
         {
             "name": "laravel-lang/starter-kits",
-            "version": "1.13.0",
+            "version": "1.13.1",
             "source": {
                 "type": "git",
                 "url": "https://github.com/Laravel-Lang/starter-kits.git",
-                "reference": "1c01f65cbbf6b47cde1e43c4ccef9473a3991081"
+                "reference": "5ecd0eb66b427fccea679d54e6150fa5e51f5115"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/Laravel-Lang/starter-kits/zipball/1c01f65cbbf6b47cde1e43c4ccef9473a3991081",
-                "reference": "1c01f65cbbf6b47cde1e43c4ccef9473a3991081",
+                "url": "https://api.github.com/repos/Laravel-Lang/starter-kits/zipball/5ecd0eb66b427fccea679d54e6150fa5e51f5115",
+                "reference": "5ecd0eb66b427fccea679d54e6150fa5e51f5115",
                 "shasum": ""
             },
             "require": {
@@ -14838,7 +14838,7 @@
             ],
             "support": {
                 "issues": "https://github.com/Laravel-Lang/starter-kits/issues",
-                "source": "https://github.com/Laravel-Lang/starter-kits/tree/1.13.0"
+                "source": "https://github.com/Laravel-Lang/starter-kits/tree/1.13.1"
             },
             "funding": [
                 {
@@ -14850,7 +14850,7 @@
                     "type": "yoomoney"
                 }
             ],
-            "time": "2026-04-11T14:14:55+00:00"
+            "time": "2026-04-13T08:45:43+00:00"
         },
         {
             "name": "laravel/boost",
@@ -16714,16 +16714,16 @@
         },
         {
             "name": "phpunit/php-code-coverage",
-            "version": "12.5.4",
+            "version": "12.5.5",
             "source": {
                 "type": "git",
                 "url": "https://github.com/sebastianbergmann/php-code-coverage.git",
-                "reference": "e70f9f8870918ec31991d69133385964834f9c5a"
+                "reference": "a25bde1f8f83849f441ef5713c6466e470872a71"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/e70f9f8870918ec31991d69133385964834f9c5a",
-                "reference": "e70f9f8870918ec31991d69133385964834f9c5a",
+                "url": "https://api.github.com/repos/sebastianbergmann/php-code-coverage/zipball/a25bde1f8f83849f441ef5713c6466e470872a71",
+                "reference": "a25bde1f8f83849f441ef5713c6466e470872a71",
                 "shasum": ""
             },
             "require": {
@@ -16778,7 +16778,7 @@
             "support": {
                 "issues": "https://github.com/sebastianbergmann/php-code-coverage/issues",
                 "security": "https://github.com/sebastianbergmann/php-code-coverage/security/policy",
-                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/12.5.4"
+                "source": "https://github.com/sebastianbergmann/php-code-coverage/tree/12.5.5"
             },
             "funding": [
                 {
@@ -16798,7 +16798,7 @@
                     "type": "tidelift"
                 }
             ],
-            "time": "2026-04-12T05:05:15+00:00"
+            "time": "2026-04-13T04:53:32+00:00"
         },
         {
             "name": "phpunit/php-file-iterator",
@@ -20504,5 +20504,5 @@
     "platform-dev": {
         "ext-json": "*"
     },
-    "plugin-api-version": "2.9.0"
+    "plugin-api-version": "2.6.0"
 }

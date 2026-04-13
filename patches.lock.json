@@ -1,17 +1,4 @@
 {
-    "_hash": "73d85638de1655b4b5c9b8b8feb3ba12a2dfb96a2be72a17a932dd0ee8a95bd7",
-    "patches": {
-        "stancl/tenancy": [
-            {
-                "package": "stancl/tenancy",
-                "description": "Fix PHP 8.4 static trait property deprecation",
-                "url": "patches/fix_tenancy_php84_trait_property.patch",
-                "sha256": "ff4e454aaa8668a223eee3cd62393f4f047734792ff72bd3b8f7a4eade67528e",
-                "depth": 1,
-                "extra": {
-                    "provenance": "root"
-                }
-            }
-        ]
-    }
+    "_hash": "6142bfcb78f54dfbf5247ae5e463f25bdb8fff1890806e2e45aa81a59c211653",
+    "patches": []
 }
