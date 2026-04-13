@@ -91,16 +91,18 @@
                 </div>
             </div>
 
-            <details class="group rounded-2xl border border-base-300 bg-base-200/40">
-                <summary class="flex cursor-pointer list-none items-center justify-between gap-3 px-3 py-1.5 sm:px-4">
+            <div x-data="{ open: localStorage.getItem('ledger_search_open') === 'true' }"
+                 x-init="$watch('open', value => localStorage.setItem('ledger_search_open', value))"
+                 class="rounded-2xl border border-base-300 bg-base-200/40">
+                <div @click="open = !open" class="flex cursor-pointer select-none items-center justify-between gap-3 px-3 py-1.5 sm:px-4">
                     <div class="flex items-center gap-2">
                         <span class="inline-flex h-8 w-8 items-center justify-center rounded-full bg-base-100 text-primary shadow-sm">
                             <x-mary-icon name="o-adjustments-horizontal" class="h-4 w-4"/>
                         </span>
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-base-content">{{ __('ledger.search_options') }}</div>
-                            <div class="text-xs text-base-content/60 group-open:hidden whitespace-nowrap overflow-hidden text-ellipsis">{{ __('ledger.show_more') }}</div>
-                            <div class="hidden text-xs text-base-content/60 group-open:block">{{ __('ledger.show_less') }}</div>
+                            <div x-show="!open" class="text-xs text-base-content/60 whitespace-nowrap overflow-hidden text-ellipsis">{{ __('ledger.show_more') }}</div>
+                            <div x-show="open" x-cloak class="text-xs text-base-content/60">{{ __('ledger.show_less') }}</div>
                         </div>
                     </div>
                     <div class="flex items-center gap-2 text-xs text-base-content/60 overflow-hidden">
@@ -143,82 +145,84 @@
                             <x-mary-badge :value="__('ledger.search_synonym')"
                                           class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
                         @endif
-                        <span class="group-open:hidden inline-flex items-center gap-1 shrink-0">
+                        <span x-show="!open" class="inline-flex items-center gap-1 shrink-0">
                             <x-mary-icon name="o-chevron-down" class="h-4 w-4"/>
                         </span>
-                        <span class="hidden items-center gap-1 group-open:inline-flex shrink-0">
+                        <span x-show="open" x-cloak class="inline-flex items-center gap-1 shrink-0">
                             <x-mary-icon name="o-chevron-up" class="h-4 w-4"/>
                         </span>
                     </div>
-                </summary>
+                </div>
 
-                <div class="border-t border-base-300 px-3 pb-1.5 pt-1 sm:px-4">
-                    @php
-                        $displayLevelOptions = [
-                            ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                            ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                            ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                        ];
-                    @endphp
-                    <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                        <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_technical_term') }}</span>
-                            <div class="tooltip w-full sm:w-auto"
-                                 data-tip="{{ __('ledger.search_technical_term_hint') }}">
-                                <x-mary-toggle wire:model.live="useTechnicalTerm" class="toggle-primary toggle-sm"
-                                               right/>
+                <div x-show="open" x-collapse x-cloak>
+                    <div class="border-t border-base-300 px-3 pb-1.5 pt-1 sm:px-4">
+                        @php
+                            $displayLevelOptions = [
+                                ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                                ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                                ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                            ];
+                        @endphp
+                        <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                            <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
+                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_technical_term') }}</span>
+                                <div class="tooltip w-full sm:w-auto"
+                                     data-tip="{{ __('ledger.search_technical_term_hint') }}">
+                                    <x-mary-toggle wire:model.live="useTechnicalTerm" class="toggle-primary toggle-sm"
+                                                   right/>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 ">
-                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_synonym') }}</span>
-                            <div class="tooltip w-full sm:w-auto"
-                                 data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym_hint') }}">
-                                <x-mary-toggle wire:model.live="useSynonym" class="toggle-primary toggle-sm"
-                                               :disabled="$useSemanticSearch" right/>
+                            <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 ">
+                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_synonym') }}</span>
+                                <div class="tooltip w-full sm:w-auto"
+                                     data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym_hint') }}">
+                                    <x-mary-toggle wire:model.live="useSynonym" class="toggle-primary toggle-sm"
+                                                   :disabled="$useSemanticSearch" right/>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-1 lg:col-start-3">
-                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.semantic_search') }}</span>
-                            <div class="tooltip w-full sm:w-auto"
-                                 data-tip="{{ __('ledger.semantic_search_requires_query') }}">
-                                <x-mary-toggle wire:model.live="useSemanticSearch" class="toggle-secondary toggle-sm"
-                                               right/>
+                            <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-1 lg:col-start-3">
+                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.semantic_search') }}</span>
+                                <div class="tooltip w-full sm:w-auto"
+                                     data-tip="{{ __('ledger.semantic_search_requires_query') }}">
+                                    <x-mary-toggle wire:model.live="useSemanticSearch" class="toggle-secondary toggle-sm"
+                                                   right/>
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-span-2">
-                            <span class="text-sm font-medium text-base-content">{{ __('ledger.form.display_level') }}</span>
-                            <div x-data="{ level: {{ (int) $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
-                                <x-mary-group x-model="level" :options="$displayLevelOptions"
-                                    class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
-                                    option-value="id" option-label="name" />
+                            <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-span-2">
+                                <span class="text-sm font-medium text-base-content">{{ __('ledger.form.display_level') }}</span>
+                                <div x-data="{ level: {{ (int) $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
+                                    <x-mary-group x-model="level" :options="$displayLevelOptions"
+                                        class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
+                                        option-value="id" option-label="name" />
+                                </div>
                             </div>
-                        </div>
 
-                        <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
-                            <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.sort_direction') }}</span>
-                            <div class="tooltip w-full sm:w-auto">
-                                <x-mary-toggle wire:model.live="orderAsc" class="toggle-primary toggle-sm" right/>
+                            <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
+                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.sort_direction') }}</span>
+                                <div class="tooltip w-full sm:w-auto">
+                                    <x-mary-toggle wire:model.live="orderAsc" class="toggle-primary toggle-sm" right/>
+                                </div>
                             </div>
-                        </div>
 
-                        {{-- @if (!empty($hasWorkflowEnabled)) --}}
-                            <label class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 lg:col-start-1 xl:col-start-4">
-                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.workflow.status.label') }}</span>
-                                <select wire:model.live="filterStatus"
-                                        class="select select-primary select-xs w-full sm:w-44">
-                                    <option value="">{{ __('ledger.all') }}</option>
-                                    @foreach (\App\Enums\WorkflowStatus::cases() as $status)
-                                        <option value="{{ $status->value }}">{{ $status->label() }}</option>
-                                    @endforeach
-                                </select>
-                            </label>
-{{--                        @endif--}}
+                            {{-- @if (!empty($hasWorkflowEnabled)) --}}
+                                <label class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 lg:col-start-1 xl:col-start-4">
+                                    <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.workflow.status.label') }}</span>
+                                    <select wire:model.live="filterStatus"
+                                            class="select select-primary select-xs w-full sm:w-44">
+                                        <option value="">{{ __('ledger.all') }}</option>
+                                        @foreach (\App\Enums\WorkflowStatus::cases() as $status)
+                                            <option value="{{ $status->value }}">{{ $status->label() }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+                            {{-- @endif --}}
+                        </div>
                     </div>
                 </div>
-            </details>
+            </div>
         </div>
     </x-mary-card>
 </div>
