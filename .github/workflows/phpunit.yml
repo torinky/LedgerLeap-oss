@@ -19,6 +19,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  GITHUB_ACTIONS: true
   DB_USERNAME: sail
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   DB_HOST: 127.0.0.1

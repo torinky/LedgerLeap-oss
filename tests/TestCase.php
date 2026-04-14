@@ -59,7 +59,7 @@ abstract class TestCase extends BaseTestCase
             $abortReasons[] = 'APP_ENV=production';
         }
 
-        $runningInsideSail = (bool) $envVar('LARAVEL_SAIL') || file_exists('/.dockerenv');
+        $runningInsideSail = (bool) $envVar('LARAVEL_SAIL') || file_exists('/.dockerenv') || (bool) $envVar('GITHUB_ACTIONS');
 
         if (! $runningInsideSail) {
             $abortReasons[] = 'Tests must run inside Laravel Sail / Docker interpreter';
