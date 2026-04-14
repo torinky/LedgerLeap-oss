@@ -60,20 +60,20 @@
                         <select wire:model.live="orderBy" class="select select-primary select-sm w-full">
                             <?php
                                 $sortOptions = ['default', 'composite_score', 'created_at', 'updated_at', 'semantic_score'];
-                                $showCurrentSortOption = $orderByLabel !== '' && ! in_array($orderBy, $sortOptions, true);
+                            $showCurrentSortOption = $orderByLabel !== '' && ! in_array($orderBy, $sortOptions, true);
                             ?>
-                            <?php if ($showCurrentSortOption): ?>
+                            <?php if ($showCurrentSortOption) { ?>
                             <option value="{{ $orderBy }}">{{ $orderByLabel }}</option>
-                            <?php endif; ?>
-                            <?php if ($hasDefaultSortOption): ?>
+                            <?php } ?>
+                            <?php if ($hasDefaultSortOption) { ?>
                             <option value="default">{{ __('ledger.default_sort_order') }}</option>
-                            <?php endif; ?>
+                            <?php } ?>
                             <option value="composite_score">{{ __('ledger.scoring.score') }}</option>
                             <option value="created_at">{{ __('ledger.created_at') }}</option>
                             <option value="updated_at">{{ __('ledger.updated_at') }}</option>
-                            <?php if ($useSemanticSearch ?? false): ?>
+                            <?php if ($useSemanticSearch ?? false) { ?>
                             <option value="semantic_score">{{ __('ledger.semantic_score_sort') }}</option>
-                            <?php endif; ?>
+                            <?php } ?>
                         </select>
                     </label>
 
@@ -121,7 +121,7 @@
 
                         @php
                             $activeSortLabel = match($orderBy) {
-                                'default' => __('ledger.default_sort_order'),
+                                'default' => $orderByLabel ?: __('ledger.default_sort_order'),
                                 'composite_score' => __('ledger.scoring.score'),
                                 'created_at' => __('ledger.created_at'),
                                 'updated_at' => __('ledger.updated_at'),

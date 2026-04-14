@@ -12,8 +12,6 @@ use Illuminate\Foundation\Bootstrap\RegisterFacades;
 use Illuminate\Foundation\Bootstrap\RegisterProviders;
 use Illuminate\Foundation\Bootstrap\SetRequestForConsole;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\ParallelTesting;
 use Illuminate\Support\Facades\Queue;
 
 abstract class TestCase extends BaseTestCase
@@ -128,40 +126,7 @@ abstract class TestCase extends BaseTestCase
             BootProviders::class,
         ]);
 
-        $this->ensureCurrentTestingDatabaseConnection();
-
         return $app;
-    }
-
-    protected function currentTestingDatabaseName(): string
-    {
-        return $this->normalizeTestingDatabaseName(
-            $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test'
-        );
-    }
-
-    protected function currentWorkerDatabaseName(): ?string
-    {
-        $token = ParallelTesting::token();
-
-        if (! $token) {
-            return null;
-        }
-
-        return $this->currentTestingDatabaseName().'_test_'.$token;
-    }
-
-    protected function ensureCurrentTestingDatabaseConnection(): void
-    {
-        if ($workerDatabase = $this->currentWorkerDatabaseName()) {
-            DB::purge('mysql_testing');
-            config()->set('database.connections.mysql_testing.database', $workerDatabase);
-        }
-    }
-
-    protected function normalizeTestingDatabaseName(string $databaseName): string
-    {
-        return preg_replace('/(?:_test_\d+)+$/', '', $databaseName) ?: $databaseName;
     }
 
     protected function setUp(): void

@@ -12,6 +12,17 @@ After a bug fix, sprint, or investigation, gather:
 - What routing or discovery rule should agents know automatically?
 ```
 
+## Step 1.5 — Run a short retrospective
+
+Before deciding where a learning belongs, record the answer to each of these:
+
+- What went well and should be repeated?
+- What caused rework, confusion, or over-scope?
+- What was a local workaround versus a reusable pattern?
+- What evidence should be preserved so the learning stays trustworthy?
+
+Use the answer to decide whether the item stays in `docs/work/*` or graduates into `.github` assets.
+
 ## Step 2 — Route each finding to the primary destination
 
 | Finding type | Primary destination |

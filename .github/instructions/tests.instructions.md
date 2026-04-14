@@ -11,6 +11,7 @@ applyTo: "tests/**"
 - `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → **Identify and run affected tests** (`./vendor/bin/sail test <path>`) → `/git-commit` → `/skill-maintenance`
 - **View changes MUST be verified by rendering tests or browser interaction.** Structural Blade changes often break `route()` generation or variable scopes.
 - Reason: testing DB host resolution (`mysql_testing` → `mysql`) is Docker-network based; host execution causes false-negative infrastructure failures before the actual test logic runs.
+- Laravel parallel testing already derives worker DB names from the base database using `ParallelTesting::token()`. Do **not** manually rewrite `mysql_testing` to `..._test_{token}` in shared bootstrap code; keep CI grants aligned with the actual worker DBs instead.
 
 ## Database Trait Selection
 
@@ -25,6 +26,11 @@ Need tenant context?
 ```
 
 **Never use `DatabaseMigrations` in unit/feature jobs** — `migrate:rollback` destroys shared tenant DB.
+
+## Filament Relation Manager Tables
+
+- When a Filament relation-manager table is deferred or the snapshot starts unloaded, call `->loadTable()` before `assertCanSeeTableRecords()`.
+- If `assertCanSeeTableRecords()` sees a table but the snapshot has no `table.records.*` keys, load the table first rather than widening the assertion.
 
 ## External Service Isolation
 
@@ -90,4 +96,3 @@ $ledger = $ledger->fresh();
 
 - Final reports (Walkthroughs) MUST include evidence of successful test execution (logs or browser screenshots).
 - Never report "Completed" without confirming that existing regressions haven't been introduced.
-

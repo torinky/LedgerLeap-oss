@@ -2,6 +2,7 @@
 
 namespace Tests\Traits;
 
+use App\Models\Tenant;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\ParallelTesting;
@@ -104,8 +105,6 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
-        $this->ensureCurrentTestingDatabaseConnection();
-
         $className = static::class;
         $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
@@ -156,6 +155,11 @@ trait RefreshDatabaseWithTenant
         );
     }
 
+    protected function normalizeTestingDatabaseName(string $databaseName): string
+    {
+        return preg_replace('/(?:_test_\d+)+$/', '', $databaseName) ?: $databaseName;
+    }
+
     protected function currentWorkerDatabaseName(): ?string
     {
         $token = ParallelTesting::token();
@@ -172,19 +176,6 @@ trait RefreshDatabaseWithTenant
         $value = $_SERVER['CI'] ?? $_ENV['CI'] ?? getenv('CI');
 
         return filter_var($value, FILTER_VALIDATE_BOOL);
-    }
-
-    protected function ensureCurrentTestingDatabaseConnection(): void
-    {
-        if ($workerDatabase = $this->currentWorkerDatabaseName()) {
-            DB::purge('mysql_testing');
-            config()->set('database.connections.mysql_testing.database', $workerDatabase);
-        }
-    }
-
-    protected function normalizeTestingDatabaseName(string $databaseName): string
-    {
-        return preg_replace('/(?:_test_\d+)+$/', '', $databaseName) ?: $databaseName;
     }
 
     protected static function markMigratedForCurrentProcess(): void
@@ -264,7 +255,6 @@ trait RefreshDatabaseWithTenant
                 '--drop-types' => $this->shouldDropTypes(),
             ]);
             $this->app[Kernel::class]->setArtisan(null);
-            $this->ensureCurrentTestingDatabaseConnection();
 
             return;
         }
@@ -322,7 +312,7 @@ trait RefreshDatabaseWithTenant
                 : ["ci-test-tenant_{$processKey}", 'ci-test-tenant'];
 
             foreach ($candidates as $candidateId) {
-                $existing = \App\Models\Tenant::find($candidateId);
+                $existing = Tenant::find($candidateId);
                 if ($existing) {
                     static::setSharedTenantForCurrentProcess($existing);
 
@@ -330,7 +320,7 @@ trait RefreshDatabaseWithTenant
                 }
             }
 
-            if ($existing = \App\Models\Tenant::first()) {
+            if ($existing = Tenant::first()) {
                 static::setSharedTenantForCurrentProcess($existing);
 
                 return;
@@ -339,8 +329,8 @@ trait RefreshDatabaseWithTenant
 
         $tenantId = $processKey === 'global' ? 'test_tenant' : "test_tenant_{$processKey}";
 
-        $tenant = \App\Models\Tenant::find($tenantId)
-            ?? \App\Models\Tenant::factory()->create(['id' => $tenantId]);
+        $tenant = Tenant::find($tenantId)
+            ?? Tenant::factory()->create(['id' => $tenantId]);
 
         static::setSharedTenantForCurrentProcess($tenant);
     }

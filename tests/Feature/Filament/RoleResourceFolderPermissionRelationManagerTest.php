@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 #[CoversClass(FolderPermissionRelationManager::class)]
@@ -39,11 +40,11 @@ class RoleResourceFolderPermissionRelationManagerTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         foreach (self::PERMISSIONS as $perm) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
         }
 
         $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        $adminRole->givePermissionTo(Permission::all());
 
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole($adminRole);
@@ -51,7 +52,7 @@ class RoleResourceFolderPermissionRelationManagerTest extends TestCase
     }
 
     #[Test]
-    public function editActionPrefillsAndSavesPermissions(): void
+    public function edit_action_prefills_and_saves_permissions(): void
     {
         $role = Role::firstOrCreate(['name' => 'RolePermissionTest', 'guard_name' => 'web']);
         $folder = Folder::factory()->create([
@@ -71,6 +72,7 @@ class RoleResourceFolderPermissionRelationManagerTest extends TestCase
             'ownerRecord' => $role,
             'pageClass' => EditRole::class,
         ])
+            ->loadTable()
             ->assertCanSeeTableRecords(RoleFolderPermission::query()
                 ->get())
             ->mountTableAction('edit', $permission)
