@@ -2,6 +2,8 @@
 
 不具合調査、実装、スプリント作業のあとに得た学びを、LedgerLeap の AI 運用資産へ反映するための標準手順です。
 
+作業に入る前は、まず `pwd` と `git rev-parse --show-toplevel` で現在地と Git ルートを確認し、WSL / Mac の取り違えを避けてから進める。
+
 関連資料:
 - [skill-maintenance prompt](/.github/prompts/skill-maintenance.prompt.md)
 - [skill-maintenance skill](/.github/skills/skill-maintenance/SKILL.md)
