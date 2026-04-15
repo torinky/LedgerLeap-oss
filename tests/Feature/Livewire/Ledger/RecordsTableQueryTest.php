@@ -33,10 +33,14 @@ class RecordsTableQueryTest extends TestCase
 
     protected Tenant $tenant;
 
+    private bool $originalRagEnabled;
+
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
+
+        $this->originalRagEnabled = config('rag.enabled', false);
 
         $this->tenant = Tenant::create(['id' => 'test-'.uniqid('', true)]);
 
@@ -82,6 +86,7 @@ class RecordsTableQueryTest extends TestCase
 
     protected function tearDown(): void
     {
+        config(['rag.enabled' => $this->originalRagEnabled]);
         parent::tearDown();
     }
 
@@ -231,6 +236,8 @@ class RecordsTableQueryTest extends TestCase
     #[Test]
     public function it_calls_rag_search_service_when_semantic_search_is_selected()
     {
+        config(['rag.enabled' => true]);
+
         // RagSearchServiceをモック
         $mock = $this->mock(RagSearchService::class);
         $mock->shouldReceive('searchLedgers')

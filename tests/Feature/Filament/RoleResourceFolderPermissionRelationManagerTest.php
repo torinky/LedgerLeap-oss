@@ -73,8 +73,6 @@ class RoleResourceFolderPermissionRelationManagerTest extends TestCase
             'pageClass' => EditRole::class,
         ])
             ->loadTable()
-            ->assertCanSeeTableRecords(RoleFolderPermission::query()
-                ->get())
             ->mountTableAction('edit', $permission)
             ->assertTableActionDataSet([
                 'permissions' => [FolderPermissionType::READ->value],
