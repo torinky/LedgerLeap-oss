@@ -173,7 +173,15 @@ trait RefreshDatabaseWithTenant
 
     protected function isCiEnvironment(): bool
     {
-        $value = $_SERVER['CI'] ?? $_ENV['CI'] ?? getenv('CI');
+        $value = $_SERVER['CI']
+            ?? $_ENV['CI']
+            ?? $_SERVER['GITHUB_ACTIONS']
+            ?? $_ENV['GITHUB_ACTIONS']
+            ?? getenv('CI');
+
+        if ($value === false || $value === null || $value === '') {
+            $value = getenv('GITHUB_ACTIONS');
+        }
 
         return filter_var($value, FILTER_VALIDATE_BOOL);
     }
