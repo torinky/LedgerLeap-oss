@@ -110,8 +110,15 @@ trait RefreshDatabaseWithTenant
 
         if (! $initialized) {
             if (! static::hasMigratedForCurrentProcess()) {
+                // refreshDatabase() がワーカー DB への切り替えを内部で行う
                 $this->refreshDatabase();
                 static::markMigratedForCurrentProcess();
+            } else {
+                // 同一プロセスの 2 番目以降のテストクラス:
+                // createApplication() が LoadConfiguration を再実行して
+                // mysql_testing.database を env() のデフォルト値にリセットする。
+                // ワーカー DB への接続を復元してから DB アクセスを行う。
+                $this->reapplyWorkerDatabaseConnection();
             }
 
             $tenant = static::getSharedTenantForCurrentProcess();
@@ -127,12 +134,40 @@ trait RefreshDatabaseWithTenant
             $this->createSharedData();
             static::$databaseInitializedByClass[$className] = true;
         } else {
+            // 同一クラスの 2 番目以降のテストメソッド:
+            // createApplication() が LoadConfiguration を再実行して
+            // mysql_testing.database を env() のデフォルト値にリセットする。
+            // ワーカー DB への接続を復元してから DB アクセスを行う。
+            $this->reapplyWorkerDatabaseConnection();
+
             if ($tenant = static::getSharedTenantForCurrentProcess()) {
                 tenancy()->initialize($tenant);
             }
         }
 
         $this->beginDatabaseTransaction();
+    }
+
+    /**
+     * ワーカー DB への接続設定を再適用する
+     *
+     * createApplication() → LoadConfiguration が実行されるたびに
+     * mysql_testing.database が env('DB_DATABASE') の値にリセットされる。
+     * parallel 実行時は各テストメソッドの setUp() でこのメソッドを呼び出して
+     * ワーカー DB への接続を復元する必要がある。
+     *
+     * シリアル実行や CI の直列実行（ワーカートークンなし）では何もしない。
+     */
+    protected function reapplyWorkerDatabaseConnection(): void
+    {
+        $workerDatabase = $this->currentWorkerDatabaseName();
+
+        if (! $workerDatabase) {
+            return;
+        }
+
+        DB::purge('mysql_testing');
+        config()->set('database.connections.mysql_testing.database', $workerDatabase);
     }
 
     /**
