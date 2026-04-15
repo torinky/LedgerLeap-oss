@@ -530,7 +530,9 @@ class RecordsTable extends BaseLivewireComponent
         // 表示対象の台帳に紐づく仕訳データを取得
         $ledgerRecordsQueryStartedAt = microtime(true);
         $ledgerRecordsDefineLoadDurationMs = 0.0;
-        if ($this->useSemanticSearch && ! empty($this->search)) {
+        $ragEnabled = config('rag.enabled', false);
+
+        if ($ragEnabled && $this->useSemanticSearch && ! empty($this->search)) {
             // ============================================
             // セマンティック検索モード
             // ============================================
