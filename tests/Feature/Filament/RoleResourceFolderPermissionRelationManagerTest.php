@@ -97,6 +97,11 @@ class RoleResourceFolderPermissionRelationManagerTest extends TestCase
             'permission' => FolderPermissionType::WRITE->value,
         ]);
 
-        $this->assertDatabaseCount('role_folder_permissions', 2);
+        $this->assertSame(
+            2,
+            RoleFolderPermission::where('role_id', $role->id)
+                ->where('folder_id', $folder->id)
+                ->count()
+        );
     }
 }

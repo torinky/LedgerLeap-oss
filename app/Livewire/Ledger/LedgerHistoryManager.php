@@ -238,12 +238,13 @@ class LedgerHistoryManager extends BaseLivewireComponent
             if ($prev) {
                 // コメントを正規化（null と "" を同一視し、前後の空白を除去）
                 $isSameComment = trim((string) $prev->comments) === trim((string) $diff->comments);
-                $isSameHistoryEntry = $prev->version === $diff->version
-                    && ($prev->status?->value ?? null) === ($diff->status?->value ?? null)
-                    && $prev->modifier_id === $diff->modifier_id
-                    && $isSameComment;
 
-                if ($isSameHistoryEntry) {
+                if (
+                    $prev->version === $diff->version &&
+                    ($prev->status?->value ?? null) === ($diff->status?->value ?? null) &&
+                    $prev->modifier_id === $diff->modifier_id &&
+                    $isSameComment
+                ) {
                     return false;
                 }
             }
