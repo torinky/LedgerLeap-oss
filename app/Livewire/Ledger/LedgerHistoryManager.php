@@ -57,17 +57,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->highlight = $highlight ?? '';
 
         $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
-
-        // Livewire の初回/再描画や CI の実行順によって tenancy が外れていても、
-        // 台帳自身の tenant_id を根拠に復元する。
-        $this->tenantId = $this->resolveTenantId($this->ledgerRecord->tenant_id);
-        $tenancy = app(Tenancy::class);
-        if ($this->tenantId && (! $tenancy->initialized || tenant('id') !== $this->tenantId)) {
-            $tenant = \App\Models\Tenant::find($this->tenantId);
-            if ($tenant) {
-                $tenancy->initialize($tenant);
-            }
-        }
+        $this->initializeTenantContextFromLedger();
 
         // ロールバック権限の事前チェック (WRITE権限があればUIを表示)
         $folder = $this->ledgerRecord->define?->folder;
@@ -218,6 +208,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
     {
         $startTime = microtime(true);
 
+        $this->initializeTenantContextFromLedger();
+
         $diffsQuery = $this->ledgerRecord->ledgerDiff()
             ->with([
                 'modifier.organizations',
@@ -310,5 +302,23 @@ class LedgerHistoryManager extends BaseLivewireComponent
             'isContentIdentical' => $isContentIdentical,
             'allAttachments' => $this->allAttachments,
         ]);
+    }
+
+    protected function initializeTenantContextFromLedger(): void
+    {
+        if (! $this->ledgerRecord) {
+            return;
+        }
+
+        // Livewire の初回/再描画や CI の実行順によって tenancy が外れていても、
+        // 台帳自身の tenant_id を根拠に復元する。
+        $this->tenantId = $this->resolveTenantId($this->ledgerRecord->tenant_id);
+        $tenancy = app(Tenancy::class);
+        if ($this->tenantId && (! $tenancy->initialized || tenant('id') !== $this->tenantId)) {
+            $tenant = \App\Models\Tenant::find($this->tenantId);
+            if ($tenant) {
+                $tenancy->initialize($tenant);
+            }
+        }
     }
 }
