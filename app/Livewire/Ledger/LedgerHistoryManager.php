@@ -56,7 +56,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
 
-        $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
+        $this->ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
         $this->initializeTenantContextFromLedger();
 
         // ロールバック権限の事前チェック (WRITE権限があればUIを表示)
