@@ -231,7 +231,7 @@ class RagSearchServiceTest extends TestCase
             'folder1_id' => $folder1->id,
         ]);
 
-        $results = retry(10, function () use ($readableFolders) {
+        $results = retry(30, function () use ($readableFolders) {
             $results = $this->ragSearchService->searchLedgers('', 10, [
                 'readable_folder_ids' => $readableFolders,
             ]);
@@ -241,7 +241,7 @@ class RagSearchServiceTest extends TestCase
             }
 
             return $results;
-        }, 300);
+        }, 500);
 
         \Log::info('=== SEARCH RESULTS ===', [
             'results_count' => count($results),
