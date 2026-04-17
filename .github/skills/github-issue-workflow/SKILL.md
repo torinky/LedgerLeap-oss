@@ -41,6 +41,8 @@ Use this flow for **bugs, improvements, feature additions, refactors, docs, and 
 4. **Use sprint breakdowns only when the work spans multiple steps** or needs evidence checkpoints.
 5. **Attach concrete evidence**: file paths, test names, coverage, screenshots, logs, and commit refs.
 6. **Add acceptance criteria** that are directly checkable.
+7. **Before creating a new issue, confirm whether an existing issue already covers the same work; prefer `issue_write(method: update)` when the target entity already exists.**
+8. **Keep the issue body in the project’s required session language**; for LedgerLeap, that means Japanese unless the user explicitly asks otherwise.
 
 ### Drafting rule
 

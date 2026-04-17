@@ -5,7 +5,9 @@ namespace App\Mcp\Tools;
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
+use App\Models\Ledger;
 use App\Services\LedgerService;
+use App\Services\Ledger\LedgerAttachmentResourceService;
 use Carbon\Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +23,8 @@ class SearchLedgersTool extends Tool
     private const ATTACHMENT_TEXT_PREVIEW_LIMIT = 500;
 
     private const ATTACHMENT_LINE_PREVIEW_LIMIT = 10;
+
+    private LedgerAttachmentResourceService $attachmentResourceService;
 
     /**
      * The tool's description.
@@ -68,9 +72,13 @@ MARKDOWN;
 
     protected LedgerService $ledgerService;
 
-    public function __construct(LedgerService $ledgerService)
+    public function __construct(
+        LedgerService $ledgerService,
+        ?LedgerAttachmentResourceService $attachmentResourceService = null,
+    )
     {
         $this->ledgerService = $ledgerService;
+        $this->attachmentResourceService = $attachmentResourceService ?? app(LedgerAttachmentResourceService::class);
     }
 
     public function handle(Request $request): Response
@@ -126,7 +134,7 @@ MARKDOWN;
             ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
                 $meta = $results['meta'];
                 $attachedFiles = $ledger instanceof Model ? ($ledger->getRelation('attachedFiles') ?? []) : [];
-                $ledgerModel = $ledger instanceof Model ? $ledger : null;
+                $ledgerModel = $ledger instanceof Ledger ? $ledger : null;
                 $ledger = (object) $ledger;
 
                 $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
@@ -241,7 +249,7 @@ MARKDOWN;
     private function formatAttachments(
         array|object $contentAttached,
         iterable $attachedFiles = [],
-        ?Model $ledger = null
+        ?Ledger $ledger = null
     ): array {
         $normalizedEntries = $this->normalizeAttachmentEntries($contentAttached);
         $lookup = collect($normalizedEntries)
@@ -327,7 +335,7 @@ MARKDOWN;
     private function buildAttachmentRecord(
         array $entry,
         ?AttachedFile $attachedFile,
-        ?Model $ledger,
+        ?Ledger $ledger,
         int $order,
         int $total
     ): array {
@@ -348,6 +356,10 @@ MARKDOWN;
 
         return [
             'attachment_id' => $attachedFile?->id,
+            'resource_template' => $attachedFile ? 'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}' : null,
+            'resource_uri' => $attachedFile && $ledger instanceof Model
+                ? $this->attachmentResourceService->buildResourceUri($ledger, $attachedFile)
+                : null,
             'filename' => $resolvedName,
             'name' => $resolvedName,
             'role' => $order === 1 ? 'primary' : 'supporting',
@@ -418,7 +430,7 @@ MARKDOWN;
     private function buildAttachmentPayloads(
         array $fileInfo,
         ?AttachedFile $attachedFile,
-        ?object $ledger,
+        ?Ledger $ledger,
         string $mimeType,
         array $availableFormats
     ): array {
@@ -441,7 +453,7 @@ MARKDOWN;
     /**
      * @return array<string, array<string, mixed>>
      */
-    private function buildAttachmentRoutes(?Model $ledger, ?AttachedFile $attachedFile): array
+    private function buildAttachmentRoutes(?Ledger $ledger, ?AttachedFile $attachedFile): array
     {
         $context = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
         $canBuildDownload = $context['tenant_id'] !== null && $context['attachment_id'] !== null;
@@ -549,7 +561,7 @@ MARKDOWN;
      * @return array<string, mixed>
      */
     private function buildVisualPayload(
-        ?Model $ledger,
+        ?Ledger $ledger,
         ?AttachedFile $attachedFile,
         string $mimeType,
         bool $available
@@ -577,7 +589,7 @@ MARKDOWN;
     /**
      * @return array{tenant_id:int|string|null, ledger_id:int|string|null, attachment_id:int|string|null}
      */
-    private function resolveAttachmentRouteContext(?Model $ledger, ?AttachedFile $attachedFile): array
+    private function resolveAttachmentRouteContext(?Ledger $ledger, ?AttachedFile $attachedFile): array
     {
         return [
             'tenant_id' => $ledger?->tenant_id ?? $attachedFile?->tenant_id,

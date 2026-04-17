@@ -4,6 +4,7 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Prompts\BootstrapClientSkillsPrompt;
 use App\Mcp\Resources\BootstrapClientResource;
+use App\Mcp\Resources\LedgerAttachmentResource;
 use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
@@ -90,6 +91,7 @@ class LedgerLeapServer extends Server
      */
     protected array $resources = [
         BootstrapClientResource::class,
+        LedgerAttachmentResource::class,
     ];
 
     /**
