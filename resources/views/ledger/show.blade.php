@@ -5,41 +5,56 @@
     @push('stylesheets')
         @vite(['resources/sass/ledgerShow.scss'])
     @endpush
-    <x-slot name="header" class="sticky top-0 z-10">
-        <div class="ttl_3d5 md:flex md:items-center space-x-4 bg-info/40 rounded">
-            <h2 class="font-black text-lg text-info-content/60 md:text-xl">
-                <i class="fas fa-list mr-2"></i>
-                {{ __('ledger.details') }}
-            </h2>
-            <div class="text-info-content/50 text-sm"><i class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}
-            </div>
-        </div>
-    </x-slot>
-
-    <div class="p-0 md:p-4 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5">
-
-        <div class="collapse bg-base-200 collapse-arrow border-base-300 border">
-            <input type="checkbox" id="createDescription" checked/>
-            <label for="createDescription"
-                   class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
-            <div class="collapse-content">
-                @if($ledgerDefineRecord->detail_description)
-                    @php
-                        $detailDescriptionHtml = app(App\Services\AutoLinkService::class)->convert(
-                            app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), 
-                            null, 
-                            $ledgerDefineRecord
-                        );
-                    @endphp
-                    <div class="prose text-sm leading-relaxed max-w-none">
-                        <x-expandable-content 
-                            :content="$detailDescriptionHtml"
-                            max-height="6rem"
-                        />
+    <div class="container max-w-full px-0 md:px-4 mt-4">
+        {{-- ヘッダー集約カード --}}
+        <x-mary-card shadow class="bg-base-100 border border-base-300 mb-6">
+            <x-slot:title>
+                <div class="flex items-center gap-3 w-full">
+                    <div class="flex-shrink-0">
+                        <i class="fas fa-list text-info/80 text-xl"></i>
                     </div>
-                @endif
-            </div>
-        </div>
+                    <div class="flex flex-col min-w-0">
+                        <div class="text-xs text-base-content/50 font-bold tracking-wider mb-1 uppercase">{{ __('ledger.details') }}</div>
+                        <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
+                            <i class="fas fa-book-open text-base-content/40 text-lg"></i>
+                            <span class="truncate">{{ $ledgerDefineRecord->title }}</span>
+                        </h2>
+                    </div>
+                </div>
+            </x-slot:title>
+            
+            @if($ledgerDefineRecord->detail_description)
+                <div class="mt-4 text-base-content" x-data="{ expanded: false }">
+                    <div class="bg-base-200/50 rounded-lg p-3 border border-base-300 transition-colors hover:bg-base-200/80">
+                        <div class="flex justify-between items-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity" @click="expanded = !expanded">
+                            <div class="font-bold text-sm flex items-center gap-2">
+                                <x-mary-icon name="o-information-circle" class="w-4 h-4 text-info" />
+                                説明 / ガイドライン
+                            </div>
+                            <x-mary-icon name="o-chevron-down" class="w-4 h-4 transition-transform" x-bind:class="expanded ? 'rotate-180' : ''" />
+                        </div>
+                        <div x-show="expanded" x-collapse>
+                            <div class="pt-3 mt-2 border-t border-base-300">
+                                @php
+                                    $detailDescriptionHtml = app(App\Services\AutoLinkService::class)->convert(
+                                        app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), 
+                                        null, 
+                                        $ledgerDefineRecord
+                                    );
+                                @endphp
+                                <div class="prose text-sm leading-relaxed max-w-none">
+                                    <x-expandable-content 
+                                        :content="$detailDescriptionHtml"
+                                        max-height="6rem"
+                                    />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </x-mary-card>
+
         <livewire:ledger.show :ledgerId="$ledger->id"/>
     </div>
 

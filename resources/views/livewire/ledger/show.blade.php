@@ -144,7 +144,7 @@
 
         {{-- タブボタン: wire:ignore でAlpine状態がLivewireのDOM diffingでリセットされるのを防ぐ --}}
         <div wire:ignore>
-            <div role="tablist" class="tabs tabs-lift tabs-xl ml-4">
+            <div role="tablist" class="tabs tabs-lift tabs-xl">
                 <button role="tab" class="tab"
                     :class="{ 'tab-active': activeTab === 'details' }"
                     @click="switchTab('details')">
@@ -193,17 +193,9 @@
 
                 {{-- Skeleton for tab switching, internal filters and lazy loading placeholder gap --}}
                     @if ($ledgerRecord->define->workflow_enabled)
-                        {{-- Workflow status card skeleton --}}
-                        <div class="card bg-base-100 shadow-xl mb-4">
-                            <div class="card-body p-4">
-                                <div class="flex items-center gap-4">
-                                    <div class="h-10 w-10 bg-base-300 rounded-full shimmer"></div>
-                                    <div class="flex-1 space-y-2">
-                                        <div class="h-4 bg-base-300 rounded w-1/3 shimmer"></div>
-                                        <div class="h-3 bg-base-200 rounded w-1/2 shimmer"></div>
-                                    </div>
-                                </div>
-                            </div>
+                        {{-- Workflow status inline skeleton --}}
+                        <div class="mb-4">
+                            <div class="h-10 bg-base-200/50 border border-base-300 rounded-lg shimmer w-full"></div>
                         </div>
                     @endif
 
