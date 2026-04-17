@@ -13,6 +13,7 @@ use Illuminate\Support\Facades\DB;
 use Mockery;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use RuntimeException;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -230,9 +231,17 @@ class RagSearchServiceTest extends TestCase
             'folder1_id' => $folder1->id,
         ]);
 
-        $results = $this->ragSearchService->searchLedgers('', 10, [
-            'readable_folder_ids' => $readableFolders,
-        ]);
+        $results = retry(10, function () use ($readableFolders) {
+            $results = $this->ragSearchService->searchLedgers('', 10, [
+                'readable_folder_ids' => $readableFolders,
+            ]);
+
+            if (empty($results)) {
+                throw new RuntimeException('RAG search results are not ready yet.');
+            }
+
+            return $results;
+        }, 300);
 
         \Log::info('=== SEARCH RESULTS ===', [
             'results_count' => count($results),

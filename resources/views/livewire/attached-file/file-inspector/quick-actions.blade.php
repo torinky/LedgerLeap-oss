@@ -22,7 +22,7 @@
                 this.copyingPdf = true;
                 setTimeout(() => { this.copyingPdf = false; }, 2000);
             }
-            $dispatch('mary-toast', {
+            this.$dispatch('mary-toast', {
                 toast: {
                     type: 'success',
                     title: '{{ __('ledger.file_inspector.messages.link_copied') }}',
@@ -43,7 +43,7 @@
         $isImageFile = $file && str_starts_with($file->original_mime_type ?? ($file->mime ?? ''), 'image/');
         $isPdfFile = $file && ($file->original_mime_type ?? ($file->mime ?? '')) === 'application/pdf';
         $hasOcrProcessed = $file && $file->ocr_processed_at;
-        $isMockFile = $file && $file->id >= 1 && $file->id <= 12;
+        $isMockFile = $file && !empty($mockData);
 
         // オリジナルファイルのダウンロードURL
         $originalUrl = $isMockFile

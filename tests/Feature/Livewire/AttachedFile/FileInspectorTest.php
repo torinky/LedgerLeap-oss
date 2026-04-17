@@ -389,6 +389,66 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_real_download_urls_for_low_id_real_files()
+    {
+        // リグレッション: quick-actions.blade.php の $isMockFile チェックが
+        // ID 1-12 を誤ってモックファイルと見なし #download-... アンカーを生成していたバグ
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'id'                => 3,
+            'ledger_id'         => $this->ledger->id,
+            'ledger_define_id'  => $this->ledger->ledger_define_id,
+            'filename'          => 'low_id_real_download.pdf',
+            'mime'              => 'application/pdf',
+            'original_mime_type'=> 'application/pdf',
+            'path'              => 'attachments/low_id_real_download.pdf',
+            'size'              => 4096,
+            'status'            => AttachedFileStatus::COMPLETED->value,
+            'tenant_id'         => $this->tenant->id,
+        ]);
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $expectedDownloadUrl = route('file.download', [
+            'tenant'       => $this->tenant->id,
+            'attachedFile' => $file->id,
+            'original'     => true,
+        ]);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        // quick-actions にリアルなルートURLが出力されること
+        $component->assertSeeHtml('href="' . $expectedDownloadUrl . '"');
+        // モック用アンカー（#download-original-3）が出力されないこと
+        $component->assertDontSeeHtml('href="#download-original-' . $file->id . '"');
+    }
+
+    #[Test]
+    public function it_renders_mock_download_anchors_for_mock_files()
+    {
+        // リグレッション: モックファイルは実ルートURLでなく #download-... アンカーになること
+        config(['mock.attachment.enabled' => true]);
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => 10001])
+            ->assertSet('open', true);
+
+        // モックファイルは #download-original-10001 のアンカーになること
+        $component->assertSeeHtml('href="#download-original-10001"');
+        // リアルなルートURLが download href に使われていないこと
+        $component->assertDontSeeHtml('href="' . route('file.download', [
+            'tenant'       => $this->tenant->id,
+            'attachedFile' => 10001,
+            'original'     => true,
+        ]) . '"');
+    }
+
+    #[Test]
     public function it_treats_pdf_extension_as_previewable_when_mime_is_generic()
     {
         config(['mock.attachment.enabled' => false]);

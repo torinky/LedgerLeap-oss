@@ -1,4 +1,4 @@
-<x-mary-card shadow class="bg-primary/50 text-primary-content border-none overflow-visible mb-6" body-class="bg-base-100 text-base-content p-4 pt-2">
+<x-mary-card shadow class="bg-primary/50 text-primary-content border-none overflow-visible mb-6" body-class="bg-base-100/30 text-base-content p-4 pt-2">
     <x-slot:title>
         <div class="flex flex-col gap-1 -mt-1">
             <div class="bg-white/10 text-primary-content/80 rounded-lg px-3 py-0.5 text-xs font-medium w-fit max-w-full overflow-hidden">

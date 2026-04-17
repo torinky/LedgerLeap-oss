@@ -10,6 +10,7 @@ use App\Models\LedgerDiff;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
+use Stancl\Tenancy\Tenancy;
 
 class LedgerHistoryManager extends BaseLivewireComponent
 {
@@ -55,7 +56,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
 
-        $this->ledgerRecord = Ledger::findOrFail($this->ledgerId);
+        $this->ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
+        $this->initializeTenantContextFromLedger();
 
         // ロールバック権限の事前チェック (WRITE権限があればUIを表示)
         $folder = $this->ledgerRecord->define?->folder;
@@ -63,7 +65,11 @@ class LedgerHistoryManager extends BaseLivewireComponent
         if ($folder) {
             $userService = app(\App\Services\UserService::class);
             if ($userService) {
-                $this->canRollback = $userService->hasFolderPermission(auth()->user(), $folder, \App\Enums\FolderPermissionType::WRITE);
+                $this->canRollback = $userService->hasFolderPermission(
+                    auth()->user(),
+                    $folder,
+                    \App\Enums\FolderPermissionType::WRITE
+                );
             }
         }
 
@@ -159,7 +165,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
     public function rollback(int $diffId): void
     {
         // 確認モーダルを開くイベントをディスパッチ
-        $this->dispatch('ledger.rollback.open-modal',
+        $this->dispatch(
+            'ledger.rollback.open-modal',
             ledgerId: $this->ledgerId,
             targetDiffId: $diffId,
             expectedVersion: $this->ledgerRecord->version
@@ -201,6 +208,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
     {
         $startTime = microtime(true);
 
+        $this->initializeTenantContextFromLedger();
+
         $diffsQuery = $this->ledgerRecord->ledgerDiff()
             ->with([
                 'modifier.organizations',
@@ -220,7 +229,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
             if ($prev) {
                 // コメントを正規化（null と "" を同一視し、前後の空白を除去）
-                $isSameComment = trim((string)$prev->comments) === trim((string)$diff->comments);
+                $isSameComment = trim((string) $prev->comments) === trim((string) $diff->comments);
 
                 if (
                     $prev->version === $diff->version &&
@@ -235,7 +244,12 @@ class LedgerHistoryManager extends BaseLivewireComponent
             return true;
         })->values();
 
-        \Illuminate\Support\Facades\Log::info("Ledger History Filter: Initial count " . $allFetchedDiffs->count() . " -> Filtered count " . $diffs->count() . " for Ledger " . $this->ledgerId, []);
+        \Illuminate\Support\Facades\Log::info(
+            'Ledger History Filter: Initial count '.$allFetchedDiffs->count().
+            ' -> Filtered count '.$diffs->count().
+            ' for Ledger '.$this->ledgerId,
+            []
+        );
 
         $this->hasMore = $diffs->count() < $totalCount;
 
@@ -288,5 +302,23 @@ class LedgerHistoryManager extends BaseLivewireComponent
             'isContentIdentical' => $isContentIdentical,
             'allAttachments' => $this->allAttachments,
         ]);
+    }
+
+    protected function initializeTenantContextFromLedger(): void
+    {
+        if (! $this->ledgerRecord) {
+            return;
+        }
+
+        // Livewire の初回/再描画や CI の実行順によって tenancy が外れていても、
+        // 台帳自身の tenant_id を根拠に復元する。
+        $this->tenantId = $this->resolveTenantId($this->ledgerRecord->tenant_id);
+        $tenancy = app(Tenancy::class);
+        if ($this->tenantId && (! $tenancy->initialized || tenant('id') !== $this->tenantId)) {
+            $tenant = \App\Models\Tenant::find($this->tenantId);
+            if ($tenant) {
+                $tenancy->initialize($tenant);
+            }
+        }
     }
 }

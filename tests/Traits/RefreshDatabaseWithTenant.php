@@ -105,6 +105,8 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
+        $this->reapplyWorkerDatabaseConnection();
+
         $className = static::class;
         $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
@@ -160,11 +162,7 @@ trait RefreshDatabaseWithTenant
      */
     protected function reapplyWorkerDatabaseConnection(): void
     {
-        $workerDatabase = $this->currentWorkerDatabaseName();
-
-        if (! $workerDatabase) {
-            return;
-        }
+        $workerDatabase = $this->currentWorkerDatabaseName() ?: $this->currentTestingDatabaseName();
 
         DB::purge('mysql_testing');
         config()->set('database.connections.mysql_testing.database', $workerDatabase);
