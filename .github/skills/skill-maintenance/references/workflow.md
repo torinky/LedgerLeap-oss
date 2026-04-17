@@ -10,6 +10,8 @@ After a bug fix, sprint, or investigation, gather:
 - What workaround is now stable enough to reuse?
 - What input template or runbook was missing?
 - What routing or discovery rule should agents know automatically?
+- What failed operation or discarded approach exposed the mismatch?
+- What expectation was wrong: implementation, test config, or workflow?
 ```
 
 ## Step 1.5 — Run a short retrospective
@@ -20,8 +22,12 @@ Before deciding where a learning belongs, record the answer to each of these:
 - What caused rework, confusion, or over-scope?
 - What was a local workaround versus a reusable pattern?
 - What evidence should be preserved so the learning stays trustworthy?
+- What did we try that failed, and what proof showed it was the wrong path?
+- If the same dead end appeared twice, what should be reclassified before a third try?
 
 Use the answer to decide whether the item stays in `docs/work/*` or graduates into `.github` assets.
+
+When the failure is due to a test / config mismatch, capture the expected condition, the actual runtime condition, and the smallest opt-in needed before promoting the learning.
 
 ## Step 2 — Route each finding to the primary destination
 
@@ -76,6 +82,7 @@ Evidence anchor: issue `#135` scope was repeatedly re-centered on 2026-04-12, an
 - [ ] Prompt is the primary slash entry for JetBrains-facing workflows
 - [ ] Skill and prompt cross-link when they cover the same domain
 - [ ] No duplicate rule remains in two places without an explicit reason
+- [ ] Failed operations and discarded approaches were captured alongside successful fixes
 - [ ] All links resolve
 - [ ] Inventory reflects new or removed skills
 - [ ] For tool-description slimming, `tool = contract`, `capability = flow`, and `docs/work = rationale` are all true after the change

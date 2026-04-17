@@ -44,7 +44,8 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 
 ## Maintenance Loop
 
-1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、ワークフローを列挙する。issue / sprint 完了後や retrospective 指示時は、実装結果とは別に「学び」だけを取り出す
+1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、失敗した操作、採用しなかった案、ワークフローを列挙する。issue / sprint 完了後や retrospective 指示時は、実装結果とは別に「学び」だけを取り出す
+   - 作業開始前に `pwd` と `git rev-parse --show-toplevel` を実行し、現在地と Git ルートを確定する。WSL / Mac でパスが違う前提なので、ここで食い違ったら作業を止める
 2. **Two-layer review**: 学びは必ず 2 層で整理する
    - 進め方の改善: 対象レイヤーの固定、証拠順序、仮説比較、検証ゲート、手戻りの防止
    - 個別具体の手法改善: 使ったコマンド、設定、UI 変更、テンプレート、文言、実装パターン
