@@ -44,7 +44,8 @@ class SearchLedgersTool extends Tool
           normalized `meta`, and a detail `link` when available
         - summary records also include `attachment_count` and per-attachment `attachment_id` /
           `filename` / `role` / `order` / `source` / `mime_type` / `delivery_mode` /
-          `available_formats` / `routes` / `payloads`
+          `available_formats` / `resource_template` / `resource_uri` / `access_guide` /
+          `routes` / `payloads`
         - `delivery_mode` is text-first for the initial envelope; `available_formats`
           advertises additional follow-up formats such as markdown / json / structured / visual
           when available
@@ -359,6 +360,9 @@ MARKDOWN;
             'resource_template' => $attachedFile ? 'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}' : null,
             'resource_uri' => $attachedFile && $ledger instanceof Model
                 ? $this->attachmentResourceService->buildResourceUri($ledger, $attachedFile)
+                : null,
+            'access_guide' => $attachedFile && $ledger instanceof Model
+                ? $this->attachmentResourceService->buildAttachmentAccessGuide($ledger, $attachedFile)
                 : null,
             'filename' => $resolvedName,
             'name' => $resolvedName,

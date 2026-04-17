@@ -21,7 +21,7 @@ class LedgerAttachmentResource extends Resource implements HasUriTemplate
 
     protected string $title = 'LedgerLeap Ledger Attachment Resource';
 
-    protected string $description = 'Attachment resource for Continue.dev and MCP clients.';
+    protected string $description = 'Attachment resource for Continue.dev and MCP clients. Use MCP resources/read for ledgerleap:// URIs; HTTP fetch is not supported.';
 
     protected string $mimeType = 'application/json';
 

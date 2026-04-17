@@ -35,6 +35,7 @@ class LedgerAttachmentResourceService
         return [
             'resource_template' => $resourceTemplate,
             'resource_uri' => $resourceUri,
+            'access_guide' => $this->buildAttachmentAccessGuide($ledger, $attachedFile, $resourceUri),
             'attachment_id' => $attachedFile->id,
             'filename' => $attachedFile->filename ?: ($fileInfo['name'] ?? $fileInfo['filename'] ?? trans('common.unknown', [], 'ja')),
             'name' => $attachedFile->filename ?: ($fileInfo['name'] ?? $fileInfo['filename'] ?? trans('common.unknown', [], 'ja')),
@@ -63,6 +64,39 @@ class LedgerAttachmentResourceService
             (string) $ledger->id,
             (string) $attachedFile->id
         );
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function buildAttachmentAccessGuide(Ledger $ledger, AttachedFile $attachedFile, ?string $resourceUri = null): array
+    {
+        $resourceUri ??= $this->buildResourceUri($ledger, $attachedFile);
+
+        return [
+            'resource_type' => 'mcp_resource',
+            'read_via' => 'resources/read',
+            'uri' => $resourceUri,
+            'instructions' => [
+                'ledgerleap://... は HTTP URL ではなく MCP resource URI です。',
+                'MCP クライアントでは `resources/read` に `resource_uri` をそのまま渡して読み込んでください。例: `resources/read(uri="ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}")`。',
+                'HTTP で取得したい場合は `routes.download` を使ってください。例: `GET {download_url}`。',
+                'HTTP の `routes.download` は認証済みセッション前提です。未認証の場合はログイン HTML にリダイレクトされることがあります。',
+            ],
+            'fallback_routes' => [
+                'download' => route('file.download', [
+                    'tenant' => $ledger->tenant_id,
+                    'attachedFile' => $attachedFile->id,
+                    'original' => true,
+                ]),
+                'inspector' => route('ledger.show', [
+                    'tenant' => $ledger->tenant_id,
+                    'ledgerId' => $ledger->id,
+                    'file' => $attachedFile->id,
+                ]),
+            ],
+            'note' => 'resource_uri は Continue.dev などの MCP クライアント向け、fallback_routes は人間向けの HTTP 導線です。',
+        ];
     }
 
     /**
