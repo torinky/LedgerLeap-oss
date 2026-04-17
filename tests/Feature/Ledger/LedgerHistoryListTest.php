@@ -69,11 +69,13 @@ class LedgerHistoryListTest extends TestCase
         $ledger = Ledger::factory()->create([
             'version' => 2,
             'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'tenant_id' => $this->getTenant()->id,
         ]);
 
         $firstDiff = LedgerDiff::create([
             'ledger_id' => $ledger->id,
             'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
             'content' => [],
             'column_define' => [],
             'version' => 1,
@@ -87,6 +89,7 @@ class LedgerHistoryListTest extends TestCase
         $secondDiff = LedgerDiff::create([
             'ledger_id' => $ledger->id,
             'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
             'content' => [],
             'column_define' => [],
             'version' => 2,
