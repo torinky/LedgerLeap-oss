@@ -2,11 +2,18 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\LogPerformance;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\Tenant;
+use App\Services\Ledger\LedgerDiffProcessor;
+use App\Services\UserService;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
@@ -43,7 +50,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
     public bool $canRollback = false;
 
     // 添付ファイル（LedgerDiffViewerに渡すため）
-    public ?\Illuminate\Database\Eloquent\Collection $allAttachments = null;
+    public ?Collection $allAttachments = null;
 
     public function mount(
         int $ledgerId,
@@ -63,12 +70,12 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $folder = $this->ledgerRecord->define?->folder;
         $this->canRollback = false;
         if ($folder) {
-            $userService = app(\App\Services\UserService::class);
+            $userService = app(UserService::class);
             if ($userService) {
                 $this->canRollback = $userService->hasFolderPermission(
                     auth()->user(),
                     $folder,
-                    \App\Enums\FolderPermissionType::WRITE
+                    FolderPermissionType::WRITE
                 );
             }
         }
@@ -91,7 +98,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         }
 
         // 添付ファイルの取得（LedgerDiffViewerに渡すため）
-        $this->allAttachments = \App\Models\AttachedFile::where('ledger_id', $this->ledgerRecord->id)
+        $this->allAttachments = AttachedFile::where('ledger_id', $this->ledgerRecord->id)
             ->with('ledger')
             ->withTrashed()
             ->get();
@@ -209,8 +216,26 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $startTime = microtime(true);
 
         $this->initializeTenantContextFromLedger();
+        $currentTenantId = $this->resolveTenantId($this->ledgerRecord?->tenant_id);
+        if (! is_string($currentTenantId) && ! is_int($currentTenantId)) {
+            Log::warning('Ledger history rendering skipped because tenant_id is missing', [
+                'ledger_id' => $this->ledgerRecord?->id,
+            ]);
 
-        $diffsQuery = $this->ledgerRecord->ledgerDiff()
+            return view('livewire.ledger.ledger-history-manager', [
+                'history' => collect(),
+                'baseDiff' => null,
+                'targetDiff' => null,
+                'baseMeta' => null,
+                'targetMeta' => null,
+                'historyDisplayLevel' => $this->historyDisplayLevel,
+                'canRollback' => $this->canRollback,
+                'isContentIdentical' => false,
+                'allAttachments' => $this->allAttachments,
+            ]);
+        }
+
+        $diffsQuery = $this->ledgerDiffQuery($currentTenantId)
             ->with([
                 'modifier.organizations',
                 'inspector.organizations',
@@ -244,7 +269,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
             return true;
         })->values();
 
-        \Illuminate\Support\Facades\Log::info(
+        Log::info(
             'Ledger History Filter: Initial count '.$allFetchedDiffs->count().
             ' -> Filtered count '.$diffs->count().
             ' for Ledger '.$this->ledgerId,
@@ -254,8 +279,12 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->hasMore = $diffs->count() < $totalCount;
 
         // 比較対象のデータを取得
-        $baseDiff = $this->baseDiffId ? LedgerDiff::find($this->baseDiffId) : null;
-        $targetDiff = $this->targetDiffId ? LedgerDiff::find($this->targetDiffId) : null;
+        $baseDiff = $this->baseDiffId
+            ? $this->ledgerDiffQuery($currentTenantId)->find($this->baseDiffId)
+            : null;
+        $targetDiff = $this->targetDiffId
+            ? $this->ledgerDiffQuery($currentTenantId)->find($this->targetDiffId)
+            : null;
 
         // メタ情報の準備
         $baseMeta = $baseDiff ? [
@@ -275,7 +304,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         // コンテンツが完全に一致するかチェック
         $isContentIdentical = false;
         if ($targetDiff && $this->ledgerRecord) {
-            $processor = app(\App\Services\Ledger\LedgerDiffProcessor::class);
+            $processor = app(LedgerDiffProcessor::class);
             // 現在のレコード($this->ledgerRecord) と 比較対象($targetDiff) の差分を計算
             // prepareContentDiff は $ledgerRecord と $comparisonTargetDiff を比較する
             // ここでは「現在のレコード」と「ロールバック対象(targetDiff)」を比較したい
@@ -315,10 +344,17 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->tenantId = $this->resolveTenantId($this->ledgerRecord->tenant_id);
         $tenancy = app(Tenancy::class);
         if ($this->tenantId && (! $tenancy->initialized || tenant('id') !== $this->tenantId)) {
-            $tenant = \App\Models\Tenant::find($this->tenantId);
+            $tenant = Tenant::find($this->tenantId);
             if ($tenant) {
                 $tenancy->initialize($tenant);
             }
         }
+    }
+
+    protected function ledgerDiffQuery(string|int $tenantId): Builder
+    {
+        return LedgerDiff::withoutTenancy()
+            ->where('ledger_id', $this->ledgerRecord->id)
+            ->where('tenant_id', $tenantId);
     }
 }
