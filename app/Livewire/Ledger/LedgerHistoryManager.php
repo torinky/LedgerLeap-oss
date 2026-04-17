@@ -12,6 +12,7 @@ use App\Models\LedgerDiff;
 use App\Models\Tenant;
 use App\Services\Ledger\LedgerDiffProcessor;
 use App\Services\UserService;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
@@ -216,10 +217,25 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
         $this->initializeTenantContextFromLedger();
         $currentTenantId = $this->resolveTenantId($this->ledgerRecord?->tenant_id);
+        if (! is_string($currentTenantId) && ! is_int($currentTenantId)) {
+            Log::warning('Ledger history rendering skipped because tenant_id is missing', [
+                'ledger_id' => $this->ledgerRecord?->id,
+            ]);
 
-        $diffsQuery = LedgerDiff::withoutTenancy()
-            ->where('ledger_id', $this->ledgerRecord->id)
-            ->where('tenant_id', $currentTenantId)
+            return view('livewire.ledger.ledger-history-manager', [
+                'history' => collect(),
+                'baseDiff' => null,
+                'targetDiff' => null,
+                'baseMeta' => null,
+                'targetMeta' => null,
+                'historyDisplayLevel' => $this->historyDisplayLevel,
+                'canRollback' => $this->canRollback,
+                'isContentIdentical' => false,
+                'allAttachments' => $this->allAttachments,
+            ]);
+        }
+
+        $diffsQuery = $this->ledgerDiffQuery($currentTenantId)
             ->with([
                 'modifier.organizations',
                 'inspector.organizations',
@@ -264,16 +280,10 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
         // 比較対象のデータを取得
         $baseDiff = $this->baseDiffId
-            ? LedgerDiff::withoutTenancy()
-                ->where('ledger_id', $this->ledgerRecord->id)
-                ->where('tenant_id', $currentTenantId)
-                ->find($this->baseDiffId)
+            ? $this->ledgerDiffQuery($currentTenantId)->find($this->baseDiffId)
             : null;
         $targetDiff = $this->targetDiffId
-            ? LedgerDiff::withoutTenancy()
-                ->where('ledger_id', $this->ledgerRecord->id)
-                ->where('tenant_id', $currentTenantId)
-                ->find($this->targetDiffId)
+            ? $this->ledgerDiffQuery($currentTenantId)->find($this->targetDiffId)
             : null;
 
         // メタ情報の準備
@@ -339,5 +349,12 @@ class LedgerHistoryManager extends BaseLivewireComponent
                 $tenancy->initialize($tenant);
             }
         }
+    }
+
+    protected function ledgerDiffQuery(string|int $tenantId): Builder
+    {
+        return LedgerDiff::withoutTenancy()
+            ->where('ledger_id', $this->ledgerRecord->id)
+            ->where('tenant_id', $tenantId);
     }
 }
