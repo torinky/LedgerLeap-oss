@@ -185,11 +185,11 @@
                                         <span class="font-bold text-primary">{{ $ledgerRecord->version }}</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 text-base-content/30">
-                                        <x-mary-icon name="o-user" class="w-4 h-4 text-base-content/40" />
+                                        <x-mary-icon name="o-user" class=" text-base-content/40" />
                                         <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
                                     </div>
                                     <div class="flex items-center gap-1.5 text-base-content/40 border-l border-base-300 pl-3">
-                                        <x-mary-icon name="o-calendar" class="w-3.5 h-3.5" />
+                                        <x-mary-icon name="o-calendar" class="" />
                                         <span>{{ $ledgerRecord->updated_at->format('Y-m-d H:i') }}</span>
                                     </div>
                                 </div>
@@ -208,11 +208,11 @@
                     <div class="bg-base-200/70 rounded-lg p-3 border border-base-300 transition-colors hover:bg-base-200/90">
                         <div class="flex justify-between items-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity" @click="expanded = !expanded">
                             <div class="font-bold text-sm flex items-center gap-2">
-                                <x-mary-icon name="o-information-circle" class="w-4 h-4 text-info" />
+                                <x-mary-icon name="o-information-circle" class=" text-info" />
                                 {{ __('ledger.description') }} / {{ __('ledger.guideline') }}
                             </div>
                             <span class="inline-flex transition-transform duration-300" :class="expanded ? 'rotate-180' : ''">
-                                <x-mary-icon name="o-chevron-down" class="w-4 h-4" />
+                                <x-mary-icon name="o-chevron-down" class="" />
                             </span>
                         </div>
                         <div x-show="expanded" x-collapse>
@@ -240,31 +240,31 @@
                 <button role="tab" class="tab"
                     :class="{ 'tab-active': activeTab === 'details' }"
                     @click="switchTab('details')">
-                    <x-mary-icon name="o-document-text" class="mr-1.5 w-4 h-4" />
+                    <x-mary-icon name="o-document-text" class="mr-1.5" />
                     {{ __('ledger.tab.details') }}
                 </button>
                 <button role="tab" class="tab"
                     :class="{ 'tab-active': activeTab === 'history' }"
                     @click="switchTab('history')">
-                    <x-mary-icon name="o-list-bullet" class="mr-1.5 w-4 h-4" />
+                    <x-mary-icon name="o-list-bullet" class="mr-1.5 " />
                     {{ $historyTabTitle }}
                 </button>
                 <button role="tab" class="tab"
                     :class="{ 'tab-active': activeTab === 'activity' }"
                     @click="switchTab('activity')">
-                    <x-mary-icon name="o-clock" class="mr-1.5 w-4 h-4" />
+                    <x-mary-icon name="o-clock" class="mr-1.5 " />
                     {{ __('ledger.tab.activity_history') }}
                 </button>
                 <button role="tab" class="tab"
                     :class="{ 'tab-active': activeTab === 'permissions' }"
                     @click="switchTab('permissions')">
-                    <x-mary-icon name="o-shield-check" class="mr-1.5 w-4 h-4" />
+                    <x-mary-icon name="o-shield-check" class="mr-1.5 " />
                     {{ __('ledger.tab.access_and_permissions') }}
                 </button>
                 <button role="tab" class="tab"
                     :class="{ 'tab-active': activeTab === 'related' }"
                     @click="switchTab('related')">
-                    <x-mary-icon name="o-link" class="mr-1.5 w-4 h-4" />
+                    <x-mary-icon name="o-link" class="mr-1.5 " />
                     <span>{{ __('ledger.tab.related') }}</span>
                     <span class="badge badge-neutral badge-sm ml-1" x-cloak x-show="relatedCount > 0" x-text="relatedCount"></span>
                 </button>
@@ -281,10 +281,25 @@
             <div x-show="activeTab === 'details'"
                  class="space-y-4 relative min-h-[400px]">
 
-                {{-- Tier 2: Overall tab/record loading --}}
-                <x-element.loading-overlay tier="2" :target="$recordFilterTargets" :delay="false">
+                @if ($ledgerRecord->define->workflow_enabled)
+                    <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
+                        wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
+                @endif
 
-                    <x-mary-card title="{{ __('ledger.tab.details') }}" shadow icon="o-document-text" class="bg-base-100 mb-6">
+                <div class="relative">
+                    {{-- Tier 2: Overall tab/record loading --}}
+                    <x-element.loading-overlay tier="2" :target="$recordFilterTargets" :delay="false">
+                        <div class="w-full max-w-5xl space-y-4 p-4">
+                            <div class="h-5 w-40 rounded bg-base-300 shimmer"></div>
+                            <div class="space-y-3">
+                                <div class="h-4 w-3/4 rounded bg-base-200 shimmer"></div>
+                                <div class="h-4 w-2/3 rounded bg-base-200 shimmer"></div>
+                                <div class="h-4 w-5/6 rounded bg-base-200 shimmer"></div>
+                            </div>
+                        </div>
+                    </x-element.loading-overlay>
+
+                    <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text" class="bg-base-100 mb-6">
                         <x-slot:menu>
                             @php
                                 $displayLevelOptions = [
@@ -293,86 +308,12 @@
                                     ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
                                 ];
                             @endphp
-                            <div class="flex items-center gap-1 mr-2">
-                                <x-mary-group wire:model.live="displayLevel" :options="$displayLevelOptions"
-                                    class="[&_label]:btn-ghost [&_input:checked+label]:!btn-primary" option-value="id"
-                                    option-label="name" wire:key="details-display-level-group" />
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
-                                    <x-mary-icon name="o-question-mark-circle"
-                                        class="w-4 h-4 text-base-content/40 cursor-help" />
-                                </div>
-                            </div>
-                            <div class="flex items-center gap-1 border-l border-base-300 pl-3">
-                                <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
-                                    class="text-xs" />
-                                <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
-                                    <x-mary-icon name="o-question-mark-circle"
-                                        class="w-4 h-4 text-base-content/40 cursor-help" />
-                                </div>
-                            </div>
-                        </x-slot:menu>
-
-                        <div class="relative min-h-[300px]">
-                            <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
-                                :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
-                                wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
-                                lazy />
-                        </div>
-                    </x-mary-card>
-
-                    {{-- Skeleton for internal state changes --}}
-                    <div class="card bg-base-100 shadow-xl opacity-0 absolute top-0 left-0 w-full -z-10"
-                         wire:loading.class="opacity-100 z-10">
-                        <div class="card-body">
-                            {{-- ... existing skeleton ... --}}
-                            <div class="flex items-center justify-between mb-4">
-                                <div class="h-6 bg-base-300 rounded w-32 shimmer"></div>
-                                <div class="flex gap-2">
-                                    <div class="h-8 bg-base-200 rounded w-24 shimmer"></div>
-                                    <div class="h-8 bg-base-200 rounded w-24 shimmer"></div>
-                                </div>
-                            </div>
-                            <div class="space-y-6">
-                                @foreach(range(1, 3) as $group)
-                                    <div class="space-y-3">
-                                        <div class="h-5 bg-base-300 rounded w-40 shimmer"></div>
-                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                            @foreach(range(1, 4) as $field)
-                                                <div class="space-y-2">
-                                                    <div class="h-4 bg-base-200 rounded w-24 shimmer"></div>
-                                                    <div class="h-10 bg-base-100 border border-base-300 rounded shimmer"></div>
-                                                </div>
-                                            @endforeach
-                                        </div>
-                                    </div>
-                                @endforeach
-                            </div>
-                        </div>
-                    </div>
-                </x-element.loading-overlay>
-
-                {{-- Actual content stays mounted; loading is layered on top only --}}
-                <div class="space-y-4">
-                    @if ($ledgerRecord->define->workflow_enabled)
-                        <livewire:ledger.workflow-status-card :ledgerRecord="$ledgerRecord"
-                            wire:key="status-card-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
-                    @endif
-
-                    <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text">
-                        <x-slot:menu>
-                            @php
-                                $displayLevelOptions = [
-                                    ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                                    ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                                    ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                                ];
-                            @endphp
-                            <div class="flex items-center gap-1 mr-2 pr-2 border-r border-base-300">
+                            <div class="flex flex-wrap items-center gap-2 mr-2 pr-2 border-r border-base-300">
                                 <div class="flex items-center gap-2 bg-base-200/50 px-3 py-1 rounded-full border border-base-300 transition-all hover:bg-base-200/80">
-                                    <x-mary-toggle 
-                                        x-data="{ 
+                                    <x-mary-toggle
+                                        x-data="{
                                             active: false,
-                                            check() { 
+                                            check() {
                                                 const id = $store.ledgerState.currentLedgerId;
                                                 this.active = !($store.ledgerState.states[id]?.['__global__'] ?? true);
                                             }
@@ -382,7 +323,7 @@
                                             setInterval(() => check(), 500);
                                         "
                                         @click="$store.ledgerState.expandAll(!active)"
-                                        ::checked="active"
+                                        x-model="active"
                                         tight
                                         label="{{ __('ledger.column.expand_all') }}"
                                         class="toggle-xs toggle-primary text-sm font-black text-base-content/40 uppercase tracking-widest"
@@ -394,7 +335,7 @@
                                         option-label="name" wire:key="details-display-level-group" />
                                     <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
                                         <x-mary-icon name="o-question-mark-circle"
-                                            class="w-4 h-4 text-base-content/40 cursor-help" />
+                                            class="text-base-content/40 cursor-help" />
                                     </div>
                                 </div>
                             </div>
@@ -403,17 +344,15 @@
                                     class="text-xs" />
                                 <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
                                     <x-mary-icon name="o-question-mark-circle"
-                                        class="w-4 h-4 text-base-content/40 cursor-help" />
+                                        class="text-base-content/40 cursor-help" />
                                 </div>
                             </div>
                         </x-slot:menu>
 
                         <div class="relative min-h-[300px]">
-                            {{-- Record content only loading is now handled by the parent's skeleton --}}
                             <livewire:ledger.ledger-diff-viewer :ledgerRecord="$ledgerRecord" :canView="$canView" :allAttachments="$currentLedgerAttachments"
                                 :highlight="$highlight" :displayLevel="$displayLevel" :showChanges="$showChanges" :targetDiffId="$targetDiffId" :baseDiffId="null"
-                                wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}"
-                                lazy />
+                                wire:key="diff-viewer-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" lazy />
                         </div>
 
                         <div class="mt-8 pt-4 border-t border-base-200">
@@ -502,8 +441,7 @@
                     <livewire:ledger.related-ledgers
                         :ledgerId="$ledgerRecord->id"
                         :displayLevel="$displayLevel"
-                        wire:key="related-ledgers-{{ $ledgerRecord->id }}"
-                        defer />
+                        wire:key="related-ledgers-{{ $ledgerRecord->id }}" defer />
                 @else
                     {{-- 初回訪問前のスケルトン --}}
                     <div class="space-y-4 p-2 w-full animate-pulse">

@@ -65,6 +65,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 
 - Primary text should stay readable on desktop; do not freeze it at a tiny value for every device.
 - Meaningful icons should scale with the text or the control role instead of staying at one fixed small size.
+- If a Mary icon is already legible at its default size, prefer the component default over repeating a fixed `w-* h-*` pair, especially for helper/tooltip icons and metadata markers.
 - Use small sizes only for badges, dense chrome, or secondary metadata.
 - Prefer responsive size steps or component defaults when the same page must work on both mobile and desktop.
 - Use the `responsive-text-icon-sizing` skill when this becomes a repeated pattern.
@@ -83,6 +84,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Assume tablet-first and office laptop use cases.
 - Keep touch targets usable on smaller devices.
 - Use `lg:` for denser list/table layouts and wider screens.
+- For dense comparison tables, keep row hover states obvious enough to read against the card surface; avoid faint hover overlays that disappear into the background.
 - Allow wrapping or horizontal scrolling where long inline structures would otherwise break the layout.
 - Avoid invisible-only hover affordances for critical actions.
 

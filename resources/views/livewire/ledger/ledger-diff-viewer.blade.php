@@ -203,20 +203,20 @@ if ($store.ledgerState) {
                                         </td>
                                     </tr>
                                 @else
-                                    <tr class="hover:bg-base-200/20 transition-colors {{ $showChanges && $column['status'] !== 'unchanged' ? 'bg-warning/5' : '' }}"
+                                    <tr class="hover:bg-accent/30 transition-colors {{ $showChanges && $column['status'] !== 'unchanged' ? 'bg-warning/5' : '' }}"
                                         wire:key="col-{{ $column['id'] }}-{{ $currentVersion }}-{{ $pastVersion }}">
                                         <td class="align-top py-4 px-4 bg-base-200/50 border-r border-base-300">
                                             <div class="flex flex-col gap-1.5">
                                                 <div class="flex items-start gap-2">
                                                     @if ($column['is_required'])
-                                                        <x-mary-icon name="o-check-badge" class="w-3 h-3 text-error" />
+                                                        <x-mary-icon name="o-check-badge" class="text-error" />
                                                     @endif
                                                     <span
-                                                        class="text-sm font-bold text-base-content/90 leading-snug break-words">{{ $column['name'] }}</span>
+                                                        class="text-sm font-bold text-base-content/90 leading-snug wrap-break-word">{{ $column['name'] }}</span>
                                                 </div>
                                                 @if ($column['hint'])
                                                     <span
-                                                        class="text-xs text-base-content/50 leading-normal break-words">{{ $column['hint'] }}</span>
+                                                        class="text-xs text-base-content/50 leading-normal wrap-break-word">{{ $column['hint'] }}</span>
                                                 @endif
 
                                                 @if ($showChanges && $column['status'] !== 'unchanged')

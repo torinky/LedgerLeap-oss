@@ -35,6 +35,8 @@ Are text or icons being hard-coded to a tiny size?
 - Use compact sizes only for badges, subtle metadata, table chrome, or other clearly secondary roles.
 - Prefer responsive size steps over one frozen value when the same UI appears on both mobile and desktop.
 - Use Mary UI and daisyUI size variants before reaching for custom CSS.
+- For required markers or helper icons in column titles or form headers, prefer a responsive icon or badge treatment rather than a one-size-fits-all tiny square.
+- If a Mary icon already reads well at its component default size, leave it unforced instead of re-declaring a tiny width/height.
 
 ## Practical layout guidance
 
@@ -43,6 +45,7 @@ Are text or icons being hard-coded to a tiny size?
 - Prefer component defaults and theme tokens over ad hoc per-element overrides.
 - When multiple items must line up, apply one shared responsive sizing pattern to the whole group.
 - Do not use tiny defaults as a shortcut for density; make compactness deliberate and role-based.
+- If a marker needs to stay visible in a dense table header, let its size breathe slightly at larger breakpoints instead of freezing it at one tiny value.
 
 ## Evidence and references
 
