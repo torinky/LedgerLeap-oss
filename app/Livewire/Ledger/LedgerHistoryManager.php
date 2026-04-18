@@ -345,7 +345,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $ledgerTenantId = $this->ledgerRecord->tenant_id;
         $this->tenantId = (is_string($ledgerTenantId) || is_int($ledgerTenantId))
             ? $ledgerTenantId
-            : $this->resolveTenantId($ledgerTenantId);
+            : $this->resolveTenantId();
 
         if (! $this->tenantId) {
             return;
