@@ -105,6 +105,7 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
+        $this->resetTenantRuntimeState();
         $this->reapplyWorkerDatabaseConnection();
 
         $className = static::class;
@@ -148,6 +149,29 @@ trait RefreshDatabaseWithTenant
         }
 
         $this->beginDatabaseTransaction();
+    }
+
+    protected function resetTenantRuntimeState(): void
+    {
+        try {
+            if (tenancy()->initialized) {
+                tenancy()->end();
+            }
+        } catch (\Throwable) {
+            // 次の初期化で再構築する
+        }
+
+        foreach (['tenant', 'mysql_testing'] as $connection) {
+            try {
+                DB::disconnect($connection);
+            } catch (\Throwable) {
+            }
+
+            try {
+                DB::purge($connection);
+            } catch (\Throwable) {
+            }
+        }
     }
 
     /**

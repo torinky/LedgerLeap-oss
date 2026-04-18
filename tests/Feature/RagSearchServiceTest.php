@@ -39,6 +39,22 @@ class RagSearchServiceTest extends TestCase
 
     private RagSearchService $ragSearchService;
 
+    protected function getTablesToTruncateForMigrationsOnce(): array
+    {
+        return [
+            'ledgers',
+            'ledger_chunks',
+            'attached_files',
+            'activity_log',
+            'taggables',
+            'tags',
+            'role_folder_permissions',
+            'folders',
+            'ledger_defines',
+            'personal_access_tokens',
+        ];
+    }
+
     protected function setUp(): void
     {
         parent::setUp();
