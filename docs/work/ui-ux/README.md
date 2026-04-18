@@ -27,6 +27,10 @@
 
 - **[台帳一覧検索ヘッダーのレスポンシブ/スクロール境界メモ](./ledger-list-redesign/2026-04-11_ledger-search-header-responsive-scroll-note.md)** ✅ 完了・skill 化: 検索入力の主役化、`sort_by` / `per_page` の中間幅横並び、sticky ヘッダーのスクロール遮蔽量を減らす余白調整を記録し、`search-header-responsive-layout` skill の evidence として昇格。
 
+- **[デザインワークフロー再編メモ](./2026-04-18_design-workflow-reorganization-note.md)** ✅ 完了・skill 化: daisyUI を前提に共通基盤を縮約し、`title-block` / `form-layout` を独立スキルとして追加。`ledger-detail-header`・`search-header-responsive-layout`・`livewire-loading-ui` と合わせて再利用前提で束ねる。
+
+- **[文字・アイコンサイズのレスポンシブ基準メモ](./2026-04-18_text-icon-size-responsiveness-note.md)** ✅ 完了・skill 化: PC で見にくい固定の小文字・小アイコンを避け、読める既定値やレスポンシブなサイズ段階へ寄せる方針を追加。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
@@ -65,6 +69,9 @@
 
 ### 文言設計 / コピーライティング
   - **[Text Writing Guidance for Buttons, Labels, and Descriptions](./2026-04-11_text-writing-guidance.md)** 📝 判断基準メモ: ボタンは action、ラベルは noun、説明は guidance、エラーは problem + next step で揃える。
+
+### 文字・アイコンサイズ設計
+  - **[Text and Icon Size Responsiveness Note](./2026-04-18_text-icon-size-responsiveness-note.md)** 📝 判断基準メモ: 文字とアイコンを固定小サイズに閉じ込めず、device/context に応じて読みやすく変化させる。
 
 - ### ブラウザ固有の問題
   - **[Safariフリーズ問題](./2025-07-20_safari-freeze-debug-log.md)** ✅ 解決済み: 特定の画面でSafariブラウザがフリーズする問題に関する詳細なデバッグログと調査記録。
