@@ -342,6 +342,8 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
         // Livewire の初回/再描画や CI の実行順によって tenancy が外れていても、
         // 台帳自身の tenant_id を根拠に復元する。
+        // このコンポーネントは stale な tenant() 状態に影響されないことが必須のため、
+        // resolveTenantId() の tenant()?->id フォールバックは使わず ledger の tenant_id を優先する。
         $ledgerTenantId = $this->ledgerRecord->tenant_id;
         $this->tenantId = (is_string($ledgerTenantId) || is_int($ledgerTenantId))
             ? $ledgerTenantId
