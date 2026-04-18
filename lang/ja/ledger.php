@@ -14,4 +14,5 @@ return array_merge(
     require __DIR__.'/ledger/history.php',
     require __DIR__.'/ledger/misc_components.php',
     require __DIR__.'/ledger/ui.php',
+    require __DIR__.'/ledger/diff.php',
 );

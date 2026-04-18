@@ -37,6 +37,11 @@ php artisan translations:compare --force
 - If a ledger label does not appear, rerun `translations:compare --force`.
 - Do not hand-edit `ledger.*` entries in `lang/ja.json`.
 
+## Common Pitfalls
+
+- **`ja.json` usage**: Adding or editing `ledger.*` keys in `lang/ja.json` directly is a regression. The `ja.json` file is a generated output; any manual changes will be overwritten by the next `translations:compare --force` run. Always use the PHP source files.
+- **Key Duplication in Blade**: Translation keys that include placeholders (e.g. `:count項目の変更`) should not have the value manually prepended in the Blade template (e.g., `{{ $count }} {{ __('ledger.diff.items_changed', ['count' => $count]) }}`) to avoid duplication in the rendered output.
+
 ## Evidence & freshness
 
 - status: confirmed-repo
