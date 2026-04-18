@@ -354,22 +354,35 @@ class LedgerHistoryManager extends BaseLivewireComponent
         }
 
         $tenancy = app(Tenancy::class);
+        $tenant = Tenant::find($this->tenantId);
+
+        if (! $tenant) {
+            Log::warning('Ledger history tenant could not be resolved from ledger tenant_id.', [
+                'ledger_id' => $this->ledgerId,
+                'tenant_id' => $this->tenantId,
+            ]);
+
+            return;
+        }
 
         try {
-            // tenant id が同一でも、テスト実行中に接続設定が再読込されるケースに備えて毎回再初期化する
-            $tenancy->initialize($this->tenantId);
+            // 同一 tenant_id でも Livewire/CI では古い接続状態が残ることがあるため、
+            // 毎回 tenancy を明示的に終了してからモデル解決済み Tenant で再初期化する。
+            if ($tenancy->initialized) {
+                $tenancy->end();
+            }
+
+            $tenancy->initialize($tenant);
+            $this->reloadLedgerRecordWithoutTenancy();
         } catch (\Throwable $exception) {
-            Log::warning('Ledger history tenant re-initialization by id failed. Fallback to tenant model resolution.', [
+            Log::warning('Ledger history tenant re-initialization via resolved tenant model failed. Falling back to tenant id re-initialization.', [
                 'ledger_id' => $this->ledgerId,
                 'tenant_id' => $this->tenantId,
                 'error' => $exception->getMessage(),
             ]);
 
-            // stancl/tenancy の実装差異で ID 指定初期化が失敗する環境向けにモデル解決で再試行する
-            $tenant = Tenant::find($this->tenantId);
-            if ($tenant) {
-                $tenancy->initialize($tenant);
-            }
+            $tenancy->initialize($this->tenantId);
+            $this->reloadLedgerRecordWithoutTenancy();
         }
     }
 

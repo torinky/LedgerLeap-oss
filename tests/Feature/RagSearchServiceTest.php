@@ -2,25 +2,32 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FolderPermissionType;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
 use App\Models\User;
+use App\Repositories\WritableFolderRepository;
+use App\Services\Embedding\RuriChunkFormatter;
 use App\Services\EmbeddingService;
 use App\Services\RagSearchService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Mockery;
 use PHPUnit\Framework\Attributes\CoversClass;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use RuntimeException;
 use Tests\TestCase;
-use Tests\Traits\RefreshDatabaseWithTenant;
+use Tests\Traits\DatabaseMigrationsOnce;
 
 #[CoversClass(RagSearchService::class)]
+#[Group('database-migrations')]
 class RagSearchServiceTest extends TestCase
 {
-    use RefreshDatabaseWithTenant;
+    use DatabaseMigrationsOnce;
 
     protected bool $fakeQueue = false;
 
@@ -35,13 +42,20 @@ class RagSearchServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->setUpRefreshDatabaseWithTenant();
+        $this->setUpDatabaseMigrationsOnce();
+        $this->tenant = static::$sharedTenantForMigrationsOnce;
         config(['rag.enabled' => true]);
 
         $this->ragSearchService = app(RagSearchService::class);
         $this->user = User::factory()->create();
         $this->folder = Folder::factory()->create(['creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
         $this->ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->folder->id, 'creator_id' => $this->user->id, 'modifier_id' => $this->user->id]);
+    }
+
+    protected function tearDown(): void
+    {
+        $this->tearDownDatabaseMigrationsOnce();
+        parent::tearDown();
     }
 
     #[Test]
@@ -159,7 +173,7 @@ class RagSearchServiceTest extends TestCase
         $job = new ProcessLedgerForRagJob($ledger->id);
         $job->handle(
             $this->app->make(EmbeddingService::class),
-            $this->app->make(\App\Services\Embedding\RuriChunkFormatter::class)
+            $this->app->make(RuriChunkFormatter::class)
         );
 
         // Wait for Mroonga to index the full-text and vector data
@@ -205,15 +219,15 @@ class RagSearchServiceTest extends TestCase
 
         // Create a new user with access only to folder1
         $restrictedUser = User::factory()->create();
-        $role = \App\Models\Role::create(['name' => 'RestrictedRole', 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'RestrictedRole', 'guard_name' => 'web']);
         $restrictedUser->roles()->attach($role->id);
         $role->folderPermissions()->attach($folder1->id, [
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'modifier_id' => $restrictedUser->id,
         ]);
 
         // Get readable folders for restricted user
-        $repo = app(\App\Repositories\WritableFolderRepository::class);
+        $repo = app(WritableFolderRepository::class);
         $readableFolders = $repo->getReadableFolderIds($restrictedUser);
         $this->assertNotEmpty($readableFolders, 'User should have at least one readable folder');
         $this->assertContains($folder1->id, $readableFolders, 'User should have access to folder1');
@@ -278,10 +292,10 @@ class RagSearchServiceTest extends TestCase
         $this->ragSearchService = app(RagSearchService::class);
 
         // Setup: Grant user access to folder
-        $role = \App\Models\Role::create(['name' => 'TestRole1', 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'TestRole1', 'guard_name' => 'web']);
         $this->user->roles()->attach($role->id);
         $role->folderPermissions()->attach($this->folder->id, [
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'modifier_id' => $this->user->id,
         ]);
 
@@ -316,10 +330,10 @@ class RagSearchServiceTest extends TestCase
         $this->ragSearchService = app(RagSearchService::class);
 
         // Setup: Grant user access
-        $role = \App\Models\Role::create(['name' => 'TestRole2', 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'TestRole2', 'guard_name' => 'web']);
         $this->user->roles()->attach($role->id);
         $role->folderPermissions()->attach($this->folder->id, [
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'modifier_id' => $this->user->id,
         ]);
 
@@ -375,10 +389,10 @@ class RagSearchServiceTest extends TestCase
         $user = $this->user;
         $folder = $this->folder;
         $ledgerDefine = $this->ledgerDefine;
-        $role = \App\Models\Role::create(['name' => 'QueryTestRole', 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'QueryTestRole', 'guard_name' => 'web']);
         $user->roles()->attach($role->id);
         $role->folderPermissions()->attach($folder->id, [
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'modifier_id' => $user->id,
         ]);
 
@@ -389,7 +403,7 @@ class RagSearchServiceTest extends TestCase
 
         // Spy on the Log facade and properly handle channel calls
         $logSpy = \Illuminate\Support\Facades\Log::spy();
-        $channelMock = \Mockery::mock();
+        $channelMock = Mockery::mock();
         $logSpy->shouldReceive('channel')->andReturn($channelMock);
         $channelMock->shouldReceive('info')->zeroOrMoreTimes(); // Allow info calls
         $channelMock->shouldReceive('debug')->zeroOrMoreTimes(); // Allow debug calls
@@ -490,7 +504,7 @@ class RagSearchServiceTest extends TestCase
 
         $result = $this->ragSearchService->search('test', $noAccessUser);
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
         $this->assertEquals(0, $result->total());
         $this->assertEmpty($result->items());
     }
@@ -524,10 +538,10 @@ class RagSearchServiceTest extends TestCase
     public function search_attaches_semantic_scores_to_ledgers(): void
     {
         // Setup: Create user and folder with permissions
-        $role = \App\Models\Role::create(['name' => 'ScoreTestRole', 'guard_name' => 'web']);
+        $role = Role::firstOrCreate(['name' => 'ScoreTestRole', 'guard_name' => 'web']);
         $this->user->roles()->attach($role->id);
         $role->folderPermissions()->attach($this->folder->id, [
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'modifier_id' => $this->user->id,
         ]);
 
@@ -560,7 +574,7 @@ class RagSearchServiceTest extends TestCase
         );
 
         // Verify results
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $results);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $results);
         $this->assertGreaterThan(0, $results->count(), 'Search should return at least one result');
 
         // Verify semantic score is attached to ledger model as dynamic property
