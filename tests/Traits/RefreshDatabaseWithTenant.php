@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\ParallelTesting;
  */
 trait RefreshDatabaseWithTenant
 {
+    use ResetsTenantRuntimeState;
+
     /**
      * クラスごとにデータベースが初期化されたかを管理
      *
@@ -149,29 +151,6 @@ trait RefreshDatabaseWithTenant
         }
 
         $this->beginDatabaseTransaction();
-    }
-
-    protected function resetTenantRuntimeState(): void
-    {
-        try {
-            if (tenancy()->initialized) {
-                tenancy()->end();
-            }
-        } catch (\Throwable) {
-            // 次の初期化で再構築する
-        }
-
-        foreach (['tenant', 'mysql_testing'] as $connection) {
-            try {
-                DB::disconnect($connection);
-            } catch (\Throwable) {
-            }
-
-            try {
-                DB::purge($connection);
-            } catch (\Throwable) {
-            }
-        }
     }
 
     /**
