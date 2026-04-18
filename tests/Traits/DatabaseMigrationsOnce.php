@@ -41,6 +41,8 @@ use Illuminate\Support\Facades\Schema;
  */
 trait DatabaseMigrationsOnce
 {
+    use ResetsTenantRuntimeState;
+
     /** テストクラスで migrate:fresh を実行済みかどうかのフラグ（クラスごと） */
     protected static array $migratedOnceByClass = [];
 
@@ -70,6 +72,7 @@ trait DatabaseMigrationsOnce
      */
     protected function setUpDatabaseMigrationsOnce(): void
     {
+        $this->resetTenantRuntimeState();
         $className = static::class;
 
         if (empty(static::$migratedOnceByClass[$className])) {

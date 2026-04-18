@@ -1,52 +1,53 @@
 # Issue #149 Actions Follow-up — 2026-04-18
 
 ## Summary
-- GitHub Actions run `24599067385` still failed in `Feature Tests (serial remainder)` after earlier #149 fixes.
+- GitHub Actions run `24600597417` still failed after PR #156 merged the previous #149 follow-up.
 - Current failures were:
   - `Tests\Feature\Ledger\LedgerHistoryListTest::component_recovers_when_tenant_context_is_missing`
   - `Tests\Feature\RagSearchServiceTest::search_respects_user_folder_permissions`
 
 ## What changed
-- `app/Livewire/Ledger/LedgerHistoryManager.php`
-  - Resolve the tenant model from `ledgerRecord->tenant_id`
-  - End stale tenancy before re-initializing
-  - Prefer model-based re-initialization, then fall back to ID-based initialization
-  - Reload the ledger after each successful recovery branch
+- `tests/Traits/RefreshDatabaseWithTenant.php`
+  - Reset stale tenancy runtime state before every test setup
+  - End the current tenant and purge the `tenant` / `mysql_testing` connections before re-initializing the shared tenant
+- `tests/Traits/DatabaseMigrationsOnce.php`
+  - Apply the same tenancy runtime reset before every db-migrations test setup
+  - Rebuild the tenant runtime from a clean state instead of stacking `initialize()` calls across suite order
 - `tests/Feature/RagSearchServiceTest.php`
-  - Move the test to `DatabaseMigrationsOnce`
-  - Mark it with `#[Group('database-migrations')]` so CI runs it in the Mroonga-safe job
-  - Replace repeated `Role::create()` calls with `Role::firstOrCreate()`
+  - Expand per-test cleanup to include folder / ledger-define / permission-side tables used by the permission-scoped RAG assertions
 
 ## Why this option was chosen
-- `LedgerHistoryListTest` was failing only in Actions serial runs, which matches stale tenancy / connection state leakage better than a simple query bug.
-- `RagSearchServiceTest` uses persisted `ledger_chunks` and Mroonga-backed search assertions, so keeping it in the normal `RefreshDatabaseWithTenant` serial suite was the wrong test isolation strategy.
-- Retrying the RAG assertion was already attempted in earlier work and did not remove the Actions-only instability.
+- `LedgerHistoryListTest` and `RagSearchServiceTest` now fail in different jobs, but both still point to stale tenant runtime state leaking across Actions-only suite order.
+- Stancl Tenancy v3 docs recommend ending tenancy before re-initializing it; the traits were still reusing runtime state and re-calling `initialize()` on top of it.
+- Mroonga / Groonga docs describe index visibility as immediate after writes, so the remaining RAG failure is better explained by test-state leakage than by another indexing-delay retry gap.
 
 ## Proven dead ends
-- Treating the remaining RAG failure as only an indexing-delay problem was insufficient; the test was still living in the wrong CI job.
-- Earlier tenant recovery fixes that only reloaded the ledger or only reinitialized by ID were not enough for the stale serial-suite state seen in Actions.
+- Treating the remaining RAG failure as only an indexing-delay problem was insufficient after it had already been moved to the db-migrations job.
+- Earlier component-only fixes in `LedgerHistoryManager` were not enough because the suite-order leak can happen before the component rebuilds its own state.
 
 ## Evidence
-- GitHub Actions run: `24599067385`
-- Failed job: `Feature Tests (serial remainder)` / job `71934521471`
+- GitHub Actions run: `24600597417`
+- Failed jobs:
+  - `Feature Tests (serial remainder)` / job `71938515734`
+  - `DB Migrations Tests` / job `71938515741`
 - Related repo files:
-  - `app/Livewire/Ledger/LedgerHistoryManager.php`
   - `tests/Feature/Ledger/LedgerHistoryListTest.php`
   - `tests/Feature/RagSearchServiceTest.php`
   - `tests/Traits/DatabaseMigrationsOnce.php`
+  - `tests/Traits/RefreshDatabaseWithTenant.php`
   - `.github/workflows/phpunit.yml`
+- External references checked:
+  - Stancl Tenancy v3 docs on initialization / testing / Livewire
+  - Groonga and Mroonga docs on immediate index visibility after writes
 
 ## Best-effort validation in this session
-- PASS: `php vendor/bin/pint --test app/Livewire/Ledger/LedgerHistoryManager.php tests/Feature/RagSearchServiceTest.php`
-- PASS: `php -l app/Livewire/Ledger/LedgerHistoryManager.php`
+- PASS: `php -l tests/Traits/RefreshDatabaseWithTenant.php`
+- PASS: `php -l tests/Traits/DatabaseMigrationsOnce.php`
 - PASS: `php -l tests/Feature/RagSearchServiceTest.php`
-- PASS: `parallel_validation` code review / CodeQL gate after the code changes
 
 ## Environment limits encountered
 - Local Sail validation could not be completed in this sandbox because the repo starts from a fresh clone without `.env` / installed dependencies.
-- `composer install` required ignoring the local PHP 8.3 host mismatch versus the repo's PHP 8.4 requirement.
-- `npm ci` needed `--ignore-scripts` because `chromedriver` download to `googlechromelabs.github.io` was blocked.
-- `./vendor/bin/sail up` could not build because the container image provisioning for PHP 8.4 packages failed in this environment.
+- `composer install` could not be completed here because one dependency download fell back to GitHub source authentication, which is unavailable in this sandbox.
 
 ## Freshness
 - status: confirmed-repo

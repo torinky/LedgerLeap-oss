@@ -15,6 +15,8 @@ use Illuminate\Support\Facades\ParallelTesting;
  */
 trait RefreshDatabaseWithTenant
 {
+    use ResetsTenantRuntimeState;
+
     /**
      * クラスごとにデータベースが初期化されたかを管理
      *
@@ -105,6 +107,7 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
+        $this->resetTenantRuntimeState();
         $this->reapplyWorkerDatabaseConnection();
 
         $className = static::class;
