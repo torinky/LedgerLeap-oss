@@ -217,7 +217,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
         $this->reloadLedgerRecordWithoutTenancy();
         $this->initializeTenantContextFromLedger();
-        $currentTenantId = $this->resolveTenantId($this->ledgerRecord?->tenant_id);
+        $currentTenantId = $this->tenantId;
         if (! is_string($currentTenantId) && ! is_int($currentTenantId)) {
             Log::warning('Ledger history rendering skipped because tenant_id is missing', [
                 'ledger_id' => $this->ledgerRecord?->id,
@@ -345,7 +345,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $ledgerTenantId = $this->ledgerRecord->tenant_id;
         $this->tenantId = (is_string($ledgerTenantId) || is_int($ledgerTenantId))
             ? $ledgerTenantId
-            : $this->resolveTenantId();
+            : null;
 
         if (! $this->tenantId) {
             return;
