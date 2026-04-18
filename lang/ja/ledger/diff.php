@@ -1,0 +1,32 @@
+<?php
+
+return [
+    'diff' => [
+        'added' => '追加',
+        'base' => '基準',
+        'compare_to' => '比較先',
+        'comparing' => '比較中',
+        'comparison_target' => '比較対象バージョン',
+        'current_version' => '最新',
+        'deleted' => '削除済み',
+        'identical_content' => '同じ内容',
+        'identical_content_hint' => '比較対象と内容は完全に一致しています。',
+        'contains_required_items' => '必須項目を含んでいます',
+        'items_changed' => ':count項目の変更',
+        'modified' => '変更',
+        'new_value' => '変更後',
+        'no_changes' => '変更はありません',
+        'not_exist' => 'なし',
+        'nudge_view_changes' => '直前の内容と比較する',
+        'nudge_view_history' => 'すべての履歴・他のバージョンと比較',
+        'old_value' => '変更前',
+        'omitted_items' => ':count項目の非表示項目があります',
+        'past_version' => '過去',
+        'previous_value' => '以前の値',
+        'same_as_current' => '変更なし',
+        'select_version_hint' => '左のリストから比較したいバージョンを選択してください。',
+        'selection_added' => 'バージョン :version を選択しました',
+        'selection_removed' => 'バージョン :version の選択を解除しました',
+        'version_label' => 'バージョン :version、:date、:user',
+    ]
+];

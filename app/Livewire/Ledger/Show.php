@@ -56,6 +56,9 @@ class Show extends BaseLivewireComponent
 
     public ?LedgerDiff $comparisonTargetDiffModel = null;
 
+    /** @var array<int, \App\Models\Folder> */
+    public array $breadcrumbs = [];
+
     public function isComparingWithPrevious(): bool
     {
         if (! $this->showChanges || ! $this->targetDiffId) {
@@ -128,6 +131,16 @@ class Show extends BaseLivewireComponent
             $this->relatedCount = count($merged);
         } catch (\Throwable $e) {
             // 件数計算の失敗はサイレントに無視（タブバッジが空のまま → タブを開いたときに更新）
+        }
+
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $this->breadcrumbs = [];
+        if ($this->ledgerRecord->define && $this->ledgerRecord->define->folder_id) {
+            $folder = \App\Models\Folder::with('ancestors')->find($this->ledgerRecord->define->folder_id);
+            if ($folder) {
+                $this->breadcrumbs = $folder->ancestors->all();
+                $this->breadcrumbs[] = $folder;
+            }
         }
 
         if (empty($this->loadedTabs)) {

@@ -130,6 +130,7 @@ return [
     'folder_permission_readable' => '閲覧可能',
     'folders' => 'フォルダー',
     'folders_to_attach_under' => '配下に紐付けるフォルダー',
+    'guideline' => 'ガイドライン',
     'go_home' => '設定を終了',
     'go_to' => 'この台帳のリスト表示へ移動',
     'go_to_folder_button' => 'フォルダへ移動',

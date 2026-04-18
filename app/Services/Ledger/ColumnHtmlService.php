@@ -41,9 +41,9 @@ class ColumnHtmlService
 
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
 
-    public const BADGE_CLASS_NAME = 'badge py-4 mx-1 my-1';
+    public const BADGE_CLASS_NAME = 'badge badge-outline badge-secondary badge-sm gap-1';
 
-    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline py-4 mx-1 my-1';
+    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline badge-primary badge-sm gap-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
@@ -143,8 +143,9 @@ class ColumnHtmlService
 
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
-            $html = $this->initialValue.' '.$unit;
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record, $highlight);
+            $value = $this->initialValue;
+            $html = '<span>' . e($value) . '</span>' . ($unit ? '<span class="opacity-50 ml-1">' . e($unit) . '</span>' : '');
+            $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record, $highlight);
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
             $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record, $highlight);
@@ -209,7 +210,7 @@ class ColumnHtmlService
             }
 
             return ! empty($displayLabels)
-                ? '<span class="'.self::BADGE_CLASS_NAME.'">'.implode('</span><span class="'.self::BADGE_CLASS_NAME.'">', array_map('e', $displayLabels)).'</span>'
+                ? '<div class="flex flex-wrap gap-1">' . implode('', array_map(fn($label) => '<span class="'.self::BADGE_CLASS_NAME.'">'.e($label).'</span>', $displayLabels)) . '</div>'
                 : '';
         }
 
