@@ -196,19 +196,20 @@ if ($store.ledgerState) {
                                     <tr class="bg-base-200/5">
                                         <td colspan="{{ $showChanges ? 3 : 2 }}" class="py-2 px-4">
                                             <div
-                                                <x-mary-icon name="o-ellipsis-horizontal" class="icon-sm opacity-50" />
+                                                class="flex items-center justify-center gap-3 py-1.5 bg-base-200/20 rounded-lg text-base-content/40 text-[10px] uppercase tracking-widest font-bold border border-dashed border-base-300/50">
+                                                <x-mary-icon name="o-ellipsis-horizontal" class="w-4 h-4 opacity-50" />
                                                 <span>{{ __('ledger.diff.omitted_items', ['count' => $column['omitted_count']]) }}</span>
                                             </div>
                                         </td>
                                     </tr>
                                 @else
-                                    <tr class="hover:bg-secondary/20 transition-colors {{ $showChanges && $column['status'] !== 'unchanged' ? 'bg-warning/5' : '' }}"
+                                    <tr class="hover:bg-base-200/20 transition-colors {{ $showChanges && $column['status'] !== 'unchanged' ? 'bg-warning/5' : '' }}"
                                         wire:key="col-{{ $column['id'] }}-{{ $currentVersion }}-{{ $pastVersion }}">
                                         <td class="align-top py-4 px-4 bg-base-200/50 border-r border-base-300">
                                             <div class="flex flex-col gap-1.5">
                                                 <div class="flex items-start gap-2">
                                                     @if ($column['is_required'])
-                                                        <x-mary-icon name="o-check-badge" class=" text-error shrink-0" />
+                                                        <x-mary-icon name="o-check-badge" class="w-3 h-3 text-error" />
                                                     @endif
                                                     <span
                                                         class="text-sm font-bold text-base-content/90 leading-snug break-words">{{ $column['name'] }}</span>
@@ -217,7 +218,7 @@ if ($store.ledgerState) {
                                                     <span
                                                         class="text-xs text-base-content/50 leading-normal break-words">{{ $column['hint'] }}</span>
                                                 @endif
- 
+
                                                 @if ($showChanges && $column['status'] !== 'unchanged')
                                                     <div class="mt-1">
                                                         @if ($column['status'] === 'added')
@@ -267,9 +268,9 @@ if ($store.ledgerState) {
                                                 @endif
                                             @elseif ($column['status'] === 'unchanged')
                                                 {{-- カラム単位で変更がない場合のプレースホルダー --}}
-                                                <td class="align-middle py-4 px-4 bg-base-200/10 text-center">
-                                                    <div class="flex items-center justify-center gap-2 text-base-content/40 text-xs font-medium transition-opacity hover:opacity-100 italic">
-                                                        <x-mary-icon name="o-check" class="" />
+                                                <td class="align-middle py-3 px-4 bg-base-200/10 text-center">
+                                                    <div class="flex items-center justify-center gap-2 text-base-content/40 text-xs">
+                                                        <x-mary-icon name="o-check-circle" class="w-4 h-4" />
                                                         <span>{{ __('ledger.diff.same_as_current') }}</span>
                                                     </div>
                                                 </td>
