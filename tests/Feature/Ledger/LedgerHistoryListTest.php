@@ -5,6 +5,7 @@ namespace Tests\Feature\Ledger;
 use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -105,6 +106,56 @@ class LedgerHistoryListTest extends TestCase
         tenancy()->end();
 
         // tenant コンテキストが空でも、ledger の tenant_id から復元できることを確認する
+        Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
+            ->assertViewHas('history', function ($history) use ($firstDiff, $secondDiff) {
+                return $history->count() === 2
+                    && $history->contains('id', $firstDiff->id)
+                    && $history->contains('id', $secondDiff->id);
+            });
+    }
+
+    public function test_component_recovers_when_wrong_tenant_is_still_initialized(): void
+    {
+        $this->actingAs(User::factory()->create());
+        tenancy()->initialize($this->getTenant());
+
+        $ledger = Ledger::factory()->create([
+            'version' => 2,
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'tenant_id' => $this->getTenant()->id,
+        ]);
+
+        $firstDiff = LedgerDiff::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
+            'content' => [],
+            'column_define' => [],
+            'version' => 1,
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'creator_id' => $ledger->creator_id,
+            'modifier_id' => $ledger->modifier_id,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+        ]);
+
+        $secondDiff = LedgerDiff::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
+            'content' => [],
+            'column_define' => [],
+            'version' => 2,
+            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'creator_id' => $ledger->creator_id,
+            'modifier_id' => $ledger->modifier_id,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+        ]);
+
+        $foreignTenant = Tenant::factory()->create(['id' => 'tenant_history_foreign']);
+        tenancy()->initialize($foreignTenant);
+
         Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
             ->assertViewHas('history', function ($history) use ($firstDiff, $secondDiff) {
                 return $history->count() === 2

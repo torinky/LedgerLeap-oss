@@ -63,7 +63,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $this->historyDisplayLevel = $displayLevel;
         $this->highlight = $highlight ?? '';
 
-        $this->ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
+        $this->reloadLedgerRecordWithoutTenancy();
         $this->initializeTenantContextFromLedger();
 
         // ロールバック権限の事前チェック (WRITE権限があればUIを表示)
@@ -215,6 +215,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
     {
         $startTime = microtime(true);
 
+        $this->reloadLedgerRecordWithoutTenancy();
         $this->initializeTenantContextFromLedger();
         $currentTenantId = $this->resolveTenantId($this->ledgerRecord?->tenant_id);
         if (! is_string($currentTenantId) && ! is_int($currentTenantId)) {
@@ -342,13 +343,28 @@ class LedgerHistoryManager extends BaseLivewireComponent
         // Livewire の初回/再描画や CI の実行順によって tenancy が外れていても、
         // 台帳自身の tenant_id を根拠に復元する。
         $this->tenantId = $this->resolveTenantId($this->ledgerRecord->tenant_id);
+
+        if (! $this->tenantId) {
+            return;
+        }
+
         $tenancy = app(Tenancy::class);
-        if ($this->tenantId && (! $tenancy->initialized || tenant('id') !== $this->tenantId)) {
+
+        try {
+            // tenant id が同一でも、接続ドリフトが起きたケースを吸収するため毎回再初期化する
+            $tenancy->initialize($this->tenantId);
+        } catch (\Throwable) {
+            // 互換性のため、ID 初期化が失敗した場合はモデル解決にフォールバックする
             $tenant = Tenant::find($this->tenantId);
             if ($tenant) {
                 $tenancy->initialize($tenant);
             }
         }
+    }
+
+    protected function reloadLedgerRecordWithoutTenancy(): void
+    {
+        $this->ledgerRecord = Ledger::withoutTenancy()->findOrFail($this->ledgerId);
     }
 
     protected function ledgerDiffQuery(string|int $tenantId): Builder
