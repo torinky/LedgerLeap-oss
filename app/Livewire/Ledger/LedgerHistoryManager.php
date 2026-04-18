@@ -354,6 +354,14 @@ class LedgerHistoryManager extends BaseLivewireComponent
         }
 
         $tenancy = app(Tenancy::class);
+
+        // 既に正しいテナントで初期化済みの場合は何もしない。
+        // Tenancy::initialize() は同一テナントへの再初期化を内部でスキップするが、
+        // render() ごとに end() を呼ぶ副作用を避けるため、ここでも明示的に早期リターンする。
+        if ($tenancy->initialized && $tenancy->tenant?->getTenantKey() === $this->tenantId) {
+            return;
+        }
+
         $tenant = Tenant::find($this->tenantId);
 
         if (! $tenant) {
@@ -366,12 +374,9 @@ class LedgerHistoryManager extends BaseLivewireComponent
         }
 
         try {
-            // 同一 tenant_id でも Livewire/CI では古い接続状態が残ることがあるため、
-            // 毎回 tenancy を明示的に終了してからモデル解決済み Tenant で再初期化する。
-            if ($tenancy->initialized) {
-                $tenancy->end();
-            }
-
+            // Tenancy::initialize() は異なるテナントが active な場合に内部で end() を呼ぶ。
+            // 手動で end() を呼ぶと CI のシリアル実行順で余分な状態変化を引き起こすため、
+            // ライブラリの組み込みロジックに委ねる。
             $tenancy->initialize($tenant);
             $this->reloadLedgerRecordWithoutTenancy();
         } catch (\Throwable $exception) {
