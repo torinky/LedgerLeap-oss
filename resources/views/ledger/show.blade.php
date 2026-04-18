@@ -7,18 +7,26 @@
     @endpush
     <div class="container max-w-full px-0 md:px-4 mt-4">
         {{-- ヘッダー集約カード --}}
-        <x-mary-card shadow class="bg-base-100 border border-base-300 mb-6">
+        <x-mary-card shadow class="bg-primary/30 border border-base-300 mb-6">
             <x-slot:title>
-                <div class="flex items-center gap-3 w-full">
-                    <div class="flex-shrink-0">
-                        <i class="fas fa-list text-info/80 text-xl"></i>
-                    </div>
-                    <div class="flex flex-col min-w-0">
-                        <div class="text-xs text-base-content/50 font-bold tracking-wider mb-1 uppercase">{{ __('ledger.details') }}</div>
-                        <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
-                            <i class="fas fa-book-open text-base-content/40 text-lg"></i>
-                            <span class="truncate">{{ $ledgerDefineRecord->title }}</span>
-                        </h2>
+                <div class="flex flex-col w-full">
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-list text-info/80 text-xl"></i>
+                        </div>
+                        <div class="flex flex-col min-w-0">
+                            <div class="text-sm font-normal text-base-content/70 w-full mb-2">
+                                <x-ledger.livewire-breadcrumbs 
+                                    :thisLedgerDefine="$ledgerDefineRecord" 
+                                    :breadcrumbs="$breadcrumbs" 
+                                    :isLivewire="false" />
+                            </div>
+                            {{-- <div class="text-xs text-base-content/50 font-bold tracking-wider mb-1 uppercase">{{ __('ledger.details') }}</div> --}}
+                            <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
+                                <i class="fas fa-book-open text-base-content/40 text-lg"></i>
+                                <span class="truncate">{{ $ledgerDefineRecord->title }}</span>
+                            </h2>
+                        </div>
                     </div>
                 </div>
             </x-slot:title>
@@ -43,10 +51,7 @@
                                     );
                                 @endphp
                                 <div class="prose text-sm leading-relaxed max-w-none">
-                                    <x-expandable-content 
-                                        :content="$detailDescriptionHtml"
-                                        max-height="6rem"
-                                    />
+                                    {!! $detailDescriptionHtml !!}
                                 </div>
                             </div>
                         </div>
