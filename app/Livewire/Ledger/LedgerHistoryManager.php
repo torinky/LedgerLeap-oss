@@ -351,10 +351,16 @@ class LedgerHistoryManager extends BaseLivewireComponent
         $tenancy = app(Tenancy::class);
 
         try {
-            // tenant id が同一でも、接続ドリフトが起きたケースを吸収するため毎回再初期化する
+            // tenant id が同一でも、テスト実行中に接続設定が再読込されるケースに備えて毎回再初期化する
             $tenancy->initialize($this->tenantId);
-        } catch (\Throwable) {
-            // 互換性のため、ID 初期化が失敗した場合はモデル解決にフォールバックする
+        } catch (\Throwable $exception) {
+            Log::warning('Ledger history tenant re-initialization by id failed. Fallback to tenant model resolution.', [
+                'ledger_id' => $this->ledgerId,
+                'tenant_id' => $this->tenantId,
+                'error' => $exception->getMessage(),
+            ]);
+
+            // stancl/tenancy の実装差異で ID 指定初期化が失敗する環境向けにモデル解決で再試行する
             $tenant = Tenant::find($this->tenantId);
             if ($tenant) {
                 $tenancy->initialize($tenant);

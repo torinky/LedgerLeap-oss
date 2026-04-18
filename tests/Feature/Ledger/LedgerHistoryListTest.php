@@ -153,7 +153,8 @@ class LedgerHistoryListTest extends TestCase
             'completed_approver_role_ids' => [],
         ]);
 
-        $foreignTenant = Tenant::factory()->create(['id' => 'tenant_history_foreign']);
+        $foreignTenantId = 'tenant_history_foreign_'.uniqid();
+        $foreignTenant = Tenant::factory()->create(['id' => $foreignTenantId]);
         tenancy()->initialize($foreignTenant);
 
         Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
