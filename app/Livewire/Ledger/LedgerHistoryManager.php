@@ -374,7 +374,7 @@ class LedgerHistoryManager extends BaseLivewireComponent
 
             $tenancy->initialize($tenant);
         } catch (\Throwable $exception) {
-            Log::warning('Ledger history tenant re-initialization failed. Falling back to tenant id re-initialization.', [
+            Log::warning('Ledger history tenant re-initialization via resolved tenant model failed. Falling back to tenant id re-initialization.', [
                 'ledger_id' => $this->ledgerId,
                 'tenant_id' => $this->tenantId,
                 'error' => $exception->getMessage(),
