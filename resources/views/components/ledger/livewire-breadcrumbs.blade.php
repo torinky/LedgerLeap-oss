@@ -19,12 +19,12 @@
                                 <a href="#" wire:click.prevent="changeCurrentFolder({{$folder->id}})"
                                    wire:key="bread_folder_{{$folder->id}}"
                                    class="inline-flex items-center gap-1">
-                                    <i class="fas fa-home"></i>Top
+                                    <i class="fas fa-home"></i>{{ __('ledger.breadcrumb_top') }}
                                 </a>
                             @else
                                 <a href="{{ route('ledger.index', ['tenant' => tenant()->id, 'cf' => $folder->id]) }}"
                                    class="inline-flex items-center gap-1 hover:opacity-75">
-                                    <i class="fas fa-home"></i>Top
+                                    <i class="fas fa-home"></i>{{ __('ledger.breadcrumb_top') }}
                                 </a>
                             @endif
                         </li>

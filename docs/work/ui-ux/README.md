@@ -33,6 +33,8 @@
 
 - **[台帳詳細 基本情報タブ リファイン計画](./2026-04-18_ledger-detail-basic-info-tab-refinement-plan.md)** ✅ Sprint 2 完了: `show.blade.php` の重複構造を整理し、`ledger-diff-viewer` と `workflow-status-card` の可読性を改善。`workflow-action-buttons` の current version 表示も維持し、関連 Feature テストを通過確認済み。
 
+- **[Issue #161 / 文言・パンくず・補助コンポーネント整理](./2026-04-19_issue-161-breadcrumbs-supporting-components-plan.md)** 🚧 着手中: `Top` の翻訳キー化と補助コンポーネントの役割整理を進行中。`show.blade.php` の文言と `expandable-content` の用途を順に見直す。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
