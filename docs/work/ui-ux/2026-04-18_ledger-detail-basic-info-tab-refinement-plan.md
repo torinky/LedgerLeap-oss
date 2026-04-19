@@ -200,8 +200,9 @@
   - `show.blade.php` の details タブ本体構造を整理
   - `ledger-diff-viewer` の行ホバーを見やすい semantic color に戻す
   - 必須マーカー / 補助アイコンの固定サイズを見直す
-- Sprint 2 以降: 継続
-  - `workflow-status-card` の固定幅と密度の見直し
-  - `livewire-breadcrumbs` の文言整理
-  - 必要に応じた `expandable-content` の役割整理
+- Sprint 2: 完了
+  - `workflow-status-card` の固定幅を外し、主情報の文字とアイコンを読みやすく調整
+  - `ledger-diff-viewer` の比較バナー、見出し、補助表示のサイズを再調整
+  - `show.blade.php` のヘッダー帯と補助アイコンを拡張し、`workflow-action-buttons` の current version 表示を維持
+  - 関連 Feature テストを実行し、`WorkflowStatusCardTest` / `LedgerDiffViewerTest` / `ShowTest` がすべて通過
 

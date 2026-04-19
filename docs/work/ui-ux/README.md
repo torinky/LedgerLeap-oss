@@ -31,7 +31,7 @@
 
 - **[文字・アイコンサイズのレスポンシブ基準メモ](./2026-04-18_text-icon-size-responsiveness-note.md)** ✅ 完了・skill 化: PC で見にくい固定の小文字・小アイコンを避け、読める既定値やレスポンシブなサイズ段階へ寄せる方針を追加。
 
-- **[台帳詳細 基本情報タブ リファイン計画](./2026-04-18_ledger-detail-basic-info-tab-refinement-plan.md)** 🚧 Sprint 1 完了・継続中: `show.blade.php` の重複構造を整理し、`ledger-diff-viewer` の行ホバーと補助アイコンのサイズ基準を反映。`workflow-status-card` / `livewire-breadcrumbs` は次スプリント以降で継続確認。
+- **[台帳詳細 基本情報タブ リファイン計画](./2026-04-18_ledger-detail-basic-info-tab-refinement-plan.md)** ✅ Sprint 2 完了: `show.blade.php` の重複構造を整理し、`ledger-diff-viewer` と `workflow-status-card` の可読性を改善。`workflow-action-buttons` の current version 表示も維持し、関連 Feature テストを通過確認済み。
 
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離

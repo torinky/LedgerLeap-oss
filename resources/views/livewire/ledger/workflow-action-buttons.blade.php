@@ -99,18 +99,25 @@
 
         {{-- 閉じるボタンとリストに戻るボタン --}}
         <div class="flex gap-2 items-center justify-center">
+            @php
+                $ledgerListUrl = route('ledgersByDefineId', ['tenant' => tenant('id'), 'defineId' => $ledgerRecord->define->id]);
+            @endphp
             <x-mary-button
                     label="{{ __('ledger.back_to_list') }}"
                     icon="o-list-bullet"
                     class="btn-sm btn-outline"
-                    onclick="window.open('{{ route('ledgersByDefineId', ['tenant' => tenant('id'), 'defineId' => $ledgerRecord->define->id ])}}', 'ledger-list');"
+                    onclick="window.open('{{ $ledgerListUrl }}', 'ledger-list');"
             />
             <x-ledger.close-window-button/>
         </div>
 
     </div>
     {{-- 現在のステータス表示 --}}
-    <div class="text-center text-xs text-base-content/70 mt-2">
+    <div class="mt-2 flex flex-col items-center gap-1 text-center text-sm md:text-base text-base-content/70">
+        <div class="flex items-center gap-2 flex-wrap justify-center">
+            <span>{{ __('ledger.diff.current_version') }}:</span>
+            <x-mary-badge :value="'Ver.' . $ledgerRecord->version" class="badge-primary badge-sm font-bold" />
+        </div>
         {{ __('ledger.workflow.current_status') }} :
         <x-mary-badge :value="$ledgerRecord->status->label()"
                       class="badge-xs {{ $ledgerRecord->status->colorClass() }}"/>

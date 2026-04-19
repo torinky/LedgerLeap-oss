@@ -60,12 +60,12 @@
                         return false;
                     }
                     const ledgerStates = this.states[this.currentLedgerId];
-                    
+
                     // 1. 個別設定があれば最優先
                     if (ledgerStates[groupName] !== undefined) {
                         return ledgerStates[groupName];
                     }
-                    
+
                     // 2. グローバル設定があればそれに従う
                     if (ledgerStates['__global__'] !== undefined) {
                         return ledgerStates['__global__'];
@@ -91,13 +91,13 @@
                 expandAll(isExpand) {
                     if (!this.currentLedgerId) return;
                     console.log('[LedgerState] expandAll():', isExpand);
-                    
+
                     // 個別のステータスをすべてクリアし、グローバル設定のみをセットする
                     // これにより、すべての（未ロードのもの含む）グループがこのフラグを初期値として参照するようになる
                     this.states[this.currentLedgerId] = {
                         '__global__': !isExpand
                     };
-                    
+
                     localStorage.setItem('ledger_collapsed_states', JSON.stringify(this.states));
                 }
             });
@@ -179,23 +179,23 @@
                                 </div>
 
                                 {{-- Metadata Area: Breadcrumb line integration --}}
-                                <div class="flex flex-wrap items-center gap-3 text-xs md:text-sm shrink-0 bg-base-200/60 p-1.5 rounded-lg border border-base-300">
+                                <div class="flex flex-wrap items-center gap-3 text-sm md:text-base shrink-0 bg-base-200/60 p-1.5 rounded-lg border border-base-300">
                                     <div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
-                                        <span class="text-primary font-bold uppercase tracking-tighter text-sm">{{ __('ledger.version') }}</span>
-                                        <span class="font-bold text-primary">{{ $ledgerRecord->version }}</span>
+                                        <span class="text-primary font-bold uppercase tracking-tighter text-sm md:text-base">{{ __('ledger.version') }}</span>
+                                        <span class="font-bold text-primary text-base md:text-lg">{{ $ledgerRecord->version }}</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 text-base-content/30">
-                                        <x-mary-icon name="o-user" class=" text-base-content/40" />
+                                        <x-mary-icon name="o-user" class="size-5 text-base-content/40" />
                                         <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
                                     </div>
                                     <div class="flex items-center gap-1.5 text-base-content/40 border-l border-base-300 pl-3">
-                                        <x-mary-icon name="o-calendar" class="" />
-                                        <span>{{ $ledgerRecord->updated_at->format('Y-m-d H:i') }}</span>
+                                        <x-mary-icon name="o-calendar" class="size-5" />
+                                        <span class="text-sm md:text-base">{{ $ledgerRecord->updated_at->format('Y-m-d H:i') }}</span>
                                     </div>
                                 </div>
                             </div>
-                            <h2 class="text-lg md:text-xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
-                                <i class="fas fa-book-open text-base-content/30 text-lg md:hidden"></i>
+                            <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
+                                <i class="fas fa-book-open text-base-content/30 text-xl md:hidden"></i>
                                 <span class="truncate">{{ $ledgerDefineRecord->title }}</span>
                             </h2>
                         </div>
@@ -207,12 +207,12 @@
                 <div class="mt-4 text-base-content" x-data="{ expanded: false }">
                     <div class="bg-base-200/70 rounded-lg p-3 border border-base-300 transition-colors hover:bg-base-200/90">
                         <div class="flex justify-between items-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity" @click="expanded = !expanded">
-                            <div class="font-bold text-sm flex items-center gap-2">
-                                <x-mary-icon name="o-information-circle" class=" text-info" />
+                            <div class="font-bold text-base md:text-lg flex items-center gap-2">
+                                <x-mary-icon name="o-information-circle" class="size-5 text-info" />
                                 {{ __('ledger.description') }} / {{ __('ledger.guideline') }}
                             </div>
                             <span class="inline-flex transition-transform duration-300" :class="expanded ? 'rotate-180' : ''">
-                                <x-mary-icon name="o-chevron-down" class="" />
+                                <x-mary-icon name="o-chevron-down" class="size-5" />
                             </span>
                         </div>
                         <div x-show="expanded" x-collapse>
@@ -224,7 +224,7 @@
                                         $ledgerDefineRecord
                                     );
                                 @endphp
-                                <div class="prose prose-sm text-sm leading-relaxed max-w-none prose-p:my-2 prose-headings:mb-2 prose-headings:mt-4">
+                                <div class="prose prose-sm md:prose-base text-sm md:text-base leading-relaxed max-w-none prose-p:my-2 prose-headings:mb-2 prose-headings:mt-4">
                                     {!! $detailDescriptionHtml !!}
                                 </div>
                             </div>
@@ -326,7 +326,7 @@
                                         x-model="active"
                                         tight
                                         label="{{ __('ledger.column.expand_all') }}"
-                                        class="toggle-xs toggle-primary text-sm font-black text-base-content/40 uppercase tracking-widest"
+                                        class="toggle-sm toggle-primary text-sm md:text-base font-black text-base-content/40 uppercase tracking-widest"
                                     />
                                 </div>
                                 <div class="flex items-center gap-1 ml-1">
@@ -335,16 +335,16 @@
                                         option-label="name" wire:key="details-display-level-group" />
                                     <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.display_level') }}">
                                         <x-mary-icon name="o-question-mark-circle"
-                                            class="text-base-content/40 cursor-help" />
+                                            class="size-5 text-base-content/40 cursor-help" />
                                     </div>
                                 </div>
                             </div>
                             <div class="flex items-center gap-1 border-l border-base-300 pl-3">
                                 <x-mary-toggle wire:model.live="showChanges" label="{{ __('ledger.show_diff') }}" tight
-                                    class="text-xs" />
+                                    class="text-sm md:text-base" />
                                 <div class="tooltip" data-tip="{{ __('ledger.workflow.guide.details_compare') }}">
                                     <x-mary-icon name="o-question-mark-circle"
-                                        class="text-base-content/40 cursor-help" />
+                                        class="size-5 text-base-content/40 cursor-help" />
                                 </div>
                             </div>
                         </x-slot:menu>
