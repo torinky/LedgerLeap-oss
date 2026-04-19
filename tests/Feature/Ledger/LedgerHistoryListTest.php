@@ -8,6 +8,7 @@ use App\Models\LedgerDiff;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
+use Stancl\Tenancy\Tenancy;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -103,7 +104,13 @@ class LedgerHistoryListTest extends TestCase
             'updated_at' => now(),
         ]);
 
-        tenancy()->end();
+        // tenancy()->end() はTenancyEndedイベントを発火し、CacheTenancyBootstrapper等のrevert()を
+        // トリガーする。これによりCIでは後続のLivewire::test()のDB接続・キャッシュ状態に副作用が
+        // 生じてテストが不安定になる。直接プロパティをリセットすることで、ブートストラッパーの
+        // 副作用を回避しつつ「テナントコンテキストなし」状態を再現する。
+        $tenancy = app(Tenancy::class);
+        $tenancy->initialized = false;
+        $tenancy->tenant = null;
 
         // tenant コンテキストが空でも、ledger の tenant_id から復元できることを確認する
         Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
