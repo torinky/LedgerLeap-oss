@@ -41,9 +41,9 @@ class ColumnHtmlService
 
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
 
-    public const BADGE_CLASS_NAME = 'badge badge-outline badge-secondary badge-sm gap-1';
+    public const BADGE_CLASS_NAME = 'badge badge-outline badge-secondary text-base md:text-lg md:badge-lg gap-1';
 
-    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline badge-primary badge-sm gap-1';
+    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline badge-primary text-base md:text-lg md:badge-lg gap-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
