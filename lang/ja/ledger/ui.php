@@ -48,6 +48,7 @@ return [
     'back_to_list' => 'リストに戻る',
     'basic_information' => '基本情報',
     'breadcrumb_top' => 'トップ',
+    'modified_by' => '最終変更者',
     'basic_operations_info' => 'その他、フォルダの権限に応じて台帳の閲覧などの基本的な操作が可能です。',
     'basic_operations_permission' => '台帳の閲覧などの基本的な操作が可能です。',
     'before_change' => '変更前',

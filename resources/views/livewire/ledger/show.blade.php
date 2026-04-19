@@ -185,10 +185,12 @@
                                         <span class="font-bold text-primary text-base md:text-lg">{{ $ledgerRecord->version }}</span>
                                     </div>
                                     <div class="flex items-center gap-1.5 text-base-content/30">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.modified_by') }}:</span>
                                         <x-mary-icon name="o-user" class="size-5 text-base-content/40" />
                                         <x-ledger.user-card-popover :user="$ledgerRecord->modifier" />
                                     </div>
                                     <div class="flex items-center gap-1.5 text-base-content/40 border-l border-base-300 pl-3">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.updated_at') }}:</span>
                                         <x-mary-icon name="o-calendar" class="size-5" />
                                         <span class="text-sm md:text-base">{{ $ledgerRecord->updated_at->format('Y-m-d H:i') }}</span>
                                     </div>

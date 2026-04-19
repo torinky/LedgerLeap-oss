@@ -1059,6 +1059,7 @@
     "ledger.messages.error.no_tenant_context": "テナントコンテキストが設定されていません。",
     "ledger.messages.error.parent_folder_not_found": "親フォルダが見つかりませんでした。",
     "ledger.messages.error.save_failed": "保存に失敗しました",
+    "ledger.modified_by": "最終変更者",
     "ledger.modifier.name": "最終変更者",
     "ledger.modifies": "変更履歴を確認",
     "ledger.modify_message": "変更する",
