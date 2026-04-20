@@ -33,27 +33,21 @@
     {{-- 左側: 承認履歴テーブル (4/12 or 5/12) --}}
     <!-- スクリーンリーダー用の選択状態通知 -->
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" x-text="selectionAnnouncement"></div>
-    <div
-        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] min-h-[400px] overflow-y-auto card bg-base-100 border border-base-300 shadow-sm custom-scrollbar sticky top-4">
-        <div class="card-body p-0">
-            <div
-                    class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
-                <div class="flex items-center gap-3 whitespace-nowrap">
-                    <h2 class="font-bold flex items-center gap-2">
-                        <x-mary-icon name="o-clock" class="" />
-                        {{ __('ledger.version') }}
-                    </h2>
-                    <span class="badge badge-neutral ">{{ count($history) }}</span>
-                </div>
+    <x-mary-card
+        shadow
+        title="{{ __('ledger.history_list') }}"
+        icon="o-clock"
+        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] min-h-[400px] overflow-y-auto bg-base-100 border border-base-300 shadow-sm custom-scrollbar sticky top-4"
+        body-class="p-0"
+    >
+        <x-slot:menu>
+            <span class="badge badge-neutral badge-sm">{{ count($history) }}</span>
+        </x-slot:menu>
 
-            </div>
+        <div class="relative">
+            <x-element.loading-overlay tier="2" target="toggleSelection,historyDisplayLevel" :delay="false" />
 
-            <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}">
-            <div wire:loading wire:target="toggleSelection,historyDisplayLevel" class="w-full">
-                <x-element.skeleton-input-form rows="3" />
-            </div>
-
-            <div wire:loading.remove wire:target="toggleSelection,historyDisplayLevel">
+            <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}" wire:loading.class="opacity-50 pointer-events-none" wire:target="toggleSelection,historyDisplayLevel">
                 @forelse($history as $index => $diff)
                     @php
                         $isBase = $baseDiffId === $diff->id;
@@ -62,11 +56,11 @@
                     @endphp
                     <div class="p-4 cursor-pointer transition-all duration-200 relative rounded-none border-l-4 {{ $isSelected ? 'bg-primary/5 border-l-primary shadow-sm' : 'hover:bg-base-200 border-l-transparent' }} focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         role="listitem" tabindex="0" aria-selected="{{ $isSelected ? 'true' : 'false' }}"
-                        aria-label="{{ __('ledger.diff.version_label', ['version' => $diff->version, 'date' => $diff->created_at->format('Y-m-d H:i'), 'user' => $diff->modifier?->name ?? '不明']) }}{{ $isSelected ? '、選択済み' : '' }}"
+                        aria-label="{{ __('ledger.diff.version_label', ['version' => $diff->version, 'date' => $diff->created_at->format('Y-m-d H:i'), 'user' => $diff->modifier?->name ?? __('ledger.unknown_user')]) }}{{ $isSelected ? '、選択済み' : '' }}"
                         x-ref="history-row-{{ $index }}"
                         @click="$wire.toggleSelection({{ $diff->id }}).then(() => announceSelection({{ $isSelected ? 'false' : 'true' }}, {{ $diff->version }}))"
                         @keydown="handleKeyDown($event, {{ $diff->id }}, {{ $index }}, {{ $isSelected ? 'true' : 'false' }}, {{ $diff->version }})"
-                        wire:loading.class="opacity-50 pointer-events-none" wire:key="history-row-{{ $diff->id }}">
+                        wire:loading.class="opacity-50 pointer-events-none" wire:target="toggleSelection,historyDisplayLevel" wire:key="history-row-{{ $diff->id }}">
 
                         @if ($isBase)
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-primary"></div>
@@ -77,7 +71,7 @@
                         <div class="flex flex-col gap-3">
                             <div class="flex items-start justify-between gap-2">
                                 <span class="text-base md:text-lg font-bold flex items-center gap-1.5 flex-wrap leading-tight">
-                                    Ver.{{ $diff->version }}
+                                    {{ __('ledger.version') }}{{ $diff->version }}
                                     @if ($diff->version === $ledgerRecord->version)
                                         <span class="badge badge-primary badge-outline badge-xs tooltip tooltip-bottom"
                                             data-tip="{{ __('ledger.diff.current_version') }}"
@@ -198,7 +192,7 @@
                 {{-- 無限スクロールトリガー --}}
                 @if ($hasMore)
                     <div x-intersect.once="$wire.loadMore()" class="p-8 flex justify-center">
-                        <span wire:loading class="loading loading-spinner loading-md text-primary"></span>
+                        <span wire:loading wire:target="loadMore" class="loading loading-spinner loading-md text-primary"></span>
                     </div>
                 @else
                     <div class="p-8 text-center text-sm md:text-base text-base-content/30 italic">
@@ -207,15 +201,17 @@
                 @endif
             </div>
         </div>
-    </div>
-    </div>
+    </x-mary-card>
 
     {{-- 右側: 差分ビューア (8/12 or 7/12) --}}
-    <div class="lg:col-span-8 xl:col-span-9 relative min-h-[400px]">
-        <div
-                class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
-
-            <div></div>
+    <x-mary-card
+        shadow
+        title="{{ __('ledger.workflow.history_detail') }}"
+        icon="o-document-text"
+        class="lg:col-span-8 xl:col-span-9 relative min-h-[400px] bg-base-100 border border-base-300 shadow-sm"
+        body-class="py-4 px-0 space-y-4"
+    >
+        <x-slot:menu>
             @php
                 $displayLevelOptions = [
                     ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
@@ -226,72 +222,34 @@
             <div class="flex flex-wrap items-center gap-2">
                 <div class="flex items-center gap-2 rounded-full border border-base-300/70 bg-base-100/70 px-3 py-1.5">
                     <x-mary-group wire:model.live="historyDisplayLevel" :options="$displayLevelOptions"
-                                  class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
-                                  option-label="name" wire:key="history-display-level-group" />
+                        class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
+                        option-label="name" wire:key="history-display-level-group" />
                 </div>
 
                 <div
-                        class="flex items-center gap-2 rounded-full border border-base-300/70 bg-base-100/70 px-3 py-1.5"
-                        x-data="{
-                            active: false,
-                            check() {
-                                const id = $store.ledgerState.currentLedgerId;
-                                this.active = !($store.ledgerState.states[id]?.['__global__'] ?? true);
-                            }
-                        }"
-                        x-init="check(); const interval = setInterval(() => check(), 500); $el.addEventListener('destroy', () => clearInterval(interval));">
+                    class="flex items-center gap-2 rounded-full border border-base-300/70 bg-base-100/70 px-3 py-1.5"
+                    x-data="{
+                        active: false,
+                        check() {
+                            const id = $store.ledgerState.currentLedgerId;
+                            this.active = !($store.ledgerState.states[id]?.['__global__'] ?? true);
+                        }
+                    }"
+                    x-init="check(); const interval = setInterval(() => check(), 500); $el.addEventListener('destroy', () => clearInterval(interval));">
                     <x-mary-toggle @click="$store.ledgerState.expandAll(!active)" x-model="active" tight
-                                   label="{{ __('ledger.column.expand_all') }}"
-                                   class="toggle-sm toggle-primary text-sm md:text-base font-black text-base-content/40 uppercase tracking-widest" />
+                        label="{{ __('ledger.column.expand_all') }}"
+                        class="toggle-sm toggle-primary text-sm md:text-base font-black text-base-content/40 uppercase tracking-widest" />
                 </div>
             </div>
-        </div>
-        <div class="rounded-2xl border border-base-300 bg-base-100 shadow-sm p-4 lg:p-5 space-y-4">
-            <x-element.loading-overlay tier="2" message="{{ __('ledger.loading') }}" />
+        </x-slot:menu>
 
-        {{-- 計算中のスケルトン表示 --}}
-            <div wire:loading wire:target="toggleSelection,historyDisplayLevel" class="w-full space-y-6 animate-pulse">
-            <div class="card bg-base-100 border border-base-300 shadow-sm">
-                <div class="card-body p-6 space-y-8">
-                    {{-- ヘッダー部分のスケルトン --}}
-                    <div class="flex flex-wrap items-center justify-between gap-4 pb-6 border-b border-base-200">
-                        <div class="flex items-center gap-4">
-                            <div class="w-16 h-8 bg-base-300 rounded-lg"></div>
-                            <div class="w-32 h-6 bg-base-200 rounded"></div>
-                        </div>
-                        <div class="flex gap-2">
-                            <div class="w-24 h-8 bg-base-200 rounded-full"></div>
-                            <div class="w-24 h-8 bg-base-200 rounded-full"></div>
-                        </div>
-                    </div>
+        <div class="relative">
+            <x-element.loading-overlay tier="2" target="toggleSelection,historyDisplayLevel" :delay="false">
+                <x-element.skeleton-input-form rows="4" />
+            </x-element.loading-overlay>
 
-                    {{-- 比較情報のスケルトン --}}
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 bg-base-200/30 rounded-xl">
-                        <div class="space-y-2">
-                            <div class="w-20 h-4 bg-base-300 rounded"></div>
-                            <div class="w-full h-12 bg-base-100 rounded-lg border border-base-200"></div>
-                        </div>
-                        <div class="space-y-2">
-                            <div class="w-20 h-4 bg-base-300 rounded"></div>
-                            <div class="w-full h-12 bg-base-100 rounded-lg border border-base-200"></div>
-                        </div>
-                    </div>
-
-                    {{-- コンテンツ部分のスケルトン（複数項目） --}}
-                    <div class="space-y-6">
-                        @foreach (range(1, 4) as $i)
-                            <div class="space-y-3">
-                                <div class="w-32 h-5 bg-base-300 rounded"></div>
-                                <div class="w-full h-20 bg-base-200/50 rounded-xl"></div>
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        {{-- 通常コンテンツ（読み込み中は非表示） --}}
-            <div wire:loading.remove wire:target="toggleSelection,historyDisplayLevel">
+            {{-- 通常コンテンツ（読み込み中も DOM を維持） --}}
+            <div wire:loading.class="opacity-50 pointer-events-none" wire:target="toggleSelection,historyDisplayLevel" class="space-y-4">
             @if ($baseDiff)
                 <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
                     <div class="card-body p-0">
@@ -311,7 +269,7 @@
             @endif
             </div>
         </div>
-    </div>
+    </x-mary-card>
     <style>
         .custom-scrollbar::-webkit-scrollbar {
             width: 4px;

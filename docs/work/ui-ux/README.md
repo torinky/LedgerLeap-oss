@@ -35,6 +35,8 @@
 
 - **[Issue #161 / 文言・パンくず・補助コンポーネント整理](./2026-04-19_issue-161-breadcrumbs-supporting-components-plan.md)** ✅ 完了: `Top` の翻訳キー化、`show.blade.php` のメタ情報ラベル整理、`expandable-content` を共有ヘルパーとして維持する判断を反映済み。`ShowTest` も通過確認済み。
 
+- **[台帳更新履歴スプリットペイン振り返り](./2026-04-20_ledger-history-split-pane-retrospective.md)** ✅ 完了: Mary UI カード化、翻訳キー化、loading の段階表示の修正、design instructions への反映、そして途中で誤った点の記録をまとめた retrospective。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備

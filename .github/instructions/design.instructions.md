@@ -35,6 +35,8 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Start from the current pain point: layout density, scroll occlusion, action placement, copy clarity, or loading behavior.
 - Preserve behavior first, then tighten layout and component usage.
 - Document the before/after decision in `docs/work/ui-ux/*` when the change reveals a reusable pattern.
+- For split-pane list/detail surfaces, use Mary UI cards as the outer shell for each pane when the component exists, and place pane controls in the card title or menu slot instead of free-floating wrappers.
+- Keep pane labels, headings, and metadata in translation keys so the same surface does not mix semantic components with hardcoded copy.
 
 ### Reuse existing skills before inventing new guidance
 
@@ -78,6 +80,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Badges should express short state, count, or metadata.
 - Chips / tags are for selectable or dismissible labels.
 - Tooltips should carry overflow details, not essential primary text.
+- If a badge or state marker is icon-only, pair it with a tooltip and sr-only text so the meaning remains accessible.
 
 ## 8. Responsive and visual behavior
 
@@ -95,6 +98,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Keep rotation or animation on wrapper elements when a component needs transform-based motion.
 - Use `x-collapse` for expandable content when the visual transition matters.
 - Do not wrap a modern collapsible layer around an older “more” component that creates duplicate interaction paths.
+- Scope Livewire loading states with `wire:target` so cards and panes do not appear to reload for unrelated actions.
 
 ## 10. UI verification
 
