@@ -34,29 +34,21 @@
     <!-- スクリーンリーダー用の選択状態通知 -->
     <div class="sr-only" role="status" aria-live="polite" aria-atomic="true" x-text="selectionAnnouncement"></div>
     <div
-        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] min-h-[400px] overflow-y-auto border border-base-300 rounded-xl bg-base-100 shadow-sm custom-scrollbar sticky top-4">
-        <div
-            class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
-            <h3 class="font-bold flex items-center gap-2 whitespace-nowrap">
-                <x-mary-icon name="o-clock" class="w-5 h-5" />
-                {{ __('ledger.history_list') }}
-            </h3>
+        class="lg:col-span-4 xl:col-span-3 h-[calc(100vh-250px)] min-h-[400px] overflow-y-auto card bg-base-100 border border-base-300 shadow-sm custom-scrollbar sticky top-4">
+        <div class="card-body p-0">
+            <div
+                    class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
+                <div class="flex items-center gap-3 whitespace-nowrap">
+                    <h2 class="font-bold flex items-center gap-2">
+                        <x-mary-icon name="o-clock" class="" />
+                        {{ __('ledger.version') }}
+                    </h2>
+                    <span class="badge badge-neutral ">{{ count($history) }}</span>
+                </div>
 
-            @php
-                $displayLevelOptions = [
-                    ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
-                    ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
-                    ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
-                ];
-            @endphp
-            <div class="flex flex-wrap items-center gap-2">
-                <x-mary-group wire:model.live="historyDisplayLevel" :options="$displayLevelOptions"
-                    class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
-                    option-label="name" wire:key="history-display-level-group" />
             </div>
-        </div>
 
-        <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}">
+            <div class="divide-y divide-base-200" role="list" aria-label="{{ __('ledger.history_list') }}">
             <div wire:loading wire:target="toggleSelection,historyDisplayLevel" class="w-full">
                 <x-element.skeleton-input-form rows="3" />
             </div>
@@ -68,7 +60,7 @@
                         $isTarget = $targetDiffId === $diff->id;
                         $isSelected = $isBase || $isTarget;
                     @endphp
-                    <div class="p-4 hover:bg-base-200 cursor-pointer transition-all duration-200 relative {{ $isSelected ? 'bg-primary/5' : '' }} focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+                    <div class="p-4 cursor-pointer transition-all duration-200 relative rounded-none border-l-4 {{ $isSelected ? 'bg-primary/5 border-l-primary shadow-sm' : 'hover:bg-base-200 border-l-transparent' }} focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
                         role="listitem" tabindex="0" aria-selected="{{ $isSelected ? 'true' : 'false' }}"
                         aria-label="{{ __('ledger.diff.version_label', ['version' => $diff->version, 'date' => $diff->created_at->format('Y-m-d H:i'), 'user' => $diff->modifier?->name ?? '不明']) }}{{ $isSelected ? '、選択済み' : '' }}"
                         x-ref="history-row-{{ $index }}"
@@ -82,13 +74,18 @@
                             <div class="absolute left-0 top-0 bottom-0 w-1 bg-error"></div>
                         @endif
 
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-bold flex items-center gap-1">
+                        <div class="flex flex-col gap-3">
+                            <div class="flex items-start justify-between gap-2">
+                                <span class="text-base md:text-lg font-bold flex items-center gap-1.5 flex-wrap leading-tight">
                                     Ver.{{ $diff->version }}
                                     @if ($diff->version === $ledgerRecord->version)
-                                        <span
-                                            class="badge badge-primary badge-xs">{{ __('ledger.diff.current_version') }}</span>
+                                        <span class="badge badge-primary badge-outline badge-xs tooltip tooltip-bottom"
+                                            data-tip="{{ __('ledger.diff.current_version') }}"
+                                            title="{{ __('ledger.diff.current_version') }}"
+                                            aria-label="{{ __('ledger.diff.current_version') }}">
+                                            <x-mary-icon name="o-sparkles" class="w-3 h-3" />
+                                            <span class="sr-only">{{ __('ledger.diff.current_version') }}</span>
+                                        </span>
                                     @endif
                                     @if ($isBase)
                                         <span class="badge badge-primary badge-outline badge-xs gap-1 pl-1.5">
@@ -103,17 +100,18 @@
                                         </span>
                                     @endif
                                 </span>
-                                <span
-                                    class="text-[10px] text-base-content/50">{{ $diff->created_at->format('Y-m-d H:i') }}</span>
+                                <span class="badge badge-ghost badge-sm text-sm text-base-content/60">
+                                    {{ $diff->created_at->format('Y-m-d H:i') }}
+                                </span>
                             </div>
 
-                            <div class="flex flex-col md:flex-row gap-2 mt-1">
+                            <div class="flex flex-col md:flex-row gap-3">
                                 {{-- 左側: ステータス・編集者 --}}
-                                <div class="flex flex-col gap-1.5 min-w-[120px] shrink-0">
+                                <div class="flex flex-col gap-1.5 min-w-[140px] shrink-0">
                                     {{-- ワークフロー状態 --}}
                                     @if ($diff->status)
                                         <div>
-                                            <span class="badge badge-xs {{ $diff->status->colorClass() }} gap-1">
+                                            <span class="badge badge-sm {{ $diff->status->colorClass() }} gap-1">
                                                 {{ $diff->status->label() }}
                                             </span>
                                         </div>
@@ -121,8 +119,8 @@
 
                                     {{-- 編集者 (Editor) --}}
                                     @if ($diff->modifier)
-                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80" title="{{ __('ledger.workflow.label.editor') }}">
-                                            <x-mary-icon name="o-pencil" class="w-3 h-3 text-base-content/50" />
+                                        <div class="flex items-center gap-1.5 text-sm md:text-base text-base-content/80" title="{{ __('ledger.workflow.label.editor') }}">
+                                            <x-mary-icon name="o-pencil" class="w-4 h-4 text-base-content/50" />
                                             <span class="sr-only">{{ __('ledger.workflow.label.editor') }}:</span>
                                             <x-ledger.user-card-popover :user="$diff->modifier" />
                                         </div>
@@ -130,8 +128,8 @@
 
                                     {{-- 承認者 (Approver) --}}
                                     @if ($diff->status === \App\Enums\WorkflowStatus::APPROVED && $diff->approver)
-                                        <div class="flex items-center gap-1.5 text-xs text-base-content/80" title="{{ __('ledger.workflow.approved_by') }}">
-                                            <x-mary-icon name="o-check-circle" class="w-3 h-3 text-success" />
+                                        <div class="flex items-center gap-1.5 text-sm md:text-base text-base-content/80" title="{{ __('ledger.workflow.approved_by') }}">
+                                            <x-mary-icon name="o-check-circle" class="w-4 h-4 text-success" />
                                             <span class="sr-only">{{ __('ledger.workflow.approved_by') }}:</span>
                                             <x-ledger.user-card-popover :user="$diff->approver" />
                                         </div>
@@ -142,25 +140,25 @@
                                 <div class="flex-1 flex flex-col justify-between gap-2 min-w-0">
                                     @if ($diff->comments)
                                         <div
-                                            class="text-[10px] text-base-content/60 bg-base-200/50 p-1.5 rounded flex flex-col gap-1 h-full">
+                                            class="text-base md:text-lg text-base-content/70 bg-base-200/50 p-3 rounded-xl border border-base-200 flex flex-col gap-2 h-full">
                                             @php
                                                 $commentParts = explode("\n--- system-info ---\n", $diff->comments);
                                                 $userComment = $commentParts[0] ?? '';
                                                 $systemInfo = $commentParts[1] ?? null;
                                             @endphp
 
-                                            <div class="flex items-start gap-1">
-                                                <x-mary-icon name="o-chat-bubble-left" class="w-3 h-3 mt-0.5 shrink-0" />
+                                            <div class="flex items-start gap-1.5">
+                                                <x-mary-icon name="o-chat-bubble-left" class="w-5 h-5 mt-0.5 shrink-0" />
                                                 <span class="line-clamp-2 break-all"
                                                     title="{{ $userComment }}">{{ $userComment }}</span>
                                             </div>
 
                                             @if ($systemInfo)
-                                                <div class="mt-auto pt-1 border-t border-base-content/5 w-full">
+                                                <div class="mt-auto pt-2 border-t border-base-content/5 w-full">
                                                     <span
-                                                        class="badge badge-ghost badge-xs text-xs opacity-70 font-normal w-full justify-start h-auto py-0.5">
+                                                        class="badge badge-ghost badge-sm text-sm opacity-70 font-normal w-full justify-start h-auto py-0.5">
                                                         <x-mary-icon name="o-information-circle"
-                                                            class="w-3 h-3 mr-1 opacity-50" />
+                                                            class="w-4 h-4 mr-1 opacity-50" />
                                                         {{ $systemInfo }}
                                                     </span>
                                                 </div>
@@ -174,9 +172,9 @@
                                     <div class="flex justify-end gap-2 mt-auto">
                                         @if ($isTarget && $canRollback && $diff->version !== $ledgerRecord->version)
                                             @if ($isContentIdentical ?? false)
-                                                <span class="badge badge-ghost badge-xs gap-1 opacity-50 cursor-help"
+                                                <span class="badge badge-ghost badge-sm gap-1 opacity-50 cursor-help"
                                                     title="{{ __('ledger.diff.identical_content_hint') }}">
-                                                    <x-mary-icon name="o-check" class="w-3 h-3" />
+                                                    <x-mary-icon name="o-check" class="w-4 h-4" />
                                                     {{ __('ledger.diff.identical_content') }}
                                                 </span>
                                             @else
@@ -192,7 +190,7 @@
                         </div>
                     </div>
                 @empty
-                    <div class="p-8 text-center text-xs text-base-content/30 italic">
+                    <div class="p-8 text-center text-sm md:text-base text-base-content/30 italic">
                         {{ __('ledger.history_empty') }}
                     </div>
                 @endforelse
@@ -203,20 +201,56 @@
                         <span wire:loading class="loading loading-spinner loading-md text-primary"></span>
                     </div>
                 @else
-                    <div class="p-8 text-center text-xs text-base-content/30 italic">
+                    <div class="p-8 text-center text-sm md:text-base text-base-content/30 italic">
                         {{ __('ledger.history_end') }}
                     </div>
                 @endif
             </div>
         </div>
     </div>
+    </div>
 
     {{-- 右側: 差分ビューア (8/12 or 7/12) --}}
-    <div class="lg:col-span-8 xl:col-span-9 space-y-6 relative min-h-[400px]">
-        <x-element.loading-overlay tier="2" message="{{ __('ledger.loading') }}" />
+    <div class="lg:col-span-8 xl:col-span-9 relative min-h-[400px]">
+        <div
+                class="p-4 border-b border-base-200 bg-base-200/30 sticky top-0 z-10 backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
+
+            <div></div>
+            @php
+                $displayLevelOptions = [
+                    ['id' => 1, 'name' => __('ledger.form.display_level_options.1')],
+                    ['id' => 2, 'name' => __('ledger.form.display_level_options.2')],
+                    ['id' => 3, 'name' => __('ledger.form.display_level_options.3')],
+                ];
+            @endphp
+            <div class="flex flex-wrap items-center gap-2">
+                <div class="flex items-center gap-2 rounded-full border border-base-300/70 bg-base-100/70 px-3 py-1.5">
+                    <x-mary-group wire:model.live="historyDisplayLevel" :options="$displayLevelOptions"
+                                  class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary" option-value="id"
+                                  option-label="name" wire:key="history-display-level-group" />
+                </div>
+
+                <div
+                        class="flex items-center gap-2 rounded-full border border-base-300/70 bg-base-100/70 px-3 py-1.5"
+                        x-data="{
+                            active: false,
+                            check() {
+                                const id = $store.ledgerState.currentLedgerId;
+                                this.active = !($store.ledgerState.states[id]?.['__global__'] ?? true);
+                            }
+                        }"
+                        x-init="check(); const interval = setInterval(() => check(), 500); $el.addEventListener('destroy', () => clearInterval(interval));">
+                    <x-mary-toggle @click="$store.ledgerState.expandAll(!active)" x-model="active" tight
+                                   label="{{ __('ledger.column.expand_all') }}"
+                                   class="toggle-sm toggle-primary text-sm md:text-base font-black text-base-content/40 uppercase tracking-widest" />
+                </div>
+            </div>
+        </div>
+        <div class="rounded-2xl border border-base-300 bg-base-100 shadow-sm p-4 lg:p-5 space-y-4">
+            <x-element.loading-overlay tier="2" message="{{ __('ledger.loading') }}" />
 
         {{-- 計算中のスケルトン表示 --}}
-        <div wire:loading wire:target="toggleSelection,historyDisplayLevel" class="w-full space-y-6 animate-pulse">
+            <div wire:loading wire:target="toggleSelection,historyDisplayLevel" class="w-full space-y-6 animate-pulse">
             <div class="card bg-base-100 border border-base-300 shadow-sm">
                 <div class="card-body p-6 space-y-8">
                     {{-- ヘッダー部分のスケルトン --}}
@@ -257,7 +291,7 @@
         </div>
 
         {{-- 通常コンテンツ（読み込み中は非表示） --}}
-        <div wire:loading.remove wire:target="toggleSelection,historyDisplayLevel">
+            <div wire:loading.remove wire:target="toggleSelection,historyDisplayLevel">
             @if ($baseDiff)
                 <div class="card bg-base-100 border border-base-300 shadow-sm overflow-hidden">
                     <div class="card-body p-0">
@@ -275,6 +309,7 @@
                     <p class="font-medium">{{ __('ledger.diff.select_version_hint') }}</p>
                 </div>
             @endif
+            </div>
         </div>
     </div>
     <style>
@@ -283,16 +318,16 @@
         }
 
         .custom-scrollbar::-webkit-scrollbar-track {
-            background: transparent;
+            background: hsl(var(--b1) / 1);
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb {
-            background: #e2e8f0;
+            background: hsl(var(--b3) / 1);
             border-radius: 10px;
         }
 
         .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-            background: #cbd5e1;
+            background: hsl(var(--b2) / 1);
         }
     </style>
 </div>

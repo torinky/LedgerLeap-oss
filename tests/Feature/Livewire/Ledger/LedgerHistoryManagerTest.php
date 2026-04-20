@@ -106,6 +106,7 @@ class LedgerHistoryManagerTest extends TestCase
             ->assertSee('Ver.1')
             ->assertSee('Ver.2')
             ->assertSee('Ver.3')
+            ->assertSee(__('ledger.column.expand_all'))
             ->assertViewHas('history', function ($history) {
                 return $history->count() === 3;
             })
