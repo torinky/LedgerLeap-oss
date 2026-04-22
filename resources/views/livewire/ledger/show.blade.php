@@ -458,21 +458,9 @@
 
         </div>{{-- end タブコンテンツエリア --}}
 
-        {{-- フッターパネル (アクションボタン集約) --}}
-        <div class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-20">
-            <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-                {{-- 透明度調整 --}}
-                <div class="card-body p-4">
-                    <livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord"
-                        wire:key="action-buttons-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
-                    @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], 'workflow-comment-modal-show')
-
-
-                </div>
-
-            </div>
-
-        </div>
+        <livewire:ledger.workflow-action-buttons :ledgerRecord="$ledgerRecord"
+            wire:key="action-buttons-{{ $ledgerRecord->id }}-{{ $ledgerRecord->updated_at?->timestamp }}" />
+        @livewire('workflow.workflow-comment-modal', ['ledgerId' => $ledgerRecord->id], 'workflow-comment-modal-show')
     </div>
 
     {{-- 添付ファイルのファイルインスペクタを常駐配置 --}}
