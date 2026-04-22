@@ -37,6 +37,9 @@ Are text or icons being hard-coded to a tiny size?
 - Use Mary UI and daisyUI size variants before reaching for custom CSS.
 - For required markers or helper icons in column titles or form headers, prefer a responsive icon or badge treatment rather than a one-size-fits-all tiny square.
 - If a Mary icon already reads well at its component default size, leave it unforced instead of re-declaring a tiny width/height.
+- For persistent footers and summary bars, keep the visible text minimal and let badge, icon, and tooltip carry the meaning together.
+- If a footer badge needs explanation, move the explanation into a tooltip instead of adding a second text label next to it.
+- Avoid text-only footer labels when the label is only there to describe a short state or count; prefer icon + badge or icon + tooltip instead.
 
 ## Practical layout guidance
 
@@ -46,11 +49,14 @@ Are text or icons being hard-coded to a tiny size?
 - When multiple items must line up, apply one shared responsive sizing pattern to the whole group.
 - Do not use tiny defaults as a shortcut for density; make compactness deliberate and role-based.
 - If a marker needs to stay visible in a dense table header, let its size breathe slightly at larger breakpoints instead of freezing it at one tiny value.
+- In sticky action bars and other persistent footers, prefer a compact footer summary row with badge-first state, a small icon when it helps scanning, and tooltip text for the longer explanation.
+- If the footer content is a status summary rather than a sentence, do not render it as a plain text line; treat it as metadata chrome.
 
 ## Evidence and references
 
 - Repo evidence: `docs/work/ui-ux/2026-04-18_text-icon-size-responsiveness-note.md`
 - Repo evidence: `docs/work/ui-ux/2026-04-18_design-workflow-reorganization-note.md`
+- Repo evidence: `docs/work/ui-ux/2026-04-22_sticky-action-bar-footer-pattern.md`
 - Related skills: `title-block`, `form-layout`, `search-header-responsive-layout`
 - Official references that shaped this pattern:
   - daisyUI v5 component size scale and size tokens

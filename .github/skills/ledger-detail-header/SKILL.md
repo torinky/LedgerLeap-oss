@@ -86,3 +86,4 @@
 - **[PROTECT]**: ヘッダーカードの背景色 `bg-primary/30` を `bg-base-100` 等に戻さない。ブランドの一貫性を保つため。
 - **[CLEANUP]**: ヘッダーを `x-collapse` で包む場合、古いアコーディオンコンポーネント（`<x-expandable-content>` 等）を内部に残したままにせず、プレーンな出力を心掛ける。
 - **[SYNCHRONIZATION]**: Alpine.js の反映を「リロード待ち」にしない。必ずリアクティブな同期ロジック（`checkStorage` 等）を実装すること。
+- **[FOOTER REVIEW]**: 詳細画面のヘッダーを見直すときは、同じ画面の persistent footer / action bar も合わせて確認し、badge-first の状態表示や tooltip への説明逃がしを見落とさないこと。
