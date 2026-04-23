@@ -1,6 +1,6 @@
 ---
 name: skill-maintenance
-description: Maintains LedgerLeap AI operating assets across prompts, skills, instructions, issue templates, runbooks, and AGENTS. Use when a bug fix, sprint, or investigation proves a new reusable pattern, disproves an old rule, or reveals a missing workflow.
+description: Maintains LedgerLeap AI operating assets across prompts, skills, instructions, issue templates, runbooks, and AGENTS. Use when a bug fix, sprint, investigation, or user-requested retrospective proves a new reusable pattern, disproves an old rule, or reveals a missing workflow.
 compatibility: LedgerLeap (.github/prompts, .github/skills, .github/instructions, .github/ISSUE_TEMPLATE, docs/runbooks, AGENTS.md)
 ---
 
@@ -31,19 +31,27 @@ A new learning was proven?
 - When a user supersedes a prior plan or scope, treat the new instruction as authoritative immediately; sync the plan, issue, and docs in the same pass and remove stale wording instead of keeping both versions active.
 - Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
-- If any task finishes — bug fix, feature review, investigation, sprint, doc update, or user-requested retrospective — extract the learnings even if they are not yet reusable; keep feature-local notes in `docs/work/*` and only promote durable guidance when the pattern is proven.
-- Before routing a finished task, do a short retrospective: what went well, what went poorly, what should be promoted, and what should be retired.
+- If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.
+- Keep local lessons in `docs/work/*` first; promote only durable guidance after the pattern is proven.
 - Review learnings in two layers: (1) the process / approach (target selection, evidence order, hypothesis comparison, validation gate, handoff timing) and (2) the concrete technique / implementation detail (commands, config, UI changes, templates, wording, code pattern).
 - For tenant-aware test suites, reapply the testing DB connection at the start of setup and avoid assuming the previous class left `mysql_testing` in the right database; see `docs/work/testing/2026-04-16_issue-149-retrospective.md`.
 - For Livewire tenant recovery, load the model without tenant scoping first (for example `Ledger::withoutTenancy()->findOrFail(...)`), then restore tenancy from that model's `tenant_id` before rendering; see `docs/work/testing/2026-04-16_issue-149-retrospective.md`.
-- If any task finishes — bug fix, feature review, investigation, sprint, doc update, or user-requested retrospective — extract the learnings even if they are not yet reusable; keep feature-local notes in `docs/work/*` and only promote durable guidance when the pattern is proven. Include failed operations and discarded approaches alongside the successful fix.
-- Before routing a finished task, do a short retrospective: what went well, what went poorly, what should be promoted, what should be retired, and which dead ends were proven to be dead ends.
 - When working in a mixed WSL / Mac environment, confirm the active directory and Git root with `pwd` and `git rev-parse --show-toplevel` before file edits or terminal actions; stop if the paths do not match the expected project root.
-- Review learnings in two layers: (1) the process / approach (target selection, evidence order, hypothesis comparison, validation gate, handoff timing, failure triage) and (2) the concrete technique / implementation detail (commands, config, UI changes, templates, wording, code pattern).
 - When a task proves that an MCP / API tool description is carrying too much workflow guidance, route the workflow to `resources/ai/capabilities/*.yaml` or discovery docs, and keep the tool description contract-centered.
 - Do not approve guidance removal until the receiver asset preserves equivalent client-facing information for generated skills, prompts, or bootstrap flows.
 - Every durable learning must point to traceable evidence: link the repo proof in `docs/work/*` or the official source in `references/*.md` before treating it as reusable guidance.
 - Record freshness metadata for doc-sensitive claims: `status`, `last_confirmed_at`, `recheck_after`, and a concrete `recheck_trigger`.
+
+## Retrospective Gate
+
+- For every finished task and every user-requested retrospective, answer the same five questions before deciding where the learning belongs.
+- What went well and should be repeated?
+- What caused rework, confusion, or over-scope?
+- What was a local workaround versus a reusable pattern?
+- What evidence should be preserved so the learning stays trustworthy?
+- What failed, and what proof showed the dead end was wrong?
+- If the same dead end appears twice, reclassify it before a third try instead of repeating the same investigation path.
+- If the learning is not yet reusable, keep it in `docs/work/*` and only promote it after the pattern is proven.
 
 ## Maintenance Loop
 
