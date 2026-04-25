@@ -29,6 +29,8 @@ A new learning was proven?
 - If a prompt and skill cover the same domain, make them cross-reference each other.
 - If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
 - When a user supersedes a prior plan or scope, treat the new instruction as authoritative immediately; sync the plan, issue, and docs in the same pass and remove stale wording instead of keeping both versions active.
+- When a user override changes the visible result, rewrite the affected branch from the nearest semantic anchor and keep only the authoritative version visible; do not leave the superseded label or checklist alongside the new one.
+- When a Blade or Livewire edit breaks a narrow branch, prefer a clean branch rewrite over stacking fragment patches, then validate before widening the search.
 - Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
 - If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.

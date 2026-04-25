@@ -175,7 +175,6 @@ class PermissionDisplayTest extends TestCase
             'resourceType' => 'LedgerDefine',
         ])
             ->assertStatus(200)
-            ->assertSee(__('ledger.access_and_permissions.inherited_from_folder_label'))
             ->assertSeeHtml($this->tenantRoute('folder.edit', ['folder' => $sourceRoot->id]))
             ->assertSeeHtml($this->tenantRoute('folder.edit', ['folder' => $sourceFolder->id]))
             ->assertSee($sourceRoot->title)

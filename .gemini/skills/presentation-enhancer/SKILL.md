@@ -1,3 +1,4 @@
+<!-- Generated from .github - DO NOT EDIT MANUALLY -->
 ---
 name: presentation-enhancer
 description: 技術ドキュメントや既存資料を、説明資料・スライド・発表草稿へ再構成するための汎用スキル。

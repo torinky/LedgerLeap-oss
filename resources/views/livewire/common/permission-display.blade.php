@@ -38,143 +38,119 @@
 
     <div class="space-y-6" wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $permissionTargets }}">
         <x-mary-card class="bg-base-100 border border-base-300 shadow" shadow>
-            <div class="flex flex-col gap-4 xl:flex-row xl:items-start xl:justify-between">
-                <div class="space-y-3">
-                    <div class="flex items-start gap-3">
-                        <x-mary-icon name="o-shield-check" class="text-primary mt-0.5"/>
-                        <div class="space-y-1">
-                            <h3 class="text-xl font-semibold text-base-content">{{ __('ledger.access_and_permissions.overview') }}</h3>
-                            {{--                            <p class="text-sm text-base-content/70">{{ __('ledger.access_and_permissions.check_details_below') }}</p>--}}
-                        </div>
+            <x-slot:title>
+                <div class="flex items-start gap-3">
+                    <x-mary-icon name="o-shield-check" class="text-primary mt-0.5"/>
+                    <div class="space-y-1">
+                        <h3 class="text-xl font-semibold text-base-content">{{ __('ledger.access_and_permissions.overview') }}</h3>
+                        {{--                            <p class="text-sm text-base-content/70">{{ __('ledger.access_and_permissions.check_details_below') }}</p>--}}
                     </div>
+                </div>
+            </x-slot:title>
 
+            <div class="space-y-3">
+                {{--
+                                    <div class="flex flex-wrap items-center gap-2">
+                                        <x-mary-badge :value="__('ledger.activity.column.subject') . ': ' . $resourceTypeLabel" :icon="$resourceTypeIcon" class="badge-outline badge-primary badge-sm" />
+                                        <x-mary-badge :value="__('ledger.access_and_permissions.viewer') . ': ' . $viewerName" icon="o-user" class="badge-outline badge-neutral badge-sm" />
+                                    </div>
+                --}}
+
+                @if ($this->currentUserHighestPermission)
                     {{--
-                                        <div class="flex flex-wrap items-center gap-2">
-                                            <x-mary-badge :value="__('ledger.activity.column.subject') . ': ' . $resourceTypeLabel" :icon="$resourceTypeIcon" class="badge-outline badge-primary badge-sm" />
-                                            <x-mary-badge :value="__('ledger.access_and_permissions.viewer') . ': ' . $viewerName" icon="o-user" class="badge-outline badge-neutral badge-sm" />
-                                        </div>
+                                            <div class="flex flex-wrap items-center gap-2">
+                                                <span class="text-sm font-medium text-base-content/70">
+                                                    {{ __('ledger.access_and_permissions.your_access_level') }}:
+                                                </span>
+                                                <x-mary-badge
+                                                        :value="$this->currentUserHighestPermission->getLabel()"
+                                                        :icon="$this->currentUserHighestPermission->icon()"
+                                                        :class="'badge-lg badge-' . $this->currentUserHighestPermission->getColor()"
+                                                />
+                                            </div>
                     --}}
-
-                    @if ($this->currentUserHighestPermission)
-                        {{--
-                                                <div class="flex flex-wrap items-center gap-2">
-                                                    <span class="text-sm font-medium text-base-content/70">
-                                                        {{ __('ledger.access_and_permissions.your_access_level') }}:
-                                                    </span>
-                                                    <x-mary-badge
-                                                            :value="$this->currentUserHighestPermission->getLabel()"
-                                                            :icon="$this->currentUserHighestPermission->icon()"
-                                                            :class="'badge-lg badge-' . $this->currentUserHighestPermission->getColor()"
-                                                    />
-                                                </div>
-                        --}}
-                        @if(!empty($this->currentUserAllPermissions))
-                            <div class="flex flex-wrap items-center gap-2">
-                                <span class="text-sm font-medium text-base-content/70">
-                                    {{ __('ledger.access_and_permissions.your_permissions') }}:
-                                </span>
-                                @forelse($this->currentUserAllPermissions ?? [] as $permission)
-                                    <x-mary-badge
-                                            :value="$permission->getLabel()"
-                                            :icon="$permission->icon()"
-                                            :class="'badge-' . $permission->getColor()"
-                                    />
-                                @empty
-                                @endforelse
-                            </div>
-                        @endif
-                    @else
-                        <div class="flex items-center gap-2 text-base-content/70">
-                            <x-mary-icon name="o-no-symbol" class="text-error"/>
-                            <span class="text-sm font-medium">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
+                    @if(!empty($this->currentUserAllPermissions))
+                        <div class="flex flex-wrap items-center gap-2">
+                            <span class="text-sm font-medium text-base-content/70">
+                                {{ __('ledger.access_and_permissions.your_permissions') }}:
+                            </span>
+                            @forelse($this->currentUserAllPermissions ?? [] as $permission)
+                                <x-mary-badge
+                                        :value="$permission->getLabel()"
+                                        :icon="$permission->icon()"
+                                        :class="'badge-' . $permission->getColor()"
+                                />
+                            @empty
+                            @endforelse
                         </div>
                     @endif
-                </div>
-
-                {{--
-                                <div class="space-y-2 xl:text-right">
-                                    <div class="tooltip tooltip-bottom xl:tooltip-left" data-tip="{{ __('ledger.access_and_permissions.legend_hint') }}">
-                                        <span class="inline-flex items-center gap-1 text-xs font-semibold uppercase tracking-wide text-base-content/50">
-                                            {{ __('ledger.access_and_permissions.legend') }}
-                                        </span>
-                                    </div>
-
-                                    <div class="flex flex-wrap gap-2 xl:justify-end">
-                                        @foreach($accessStateItems as $stateItem)
-                                            <div class="tooltip tooltip-bottom" data-tip="{{ $stateItem['tooltip'] }}">
-                                                <span class="badge badge-lg {{ $stateItem['badgeClass'] }} {{ $stateItem['textClass'] }} inline-flex items-center justify-center gap-0.5">
-                                                    <x-mary-icon :name="$stateItem['icon']" class="h-4 w-4 shrink-0" />
-                                                    <span class="sr-only">{{ $stateItem['label'] }}</span>
-                                                </span>
-                                            </div>
-                                        @endforeach
-                                    </div>
-                                </div>
-                --}}
-            </div>
-
-            <div class="mt-5 stats stats-vertical gap-3 bg-base-200/70 border border-base-300 shadow-sm w-full lg:stats-horizontal lg:gap-0">
-                <div class="stat">
-                    <div class="stat-figure text-primary">
-                        <x-mary-icon name="o-sparkles" class="h-8 w-8"/>
+                @else
+                    <div class="flex items-center gap-2 text-base-content/70">
+                        <x-mary-icon name="o-no-symbol" class="text-error"/>
+                        <span class="text-sm font-medium">{{ __('ledger.access_and_permissions.no_direct_access') }}</span>
                     </div>
-                    <div class="stat-title">{{ __('ledger.access_and_permissions.roles_with_access') }}</div>
-                    <div class="stat-value text-primary">{{ $roleCount }}</div>
-                    <div class="stat-desc">{{ __('ledger.access_and_permissions.roles') }}</div>
-                </div>
+                @endif
 
-                <div class="stat">
-                    <div class="stat-figure text-primary">
-                        <x-mary-icon name="o-building-office-2" class="h-8 w-8"/>
+                <div class="mt-5 stats stats-vertical gap-3 bg-base-200/70 border border-base-300 shadow-sm w-full lg:stats-horizontal lg:gap-0">
+                    <div class="stat">
+                        <div class="stat-figure text-primary">
+                            <x-mary-icon name="o-sparkles" class="h-8 w-8"/>
+                        </div>
+                        <div class="stat-title">{{ __('ledger.access_and_permissions.roles_with_access') }}</div>
+                        <div class="stat-value text-primary">{{ $roleCount }}</div>
+                        <div class="stat-desc">{{ __('ledger.access_and_permissions.roles') }}</div>
                     </div>
-                    <div class="stat-title">{{ __('ledger.access_and_permissions.organizations_with_access') }}</div>
-                    <div class="stat-value text-primary">{{ $organizationCount }}</div>
-                    <div class="stat-desc">{{ __('ledger.access_and_permissions.organizations') }}</div>
-                </div>
 
-                <div class="stat">
-                    <div class="stat-figure text-primary">
-                        <x-mary-icon name="o-users" class="h-8 w-8"/>
+                    <div class="stat">
+                        <div class="stat-figure text-primary">
+                            <x-mary-icon name="o-building-office-2" class="h-8 w-8"/>
+                        </div>
+                        <div class="stat-title">{{ __('ledger.access_and_permissions.organizations_with_access') }}</div>
+                        <div class="stat-value text-primary">{{ $organizationCount }}</div>
+                        <div class="stat-desc">{{ __('ledger.access_and_permissions.organizations') }}</div>
                     </div>
-                    <div class="stat-title">{{ __('ledger.access_and_permissions.users_with_access') }}</div>
-                    <div class="stat-value text-primary">{{ $userCount }}</div>
-                    <div class="stat-desc">{{ __('ledger.access_and_permissions.users') }}</div>
-                </div>
 
-                <div class="stat">
-                    <div class="stat-figure text-primary">
-                        <x-mary-icon name="o-lock-closed" class="h-8 w-8"/>
+                    <div class="stat">
+                        <div class="stat-figure text-primary">
+                            <x-mary-icon name="o-users" class="h-8 w-8"/>
+                        </div>
+                        <div class="stat-title">{{ __('ledger.access_and_permissions.users_with_access') }}</div>
+                        <div class="stat-value text-primary">{{ $userCount }}</div>
+                        <div class="stat-desc">{{ __('ledger.access_and_permissions.users') }}</div>
                     </div>
-                    <div class="stat-title">{{ __('ledger.access_and_permissions.column.permissions') }}</div>
-                    <div class="stat-value text-primary">{{ $currentPermissionCount }}</div>
-                    <div class="stat-desc">{{ __('ledger.access_and_permissions.your_access_level') }}</div>
+
+                    <div class="stat">
+                        <div class="stat-figure text-primary">
+                            <x-mary-icon name="o-lock-closed" class="h-8 w-8"/>
+                        </div>
+                        <div class="stat-title">{{ __('ledger.access_and_permissions.column.permissions') }}</div>
+                        <div class="stat-value text-primary">{{ $currentPermissionCount }}</div>
+                        <div class="stat-desc">{{ __('ledger.access_and_permissions.your_access_level') }}</div>
+                    </div>
                 </div>
             </div>
         </x-mary-card>
 
         <x-mary-card class="bg-base-100 border border-base-300 shadow" shadow>
-            <div class="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
-                <div class="space-y-1">
-                    <div class="flex items-center gap-2">
-                        <x-mary-icon name="o-funnel" class="text-primary mt-0.5"/>
-                        <h4 class="text-lg font-semibold text-base-content">{{ __('ledger.access_and_permissions.filters') }}</h4>
-                    </div>
-{{--                    <p class="text-sm text-base-content/70">{{ __('ledger.access_and_permissions.check_details_below') }}</p>--}}
+            <x-slot:title>
+                <div class="flex items-center gap-2">
+                    <x-mary-icon name="o-funnel" class="text-primary mt-0.5"/>
+                    <h4 class="text-lg font-semibold text-base-content">{{ __('ledger.access_and_permissions.filters') }}</h4>
                 </div>
+            </x-slot:title>
 
-{{--
-                <div class="flex flex-wrap gap-2">
+            {{-- <x-slot:menu>
+                <div class="flex flex-wrap items-center justify-end gap-2">
                     @foreach($accessStateItems as $stateItem)
                         <div class="tooltip tooltip-bottom" data-tip="{{ $stateItem['tooltip'] }}">
                             <span class="badge badge-outline {{ $stateItem['badgeClass'] }} {{ $stateItem['textClass'] }} inline-flex items-center justify-center gap-0.5">
-                                <x-mary-icon :name="$stateItem['icon']" class="h-3.5 w-3.5 shrink-0"/>
+                                <x-mary-icon :name="$stateItem['icon']" class="shrink-0"/>
                                 <span class="sr-only">{{ $stateItem['label'] }}</span>
                             </span>
                         </div>
                     @endforeach
                 </div>
---}}
-            </div>
+            </x-slot:menu> --}}
 
             <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-3">
                 <div>
@@ -231,37 +207,40 @@
                 </div>
             </div>
 
-            <div class="mt-4 flex justify-end">
+            <x-slot:actions>
                 <x-mary-button
                         label="{{ __('ledger.reset') }}"
                         wire:click="resetFilters"
                         class="btn-sm btn-ghost"
                         icon="o-arrow-path"
                 />
-            </div>
+            </x-slot:actions>
         </x-mary-card>
 
         <div class="space-y-6">
             <x-mary-card class="bg-base-100 border border-base-300 shadow" shadow>
-                <div class="flex flex-row items-center space-x-2 lg:justify-between">
+                <x-slot:title>
                     <div class="flex items-center gap-2">
                         <x-mary-icon name="o-sparkles" class="text-primary"/>
                         <h4 class="text-lg font-semibold text-base-content">{{ __('ledger.access_and_permissions.roles_with_access') }}</h4>
                     </div>
-                    <span class="badge badge-outline text-base-content/60">{{ $roleCount }}</span>
-                </div>
+                </x-slot:title>
 
-                <div class="mt-2 text-sm text-base-content/70 space-x-2">
-                    <span class="badge badge-primary badge-sm">
-                        <x-mary-icon name="o-arrow-trending-up" label="{{ __('ledger.access_and_permissions.direct_role') }}" />
-                    </span>
-                    <span class="badge badge-neutral badge-sm">
-                        <x-mary-icon name="o-link" label="{{ __('ledger.access_and_permissions.inherited_role') }}" />
-                    </span>
-                    {{--                    {{ __('ledger.access_and_permissions.check_details_below') }}--}}
-                </div>
+                <x-slot:menu>
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                        <span class="badge badge-outline text-base-content/60">{{ $roleCount }}</span>
+                        <span class="badge badge-primary badge-sm">
+                            <x-mary-icon name="o-arrow-trending-up"
+                                         label="{{ __('ledger.access_and_permissions.direct_role') }}"/>
+                        </span>
+                        <span class="badge badge-neutral badge-sm">
+                            <x-mary-icon name="o-link"
+                                         label="{{ __('ledger.access_and_permissions.inherited_role') }}"/>
+                        </span>
+                    </div>
+                </x-slot:menu>
 
-                <div class="mt-4">
+                <div>
                     @if ($this->accessRoles->isEmpty())
                         <div class="alert alert-info bg-info/10 text-info-content border-info">
                             <i class="fas fa-exclamation-circle text-info"></i>
@@ -279,75 +258,73 @@
                         >
                             @scope('cell_role_name', $item)
                             <div class="flex flex-wrap items-center gap-2">
+                                @php
+                                    $inheritedSourceSegments = collect($item->source_folder_path_items ?? []);
+                                    $sourceFolderUrl = $item->source_folder_id
+                                        ? route('folder.edit', ['tenant' => $this->resolveTenantId(), 'folder' => $item->source_folder_id])
+                                        : null;
+                                @endphp
+
                                 @if($item->is_inherited)
-                                    <div class="tooltip"
-                                         data-tip="{{ __('ledger.access_and_permissions.inherited_role_hint') }}">
-                                        <span class="badge badge-neutral text-neutral-content inline-flex items-center justify-center gap-0.5">
-                                            <x-mary-icon name="o-link" class=""
-                                                         label="{{ $item->role->name }}"
-                                            />
-                                            <span class="sr-only">{{ __('ledger.access_and_permissions.inherited_role') }}</span>
-                                        </span>
+                                    <div class="flex flex-col items-start gap-1">
+                                        <div class="tooltip"
+                                             data-tip="{{ __('ledger.access_and_permissions.inherited_role_hint') }}">
+                                            <span class="badge badge-neutral text-neutral-content inline-flex items-center justify-center gap-0.5">
+                                                <x-mary-icon name="o-link" label="{{ $item->role->name }}" />
+                                                <span class="sr-only">{{ __('ledger.access_and_permissions.inherited_role') }}</span>
+                                            </span>
+                                        </div>
+
+                                        <span class="text-sm text-base-content/70">{{ __('ledger.access_and_permissions.inherited_from_folder_label') }}</span>
+
+                                        @if(!empty($item->source_folder_id))
+                                            <div class="ml-6">
+                                                @if($inheritedSourceSegments->isNotEmpty())
+                                                    <div class="breadcrumbs text-xs min-w-0 shrink overflow-x-auto">
+                                                        <ul class="m-0 p-0">
+                                                            @foreach($inheritedSourceSegments as $segment)
+                                                                <li class="whitespace-nowrap inline-flex items-center gap-1">
+                                                                    <a href="{{ route('folder.edit', ['tenant' => $this->resolveTenantId(), 'folder' => $segment['id']]) }}"
+                                                                       class="inline-flex items-center gap-1 link link-primary hover:no-underline">
+                                                                        <x-mary-icon name="o-folder" class="shrink-0"/>
+                                                                        <span>{{ $segment['title'] }}</span>
+                                                                    </a>
+                                                                </li>
+                                                            @endforeach
+                                                        </ul>
+                                                    </div>
+                                                @else
+                                                    <a href="{{ $sourceFolderUrl }}"
+                                                       class="inline-flex items-center gap-1 font-medium link link-primary hover:no-underline">
+                                                        <x-mary-icon name="o-folder" class="shrink-0"/>
+                                                        <span>{{ $item->source_folder_title ?? __('ledger.access_and_permissions.inherited_from_folder_label') }}</span>
+                                                    </a>
+                                                @endif
+                                            </div>
+                                        @endif
                                     </div>
                                 @else
                                     <div class="tooltip"
                                          data-tip="{{ __('ledger.access_and_permissions.direct_role_hint') }}">
                                         <span class="badge badge-primary badge-sm text-primary-content inline-flex items-center justify-center gap-0.5">
-                                            <x-mary-icon name="o-arrow-trending-up" class=""
-                                            label="{{ $item->role->name }}"
-                                            />
+                                            <x-mary-icon name="o-arrow-trending-up" label="{{ $item->role->name }}" />
                                             <span class="sr-only">{{ __('ledger.access_and_permissions.direct_role') }}</span>
                                         </span>
                                     </div>
                                 @endif
-                            </div>
-                            @if($item->source === 'folder' && $item->is_inherited && !empty($item->source_folder_id))
-                                @php
-                                    $inheritedSourceSegments = collect($item->source_folder_path_items ?? []);
-                                    $sourceFolderUrl = route('folder.edit', ['tenant' => $this->resolveTenantId(), 'folder' => $item->source_folder_id]);
-                                @endphp
-                                <div class="mt-1 flex flex-wrap items-center gap-1 text-xs text-base-content/60">
-                                    <span class="inline-flex items-center gap-1 font-medium text-base-content/70">
-                                        <x-mary-icon name="o-folder" class="shrink-0"/>
-                                        {{ __('ledger.access_and_permissions.inherited_from_folder_label') }}
-                                    </span>
-                                    <span class="text-base-content/60">:</span>
-                                    @if($inheritedSourceSegments->isNotEmpty())
-                                        <div class="breadcrumbs text-xs min-w-0 shrink overflow-x-auto">
-                                            <ul class="m-0 p-0">
-                                                @foreach($inheritedSourceSegments as $segment)
-                                                    <li class="whitespace-nowrap inline-flex items-center gap-1">
-                                                        <a href="{{ route('folder.edit', ['tenant' => $this->resolveTenantId(), 'folder' => $segment['id']]) }}"
-                                                           class="inline-flex items-center gap-1 link link-primary hover:no-underline">
-                                                            <x-mary-icon name="o-folder" class="shrink-0"/>
-                                                            <span>{{ $segment['title'] }}</span>
-                                                        </a>
-                                                    </li>
-                                                @endforeach
-                                            </ul>
-                                        </div>
-                                    @else
-                                        <a href="{{ $sourceFolderUrl }}"
-                                           class="inline-flex items-center gap-1 font-medium link link-primary hover:no-underline">
-                                            <x-mary-icon name="o-folder" class="shrink-0"/>
-                                            <span>{{ $item->source_folder_title ?? __('ledger.access_and_permissions.inherited_from_folder_label') }}</span>
-                                        </a>
-                                    @endif
-                                </div>
-                            @endif
-                            @endscope
+                                            @endscope
 
-                            @scope('cell_permissions', $item)
-                            @forelse($item->permissions as $permission)
-                                <x-mary-badge
-                                        :value="$permission->getLabel()"
-                                        :icon="$permission->icon()"
-                                        class="badge-{{ $permission->getColor() }} badge-sm mr-1 mb-1"
-                                />
-                            @empty
-                                <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>
-                            @endforelse
-                            @endscope
+                                            @scope('cell_permissions', $item)
+                                            @forelse($item->permissions as $permission)
+                                                <x-mary-badge
+                                                        :value="$permission->getLabel()"
+                                                        :icon="$permission->icon()"
+                                                        class="badge-{{ $permission->getColor() }} badge-sm mr-1 mb-1"
+                                                />
+                                            @empty
+                                                <span class="text-base-content/70">{{ __('ledger.access_and_permissions.no_specific_permissions') }}</span>
+                                            @endforelse
+                                            @endscope
 
                             <x-slot:empty>
                                 <x-mary-icon name="o-folder-minus"
@@ -359,24 +336,26 @@
             </x-mary-card>
 
             <x-mary-card class="bg-base-100 border border-base-300 shadow" shadow>
-                <div class="flex flex-col gap-2 lg:flex-row lg:items-center lg:justify-between">
+                <x-slot:title>
                     <div class="flex items-center gap-2">
                         <x-mary-icon name="o-building-office-2" class="text-primary"/>
                         <h4 class="text-lg font-semibold text-base-content">{{ __('ledger.access_and_permissions.organizations_with_access') }}</h4>
                     </div>
-                    <span class="badge badge-outline text-base-content/60">{{ $organizationCount }}</span>
-                </div>
+                </x-slot:title>
 
-                <div class="mt-2 text-sm text-base-content/70 space-x-2">
-                    <span class="badge badge-primary badge-sm">
-                        <x-mary-icon name="o-arrow-trending-up" label="{{ __('ledger.access_and_permissions.direct_role') }}" />
-                    </span>
-                    <span class="badge badge-neutral badge-sm">
-                        <x-mary-icon name="o-link" label="{{ __('ledger.access_and_permissions.inherited_role') }}" />
-                    </span>
-                    {{--                    {{ __('ledger.access_and_permissions.check_details_below') }}--}}
-                </div>
-
+                <x-slot:menu>
+                    <div class="flex flex-wrap items-center justify-end gap-2">
+                        <span class="badge badge-outline text-base-content/60">{{ $this->accessOrganizations->count() }}</span>
+                        <span class="badge badge-primary badge-sm">
+                            <x-mary-icon name="o-arrow-trending-up"
+                                         label="{{ __('ledger.access_and_permissions.direct_role') }}"/>
+                        </span>
+                        <span class="badge badge-neutral badge-sm">
+                            <x-mary-icon name="o-link" label="{{ __('ledger.access_and_permissions.inherited_role') }}"/>
+                        </span>
+                    </div>
+                </x-slot:menu>
+                
                 <div class="mt-4">
                     @if ($this->accessOrganizations->isEmpty())
                         <div class="alert alert-info bg-info/10 text-info-content border-info">
@@ -466,28 +445,28 @@
             </x-mary-card>
 
             <x-mary-card class="bg-base-100 border border-base-300 shadow" shadow>
-                <div class="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                <x-slot:title>
                     <div class="flex items-center gap-2">
                         <x-mary-icon name="o-users" class="text-primary"/>
                         <h4 class="text-lg font-semibold text-base-content">{{ __('ledger.access_and_permissions.users_with_access') }}</h4>
                     </div>
+                </x-slot:title>
 
-                    <div class="flex flex-wrap gap-2">
+                <x-slot:menu>
+                    <div class="flex flex-wrap items-center justify-end gap-2">
                         <span class="badge badge-outline text-base-content/60">{{ $userCount }}</span>
+                        <span class="badge badge-primary badge-sm">
+                            <x-mary-icon name="o-arrow-trending-up"
+                                         label="{{ __('ledger.access_and_permissions.direct_role') }}"/>
+                        </span>
+                        <span class="badge badge-neutral badge-sm">
+                            <x-mary-icon name="o-link"
+                                         label="{{ __('ledger.access_and_permissions.inherited_role') }}"/>
+                        </span>
                     </div>
-                </div>
+                </x-slot:menu>
 
-                <div class="mt-2 text-sm text-base-content/70 space-x-2">
-                    <span class="badge badge-primary badge-sm">
-                        <x-mary-icon name="o-arrow-trending-up" label="{{ __('ledger.access_and_permissions.direct_role') }}" />
-                    </span>
-                    <span class="badge badge-neutral badge-sm">
-                        <x-mary-icon name="o-link" label="{{ __('ledger.access_and_permissions.inherited_role') }}" />
-                    </span>
-                    {{--                    {{ __('ledger.access_and_permissions.check_details_below') }}--}}
-                </div>
-
-                <div class="mt-4">
+                <div>
                     <x-mary-input
                             wire:model.live.debounce.300ms="searchUserQuery"
                             placeholder="{{ __('ledger.access_and_permissions.search_users_placeholder') }}"

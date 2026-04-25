@@ -35,6 +35,31 @@ $currentTenantId = $this->tenantId      // Livewire state (saved across requests
     ?? $ledger->tenant_id;              // model always has correct tenant_id
 ```
 
+## Pattern C — Shared resolver for Blade and URL helpers
+
+```php
+$tenantId = $this->resolveTenantId($ledger->tenant_id);
+$url = route('file.download-ocr-pdf', [
+    'tenant' => $tenantId,
+    'attachedFile' => $file->id,
+]);
+```
+
+- Use this when a Livewire component, computed property, or Blade partial needs the same tenant fallback order in more than one place.
+- Do not duplicate `tenant()?->id ?? $model->tenant_id` inline in Blade; call the shared resolver from `InitializesTenantContext`.
+- Keep `render()` / `mount()` responsible for state setup; keep URL generation on the resolver path so `/livewire/update` requests still work when the route tenant parameter is missing.
+
+### Evidence
+
+- `docs/work/testing/2026-04-02_livewire-tenant-resolver-sharing.md`
+
+### Freshness metadata
+
+- `status`: confirmed
+- `last_confirmed_at`: 2026-04-02
+- `recheck_after`: 2026-07-02
+- `recheck_trigger`: Livewire boot order or route generation changes, or another `tenant()?->id` null failure appears in tenant-aware views
+
 ## Pattern B — mount() explicit init (required for #[Lazy] components)
 
 ```php
