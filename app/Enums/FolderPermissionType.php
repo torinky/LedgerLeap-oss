@@ -132,9 +132,23 @@ enum FolderPermissionType: string
             self::WRITE => 'info',
             self::INSPECT => 'warning', // 点検は注意喚起的な色？
             self::APPROVE => 'success', // 承認は成功色
-            self::ADMIN => 'danger', // ADMIN は強い権限なので赤系？ or primary?
+            self::ADMIN => 'error', // ADMIN は強い権限なので赤系？ or primary?
             self::NOTIFY_ON, self::NOTIFY_OFF => 'primary', // 通知は別の色
             default => 'neutral',
+        };
+    }
+
+    public function icon(): string
+    {
+        return match ($this) {
+            self::READ => 'o-eye',
+            self::WRITE => 'o-pencil-square',
+            self::INSPECT => 'o-magnifying-glass',
+            self::APPROVE => 'o-check-badge',
+            self::ADMIN => 'o-shield-check',
+            self::NOTIFY_ON => 'o-lock-closed',
+            self::NOTIFY_OFF => 'o-lock-closed',
+            default => 'o-lock-closed',
         };
     }
 

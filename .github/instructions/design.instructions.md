@@ -7,6 +7,7 @@ This file is the compact top-level UI policy for generated or modified views and
 - Build a clean, corporate administrative interface with good information density and strong readability.
 - Use daisyUI v5 + Tailwind CSS v4 as the default UI foundation.
 - Prefer Mary UI components whenever a matching component exists.
+- When using a Mary UI component, first check the component's supported parameters and attributes, then use those built-in options instead of adding custom wrapper markup for labels, titles, icons, or state text.
 - Use daisyUI semantic component classes to keep markup readable: `btn`, `card`, `input`, `badge`, `collapse`, `tooltip`, `table`, `tabs`, `fieldset`, `join`, and related variants.
 - Use Tailwind utilities to tune layout, spacing, and responsiveness; do not rebuild a component from scratch if daisyUI already provides it.
 - Never use hardcoded hex colors, arbitrary pixel values, or custom CSS components unless there is no practical semantic alternative.
@@ -61,6 +62,9 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Match sibling ledger screens when adjusting footer density, mobile pull-up behavior, and z-index layering so the footer does not occlude the main content.
 - Badge-first review is not limited to detail pages; apply the same status / count / metadata check to list rows, cards, forms, title blocks, and any other surface that presents compact state.
 - When a screen includes badges or other compact status markers, verify the nearby action area and tooltip wording together so the meaning is clear without adding a second text label.
+- For permission / access summary cards, surface the subject and viewer in the overview before the drill-down list so the user can answer "whose access to what" without reading the rows first.
+- If a direct / inherited marker is too long for the card, reduce it to icon-only + tooltip + sr-only text instead of keeping a verbose inline label.
+- For inherited access rows, render the granting folder as a breadcrumb-style path with folder icons and separators so the hierarchy break is visually obvious.
 
 ## 5. Component selection hierarchy
 
@@ -74,6 +78,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Primary text should stay readable on desktop; do not freeze it at a tiny value for every device.
 - Meaningful icons should scale with the text or the control role instead of staying at one fixed small size.
 - If a Mary icon is already legible at its default size, prefer the component default over repeating a fixed `w-* h-*` pair, especially for helper/tooltip icons and metadata markers.
+- Prefer Mary icon attributes such as `label`, `title`, and built-in size or variant options when they exist, instead of recreating those behaviors with custom spans or repeated class overrides.
 - Use small sizes only for badges, dense chrome, or secondary metadata.
 - Prefer responsive size steps or component defaults when the same page must work on both mobile and desktop.
 - Use the `responsive-text-icon-sizing` skill when this becomes a repeated pattern.
@@ -87,6 +92,8 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Chips / tags are for selectable or dismissible labels.
 - Tooltips should carry overflow details, not essential primary text.
 - If a badge or state marker is icon-only, pair it with a tooltip and sr-only text so the meaning remains accessible.
+- In dense tables, keep the primary entity label visible in the row cell; use icon-only badges for secondary state markers, not for the main role / user / organization name.
+- If the compact treatment hides the entity name itself, it has gone too far; restore the text label and reserve icon-only treatment for the accompanying state.
 
 ## 8. Responsive and visual behavior
 

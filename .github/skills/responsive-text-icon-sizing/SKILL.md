@@ -30,6 +30,7 @@ Are text or icons being hard-coded to a tiny size?
 
 - Prefer readable defaults for primary text.
 - Avoid locking shared text to `text-xs` or similar tiny sizes unless it is clearly secondary.
+- For Mary UI icons and similar components, check whether the component already exposes `label`, `title`, size, or variant parameters before adding custom wrappers or hard-coded classes.
 - Icons that support readable text should scale with that text or with the surrounding component role.
 - Avoid fixed icon sizes like `w-4 h-4` or `size-4` for primary actions, titles, or important metadata.
 - Use compact sizes only for badges, subtle metadata, table chrome, or other clearly secondary roles.
@@ -40,17 +41,20 @@ Are text or icons being hard-coded to a tiny size?
 - For persistent footers and summary bars, keep the visible text minimal and let badge, icon, and tooltip carry the meaning together.
 - If a footer badge needs explanation, move the explanation into a tooltip instead of adding a second text label next to it.
 - Avoid text-only footer labels when the label is only there to describe a short state or count; prefer icon + badge or icon + tooltip instead.
+- In dense list cells, do not remove the primary entity label just to save space; keep the name visible and use icon-only badges only for the attached state or provenance marker.
 
 ## Practical layout guidance
 
 - For desktop-facing content, allow text to grow at larger breakpoints instead of freezing it at a mobile-small size.
 - For icons paired with text, keep the icon visually proportional to the text and the surrounding control.
 - Prefer component defaults and theme tokens over ad hoc per-element overrides.
+- If a Mary UI component exposes a parameter that expresses the desired behavior, use that parameter instead of rebuilding the behavior in surrounding markup.
 - When multiple items must line up, apply one shared responsive sizing pattern to the whole group.
 - Do not use tiny defaults as a shortcut for density; make compactness deliberate and role-based.
 - If a marker needs to stay visible in a dense table header, let its size breathe slightly at larger breakpoints instead of freezing it at one tiny value.
 - In sticky action bars and other persistent footers, prefer a compact footer summary row with badge-first state, a small icon when it helps scanning, and tooltip text for the longer explanation.
 - If the footer content is a status summary rather than a sentence, do not render it as a plain text line; treat it as metadata chrome.
+- When a badge or marker is acting as the only clue to an entity name, that is a design smell; restore the text label and keep compactness for secondary details only.
 
 ## Evidence and references
 

@@ -3,6 +3,15 @@
 return [
     'access_and_permissions' => [
         'check_details_below' => '詳細については以下のリストを確認してください。',
+        'direct_role_hint' => 'このリソースに直接割り当てられたロールです。',
+        'filters' => 'フィルタ',
+        'legend' => '凡例',
+        'legend_hint' => '直接付与と継承の違いを示す凡例です。',
+        'inherited_role_hint' => '所属組織や親階層から継承されたロールです。',
+        'inherited_from_folder' => '継承元フォルダ: :folder',
+        'inherited_from_folder_label' => '継承元フォルダ',
+        'viewer' => '閲覧者',
+        'overview' => '概要',
         'column' => [
             'email' => 'メールアドレス',
             'organization_name' => '組織名',
@@ -25,7 +34,9 @@ return [
         'no_specific_permissions' => '特定の権限なし',
         'no_users_found' => 'このリソースにアクセス可能なユーザーは見つかりませんでした。',
         'organizations_with_access' => 'アクセス権限を持つ組織',
+        'organizations' => '組織',
         'roles_with_access' => 'アクセス権限を持つロール',
+        'roles' => 'ロール',
         'search_users_placeholder' => 'ユーザー名またはメールアドレスで検索...',
         'source' => [
             'folder' => 'フォルダ',
@@ -34,7 +45,8 @@ return [
         ],
         'title' => 'アクセスと権限',
         'users_with_access' => 'アクセス可能なユーザー',
-        'your_access_level' => 'あなたのアクセスレベル',
+        'users'=>'ユーザー',
+        'your_permissions' => 'この リソース への あなたの権限',
     ],
     'permission_description' => [
         'create_folders' => '新しいフォルダーを作成できます。',
