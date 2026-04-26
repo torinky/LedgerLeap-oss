@@ -40,7 +40,9 @@ it('column value is array', function () {
         'aaa' => true,
     ], true, [], '', false, null);
 
-    $expectedHtml = '<span class="'.ColumnHtmlService::BADGE_CLASS_NAME.'">aaa</span>';
+    $expectedHtml = '<div class="flex flex-wrap gap-1">'
+        . '<span class="'.ColumnHtmlService::BADGE_CLASS_NAME.'">aaa</span>'
+        . '</div>';
     expect($result->toHtml())->toBe($expectedHtml);
 });
 
