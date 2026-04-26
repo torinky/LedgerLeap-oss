@@ -278,7 +278,7 @@ class LedgerDefineModelTest extends TestCase
     public function test_scope_search_tags_filters_by_keyword(): void
     {
         // タグを持つ LedgerDefine を作成
-        $tag = \App\Models\Tag::factory()->create([
+        \App\Models\Tag::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'name' => 'sprint3-unique-tag',
         ]);
@@ -288,5 +288,22 @@ class LedgerDefineModelTest extends TestCase
 
         $noResult = LedgerDefine::searchTags(['XXXXNOTEXIST'])->get();
         $this->assertFalse($noResult->contains('id', $this->ledgerDefine->id));
+    }
+
+    public function test_scope_search_tags_matches_multiple_partial_tags_across_distinct_rows(): void
+    {
+        \App\Models\Tag::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'name' => '営業活動',
+        ]);
+
+        \App\Models\Tag::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'name' => '日次報告',
+        ]);
+
+        $result = LedgerDefine::searchTags(['日次', '営業'])->get();
+
+        $this->assertTrue($result->contains('id', $this->ledgerDefine->id));
     }
 }

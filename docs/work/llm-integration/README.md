@@ -87,6 +87,7 @@
   - 連動ツール: `GetTagsTool` / `GetFoldersTool` / `GetLedgerDefinesTool` / `SearchLedgersTool`
 - **[Issue 137 policy memo: synonym / technical-term selection](./2026-04-05_Issue-137_Synonym_Technical_Term_Selection_Policy_Memo.md)**: 同義語と技術用語候補の分離、業務慣熟度ベースの選択ポリシー、既存正規化の非ゴール化をまとめた A2-1 の最終アウトプット。
 - **[Issue 138 policy memo: search query trace explainability](./2026-04-05_Issue-138_Search_Query_Trace_Explainability_Memo.md)**: 検索クエリ trace の最小項目、ユーザー向け要約と開発者向け詳細の分離、後続対話での q 調整に関する A2-2 の最終アウトプット。
+- **[複数 `#タグ` 検索の一般的な挙動調査と LedgerLeap の判断整理](./2026-04-27_Tag_Search_Multi_Hashtag_Common_Principles_and_LedgerLeap_Policy.md)**: GitHub Code Search とタグ管理ライブラリの一般的な挙動を踏まえ、LedgerLeap の複数 `#タグ` 検索を AND / 部分一致として扱う判断との差分を整理した調査メモ。
 - **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)**: MCP経由で添付ファイル情報を活用するための実装計画。
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。
