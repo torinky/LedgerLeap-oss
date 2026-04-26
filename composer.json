@@ -24,7 +24,7 @@
     "filament/filament": "^5",
     "guzzlehttp/guzzle": "^7",
     "intervention/image": "^2",
-    "kalnoy/nestedset": "^6",
+    "kalnoy/nestedset": "^7.0",
     "laravel/framework": "^13",
     "laravel/mcp": "^0.5",
     "laravel/sanctum": "^4",

@@ -122,7 +122,7 @@ LedgerLeap は、以下のようなユーザーと状況での利用を想定し
     * マルチテナント: `stancl/tenancy` (^3.7)
     * 権限管理: `spatie/laravel-permission` (^6.9)
     * アクティビティログ: `spatie/laravel-activitylog` (^4.9)
-    * フォルダ階層管理: `kalnoy/nestedset` (^6.0)
+    * フォルダ階層管理: `kalnoy/nestedset` (^7.0)
     * **ファイル処理統合 (Phase 1-5実装完了)**:
         * **VLM (Visual Language Model)**: **PaddleOCR-VL 0.9B** - 高精度OCR、Markdown生成、構造化データ抽出
         * **OCR**: **OcrMyPDF** - 画像・PDFのOCR処理とPDF最適化
