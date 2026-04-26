@@ -89,9 +89,7 @@ class Tree extends BaseLivewireComponent
     #[On('currentFolderChangedByMain')]
     public function syncCurrentFolderFromMain($newFolderId): void
     {
-        if (! $this->parentComponentId) {
-            $this->standaloneFolderId = $newFolderId;
-        }
+        $this->standaloneFolderId = $newFolderId;
     }
 
     #[On('permissions-changed')]

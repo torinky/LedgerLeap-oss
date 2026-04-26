@@ -1,26 +1,38 @@
 <div class="min-h-[400px]">
     @php use App\Helpers\ActivityLogFormatter; @endphp
-    {{--    <x-mary-header title="{{ __('ledger.activity.title') }}" icon="o-clock" />--}}
-
-
-
         @if(!auth()->check() || !auth()->user()->can('view', \App\Models\CustomActivity::class))
             <p class="text-center text-gray-500 py-8">{{ __('ledger.activity.no_permission') }}</p>
         @else
-            {{-- ★★★ フィルタリングUI ★★★ --}}
-            <div class="relative">
-                <x-element.loading-overlay tier="2" target="filterByUserId,filterByEvent,filterByDescription,gotoPage" />
+            <div class="relative space-y-4">
+                @php
+                    $activityTargets = 'filterByUserId,filterByEvent,filterByDescription,filterStartDate,filterEndDate,resetFilters,gotoPage,nextPage,previousPage';
+                @endphp
 
-                <x-mary-card  class="pt-0" shadow>
+                <x-element.loading-overlay tier="2" target="{{ $activityTargets }}" />
 
-{{--
                 <x-mary-header
-                        title="{{ __('ledger.filter') }}"
-                        icon="o-funnel"
-                        size="text-md"
-                />
---}}
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+                        :title="__('ledger.activity.title')"
+                        icon="o-clock"
+                        size="text-xl"
+                        separator
+                >
+                    <x-slot:actions>
+                        <div class="flex flex-wrap items-center justify-end gap-2">
+                            <span class="badge badge-outline badge-lg shrink-0">
+                                {{ $activities->total() }}
+                            </span>
+                            <x-mary-button
+                                    label="{{ __('ledger.reset') }}"
+                                    wire:click="resetFilters"
+                                    class="btn-sm btn-ghost"
+                                    icon="o-arrow-path"
+                            />
+                        </div>
+                    </x-slot:actions>
+                </x-mary-header>
+
+                <x-mary-card class="shadow-sm border border-base-200">
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                     {{-- 操作者フィルタ --}}
                     <div>
                         <x-mary-choices
@@ -40,7 +52,7 @@
                                 label="{{ __('ledger.activity.column.operation') }}"
                                 :options="$this->eventOptions"
                                 option-value="event"
-                                option-label="event"
+                            option-label="label"
                                 wire:model.live="filterByEvent"
                                 placeholder="{{ __('ledger.all_operations') }}"
                                 allow-empty
@@ -51,14 +63,14 @@
                                 label="{{ __('ledger.activity.column.description') }}"
                                 :options="$this->descriptionOptions"
                                 option-value="description"
-                                option-label="description"
+                            option-label="label"
                                 wire:model.live="filterByDescription"
                                 placeholder="{{ __('ledger.all_operations') }}"
                                 allow-empty
                         />
                     </div>
                     {{-- 期間フィルタ --}}
-                    <div class="md:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div class="md:col-span-2 lg:col-span-2 grid grid-cols-1 sm:grid-cols-2 gap-4">
                         <x-mary-datepicker
                                 label="{{ __('ledger.activity.filter.start_date') }}"
                                 wire:model.live="filterStartDate"
@@ -70,21 +82,10 @@
                                 icon="o-calendar"
                         />
                     </div>
-                </div>
-                <div class="mt-4 flex justify-end">
-                    <x-mary-button
-                            label="{{ __('ledger.reset') }}"
-                            wire:click="resetFilters"
-                            class="btn-sm btn-ghost"
-                            icon="o-arrow-path"
-                    />
-                </div>
-            </x-mary-card>
-            <div class="divider"></div>
+                    </div>
+                </x-mary-card>
 
-            @php
-                $activityTargets = 'filterByUserId,filterByEvent,filterByDescription,filterStartDate,filterEndDate,gotoPage,nextPage,previousPage';
-            @endphp
+            <div class="divider"></div>
 
             <div wire:loading wire:target="{{ $activityTargets }}">
                 <x-element.skeleton-table rows="10" cols="5" />

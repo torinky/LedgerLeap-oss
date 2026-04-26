@@ -103,9 +103,10 @@ class LedgerHistoryManagerTest extends TestCase
     {
         Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
-            ->assertSee('Ver.1')
-            ->assertSee('Ver.2')
-            ->assertSee('Ver.3')
+            ->assertSee(__('ledger.version').'1')
+            ->assertSee(__('ledger.version').'2')
+            ->assertSee(__('ledger.version').'3')
+            ->assertSee(__('ledger.column.expand_all'))
             ->assertViewHas('history', function ($history) {
                 return $history->count() === 3;
             })
@@ -350,7 +351,7 @@ class LedgerHistoryManagerTest extends TestCase
                 // 元々3件（diff1, diff2, diff3）あったところに1件追加したが、
                 // diff3 と redundantDiff が重複するので、結果として3件になるはず。
                 // また、より新しい redundantDiff が残っているはず。
-                return $history->count() === 3 
+                return $history->count() === 3
                     && $history->contains('id', $redundantDiff->id)
                     && !$history->contains('id', $this->diff3->id);
             });

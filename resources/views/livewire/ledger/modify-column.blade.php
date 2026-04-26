@@ -236,14 +236,14 @@
                                 default => 'o-document-text',
                             };
                         @endphp
-                        <div class="tooltip tooltip-top" data-tip="{{ __('ledger.workflow.current_status_desc') }}">
+                        <div class="tooltip tooltip-top" data-tip="{{ __('ledger.workflow.current_status') }}">
                             <x-mary-badge
                                 :value="$status->label()"
                                 :icon="$statusIcon"
                                 class="badge-sm {{ $status->colorClass() }} font-bold shadow-sm" />
                         </div>
                     @else
-                        <div class="tooltip tooltip-top" data-tip="{{ __('ledger.workflow.current_status_desc') }}">
+                        <div class="tooltip tooltip-top" data-tip="{{ __('ledger.workflow.current_status') }}">
                             <x-mary-badge
                                 :value="__('ledger.workflow.status.draft')"
                                 icon="o-pencil-square"

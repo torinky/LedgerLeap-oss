@@ -42,10 +42,27 @@ class PermissionDisplayTest extends TestCase
     {
         $this->actingAs($this->user);
 
+        $accessibleUser = User::factory()->create();
+        $accessibleUser->assignRole($this->role);
+
+        RoleFolderPermission::create([
+            'role_id' => $this->role->id,
+            'folder_id' => $this->folder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $this->user->id,
+        ]);
+
         Livewire::test(PermissionDisplay::class, [
             'resourceId' => $this->folder->id,
             'resourceType' => 'Folder',
-        ])->assertStatus(200);
+        ])
+            ->assertStatus(200)
+            ->assertSee(__('ledger.access_and_permissions.overview'))
+            ->assertSee(__('ledger.access_and_permissions.no_direct_access'))
+            ->assertSee(__('ledger.access_and_permissions.roles_with_access'))
+            ->assertSee(__('ledger.access_and_permissions.filters'))
+            ->assertSee($this->role->name)
+            ->assertSee(__('ledger.access_and_permissions.your_access_level'));
     }
 
     #[Test]
@@ -135,12 +152,33 @@ class PermissionDisplayTest extends TestCase
     public function renders_successfully_for_ledger_define()
     {
         $this->actingAs($this->user);
-        $define = LedgerDefine::factory()->create(['folder_id' => $this->folder->id]);
+        $sourceRoot = Folder::factory()->create(['title' => 'SourceRoot_'.uniqid()]);
+        $sourceFolder = Folder::factory()->create([
+            'title' => 'SourceFolder_'.uniqid(),
+            'parent_id' => $sourceRoot->id,
+        ]);
+        $leafFolder = Folder::factory()->create([
+            'title' => 'LeafFolder_'.uniqid(),
+            'parent_id' => $sourceFolder->id,
+        ]);
+        $define = LedgerDefine::factory()->create(['folder_id' => $leafFolder->id]);
+
+        RoleFolderPermission::create([
+            'role_id' => $this->role->id,
+            'folder_id' => $sourceFolder->id,
+            'permission' => FolderPermissionType::READ->value,
+            'modifier_id' => $this->user->id,
+        ]);
 
         Livewire::test(PermissionDisplay::class, [
             'resourceId' => $define->id,
             'resourceType' => 'LedgerDefine',
-        ])->assertStatus(200);
+        ])
+            ->assertStatus(200)
+            ->assertSeeHtml($this->tenantRoute('folder.edit', ['folder' => $sourceRoot->id]))
+            ->assertSeeHtml($this->tenantRoute('folder.edit', ['folder' => $sourceFolder->id]))
+            ->assertSee($sourceRoot->title)
+            ->assertSee($sourceFolder->title);
     }
 
     #[Test]
@@ -163,5 +201,10 @@ class PermissionDisplayTest extends TestCase
             'resourceId' => $this->folder->id,
             'resourceType' => 'Folder',
         ])->assertSee(__('ledger.access_and_permissions.title'));
+    }
+
+    private function tenantRoute(string $name, array $parameters = []): string
+    {
+        return route($name, array_merge(['tenant' => tenant('id')], $parameters));
     }
 }

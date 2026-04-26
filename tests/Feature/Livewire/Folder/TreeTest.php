@@ -315,6 +315,23 @@ class TreeTest extends TestCase
         $component->assertSeeHtml('open: (function()');
     }
 
+    #[Test]
+    public function it_syncs_current_folder_from_main_event()
+    {
+        $this->actingAs($this->user);
+
+        $childFolder = Folder::where('title', 'Child 1')->first();
+
+        $component = Livewire::test(Tree::class, [
+            'currentFolderId' => $childFolder->id,
+            'selectedFolderIds' => [$childFolder->id],
+        ]);
+
+        $component->dispatch('currentFolderChangedByMain', newFolderId: $childFolder->id, newSelectedFolderIds: [$childFolder->id]);
+
+        $component->assertSet('standaloneFolderId', $childFolder->id);
+    }
+
     /**
      * Sprint 4: 5段階層での descendants 一括 Eager Load 回帰テスト
      *

@@ -52,6 +52,8 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - HAR analysis: `/browser-har-analysis`
 - Git commits: `/git-commit`
 - GitHub issues / PRs: `/github-issue-workflow`
+- Client-facing contract triage: `/client-facing-contract-triage`
+- Client-facing contract maintenance agent: `.github/agents/client-facing-contract-maintenance.agent.md`
 - CI failures: `/ci-failure-investigation`
 - RAG / search: `/rag-vector-search`
 - AI asset maintenance: `/skill-maintenance`

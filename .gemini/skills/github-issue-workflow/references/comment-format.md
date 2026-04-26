@@ -9,7 +9,14 @@
 ## 🐛 本番コードバグ修正 — Sprint X 発見分 (YYYY-MM-DD)
 ## 📊 カバレッジ評価タイトル (YYYY-MM-DD)
 ## 📝 ドキュメント更新 + 完了判定 (YYYY-MM-DD)
+## 🧭 イシュー起草 — 機能 / 改善 / 言語 / 調査 (YYYY-MM-DD)
 ```
+
+## Issue Drafting Entry Point
+
+通常の起票フォーマットは `/.github/ISSUE_TEMPLATE/issue_request.yml` に集約する。
+バグ / CI 失敗 / 回帰は `/.github/ISSUE_TEMPLATE/bug_report.yml` を使う。
+コメント側では sprint 計画・完了報告・証拠の書式だけを扱う。
 
 ## Emoji Conventions
 
@@ -25,6 +32,7 @@
 | 📐 | plan / design |
 | 🔍 | investigation |
 | 🐛 | bug fix |
+| 🧭 | drafting / scoping |
 | 🎉 | milestone achieved |
 | 🏁 | final completion |
 

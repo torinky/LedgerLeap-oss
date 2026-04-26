@@ -22,9 +22,18 @@ class ShowController extends Controller
 
         $this->authorize('view', $ledger);
 
+        $breadcrumbs = [];
         $ledgerDefineRecord = null;
         if (! empty($ledger)) {
             $ledgerDefineRecord = $ledger->define;
+            
+            if ($ledgerDefineRecord && $ledgerDefineRecord->folder_id) {
+                $folder = \App\Models\Folder::with('ancestors')->find($ledgerDefineRecord->folder_id);
+                if ($folder) {
+                    $breadcrumbs = $folder->ancestors->all();
+                    $breadcrumbs[] = $folder;
+                }
+            }
         }
 
         // 表示可否の判定はlivewireで行う
@@ -32,6 +41,6 @@ class ShowController extends Controller
             abort(404, __('ledger.not_found'));
         }
 
-        return View::make('ledger.show', compact('ledger', 'ledgerDefineRecord'));
+        return View::make('ledger.show', compact('ledger', 'ledgerDefineRecord', 'breadcrumbs'));
     }
 }

@@ -1,5 +1,5 @@
 ---
-description: Maintain LedgerLeap AI operating assets after every bug fix, sprint, or investigation. Sync prompts, skills, instructions, AGENTS, issue templates, and runbooks from newly proven learnings.
+description: Maintain LedgerLeap AI operating assets after every bug fix, sprint, investigation, or user-requested retrospective. Sync prompts, skills, instructions, AGENTS, issue templates, and runbooks from newly proven learnings.
 ---
 
 # skill-maintenance
@@ -20,7 +20,9 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 
 ## When to Run
 
-- バグ修正で再利用可能な原因・回避策・実装パターンが確定したとき
+- すべての作業（不具合対応、機能検討、調査、実装、スプリント、ドキュメント更新）が完了したとき
+- issue / sprint 完了後に、学びを整理して残したいとき
+- ユーザーから明示的に「振り返りをしてください」と指示されたとき
 - 既存 instruction / prompt / skill が誤っていたと分かったとき
 - 新しい recurring workflow が 2 回以上出現したとき
 - issue template / runbook / AGENTS の不足が判明したとき
@@ -42,14 +44,18 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 
 ## Maintenance Loop
 
-1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、ワークフローを列挙する
-2. **Classify**: 上の routing matrix で primary destination を決める
-3. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
-4. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
-5. **Evidence**: durable claim ごとに、repo 証拠または official source への到達点を記録する
-6. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint、evidence reachability に加えて、`tool = contract` / `capability = flow` / `docs = rationale` の分離を確認する
-7. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
-8. **Recheck**: doc-sensitive guidance には `last_confirmed_at` と `recheck_after` を付け、期限超過または同領域変更時に再確認する
+1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、失敗した操作、採用しなかった案、ワークフローを列挙する。issue / sprint 完了後や retrospective 指示時は、実装結果とは別に「学び」だけを取り出す
+   - 作業開始前に `pwd` と `git rev-parse --show-toplevel` を実行し、現在地と Git ルートを確定する。WSL / Mac でパスが違う前提なので、ここで食い違ったら作業を止める
+2. **Two-layer review**: 学びは必ず 2 層で整理する
+   - 進め方の改善: 対象レイヤーの固定、証拠順序、仮説比較、検証ゲート、手戻りの防止
+   - 個別具体の手法改善: 使ったコマンド、設定、UI 変更、テンプレート、文言、実装パターン
+3. **Classify**: 上の routing matrix で primary destination を決める
+4. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
+5. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
+6. **Evidence**: durable claim ごとに、repo 証拠または official source への到達点を記録する
+7. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint、evidence reachability に加えて、`tool = contract` / `capability = flow` / `docs = rationale` の分離を確認する
+8. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
+9. **Recheck**: doc-sensitive guidance には `last_confirmed_at` と `recheck_after` を付け、期限超過または同領域変更時に再確認する
 
 ## JetBrains / Copilot Rule
 

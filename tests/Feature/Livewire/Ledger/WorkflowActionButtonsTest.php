@@ -62,6 +62,8 @@ class WorkflowActionButtonsTest extends TestCase
         $this->setupDefaultRenderMocks(false, false, false);
 
         Livewire::test(WorkflowActionButtons::class, ['ledgerRecord' => $this->ledger])
-            ->assertStatus(200);
+            ->assertStatus(200)
+            ->assertSee(__('ledger.action_bar_open'))
+            ->assertSee(__('ledger.action_bar_close'));
     }
 }

@@ -21,6 +21,8 @@ Need tenant context?
   NO  → RefreshDatabase
 ```
 
+**MCP unit test shortcut**: if a test only verifies MCP tool auth or response shape and does not need to persist tenant-scoped records, prefer an in-memory `User::factory()->make()` plus `Sanctum::actingAs(..., ['mcp:*'])` over `RefreshDatabaseWithTenant`. This avoids unnecessary tenant DB setup and keeps pure tool tests fast.
+
 ## Trait Comparison
 
 | Trait | migrate:fresh | Tenant | Speed | Use case |
@@ -32,6 +34,8 @@ Need tenant context?
 
 **Why `DatabaseMigrations` is slow**: `migrate:fresh` takes ~13s (Mroonga index rebuild).
 10 test methods = 130s. Also `migrate:rollback` destroys other tests' DB state.
+
+**Environment recovery first**: if `composer test:coverage` fails because tables already exist or `migrations` is missing, fix the test DB with `bin/reset-test-db.sh` and the recorded recovery flow before changing traits.
 
 ## Performance (measured)
 
