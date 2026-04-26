@@ -147,6 +147,7 @@ class IndexManagerIntegrationTest extends TestCase
         Livewire::test(IndexManager::class)
             ->call('changeCurrentFolder', $otherFolder->id)
             ->assertSet('currentFolderId', $otherFolder->id)
+            ->assertDispatched('currentFolderChangedByMain', newFolderId: $otherFolder->id, newSelectedFolderIds: [$otherFolder->id])
             ->assertSee($otherFolder->title);
     }
 
