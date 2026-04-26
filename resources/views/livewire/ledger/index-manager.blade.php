@@ -103,7 +103,18 @@
                 <div
                         class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6 items-center">
 
-                    <div class="grid grid-cols-1 {{ !empty($this->highlights) ? 'md:grid-cols-2' : '' }}">
+                    @php
+                        $hasSearchKeywords = ! empty($this->highlights);
+                        $hasSearchTags = ! empty($tags);
+                        $searchGridClass = '';
+                        if ($hasSearchKeywords && $hasSearchTags) {
+                            $searchGridClass = 'md:grid-cols-3';
+                        } elseif ($hasSearchKeywords || $hasSearchTags) {
+                            $searchGridClass = 'md:grid-cols-2';
+                        }
+                    @endphp
+
+                    <div class="grid grid-cols-1 {{ $searchGridClass }}">
 
                         @if (!empty($this->highlights))
                             <div class="flex flex-wrap gap-2 items-center justify-center pb-2 md:pb-0">
@@ -119,6 +130,19 @@
                                                 <i class="fas fa-layer-group text-[10px] opacity-70"></i>
                                             </div>
                                         @endif
+                                    </div>
+                                @endforeach
+                            </div>
+                        @endif
+
+                        @if (!empty($tags))
+                            <div class="flex flex-wrap gap-2 items-center justify-center pb-2 md:pb-0">
+                                <span class="text-xs">
+                                    <i class="fas fa-tag mr-1 opacity-50"></i>{{ __('ledger.search_tag_active') }}
+                                </span>
+                                @foreach ($tags as $tag)
+                                    <div class="badge badge-secondary badge-md gap-2 py-3 shadow-sm border-none">
+                                        <span class="font-bold">#{{ $tag }}</span>
                                     </div>
                                 @endforeach
                             </div>
@@ -288,7 +312,7 @@
                                                        :useTechnicalTerm="$useTechnicalTerm" :perPage="$perPage"
                                                        :defaultSortColumns="$defaultSortColumns"
                                                        :hasWorkflowEnabled="$hasWorkflowEnabled"
-                                                       :keywords="$this->keywords" :highlights="$this->highlights"
+                                                       :keywords="$this->keywords" :tags="$tags" :highlights="$this->highlights"
                                                        :synonyms="$this->synonyms"
                                                        wire:key="ledger-records-table-stable"/>
                     </div>

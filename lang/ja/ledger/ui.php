@@ -256,6 +256,7 @@ return [
     'search_hero_title' => '台帳を検索',
     'search_keyword' => '検索キーワード',
     'search_message' => 'スペース区切りでキーワードを検索',
+    'search_tag_active' => 'タグでフィルタ中',
     'search_options' => '検索オプション',
     'search_synonym' => '同義語も検索',
     'search_synonym_hint' => '同義語を候補に含めます',

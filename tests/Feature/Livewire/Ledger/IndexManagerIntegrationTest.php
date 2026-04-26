@@ -6,6 +6,7 @@ use App\Livewire\Ledger\IndexManager;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tag;
 use App\Models\User;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -82,7 +83,7 @@ class IndexManagerIntegrationTest extends TestCase
             ->set('currentFolderId', $this->rootFolder->id)
             ->assertSee(__('ledger.search_options'))
             ->assertSee(__('ledger.form.display_level'))
-            ->assertSee(__('ledger.form.display_level') . ': ' . __('ledger.form.display_level_options.1'))
+            ->assertSee(__('ledger.form.display_level').': '.__('ledger.form.display_level_options.1'))
             ->assertSee(__('ledger.opened_count'));
     }
 
@@ -127,6 +128,84 @@ class IndexManagerIntegrationTest extends TestCase
 
         $keywordsAfterClear = $component->get('keywords');
         $this->assertEmpty($keywordsAfterClear, 'Keywords should be empty when search is cleared');
+    }
+
+    #[Test]
+    public function it_filters_by_tag_only_from_query_string(): void
+    {
+        $taggedDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Tagged Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        Tag::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'folder_id' => $this->subFolder->id,
+            'name' => 'urgent',
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'content' => $taggedDefine->normalizeByColumnDefine([0 => 'TaggedOnlyUrgentMatch']),
+        ]);
+
+        $bodyOnlyDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Body Only Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $bodyOnlyDefine->id,
+            'content' => $bodyOnlyDefine->normalizeByColumnDefine([0 => 'BodyOnlyUrgentMatch']),
+        ]);
+
+        Livewire::withQueryParams([
+            'q' => '#urgent',
+            'cf' => $this->rootFolder->id,
+        ])
+            ->test(IndexManager::class)
+            ->assertOk()
+            ->assertSee(__('ledger.search_tag_active'))
+            ->assertSee('TaggedOnlyUrgentMatch')
+            ->assertDontSee('BodyOnlyUrgentMatch');
+    }
+
+    #[Test]
+    public function it_uses_three_columns_when_keyword_and_tag_search_are_active(): void
+    {
+        $taggedDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Tagged Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        Tag::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'folder_id' => $this->subFolder->id,
+            'name' => 'urgent',
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'content' => $taggedDefine->normalizeByColumnDefine([0 => 'TargetUrgentMatch']),
+        ]);
+
+        Livewire::withQueryParams([
+            'q' => 'Target #urgent',
+            'cf' => $this->rootFolder->id,
+        ])
+            ->test(IndexManager::class)
+            ->assertOk()
+            ->assertSeeHtml('grid grid-cols-1 md:grid-cols-3')
+            ->assertSee(__('ledger.search_tag_active'));
     }
 
     #[Test]

@@ -2,7 +2,10 @@
 
 namespace App\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
+use App\Helpers\SearchHelper;
 use App\Http\Requests\Ledger\SearchRequest;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HasSortingLabels;
 use App\Livewire\Traits\InitializesTenantContext;
@@ -13,10 +16,15 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
+use App\Services\PermissionService; // 追加
+use App\Services\RagSearchService;
 use App\Services\SynonymService;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive; // 追加
+use Livewire\Attributes\Reactive;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
@@ -66,7 +74,8 @@ class RecordsTable extends BaseLivewireComponent
     #[Reactive]
     public int $displayLevel = 1;
 
-    private $tags = [];
+    #[Reactive]
+    public $tags = [];
 
     #[Reactive]
     public $keywords = [];
@@ -248,10 +257,9 @@ class RecordsTable extends BaseLivewireComponent
         $synonymService = new SynonymService($this->synonymServiceConfig);
         $this->searchContext = new SearchContext($synonymService);
 
-        // プロパティ値をセットして検索に備える
-        // 注意: setSearch() などを呼ぶと内部で再計算される可能性があるため、
-        // 必要なプロパティのみを直接セットするか、再計算を防ぐ構成にする。
+        // 親から受け取った状態をそのまま利用し、タグだけを検索コンテキストに注入する。
         $this->searchContext->keywords = $this->keywords ?? [];
+        $this->searchContext->tags = $this->tags ?? [];
         $this->searchContext->highlights = $this->highlights ?? [];
         $this->searchContext->synonyms = $this->synonyms ?? [];
         $this->searchContext->filter = $this->filter ?? [];
@@ -402,10 +410,10 @@ class RecordsTable extends BaseLivewireComponent
     /**
      * コレクションに対してソートを適用する
      *
-     * @param  \Illuminate\Support\Collection  $collection
+     * @param  Collection  $collection
      * @param  string  $sortBy
      * @param  bool  $orderAsc
-     * @return \Illuminate\Support\Collection
+     * @return Collection
      */
     private function applySorting($collection, $sortBy, $orderAsc)
     {
@@ -546,7 +554,7 @@ class RecordsTable extends BaseLivewireComponent
                 : $this->search;
 
             // Step 2: RAGで検索（スコア情報付きで全件取得）
-            $ragResults = app(\App\Services\RagSearchService::class)->searchLedgers(
+            $ragResults = app(RagSearchService::class)->searchLedgers(
                 query: $searchQuery,
                 limit: 1000, // 十分な件数を取得（後でソート・ページネーション）
                 filters: array_merge($this->filter, [
@@ -563,11 +571,11 @@ class RecordsTable extends BaseLivewireComponent
                     $searchTargetLedgerDefineIds
                 );
                 $this->dispatchTotalRecordsChanged($this->totalRecords);
-                $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
+                $ledgerRecords = new LengthAwarePaginator(
                     [],
                     0,
                     $this->perPage,
-                    \Illuminate\Pagination\Paginator::resolveCurrentPage()
+                    Paginator::resolveCurrentPage()
                 );
                 $ledgerDefineRecords = collect()->keyBy('id');
             } else {
@@ -605,10 +613,10 @@ class RecordsTable extends BaseLivewireComponent
                     $searchTargetLedgerDefineIds
                 );
                 $this->dispatchTotalRecordsChanged($this->totalRecords);
-                $currentPage = \Illuminate\Pagination\Paginator::resolveCurrentPage();
+                $currentPage = Paginator::resolveCurrentPage();
                 $currentPageItems = $sortedLedgers->slice(($currentPage - 1) * $this->perPage, $this->perPage)->values();
 
-                $ledgerRecords = new \Illuminate\Pagination\LengthAwarePaginator(
+                $ledgerRecords = new LengthAwarePaginator(
                     $currentPageItems,
                     $this->totalRecords,
                     $this->perPage,
@@ -745,7 +753,7 @@ class RecordsTable extends BaseLivewireComponent
                     continue;
                 }
                 foreach ($attached as $hashedfilename => $metaData) {
-                    if (\App\Helpers\SearchHelper::isFileDataHit($metaData, $hits)) {
+                    if (SearchHelper::isFileDataHit($metaData, $hits)) {
                         if (is_array($metaData)) {
                             $contentAttached[$key][$hashedfilename]['hit'] = true;
                         } else {
@@ -764,7 +772,7 @@ class RecordsTable extends BaseLivewireComponent
 
         $currentFolder = $this->currentFolder;
         $currentUserPermissionStartedAt = microtime(true);
-        $currentUserPermission = $currentFolder ? app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
+        $currentUserPermission = $currentFolder ? app(PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
         $currentUserPermissionDurationMs = (microtime(true) - $currentUserPermissionStartedAt) * 1000;
 
         // Filter column_define for each ledgerDefine based on displayLevel
@@ -868,6 +876,7 @@ class RecordsTable extends BaseLivewireComponent
             'filteredColumnDefines' => $filteredColumnDefines,
             'scoreStatsByDefineId' => $scoreStatsByDefineId,
             'keywords' => $this->keywords,
+            'tags' => $this->tags,
             'synonyms' => $this->synonyms,
             'highlights' => $this->highlights,
             'totalRecords' => $this->totalRecords,
@@ -1022,8 +1031,8 @@ class RecordsTable extends BaseLivewireComponent
         }
 
         try {
-            $attachedFile->update(['status' => \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
-            \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
+            $attachedFile->update(['status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value]);
+            ProcessAttachedFile::dispatch($attachedFile);
             $this->dispatch('toast', type: 'success', message: __('ledger.messages.processing_retried'));
         } catch (\Exception $e) {
             $this->dispatch('toast', type: 'error', message: __('ledger.messages.processing_retry_failed', ['error' => $e->getMessage()]));

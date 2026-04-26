@@ -11,7 +11,8 @@ use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
-use App\Services\SynonymService; // 追加
+use App\Services\PermissionService; // 追加
+use App\Services\SynonymService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema as FacadesSchema;
 use Livewire\Attributes\Computed;
@@ -72,6 +73,8 @@ class IndexManager extends BaseLivewireComponent
 
     public $keywords = [];
 
+    public $tags = [];
+
     public $synonyms = [];
 
     public $totalRecords = 0;
@@ -98,7 +101,7 @@ class IndexManager extends BaseLivewireComponent
             return null;
         }
 
-        return app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
+        return app(PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
     }
 
     #[Computed]
@@ -122,7 +125,7 @@ class IndexManager extends BaseLivewireComponent
         }
 
         return $this->currentFolder->children()
-            ->addSelect(['ledger_defines_count' => \App\Models\LedgerDefine::selectRaw('count(*)')
+            ->addSelect(['ledger_defines_count' => LedgerDefine::selectRaw('count(*)')
                 ->whereIn('folder_id', function ($query) {
                     $query->select('id')
                         ->from('folders as f2')
@@ -230,6 +233,7 @@ class IndexManager extends BaseLivewireComponent
         $searchContext->setFilter($this->filter);
 
         $this->keywords = $searchContext->keywords ?? [];
+        $this->tags = $searchContext->tags ?? [];
         $this->highlights = $searchContext->highlights ?? [];
         $this->synonyms = $searchContext->synonyms ?? [];
     }
@@ -529,6 +533,7 @@ class IndexManager extends BaseLivewireComponent
 
         return view('livewire.ledger.index-manager', [
             'keywords' => $this->keywords ?? [],
+            'tags' => $this->tags ?? [],
             'synonyms' => $this->synonyms ?? [],
             'totalRecords' => $this->totalRecords ?? 0,
             'highlights' => $this->highlights ?? [],

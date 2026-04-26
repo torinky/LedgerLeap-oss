@@ -172,12 +172,13 @@ class SearchContext
         }
 
         $tags = [];
-        $keywords = $words;
+        $keywords = [];
 
         foreach ($words as $word) {
             if (Str::startsWith($word, '#')) {
                 $tags[] = substr($word, 1);
             } else {
+                $keywords[] = $word;
                 $keywords = array_merge($keywords, SynonymService::wakati($word));
             }
         }
@@ -214,7 +215,6 @@ class SearchContext
     /**
      * 検索候補を kind 付きで取得する
      *
-     * @param  array  $keywords
      * @return array<int, array{term:string, kind:string}>
      */
     private function findSelectedTerms(array $keywords): array
