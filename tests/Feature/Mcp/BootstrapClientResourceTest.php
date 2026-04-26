@@ -33,7 +33,7 @@ class BootstrapClientResourceTest extends TestCase
 
         $this->assertArrayHasKey('result', $response);
         $this->assertArrayHasKey('resourceTemplates', $response['result']);
-        $this->assertCount(1, $response['result']['resourceTemplates']);
+        $this->assertCount(3, $response['result']['resourceTemplates']);
         $this->assertSame(
             'ledgerleap://bootstrap/{client}',
             $response['result']['resourceTemplates'][0]['uriTemplate']
@@ -41,6 +41,14 @@ class BootstrapClientResourceTest extends TestCase
         $this->assertSame(
             'text/markdown',
             $response['result']['resourceTemplates'][0]['mimeType']
+        );
+        $this->assertSame(
+            'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}/blob',
+            $response['result']['resourceTemplates'][1]['uriTemplate']
+        );
+        $this->assertSame(
+            'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}',
+            $response['result']['resourceTemplates'][2]['uriTemplate']
         );
     }
 
