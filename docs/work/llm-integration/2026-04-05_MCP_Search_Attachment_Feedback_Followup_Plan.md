@@ -2,7 +2,7 @@
 
 **作成日:** 2026年04月05日  
 **種別:** 作業計画（MCP テストフィードバック整理）  
-**関連:** `resources/ai/capabilities/ledger-search.yaml`, `app/Mcp/Tools/SearchLedgersTool.php`, `app/Services/LedgerService.php`, `app/Services/Ledger/SearchContext.php`, `app/Mcp/Tools/GetPendingApprovalsTool.php`, `app/Models/AttachedFile.php`, `app/Jobs/Ledger/ProcessVlmExtraction.php`, `app/Http/Controllers/AttachedFileDownloadController.php`
+**関連:** `resources/ai/capabilities/ledger-search.yaml`, `app/Mcp/Tools/SearchLedgersTool.php`, `app/Services/LedgerService.php`, `app/Services/Ledger/SearchContext.php`, `app/Mcp/Tools/GetPendingApprovalsTool.php`, `app/Models/AttachedFile.php`, `app/Jobs/Ledger/ProcessVlmExtraction.php`, `app/Http/Controllers/AttachedFileDownloadController.php`, `docs/work/llm-integration/2026-04-17_Continue_MCP_Attachment_Resource_Exposure_Plan.md`
 
 ## 1. 目的
 
@@ -364,4 +364,4 @@ A2-1 の最終アウトプットは `docs/work/llm-integration/2026-04-05_Issue-
 2. 検索改善 / 複数添付改善 / 添付詳細出力の issue を起票する
 3. 既存の `ledger-search` capability の文言を、実際の挙動に合わせて整理する
 4. 実装優先度の高い Sprint A から着手する
-
+5. Continue.dev resource 導線は `docs/work/llm-integration/2026-04-17_Continue_MCP_Attachment_Resource_Exposure_Plan.md` に集約し、検索改善計画とは分離して管理する

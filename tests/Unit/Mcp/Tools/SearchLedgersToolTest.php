@@ -448,6 +448,11 @@ class SearchLedgersToolTest extends TestCase
         $this->assertEquals('application/pdf', $attachments[0]['mime_type']);
         $this->assertEquals('text', $attachments[0]['delivery_mode']);
         $this->assertSame(['text', 'markdown', 'structured', 'json', 'visual'], $attachments[0]['available_formats']);
+        $this->assertSame('ledgerleap://ledger/'.$this->getTenant()->id.'/1/attachments/11', $attachments[0]['resource_uri']);
+        $this->assertSame('ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}', $attachments[0]['resource_template']);
+        $this->assertSame('mcp_resource', $attachments[0]['access_guide']['resource_type']);
+        $this->assertSame('resources/read', $attachments[0]['access_guide']['read_via']);
+        $this->assertSame($attachments[0]['resource_uri'], $attachments[0]['access_guide']['uri']);
         $this->assertArrayHasKey('routes', $attachments[0]);
         $this->assertSame(route('file.download', [
             'tenant' => $this->getTenant()->id,
@@ -635,6 +640,7 @@ class SearchLedgersToolTest extends TestCase
             'available' => false,
             'url' => null,
         ], $attachments[0]['routes']['inspector']);
+        $this->assertNull($attachments[0]['access_guide']);
         $this->assertFalse($attachments[0]['payloads']['structured']['available']);
         $this->assertFalse($attachments[0]['payloads']['visual']['available']);
     }
@@ -710,6 +716,9 @@ class SearchLedgersToolTest extends TestCase
         $this->assertSame('application/json', $attachments[0]['mime_type']);
         $this->assertSame('text', $attachments[0]['delivery_mode']);
         $this->assertSame(['text', 'structured', 'json'], $attachments[0]['available_formats']);
+        $this->assertNull($attachments[0]['resource_template']);
+        $this->assertNull($attachments[0]['resource_uri']);
+        $this->assertNull($attachments[0]['access_guide']);
         $this->assertSame('primary', $attachments[0]['role']);
         $this->assertSame(1, $attachments[0]['order']);
         $this->assertTrue($attachments[0]['payloads']['text']['available']);

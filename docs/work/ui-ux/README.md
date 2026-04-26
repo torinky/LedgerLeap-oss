@@ -27,6 +27,18 @@
 
 - **[台帳一覧検索ヘッダーのレスポンシブ/スクロール境界メモ](./ledger-list-redesign/2026-04-11_ledger-search-header-responsive-scroll-note.md)** ✅ 完了・skill 化: 検索入力の主役化、`sort_by` / `per_page` の中間幅横並び、sticky ヘッダーのスクロール遮蔽量を減らす余白調整を記録し、`search-header-responsive-layout` skill の evidence として昇格。
 
+- **[デザインワークフロー再編メモ](./2026-04-18_design-workflow-reorganization-note.md)** ✅ 完了・skill 化: daisyUI を前提に共通基盤を縮約し、`title-block` / `form-layout` を独立スキルとして追加。`ledger-detail-header`・`search-header-responsive-layout`・`livewire-loading-ui` と合わせて再利用前提で束ねる。
+
+- **[文字・アイコンサイズのレスポンシブ基準メモ](./2026-04-18_text-icon-size-responsiveness-note.md)** ✅ 完了・skill 化: PC で見にくい固定の小文字・小アイコンを避け、読める既定値やレスポンシブなサイズ段階へ寄せる方針を追加。
+
+- **[台帳詳細 基本情報タブ リファイン計画](./2026-04-18_ledger-detail-basic-info-tab-refinement-plan.md)** ✅ Sprint 2 完了: `show.blade.php` の重複構造を整理し、`ledger-diff-viewer` と `workflow-status-card` の可読性を改善。`workflow-action-buttons` の current version 表示も維持し、関連 Feature テストを通過確認済み。
+
+- **[Sticky Action Bar Footer Pattern](./2026-04-22_sticky-action-bar-footer-pattern.md)** ✅ 完了・skill 化候補: 共有フッターは `x-ledger.sticky-action-bar` を使い、`left` / `right` / `footer` の役割を固定。編集・新規・定義・詳細の各画面で action / status / navigation を揃える基準を記録。
+
+- **[Issue #161 / 文言・パンくず・補助コンポーネント整理](./2026-04-19_issue-161-breadcrumbs-supporting-components-plan.md)** ✅ 完了: `Top` の翻訳キー化、`show.blade.php` のメタ情報ラベル整理、`expandable-content` を共有ヘルパーとして維持する判断を反映済み。`ShowTest` も通過確認済み。
+
+- **[台帳更新履歴スプリットペイン振り返り](./2026-04-20_ledger-history-split-pane-retrospective.md)** ✅ 完了: Mary UI カード化、翻訳キー化、loading の段階表示の修正、design instructions への反映、そして途中で誤った点の記録をまとめた retrospective。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
@@ -65,6 +77,9 @@
 
 ### 文言設計 / コピーライティング
   - **[Text Writing Guidance for Buttons, Labels, and Descriptions](./2026-04-11_text-writing-guidance.md)** 📝 判断基準メモ: ボタンは action、ラベルは noun、説明は guidance、エラーは problem + next step で揃える。
+
+### 文字・アイコンサイズ設計
+  - **[Text and Icon Size Responsiveness Note](./2026-04-18_text-icon-size-responsiveness-note.md)** 📝 判断基準メモ: 文字とアイコンを固定小サイズに閉じ込めず、device/context に応じて読みやすく変化させる。
 
 - ### ブラウザ固有の問題
   - **[Safariフリーズ問題](./2025-07-20_safari-freeze-debug-log.md)** ✅ 解決済み: 特定の画面でSafariブラウザがフリーズする問題に関する詳細なデバッグログと調査記録。

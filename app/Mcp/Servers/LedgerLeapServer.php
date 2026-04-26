@@ -4,25 +4,29 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Prompts\BootstrapClientSkillsPrompt;
 use App\Mcp\Resources\BootstrapClientResource;
+use App\Mcp\Resources\LedgerAttachmentBinaryResource;
+use App\Mcp\Resources\LedgerAttachmentResource;
 use App\Mcp\Tools\ClaimWorkflowTaskTool;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Mcp\Tools\ExecuteApprovalTool;
 use App\Mcp\Tools\GetActivityLogTool;
 use App\Mcp\Tools\GetClientBootstrapManifestTool;
-use App\Mcp\Tools\GetFoldersTool;
 use App\Mcp\Tools\GetFolderStatsTool;
+use App\Mcp\Tools\GetFoldersTool;
 use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
-use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetRelatedLedgersTool;
+use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetTagsTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Mcp\Tools\UpdateLedgerTool;
 use Laravel\Mcp\Server;
+use Laravel\Mcp\Server\Prompt;
+use Laravel\Mcp\Server\Tool;
 
 class LedgerLeapServer extends Server
 {
@@ -60,7 +64,7 @@ class LedgerLeapServer extends Server
     /**
      * The tools registered with this MCP server.
      *
-     * @var array<int, class-string<\Laravel\Mcp\Server\Tool>>
+     * @var array<int, class-string<Tool>>
      */
     protected array $tools = [
         GetClientBootstrapManifestTool::class,
@@ -86,16 +90,18 @@ class LedgerLeapServer extends Server
     /**
      * The resources registered with this MCP server.
      *
-     * @var array<int, class-string<\Laravel\Mcp\Server\Resource>>
+     * @var array<int, class-string<Server\Resource>>
      */
     protected array $resources = [
         BootstrapClientResource::class,
+        LedgerAttachmentBinaryResource::class,
+        LedgerAttachmentResource::class,
     ];
 
     /**
      * The prompts registered with this MCP server.
      *
-     * @var array<int, class-string<\Laravel\Mcp\Server\Prompt>>
+     * @var array<int, class-string<Prompt>>
      */
     protected array $prompts = [
         BootstrapClientSkillsPrompt::class,

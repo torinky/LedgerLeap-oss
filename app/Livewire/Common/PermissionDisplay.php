@@ -4,6 +4,7 @@ namespace App\Livewire\Common;
 
 use App\Enums\FolderPermissionType;
 use App\Livewire\BaseLivewireComponent;
+use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -19,6 +20,7 @@ use Livewire\WithPagination;
 
 class PermissionDisplay extends BaseLivewireComponent
 {
+    use InitializesTenantContext;
     use WithPagination;
 
     public int $resourceId;
@@ -220,6 +222,26 @@ class PermissionDisplay extends BaseLivewireComponent
     public function getCurrentUserAllPermissionsProperty(): ?array
     {
         return $this->permissionService->getCurrentUserAllPermissions($this->resourceId, $this->resourceType);
+    }
+
+    public function getInheritedFromFolderPathProperty(): ?string
+    {
+        $folder = match ($this->resourceType) {
+            'Folder' => Folder::with('ancestors')->find($this->resourceId),
+            'LedgerDefine' => LedgerDefine::with('folder.ancestors')->find($this->resourceId)?->folder,
+            'Ledger' => Ledger::with('define.folder.ancestors')->find($this->resourceId)?->define?->folder,
+            default => null,
+        };
+
+        if (! $folder) {
+            return null;
+        }
+
+        $ancestorTitles = $folder->relationLoaded('ancestors')
+            ? $folder->ancestors->pluck('title')->all()
+            : [];
+
+        return '/'.implode('/', array_merge($ancestorTitles, [$folder->title]));
     }
 
     /**

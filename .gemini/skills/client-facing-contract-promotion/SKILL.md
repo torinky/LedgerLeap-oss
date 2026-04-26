@@ -33,6 +33,7 @@ A useful workflow already exists in WebUI?
 - Extract a **shared service** when the current logic is locked inside Livewire / controller code.
 - Ship the **smallest MCP contract** that makes the workflow usable.
 - Treat REST as **follow-up support** unless another client already depends on it.
+- If the input is still an uncontracted scenario or intake item, route it through `/client-facing-contract-triage` first.
 - Record the implementation evidence in the execution issue, then return only reusable patterns to the iteration issue.
 
 ## Minimum Deliverable

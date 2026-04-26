@@ -1,5 +1,5 @@
 ---
-description: Maintain LedgerLeap AI operating assets after every bug fix, sprint, or investigation. Sync prompts, skills, instructions, AGENTS, issue templates, and runbooks from newly proven learnings.
+description: Maintain LedgerLeap AI operating assets after every bug fix, sprint, investigation, or user-requested retrospective. Sync prompts, skills, instructions, AGENTS, issue templates, and runbooks from newly proven learnings.
 ---
 
 # skill-maintenance

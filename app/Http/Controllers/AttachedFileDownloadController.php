@@ -6,6 +6,7 @@ use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Models\AttachedFile;
+use App\Services\Ledger\LedgerAttachmentBinaryResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -13,6 +14,10 @@ use Illuminate\Support\Facades\Storage;
 
 class AttachedFileDownloadController extends Controller
 {
+    public function __construct(
+        private readonly LedgerAttachmentBinaryResourceService $attachmentBinaryResourceService,
+    ) {}
+
     public function download(Request $request, AttachedFile $attachedFile)
     {
         Log::info('[DownloadController@download] Started.', [
@@ -47,13 +52,13 @@ class AttachedFileDownloadController extends Controller
                 $attachedFile->tenant_id,
             );
         } elseif ($isOriginalRequest && $attachedFile->original_file_path) {
-            $filePath = $attachedFile->original_file_path;
+            $filePath = $this->attachmentBinaryResourceService->resolveAttachmentPath($attachedFile, true);
             $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
             Log::info('[DownloadController@download] Original file path from helper.', [
                 'path' => $filePath,
             ]);
         } else {
-            $filePath = $attachedFile->path;
+            $filePath = $this->attachmentBinaryResourceService->resolveAttachmentPath($attachedFile);
             Log::info('[DownloadController@download] Attachment file path from helper.', [
                 'path' => $filePath,
             ]);
@@ -96,7 +101,7 @@ class AttachedFileDownloadController extends Controller
             Log::info('[DownloadController@download] Thumbnail not found, returning icon instead of redirecting.');
 
             // FontAwesomeIconControllerを使用して直接アイコンを返す
-            return app(\App\Http\Controllers\FontAwesomeIconController::class)
+            return app(FontAwesomeIconController::class)
                 ->serveIconByMime($request->merge(['type' => $previewMime]));
         }
 
@@ -120,7 +125,7 @@ class AttachedFileDownloadController extends Controller
             ])
             ->log('User activity logged for file: '.$fileNameToServe);
 
-        $mimeType = Storage::disk('public')->mimeType($filePath);
+        $mimeType = $this->attachmentBinaryResourceService->resolveAttachmentMimeType($attachedFile, $filePath);
 
         // original=trueの場合は必ずダウンロード（attachment）
         if ($isOriginalRequest) {

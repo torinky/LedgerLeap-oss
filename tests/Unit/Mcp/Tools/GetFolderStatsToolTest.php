@@ -49,8 +49,8 @@ class GetFolderStatsToolTest extends TestCase
 
         // WritableFolderRepositoryをモック
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getWritableFolders')
-            ->andReturn(collect([$this->folder]));
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->andReturn([$this->folder->id]);
         $mockRepository->shouldReceive('clearAllCache')->byDefault()->andReturn(true);
         $mockRepository->shouldReceive('refreshAllCache')->byDefault()->andReturn(true);
 
@@ -213,8 +213,8 @@ class GetFolderStatsToolTest extends TestCase
 
         // モックを更新して両方のフォルダを返すように
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getWritableFolders')
-            ->andReturn(collect([$this->folder, $folder2]));
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->andReturn([$this->folder->id, $folder2->id]);
         $mockRepository->shouldReceive('clearAllCache')->byDefault()->andReturn(true);
         $mockRepository->shouldReceive('refreshAllCache')->byDefault()->andReturn(true);
 

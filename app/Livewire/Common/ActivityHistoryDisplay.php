@@ -84,6 +84,8 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
         $this->hiddenColumns = $hiddenColumns;
 
         // ★★★ フィルタ選択肢を初期化 ★★★
+        $this->eventOptions = collect();
+        $this->descriptionOptions = collect();
         $this->userOptions = User::orderBy('name')->get(['id', 'name']);
     }
 
@@ -235,12 +237,32 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
             ->whereNotNull('event')
             ->distinct()
             ->orderBy('event')
-            ->get();
+            ->get()
+            ->map(function ($option) {
+                $event = $option->event;
+
+                return [
+                    'event' => $event,
+                    'label' => $this->getOperationLabel($event),
+                ];
+            })
+            ->values();
         $this->descriptionOptions = CustomActivity::select('description')
             ->whereNotNull('description')
             ->distinct()
             ->orderBy('description')
             ->get();
+
+        $this->descriptionOptions = $this->descriptionOptions
+            ->map(function ($option) {
+                $description = $option->description;
+
+                return [
+                    'description' => $description,
+                    'label' => $this->getDescriptionLabel($description),
+                ];
+            })
+            ->values();
 
         // 2段階クエリ: まず ID のみで ORDER BY + LIMIT を実行（sort_buffer_size 節約）
         // → 対象 ID で本データを取得することで大容量の properties カラムをソートに含めない
@@ -361,5 +383,45 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
     public function getCauserDetailLink(CustomActivity $activity): ?string
     {
         return ActivityLogFormatter::getCauserDetailLink($activity);
+    }
+
+    protected function getDescriptionLabel(?string $description): string
+    {
+        if (! $description) {
+            return '';
+        }
+
+        if (str_starts_with($description, 'User activity logged for file: ')) {
+            $filename = substr($description, strlen('User activity logged for file: '));
+
+            return __('ledger.activity.filter.description.file_activity_logged', ['filename' => $filename]);
+        }
+
+        if (str_starts_with($description, 'User downloaded VLM result for file: ')) {
+            $filename = substr($description, strlen('User downloaded VLM result for file: '));
+
+            return __('ledger.activity.filter.description.downloaded_vlm_result', ['filename' => $filename]);
+        }
+
+        if (str_starts_with($description, 'User downloaded OCR PDF: ')) {
+            $filename = substr($description, strlen('User downloaded OCR PDF: '));
+
+            return __('ledger.activity.filter.description.downloaded_ocr_pdf_file', ['filename' => $filename]);
+        }
+
+        $key = 'ledger.activity.filter.description.'.$description;
+
+        return __($key) !== $key ? __($key) : $description;
+    }
+
+    protected function getOperationLabel(?string $event): string
+    {
+        if (! $event) {
+            return '';
+        }
+
+        $key = 'ledger.activity.filter.operation.'.$event;
+
+        return __($key) !== $key ? __($key) : $event;
     }
 }

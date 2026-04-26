@@ -12,6 +12,7 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - Reusable capabilities and decision trees belong in `/.github/skills/<name>/SKILL.md`.
 - Long examples and deep procedures belong in `/.github/skills/<name>/references/*.md`.
 - Agent-wide routing and discovery rules belong in `/AGENTS.md`.
+- Reusable evaluation harnesses, fixtures, and sanitized environment templates belong in `docs/harnesses/*`.
 - Human-readable operating procedures belong in `docs/runbooks/*`.
 
 ## Editing Rules
@@ -41,6 +42,7 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 ## Runbook / Template Rules
 
 - Runbooks explain the operational sequence for humans and AI.
+- Harnesses capture copyable directory layouts, sanitized templates, and evaluation fixtures.
 - Templates standardize evidence capture and output structure.
 - If a workflow ends with a reusable learning, link to `/skill-maintenance` or the AI maintenance playbook.
 

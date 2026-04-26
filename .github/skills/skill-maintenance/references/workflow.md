@@ -29,6 +29,8 @@ Use the answer to decide whether the item stays in `docs/work/*` or graduates in
 
 When the failure is due to a test / config mismatch, capture the expected condition, the actual runtime condition, and the smallest opt-in needed before promoting the learning.
 
+When a Blade change produces a syntax or rendering error that does not match the visible source, clear compiled views before widening the diagnosis; stale cache can make the wrong branch look guilty.
+
 ## Step 2 — Route each finding to the primary destination
 
 | Finding type | Primary destination |
@@ -71,6 +73,7 @@ When the user supersedes an earlier plan, treat the override as the new authorit
 - Remove or rewrite stale checklist items instead of leaving both versions visible.
 - Restate the new scope in the next progress note so the user can confirm what changed.
 - Keep the old wording only if it is explicitly marked as superseded.
+- For a user override, rewrite the affected branch so the new instruction is the only visible source of truth.
 
 Evidence anchor: issue `#135` scope was repeatedly re-centered on 2026-04-12, and the stable result came from writing the new scope back into the issue / plan immediately (`https://github.com/torinky/LedgerLeap/issues/135#issuecomment-4230914437`).
 

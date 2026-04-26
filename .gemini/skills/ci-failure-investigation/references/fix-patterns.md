@@ -141,3 +141,51 @@ if (! Schema::connection('mysql_testing')->hasTable('tenants')) {
 `FolderTest` → `LedgerFullTextSearchTest` → `SearchApiTest` のように `F < L < S` の順になるため、
 この問題は構造的に発生しうる。`Schema::hasTable()` ガードが常に有効。
 
+---
+
+## §7 Parallel test DB suffix mismatch
+
+`ParallelTesting::token()` が有効な環境で、共有の `TestCase` や trait で `mysql_testing` を
+手動で `..._test_{token}` に書き換えると、Laravel 本体の parallel testing がさらに suffix を
+付けて `ledgerleap_test_test_1_test_1` のような二重 suffix が発生する。
+
+### Fix: let Laravel own the worker database switch
+
+```php
+// ❌ shared bootstrap で再度 suffix を付けない
+DB::purge('mysql_testing');
+config()->set('database.connections.mysql_testing.database', $workerDatabase);
+
+// ✅ Laravel ParallelTesting に worker DB 切り替えを任せる
+// 共有 bootstrap では DB 名を触らない
+```
+
+### CI side check
+
+- `phpunit.parallel.xml` / `phpunit.xml` / `.github/actions/laravel-test-setup/action.yml`
+  の DB 名と権限付与は、実際に Laravel が使う worker DB 名と一致させる。
+- この症状は `SQLSTATE[42000]: Access denied ... ledgerleap_test_test_1_test_1` で出る。
+
+Evidence: `vendor/laravel/framework/src/Illuminate/Testing/Concerns/TestDatabases.php` の
+`testDatabase()` は `{$database}_test_{$token}` を返す。LedgerLeap の CI では
+`ledgerleap_test` をベース名にして worker DB を作成・grant する。
+
+---
+
+## §8 Filament relation-manager table assertions
+
+Relation-manager の table が deferred / unloaded のままだと、
+`assertCanSeeTableRecords()` が Livewire snapshot 上の `table.records.*` を見つけられず
+失敗することがある。
+
+### Fix: load the table first
+
+```php
+Livewire::test(FolderPermissionRelationManager::class, [...])
+    ->loadTable()
+    ->assertCanSeeTableRecords($records);
+```
+
+Evidence: `vendor/filament/tables/src/Testing/TestsRecords.php` exposes `loadTable()`
+and `tests/Feature/Filament/RoleResourceFolderPermissionRelationManagerTest.php`
+became stable after loading the table explicitly.

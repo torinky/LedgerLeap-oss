@@ -89,6 +89,7 @@
 - 既存の `vlm_markdown` / `vlm_structured_data` と矛盾する再生成は行わない
 - tenant 境界と認可を越える URL は生成しない
 - 大きすぎる添付は切り詰めや分割を前提にする
+- `resource_uri` は Continue.dev 向け follow-up 導線として扱い、`routes.download` / `routes.inspector` は人間向け導線として維持する
 
 ### 9. C.2 実装確定事項
 - `attachments[]` は mode ごとに同じ `payloads.text` / `payloads.structured` / `payloads.visual` envelope を返す

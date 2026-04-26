@@ -45,6 +45,30 @@ Layer 2 — WritableFolderRepository (folder-level)
          WritableFolderRepository::clearAllCache($user)
 ```
 
+## ACL Display Pattern
+
+- When a permission summary shows inherited access, prefer the concrete granting folder path over a generic "inherited" label.
+- Render the source folder as a breadcrumb-style path with folder icons and visible separators when the hierarchy matters.
+- Keep the primary entity name visible in dense tables; reserve icon-only badges for secondary state markers such as direct / inherited provenance.
+- Keep the role name as the main label on the row, and place inherited folder provenance on a secondary line below it.
+- If the source folder is not known, fall back to a short inherited label instead of guessing.
+
+## Evidence
+
+- Repo proof: [docs/work/ui-ux/2026-04-25_permission-display-overview-retrospective.md](../../../docs/work/ui-ux/2026-04-25_permission-display-overview-retrospective.md)
+- Repo proof: [resources/views/livewire/common/permission-display.blade.php](../../../resources/views/livewire/common/permission-display.blade.php)
+- Repo proof: [tests/Feature/Livewire/Common/PermissionDisplayTest.php](../../../tests/Feature/Livewire/Common/PermissionDisplayTest.php)
+
+## Freshness
+
+- status: confirmed
+- last_confirmed_at: 2026-04-25
+- recheck_after: 90d
+- recheck_trigger:
+  - permission summary rows start hiding the role name behind state icons again
+  - inherited folder provenance stops being shown as a breadcrumb path
+  - the breadcrumb separator or folder icon treatment changes in another ACL list
+
 ## Observer Auto-Clear Map
 
 | Model changed | Observer | What is cleared |
@@ -61,6 +85,7 @@ Layer 2 — WritableFolderRepository (folder-level)
 - [ ] After `RoleFolderPermission` change → `WritableFolderRepository::clearAllCache($user)`
 - [ ] `FolderPermissionType::ADMIN` includes all sub-permissions (no separate READ needed)
 - [ ] `tenancy()->initialize($tenant)` called before any permission check in Feature tests
+- [ ] In ACL summary UIs, inherited rows show the granting folder path as a breadcrumb when available
 
 See [references/cache-patterns.md](references/cache-patterns.md) for code examples.
 See [references/test-permission-setup.md](references/test-permission-setup.md) for test patterns.

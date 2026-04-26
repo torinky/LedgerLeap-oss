@@ -14,6 +14,7 @@ use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\UserService;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Bus;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -118,7 +119,10 @@ class ShowTest extends TestCase
 
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
             ->assertStatus(200)
-            ->assertSee($this->ledger->define->name);
+            ->assertSee($this->ledger->define->name)
+            ->assertSee(__('ledger.breadcrumb_top'))
+            ->assertSee(__('ledger.modified_by'))
+            ->assertSee(__('ledger.updated_at'));
     }
 
     #[Test]

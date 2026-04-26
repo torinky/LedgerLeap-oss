@@ -42,9 +42,9 @@ class AnalyticsServiceTest extends TestCase
 
         // WritableFolderRepositoryをモック
         $folderRepository = Mockery::mock(WritableFolderRepository::class);
-        $folderRepository->shouldReceive('getWritableFolders')
+        $folderRepository->shouldReceive('getReadableFolderIds')
             ->with($this->user)
-            ->andReturn(collect([$this->folder]));
+            ->andReturn([$this->folder->id]);
 
         $this->service = new AnalyticsService($folderRepository);
     }
@@ -100,9 +100,9 @@ class AnalyticsServiceTest extends TestCase
     {
         // アクセス可能なフォルダがない場合のモックを作成
         $folderRepository = Mockery::mock(WritableFolderRepository::class);
-        $folderRepository->shouldReceive('getWritableFolders')
+        $folderRepository->shouldReceive('getReadableFolderIds')
             ->with($this->user)
-            ->andReturn(collect([]));
+            ->andReturn([]);
 
         $service = new AnalyticsService($folderRepository);
 

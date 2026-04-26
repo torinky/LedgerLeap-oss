@@ -29,6 +29,15 @@ description: Investigate LedgerLeap bugs systematically before implementation. G
 - 発生環境（tenant / route / browser / test / CI / queue など）
 - エラーメッセージ、ログ、スタックトレース
 - 直近変更（関連 Issue / PR / commit / migration / package update）
+- どの層の問題か（app / Filament / vendor / translation / CSS / test など）
+- その層の所有者がどこか（自前コード / vendor / 設定 / 翻訳）
+
+## Early Checkpoints
+
+- まず対象レイヤーを 1 つに固定する。複数候補がある場合は、最も可能性が高い 1 つを主対象として明示する。
+- 所有者が不明な場合は、調査を進める前に「不明」と書き、確認を優先する。
+- 仮説を立てる前に、次に反証すべきポイントを 1 つ以上決める。
+- UI / Livewire / Filament の変更なら、後続の検証方法まで先に決める。
 
 ## Required Investigation Order
 
@@ -71,6 +80,7 @@ description: Investigate LedgerLeap bugs systematically before implementation. G
 - 仮説は 1 つに固定せず、A/B/C で列挙する
 - 各仮説に「根拠」「反証」「信頼度」を付ける
 - disproven な仮説や failed experiment も残す
+- 誤認した対象や外した確認順も、次回のために短く残す
 
 ## Deliverable Format
 

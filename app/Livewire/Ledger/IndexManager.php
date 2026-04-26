@@ -368,6 +368,7 @@ class IndexManager extends BaseLivewireComponent
         }
         $this->currentFolderId = $newFolderId;
         $this->updateSearchMetadata();
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
 
         $this->logPerformance('ledger_change_current_folder', (microtime(true) - $startedAt) * 1000, [
             'new_folder_id' => $newFolderId,
