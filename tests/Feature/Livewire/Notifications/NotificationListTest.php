@@ -69,6 +69,9 @@ class NotificationListTest extends TestCase
     {
         Livewire::test(NotificationList::class)
             ->assertSet('totalNotifications', 0);
+
+        Livewire::test(NotificationList::class)
+            ->assertSee(__('ledger.no_notification'));
     }
 
     #[Test]
@@ -79,6 +82,17 @@ class NotificationListTest extends TestCase
 
         Livewire::test(NotificationList::class)
             ->assertSet('totalNotifications', 2);
+    }
+
+    #[Test]
+    public function component_renders_actions_for_unread_notifications(): void
+    {
+        $this->createNotification(['event' => 'created']);
+
+        Livewire::test(NotificationList::class)
+            ->assertSee(__('ledger.mark_all_as_read'))
+            ->assertSee(__('ledger.mark_as_read'))
+            ->assertSee(__('ledger.unread'));
     }
 
     // ================================================================

@@ -9,10 +9,10 @@
     </div>
 
     <div wire:loading.delay.remove>
-        <x-mary-card :title="__('ledger.workflow.pending_tasks')">
+        <x-mary-card :title="__('ledger.workflow.pending_tasks')" class="border border-base-300 bg-base-100 shadow-sm">
         {{-- テーブルヘッダーのラベルを翻訳キーに --}}
         {{--        // 修正: 申請日時は latestDiff から取得 or updated_at を使う？ -> updated_at が現実的か--}}
-        <x-mary-table class="table-sm w-full table-zebra overflow-x-auto"
+        <x-mary-table class="table-sm w-full table-zebra overflow-x-auto bg-base-100"
                       :headers="[
             ['key' => 'requester', 'label' => __('ledger.workflow.requester')],
             ['key' => 'updated_at', 'label' => __('ledger.workflow.last_updated_at')],
@@ -38,7 +38,7 @@
             @endscope
 
             @scope('cell_status_and_progress', $ledger) {{-- スコープ名変更 --}}
-            <div class="space-2 grid grid-cols-1">
+            <div class="space-y-2">
                 <x-mary-badge :value="$ledger->status->label()" class="badge-sm {{ $ledger->status->colorClass() }}"/>
                 {{-- 必須ロール進捗サマリー表示 --}}
                 @if($ledger->required_roles_progress_summary)
@@ -46,8 +46,8 @@
                     {{-- 点検進捗 --}}
                     @if($progress['inspection_total'] > 0)
 
-                        <span class="tooltip tooltip-left">
-                            <div class="tooltip-content p-2 space-y-2 text-sm">
+                        <span class="tooltip tooltip-left inline-flex items-center gap-1">
+                            <div class="tooltip-content space-y-2 p-2 text-sm">
 {{--                                <div class="h3"> {{ __('ledger.workflow.required_inspector_roles') }}:</div>--}}
                                 <strong>{{__('ledger.workflow.inspection_completed')}}:</strong>
                                 @foreach($progress['inspection_completed_roles_names'] as $role)
@@ -67,15 +67,15 @@
                             </div>
                             <x-mary-icon
                                     name="{{ $progress['inspection_all_completed'] ? 'o-check-circle' : 'o-ellipsis-horizontal-circle' }}"
-                                    class="w-4 h-4 {{ $progress['inspection_all_completed'] ? 'text-success' : 'text-warning' }}"/>
+                                    class="h-4 w-4 {{ $progress['inspection_all_completed'] ? 'text-success' : 'text-warning' }}"/>
                             <span class="text-xs">{{ $progress['inspection_completed'] }}/{{ $progress['inspection_total'] }}</span>
                         </span>
                     @endif
                     {{-- 承認進捗 --}}
                     @if($progress['approval_total'] > 0)
 
-                        <span class="tooltip tooltip-left">
-                            <div class="tooltip-content p-2 space-y-2 text-sm">
+                        <span class="tooltip tooltip-left inline-flex items-center gap-1">
+                            <div class="tooltip-content space-y-2 p-2 text-sm">
 {{--                                <div class="h3"> {{ __('ledger.workflow.required_approver_roles') }}:</div>--}}
                                 <strong>{{__('ledger.workflow.approval_completed')}}:</strong>
                                 @foreach($progress['approval_completed_roles_names'] as $role)
@@ -95,7 +95,7 @@
                             </div>
                             <x-mary-icon
                                     name="{{ $progress['approval_all_completed'] ? 'o-check-circle' : 'o-ellipsis-horizontal-circle' }}"
-                                    class="w-4 h-4 {{ $progress['approval_all_completed'] ? 'text-success' : 'text-warning' }}"/>
+                                    class="h-4 w-4 {{ $progress['approval_all_completed'] ? 'text-success' : 'text-warning' }}"/>
                             <span class="text-xs">{{ $progress['approval_completed'] }}/{{ $progress['approval_total'] }}</span>
                         </span>
                     @endif
@@ -110,7 +110,7 @@
             @endscope
 
             @scope('actions', $ledger) {{-- $task を $ledger に変更 --}}
-            <div class="flex justify-end gap-1">
+            <div class="flex flex-wrap justify-end gap-1">
                 @if($ledger->status === WorkflowStatus::PENDING_INSPECTION && Auth::id() === $ledger->latestDiff->inspector_id /* && 権限チェック */)
                     {{-- 承認申請ボタン (モーダルを開く) --}}
                     <x-mary-button data-tip="{{ __('ledger.workflow.request_approval_short') }}" icon="o-check-badge"
@@ -157,7 +157,7 @@
         </x-mary-table>
 
         {{-- 担当者選択モーダルコンポーネント呼び出し --}}
-        @livewire('workflow.workflow-assignee-modal', key('assignee-modal-pending'))
+        <livewire:workflow.workflow-assignee-modal :key="'assignee-modal-pending'" />
 
         {{-- 承認者選択モーダル --}}
         {{--

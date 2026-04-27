@@ -33,7 +33,7 @@
 
 - **[台帳詳細 基本情報タブ リファイン計画](./2026-04-18_ledger-detail-basic-info-tab-refinement-plan.md)** ✅ Sprint 2 完了: `show.blade.php` の重複構造を整理し、`ledger-diff-viewer` と `workflow-status-card` の可読性を改善。`workflow-action-buttons` の current version 表示も維持し、関連 Feature テストを通過確認済み。
 
-- **[Sticky Action Bar Footer Pattern](./2026-04-22_sticky-action-bar-footer-pattern.md)** ✅ 完了・skill 化候補: 共有フッターは `x-ledger.sticky-action-bar` を使い、`left` / `right` / `footer` の役割を固定。編集・新規・定義・詳細の各画面で action / status / navigation を揃える基準を記録。
+- **[Sticky Action Bar Footer Pattern](./2026-04-22_sticky-action-bar-footer-pattern.md)** ✅ 完了・skill 化: 共有フッターは `x-ledger.sticky-action-bar` を使い、`left` / `right` / `footer` の役割を固定する基準を `sticky-action-bar-footer-pattern` skill として昇格。
 
 - **[Issue #161 / 文言・パンくず・補助コンポーネント整理](./2026-04-19_issue-161-breadcrumbs-supporting-components-plan.md)** ✅ 完了: `Top` の翻訳キー化、`show.blade.php` のメタ情報ラベル整理、`expandable-content` を共有ヘルパーとして維持する判断を反映済み。`ShowTest` も通過確認済み。
 
@@ -76,6 +76,9 @@
 
 ### 状態表示 / バッジ設計
   - **[Status / Count Display Badge Guidance](./2026-04-11_status-badge-pattern-guidance.md)** 📝 判断基準メモ: フッターやサマリーの短い状態・件数・メタ情報を badge + icon + tooltip へ寄せる基準と、text / chip / tag との使い分けを整理。
+
+### 共有フッター / Sticky Action Bar
+  - **[Sticky Action Bar Footer Pattern](./2026-04-22_sticky-action-bar-footer-pattern.md)** ✅ 完了・skill 化: 共有フッターは `x-ledger.sticky-action-bar` に寄せ、`left` / `right` / `footer` の slot 責務と badge-first summary を独立 skill に昇格。
 
 ### 文言設計 / コピーライティング
   - **[Text Writing Guidance for Buttons, Labels, and Descriptions](./2026-04-11_text-writing-guidance.md)** 📝 判断基準メモ: ボタンは action、ラベルは noun、説明は guidance、エラーは problem + next step で揃える。

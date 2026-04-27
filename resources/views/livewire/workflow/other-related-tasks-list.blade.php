@@ -1,6 +1,6 @@
 @php use App\Enums\WorkflowStatus; @endphp
 <div>
-    <x-mary-card :title="__('ledger.workflow.other_related_tasks_title')">
+    <x-mary-card :title="__('ledger.workflow.other_related_tasks_title')" class="border border-base-300 bg-base-100 shadow-sm">
 
         <x-mary-table :headers="[
                 ['key' => 'ledger_title', 'label' => __('ledger.title'), 'sortable' => true],
@@ -31,7 +31,7 @@
             @endscope
 
             @scope('cell_status_and_progress', $taskData)
-            <div class="space-2 grid grid-cols-1">
+            <div class="space-y-2">
                 <x-mary-badge :value="$taskData['status_label']"
                               class="badge-sm {{ $taskData['status_color_class'] }}"/>
                 {{-- 必須ロール進捗サマリー表示 --}}
@@ -40,8 +40,8 @@
                     {{--                @dd($progress)--}}
                     {{-- 点検進捗 --}}
                     @if($progress['inspection_total'] > 0)
-                        <span class="tooltip tooltip-left">
-                            <div class="tooltip-content p-2 space-y-2 text-sm">
+                        <span class="tooltip tooltip-left inline-flex items-center gap-1">
+                            <div class="tooltip-content space-y-2 p-2 text-sm">
 {{--                                <div class="h3"> {{ __('ledger.workflow.required_inspector_roles') }}:</div>--}}
                                 <strong>{{__('ledger.workflow.inspection_completed')}}:</strong>
                                 @foreach($progress['inspection_completed_roles_names'] as $role)
@@ -61,15 +61,15 @@
                             </div>
                             <x-mary-icon
                                     name="{{ $progress['inspection_all_completed'] ? 'o-check-circle' : 'o-ellipsis-horizontal-circle' }}"
-                                    class="w-4 h-4 {{ $progress['inspection_all_completed'] ? 'text-success' : 'text-warning' }}"/>
+                                    class="h-4 w-4 {{ $progress['inspection_all_completed'] ? 'text-success' : 'text-warning' }}"/>
                             <span class="text-xs">{{ $progress['inspection_completed'] }}/{{ $progress['inspection_total'] }}</span>
                         </span>
                     @endif
                     {{-- 承認進捗 --}}
                     @if($progress['approval_total'] > 0)
 
-                        <span class="tooltip tooltip-left">
-                            <div class="tooltip-content p-2 space-y-2 text-sm">
+                        <span class="tooltip tooltip-left inline-flex items-center gap-1">
+                            <div class="tooltip-content space-y-2 p-2 text-sm">
 {{--                                <div class="h3"> {{ __('ledger.workflow.required_approver_roles') }}:</div>--}}
                                 <strong>{{__('ledger.workflow.approval_completed')}}:</strong>
                                 @foreach($progress['approval_completed_roles_names'] as $role)
@@ -89,7 +89,7 @@
                             </div>
                             <x-mary-icon
                                     name="{{ $progress['approval_all_completed'] ? 'o-check-circle' : 'o-ellipsis-horizontal-circle' }}"
-                                    class="w-4 h-4 {{ $progress['approval_all_completed'] ? 'text-success' : 'text-warning' }}"/>
+                                    class="h-4 w-4 {{ $progress['approval_all_completed'] ? 'text-success' : 'text-warning' }}"/>
                             <span class="text-xs">{{ $progress['approval_completed'] }}/{{ $progress['approval_total'] }}</span>
                         </span>
                     @endif
@@ -126,7 +126,7 @@
             @endscope
 
             @scope('actions', $taskData)
-            <div class="flex justify-end gap-1">
+            <div class="flex flex-wrap justify-end gap-1">
                 @if (in_array($taskData['task_type'], ['my_submission_pending_inspection', 'my_submission_pending_approval']) && !$taskData['is_locked'])
                     <a href="{{ route('ledger.edit', ['tenant' => tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
                        class="btn btn-square btn-ghost text-primary tooltip" data-tip="{{__('ledger.edit')}}">
@@ -154,7 +154,7 @@
     {{-- 引き継ぎコメント入力モーダル --}}
     <x-mary-modal wire:model="showClaimCommentModal" :title="__('ledger.workflow.claim_task_comment_title')">
         @if($claimingTaskData)
-            <p class="mb-2">{{ __('台帳') }}: {{ $claimingTaskData['ledger_title'] }}
+            <p class="mb-2">{{ __('ledger.title') }}: {{ $claimingTaskData['ledger_title'] }}
                 (ID: {{ $claimingTaskData['ledger_id'] }})</p>
             <x-mary-textarea
                     label="{{ __('ledger.workflow.comment_optional') }}"
@@ -164,7 +164,7 @@
             />
         @endif
         <x-slot:actions>
-            <x-mary-button label="{{ __('Cancel') }}" @click="$wire.showClaimCommentModal = false"/>
+            <x-mary-button label="{{ __('ledger.ui.cancel') }}" @click="$wire.showClaimCommentModal = false"/>
             <x-mary-button label="{{ __('ledger.workflow.claim_and_start') }}" class="btn-success"
                            wire:click="claimTaskWithComment" spinner="claimTaskWithComment"/>
         </x-slot:actions>

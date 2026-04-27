@@ -13,6 +13,7 @@ This file is the compact top-level UI policy for generated or modified views and
 - Never use hardcoded hex colors, arbitrary pixel values, or custom CSS components unless there is no practical semantic alternative.
 - Never hardcode natural-language UI text. Use translation keys such as `__('ledger.xxx')` and manage them through the translation workflow.
 - Avoid locking primary text or meaningful icons to one tiny fixed size across all devices; prefer readable defaults or responsive size steps so desktop remains legible.
+- For wide business dashboards and tabbed summary pages, widen the outer container first on desktop (`w-full` plus a larger `max-w-*`) and keep the internal control groups centered; do not compensate with scattered child spacing that makes badges or tabs drift toward both edges.
 
 ## 2. Color and Density Rules
 
@@ -43,6 +44,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 
 - Detail header and compact context block: [`ledger-detail-header`](../skills/ledger-detail-header/SKILL.md)
 - Search / list sticky header and breakpoint behavior: [`search-header-responsive-layout`](../skills/search-header-responsive-layout/SKILL.md)
+- Tabbed dashboards, notification surfaces, and count badge placement: [`tabbed-dashboard-responsive-layout`](../skills/tabbed-dashboard-responsive-layout/SKILL.md)
 - Loading tiers, `wire:loading`, `x-show`, and sticky UI interactions: [`livewire-loading-ui`](../skills/livewire-loading-ui/SKILL.md)
 - UI copy, labels, and error text: [`translation`](../skills/translation/SKILL.md)
 - Text and icon sizing / legibility: [`responsive-text-icon-sizing`](../skills/responsive-text-icon-sizing/SKILL.md)
@@ -56,7 +58,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - When a form or page shell pattern repeats, record the pattern in `docs/work/ui-ux/*` before promoting it into a reusable skill.
 - For a reusable title block pattern, use the `title-block` skill.
 - For reusable form layout and field grouping patterns, use the `form-layout` skill.
-- For persistent ledger footers and bottom action surfaces, prefer `x-ledger.sticky-action-bar` over custom fixed cards or ad hoc bottom bars.
+- For persistent ledger footers and bottom action surfaces, prefer `x-ledger.sticky-action-bar` over custom fixed cards or ad hoc bottom bars, and follow `sticky-action-bar-footer-pattern` for slot responsibilities and badge-first summaries.
 - Use the shared footer shell consistently: `left` for escape / navigation / secondary actions, `right` for primary or workflow actions, and `footer` for short status or count summaries.
 - Keep footer summaries badge-first and compact; place the longer explanation in a tooltip or nearby helper text when needed.
 - Match sibling ledger screens when adjusting footer density, mobile pull-up behavior, and z-index layering so the footer does not occlude the main content.
@@ -116,6 +118,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 ## 10. UI verification
 
 - If you change Blade structure, verify both the visuals and the underlying variable scope / route resolution.
+- If you change a tabbed dashboard or notification surface, use Mary UI tabs when available, keep tab badges in one place, and verify the workflow too: the controller's initial active tab, any Livewire count events, and the presence of the relevant tab content all need to stay in sync with the new layout.
 - Run the relevant Feature test or rendering check for the affected page.
 - Report the verification result together with the change.
 
