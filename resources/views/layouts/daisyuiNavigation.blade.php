@@ -104,14 +104,12 @@
                             <i class="fas fa-user-edit w-4 mr-2"></i> {{ __('ledger.navigation.profile') }}
                         </x-daisyui-nav-link>
                     </li>
-                    @if (tenant())
-                        <li>
-                            <x-daisyui-nav-link :href="route('notifications.settings', ['tenant' => tenant()->id])" :active="request()->routeIs('notifications.settings')"> {{-- active 状態を追加 --}}
-                                <i class="fas fa-bell w-4 mr-2"></i>
-                                {{ __('ledger.navigation.notification_settings') }}
-                            </x-daisyui-nav-link>
-                        </li>
-                    @endif
+                    <li>
+                        <x-daisyui-nav-link :href="route('notifications.settings')" :active="request()->routeIs('notifications.settings')"> {{-- active 状態を追加 --}}
+                            <i class="fas fa-bell w-4 mr-2"></i>
+                            {{ __('ledger.navigation.notification_settings') }}
+                        </x-daisyui-nav-link>
+                    </li>
                     <form method="POST" action="{{ route('logout') }}">
                         @csrf
                         <li>

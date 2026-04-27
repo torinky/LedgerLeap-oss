@@ -266,6 +266,7 @@
 .menu .tree .tooltip::before,
 .menu .tree .tooltip::after {
     z-index: 100;
+    pointer-events: none;
 }
 
 /*

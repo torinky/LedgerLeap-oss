@@ -14,7 +14,7 @@
             ]" :rows="$listedTasks" striped with-pagination wire:sortable="sortBy" wire:key="other-related-tasks-table">
 
             @scope('cell_ledger_title', $taskData)
-            <a href="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
+            <a href="{{ route('ledger.show', ['tenant' => $taskData['tenant_id'] ?? tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
                class="hover:underline font-semibold">
                 {{ $taskData['ledger_title'] }} (ID: {{ $taskData['ledger_id'] }})
             </a>
@@ -139,7 +139,7 @@
                         <x-mary-icon name="o-hand-raised"/>
                     </x-mary-button>
                 @endif
-                <a href="{{ route('ledger.show', ['tenant' => tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
+                <a href="{{ route('ledger.show', ['tenant' => $taskData['tenant_id'] ?? tenant()?->id, 'ledgerId' => $taskData['ledger_id']]) }}"
                    class="btn btn-square btn-ghost tooltip" data-tip="{{__('ledger.view_details')}}">
                     <x-mary-icon name="o-eye"/>
                 </a>

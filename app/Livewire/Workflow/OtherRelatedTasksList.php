@@ -11,11 +11,12 @@ use App\Models\User;
 use App\Services\UserService;
 use App\Services\WorkflowService;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection as BaseCollection;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Log;
 // Eloquent Collection
 // Support Collection
+use Illuminate\Support\Facades\Log;
 use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
@@ -109,6 +110,7 @@ class OtherRelatedTasksList extends BaseLivewireComponent
 
         return [
             'ledger_id' => $ledger->id,
+            'tenant_id' => $ledger->tenant_id,
             'ledger_title' => $ledger->define?->title ?? __('ledger.unknown_ledger'),
             'status_value' => $ledger->status->value,
             'status_label' => $ledger->status->label(),
@@ -182,7 +184,7 @@ class OtherRelatedTasksList extends BaseLivewireComponent
                 }
         */
 
-        $paginatedTasks = new \Illuminate\Pagination\LengthAwarePaginator(
+        $paginatedTasks = new LengthAwarePaginator(
             $this->tasksData->forPage($this->getPage('related_task_page'), $this->perPage),
             $this->tasksData->count(),
             $this->perPage,

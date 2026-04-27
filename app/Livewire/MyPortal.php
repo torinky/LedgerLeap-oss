@@ -18,6 +18,12 @@ class MyPortal extends BaseLivewireComponent
 
     public ?Organization $primaryOrganization; // Nullable に
 
+    public string $primaryOrganizationName = '';
+
+    public string $primaryOrganizationNote = '';
+
+    public string $primaryRoleName = '';
+
     public Collection $otherOrganizations;
 
     public Collection $activeRoles;
@@ -122,6 +128,12 @@ class MyPortal extends BaseLivewireComponent
 
         // 主所属がある場合は "(主所属)" を付ける
         $primaryBadge = $this->primaryOrganization ? ' ('.__('ledger.organizations.primary').')' : '';
+
+        $this->primaryOrganizationName = $orgName;
+        $this->primaryOrganizationNote = $this->primaryOrganization
+            ? __('ledger.organizations.primary')
+            : ($this->otherOrganizations->isNotEmpty() ? __('ledger.no_primary_organization') : __('ledger.no_organization_assigned'));
+        $this->primaryRoleName = $roleName;
 
         $this->roleDisplayString = sprintf('%s %s%s', $orgName, $roleName, $primaryBadge);
 

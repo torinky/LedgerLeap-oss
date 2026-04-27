@@ -8,6 +8,8 @@
     'readableFolderIds' => [],
     'manageableFolderIds' => [],
     'interactive' => true,
+    'clickNavigatesToLedgerList' => false,
+    'showPermissionTooltip' => true,
     'parentComponentId' => null,
 ])
 <ul class="tree">
@@ -52,7 +54,9 @@
             <div class="tree-row flex items-center" wire:key="f_row_{{ $folder->id }}_{{ $isOpen ? 1 : 0 }}">
                 {{-- 左部分: スクロール可能エリア（flex-1 min-w-0 overflow-x-auto） --}}
                 <div class="tree-row-left">
-                    <a @if ($interactive)
+                    <a @if ($clickNavigatesToLedgerList)
+                            href="{{ route('ledgersByFolderId', ['tenant' => tenant()?->id, 'folderId' => $folder->id]) }}"
+                        @elseif ($interactive)
                             @if ($parentComponentId)
                                 x-on:click.prevent="Livewire.find('{{ $parentComponentId }}').call('changeCurrentFolder', {{ $folder->id }})"
                             @else
@@ -72,9 +76,22 @@
                             アイコン部: daisyUI tooltip で権限ラベルを表示。
                             tooltip-right で右にポップアップ（サイドバー内での向き）。
                         --}}
-                        <span class="shrink-0 tooltip tooltip-right"
-                            data-tip="{{ in_array($folder->id, $manageableFolderIds) ? __('ledger.folder.manageable') : (in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable') : __('ledger.no_view_permissions'))) }}"
-                            aria-label="{{ in_array($folder->id, $manageableFolderIds) ? __('ledger.folder.manageable') : (in_array($folder->id, $writableFolderIds) ? __('ledger.folder.writable') : (in_array($folder->id, $readableFolderIds) ? __('ledger.folder.readable') : __('ledger.no_view_permissions'))) }}">
+                        @php
+                            $permissionLabel = in_array($folder->id, $manageableFolderIds)
+                                ? __('ledger.folder.manageable')
+                                : (in_array($folder->id, $writableFolderIds)
+                                    ? __('ledger.folder.writable')
+                                    : (in_array($folder->id, $readableFolderIds)
+                                        ? __('ledger.folder.readable')
+                                        : __('ledger.no_view_permissions')));
+                        @endphp
+                        <span @class(['shrink-0', 'tooltip tooltip-right' => $showPermissionTooltip])
+                            @if($showPermissionTooltip)
+                                data-tip="{{ $permissionLabel }}"
+                            @else
+                                title="{{ $permissionLabel }}"
+                            @endif
+                            aria-label="{{ $permissionLabel }}">
                             @if ($folder->isRoot())
                                 <i class="fas fa-home text-primary"></i>
                             @else
@@ -125,18 +142,20 @@
                     右端固定のボタン列: .tree-row の flex 子として shrink-0 で固定。
                     .tree-row 自体は width: 100% のため、ボタンは常に表示領域の右端に位置する。
                 --}}
-                @if ($hasChildren)
-                    <button
-                        x-on:click="toggleOpen()"
-                        :style="open ? 'transform: rotate(90deg); transition: transform 0.2s ease;' : 'transform: rotate(0deg); transition: transform 0.2s ease;'"
-                        class="shrink-0 btn btn-ghost btn-xs p-0 w-6 h-6 min-h-0 text-base-content/40 hover:text-base-content tree-toggle-btn"
-                        :aria-label="open ? '{{ __('ledger.folder.collapse') }}' : '{{ __('ledger.folder.expand') }}'"
-                        :aria-expanded="open">
-                        <i class="fas fa-chevron-right text-xs"></i>
-                    </button>
-                @else
-                    <span class="shrink-0 w-6 tree-toggle-btn-placeholder"></span>
-                @endif
+                <div class="shrink-0 flex items-center gap-1">
+                    @if ($hasChildren)
+                        <button
+                            x-on:click="toggleOpen()"
+                            :style="open ? 'transform: rotate(90deg); transition: transform 0.2s ease;' : 'transform: rotate(0deg); transition: transform 0.2s ease;'"
+                            class="shrink-0 btn btn-ghost btn-xs p-0 w-6 h-6 min-h-0 text-base-content/40 hover:text-base-content tree-toggle-btn"
+                            :aria-label="open ? '{{ __('ledger.folder.collapse') }}' : '{{ __('ledger.folder.expand') }}'"
+                            :aria-expanded="open">
+                            <i class="fas fa-chevron-right text-xs"></i>
+                        </button>
+                    @else
+                        <span class="shrink-0 w-6 tree-toggle-btn-placeholder"></span>
+                    @endif
+                </div>
             </div>
 
             @if ($hasChildren)
@@ -154,6 +173,8 @@
                     <x-folder.tree
                         :folders="$folder->children"
                         :interactive="$interactive"
+                        :clickNavigatesToLedgerList="$clickNavigatesToLedgerList"
+                        :showPermissionTooltip="$showPermissionTooltip"
                         :writableFolderIds="$writableFolderIds"
                         :readableFolderIds="$readableFolderIds"
                         :manageableFolderIds="$manageableFolderIds"

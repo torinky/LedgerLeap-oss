@@ -3,14 +3,11 @@
 namespace App\Livewire\Notifications;
 
 use App\Livewire\BaseLivewireComponent;
-use App\Livewire\Traits\InitializesTenantContext;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 
 class Icon extends BaseLivewireComponent
 {
-    use InitializesTenantContext;
-
     public $unreadCount = 0;
 
     public $pendingTaskCount = 0; // ワークフロー未処理件数
