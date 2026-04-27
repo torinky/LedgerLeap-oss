@@ -9,6 +9,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -115,6 +116,7 @@ class RecordsTableActionsTest extends TestCase
             'tenant_id' => $this->tenant->id,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
+            'content' => $fileLedgerDefine->normalizeByColumnDefine([0 => 'first-term second-term']),
         ]);
 
         $file = AttachedFile::factory()->create([
@@ -147,6 +149,45 @@ class RecordsTableActionsTest extends TestCase
         $this->assertStringContainsString('id="ledger-cell-'.$ledger->id.'-0"', $html);
         $this->assertStringContainsString('ring-2 ring-primary/40 bg-primary/5', $html);
         $this->assertStringContainsString('ring-2 ring-primary/60 bg-primary/5', $html);
+    }
+
+    #[Test]
+    public function attachment_list_rerenders_the_current_search_context_for_file_inspector(): void
+    {
+        $files = [[
+            'id' => 1001,
+            'filename' => 'search-context.pdf',
+            'mime' => 'application/pdf',
+            'status' => 'completed',
+            'column_id' => 0,
+            'downloadUrl' => '#',
+        ]];
+
+        $tenantId = $this->tenant->id;
+
+        $firstRender = Blade::render(
+            '<x-ledger.attachment-list :files="$files" mode="icon-only" :column-id="$columnId" :tenant-id="$tenantId" :search="$search" />',
+            [
+                'files' => $files,
+                'columnId' => 0,
+                'tenantId' => $tenantId,
+                'search' => 'first-term',
+            ]
+        );
+
+        $secondRender = Blade::render(
+            '<x-ledger.attachment-list :files="$files" mode="icon-only" :column-id="$columnId" :tenant-id="$tenantId" :search="$search" />',
+            [
+                'files' => $files,
+                'columnId' => 0,
+                'tenantId' => $tenantId,
+                'search' => 'second-term',
+            ]
+        );
+
+        $this->assertStringContainsString('data-search="first-term"', $firstRender);
+        $this->assertStringContainsString('data-search="second-term"', $secondRender);
+        $this->assertStringContainsString("closest('[data-search]')", $firstRender);
     }
 
     #[Test]

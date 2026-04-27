@@ -254,6 +254,13 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
+        if (blank($search)) {
+            $search = request()->query('search')
+                ?? request()->query('highlight')
+                ?? request()->query('q')
+                ?? null;
+        }
+
         Log::info('FileInspector: openInspector called', [
             'id' => $id,
             'search' => $search,

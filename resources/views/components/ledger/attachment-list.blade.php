@@ -37,15 +37,15 @@
     showAll: false,
     displayLimit: {{ $displayLimit }},
     totalCount: {{ $fileCount }},
-    search: @js($search),
     columnId: @js($columnId),
     isIconOnly: {{ $isIconOnly ? 'true' : 'false' }},
     isCompact: {{ $isCompact ? 'true' : 'false' }},
-    handleFileClick(fileId, fileColumnId) {
+    handleFileClick(fileId, fileColumnId, event) {
+        const search = event?.currentTarget?.closest('[data-search]')?.dataset.search || '';
         this.$dispatch('open-file-inspector', {
             id: fileId,
             column_id: fileColumnId || this.columnId,
-            search: this.search
+            search
         });
     },
     handleDownload(event, fileId, url) {
@@ -84,7 +84,7 @@
             });
         }
     }
-}" class="not-prose w-full flex flex-col" id="{{ $componentId }}">
+}" class="not-prose w-full flex flex-col" id="{{ $componentId }}" data-search="{{ $search ?? '' }}">
 
     {{-- 高さ制限とフェードを実現するラッパー。ボタンをこの外に出すことで見切れを防止する --}}
     <div class="relative transition-all duration-500 ease-in-out overflow-hidden"
@@ -217,7 +217,7 @@
                         x-transition:leave-start="opacity-100 scale-100"
                         x-transition:leave-end="opacity-0 scale-90"
                         :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 40 + 'ms' : ''"
-                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
+                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }}, $event)"
                         :class="{ 'ring-2 ring-primary/60 bg-primary/5 rounded-md': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
@@ -284,7 +284,7 @@
                                 </span>
                             @endif
                             <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
-                                x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})">
+                                x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }}, $event)">
                                 {{-- ステータスインジケータ --}}
                                 <div class="indicator shrink-0">
                                     @if ($isProcessing)

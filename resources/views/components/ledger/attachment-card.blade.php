@@ -111,7 +111,7 @@
     $downloadTooltip = $hasSecondary ? __('ledger.download_optimized') : __('ledger.download_original');
 @endphp
 
-<div class="relative tooltip tooltip-bottom h-full"
+<div class="relative tooltip tooltip-bottom h-full" data-search="{{ $search ?? '' }}"
     x-transition:enter="transition ease-out duration-500"
     x-transition:enter-start="opacity-0 scale-95"
     x-transition:enter-end="opacity-100 scale-100"
@@ -122,7 +122,7 @@
 
     <div class="card bg-base-100 shadow-sm hover:shadow-xl transition-all duration-300 {{ $isHit ? 'card-bordered border-success ring-1 ring-success bg-success/5 shadow-lg shadow-success/10' : 'card-bordered border-base-200 hover:border-primary/30' }} {{ $isSelectedFile ? 'ring-2 ring-primary/60 bg-primary/5 border-primary/40' : '' }} group cursor-pointer h-full flex flex-col"
         role="listitem" x-data="{ imageLoading: true, imageError: false }"
-        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})" tabindex="0"
+        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }}, $event)" tabindex="0"
         aria-label="{{ $label }} ({{ $statusLabel }})">
 
         {{-- バッジインジケーター --}}

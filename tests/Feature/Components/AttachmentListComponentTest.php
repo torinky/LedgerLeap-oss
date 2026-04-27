@@ -102,11 +102,34 @@ class AttachmentListComponentTest extends TestCase
         // Verify the handleFileClick function dispatches correct event payload structure
         $view->assertSee('id: fileId', false);
         $view->assertSee('column_id: fileColumnId || this.columnId', false);
-        $view->assertSee('search: this.search', false);
+        $view->assertSee("closest('[data-search]')", false);
+        $view->assertSee('data-search="keyword"', false);
 
         // Verify Alpine x-data includes required properties
-        $view->assertSee('search:', false);
         $view->assertSee('columnId:', false);
+    }
+
+    public function test_attachment_list_full_mode_carries_search_into_file_inspector_dispatch()
+    {
+        $files = [
+            [
+                'id' => 321,
+                'filename' => 'detail.pdf',
+                'mime' => 'application/pdf',
+                'status' => 'completed',
+                'downloadUrl' => '#',
+                'column_id' => 654,
+            ],
+        ];
+
+        $view = $this->blade(
+            '<x-ledger.attachment-list :files="$files" mode="full" columnId="789" search="detail-keyword" />',
+            ['files' => $files]
+        );
+
+        $view->assertSee('data-search="detail-keyword"', false);
+        $view->assertSee('handleFileClick(321, 654, $event)', false);
+        $view->assertSee("closest('[data-search]')", false);
     }
 
     public function test_attachment_list_shows_more_button_when_files_exceed_limit()

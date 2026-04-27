@@ -124,6 +124,64 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_prefills_search_keyword_from_the_query_string_when_payload_is_missing(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'highlighted_file.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        Livewire::withQueryParams(['file' => $file->id, 'highlight' => 'detail-keyword'])
+            ->test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->assertSet('fileId', $file->id)
+            ->assertSet('searchKeyword', 'detail-keyword')
+            ->assertSet('open', true)
+            ->assertSee('highlighted_file.pdf');
+    }
+
+    #[Test]
+    public function it_keeps_search_keyword_when_reopening_the_inspector_with_the_same_payload(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'reopen_search_file.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id, 'search' => 'reopen-keyword'])
+            ->assertSet('searchKeyword', 'reopen-keyword')
+            ->assertSet('open', true)
+            ->call('close')
+            ->assertSet('open', false)
+            ->call('openInspector', ['id' => $file->id, 'search' => 'reopen-keyword'])
+            ->assertSet('searchKeyword', 'reopen-keyword')
+            ->assertSet('open', true)
+            ->assertSee('reopen_search_file.pdf');
+
+        $this->assertSame($file->id, $component->get('fileId'));
+    }
+
+    #[Test]
     public function it_dispatches_selection_sync_events_when_opening_and_closing(): void
     {
         config(['mock.attachment.enabled' => false]);
