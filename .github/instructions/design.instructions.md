@@ -39,6 +39,8 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Document the before/after decision in `docs/work/ui-ux/*` when the change reveals a reusable pattern.
 - For split-pane list/detail surfaces, use Mary UI cards as the outer shell for each pane when the component exists, and place pane controls in the card title or menu slot instead of free-floating wrappers.
 - Keep pane labels, headings, and metadata in translation keys so the same surface does not mix semantic components with hardcoded copy.
+- For overview cards that summarize affiliation or role, prefer a stats-based body: keep the card title compact, then render the primary affiliation / role / status values as Mary UI stats so the hierarchy is obvious at a glance.
+- For those summary cards, treat the card title as a compact context header and use the card title slot for a short icon + text row when the section needs a visual anchor.
 
 ### Reuse existing skills before inventing new guidance
 
@@ -65,6 +67,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Badge-first review is not limited to detail pages; apply the same status / count / metadata check to list rows, cards, forms, title blocks, and any other surface that presents compact state.
 - When a screen includes badges or other compact status markers, verify the nearby action area and tooltip wording together so the meaning is clear without adding a second text label.
 - For permission / access summary cards, surface the subject and viewer in the overview before the drill-down list so the user can answer "whose access to what" without reading the rows first.
+- For role / affiliation summary cards, show the role and organization as separate stats rather than inline text blobs; keep the labels short, the values prominent, and the descriptive note secondary.
 - If a direct / inherited marker is too long for the card, reduce it to icon-only + tooltip + sr-only text instead of keeping a verbose inline label.
 - For inherited access rows, render the granting folder as a breadcrumb-style path with folder icons and separators so the hierarchy break is visually obvious.
 
@@ -84,6 +87,12 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Use small sizes only for badges, dense chrome, or secondary metadata.
 - Prefer responsive size steps or component defaults when the same page must work on both mobile and desktop.
 - Use the `responsive-text-icon-sizing` skill when this becomes a repeated pattern.
+
+## 6.1 Stats card sizing
+
+- In `stats` / `stat` layouts, let the value carry the visual weight and keep the title/description smaller but still readable.
+- Do not collapse role or affiliation values into tiny metadata text just because the block is inside a card; the summary value is primary content.
+- If the stats are used as the main summary surface, keep the spacing deliberate so each stat reads as a separate unit and not as a dense paragraph.
 
 ## 7. Common component guidance
 

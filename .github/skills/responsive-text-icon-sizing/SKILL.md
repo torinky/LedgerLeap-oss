@@ -36,6 +36,8 @@ Are text or icons being hard-coded to a tiny size?
 - Use compact sizes only for badges, subtle metadata, table chrome, or other clearly secondary roles.
 - Prefer responsive size steps over one frozen value when the same UI appears on both mobile and desktop.
 - Use Mary UI and daisyUI size variants before reaching for custom CSS.
+- In stat-based summary cards, make the stat value the largest readable text in the card body, keep the stat title smaller but legible, and reserve the stat description for secondary context only.
+- When role and affiliation are summarized together, keep the role / organization values readable on desktop and do not collapse them into badge-sized text just to fit more rows.
 - For required markers or helper icons in column titles or form headers, prefer a responsive icon or badge treatment rather than a one-size-fits-all tiny square.
 - If a Mary icon already reads well at its component default size, leave it unforced instead of re-declaring a tiny width/height.
 - For persistent footers and summary bars, keep the visible text minimal and let badge, icon, and tooltip carry the meaning together.
@@ -51,6 +53,7 @@ Are text or icons being hard-coded to a tiny size?
 - If a Mary UI component exposes a parameter that expresses the desired behavior, use that parameter instead of rebuilding the behavior in surrounding markup.
 - When multiple items must line up, apply one shared responsive sizing pattern to the whole group.
 - Do not use tiny defaults as a shortcut for density; make compactness deliberate and role-based.
+- In cards that render `stats`, use the component's layout hierarchy instead of fighting it with one-off font sizes; the value, title, and description already imply the needed emphasis.
 - If a marker needs to stay visible in a dense table header, let its size breathe slightly at larger breakpoints instead of freezing it at one tiny value.
 - In sticky action bars and other persistent footers, prefer a compact footer summary row with badge-first state, a small icon when it helps scanning, and tooltip text for the longer explanation.
 - If the footer content is a status summary rather than a sentence, do not render it as a plain text line; treat it as metadata chrome.
@@ -61,6 +64,7 @@ Are text or icons being hard-coded to a tiny size?
 - Repo evidence: `docs/work/ui-ux/2026-04-18_text-icon-size-responsiveness-note.md`
 - Repo evidence: `docs/work/ui-ux/2026-04-18_design-workflow-reorganization-note.md`
 - Repo evidence: `docs/work/ui-ux/2026-04-22_sticky-action-bar-footer-pattern.md`
+- Repo evidence: `docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md`
 - Related skills: `title-block`, `form-layout`, `search-header-responsive-layout`
 - Official references that shaped this pattern:
   - daisyUI v5 component size scale and size tokens
@@ -70,7 +74,7 @@ Are text or icons being hard-coded to a tiny size?
 ## Freshness
 
 - status: confirmed
-- last_confirmed_at: 2026-04-18
+- last_confirmed_at: 2026-04-27
 - recheck_after: 90d
 - recheck_trigger:
   - too many pages start locking text or icons to fixed tiny sizes again

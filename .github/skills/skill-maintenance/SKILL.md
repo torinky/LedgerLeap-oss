@@ -33,6 +33,8 @@ A new learning was proven?
 - When a Blade or Livewire edit breaks a narrow branch, prefer a clean branch rewrite over stacking fragment patches, then validate before widening the search.
 - Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
+- For static trees, accordions, and other hover-sensitive UI shells, do not assume `wire:ignore` or Livewire morphing is the whole cause of flicker; inspect tooltip, overflow, z-index, and pseudo-element layering next, and prefer static `title` / `aria-label` fallbacks over hover-only critical text.
+- When GitHub issue numbers and sprint labels can drift, treat the GitHub issue title/number as authoritative, add a visible `GitHub 追跡` mapping in the plan or issue body, and rewrite the affected branch immediately so the old numbering does not remain visible.
 - If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.
 - Keep local lessons in `docs/work/*` first; promote only durable guidance after the pattern is proven.
 - Review learnings in two layers: (1) the process / approach (target selection, evidence order, hypothesis comparison, validation gate, handoff timing) and (2) the concrete technique / implementation detail (commands, config, UI changes, templates, wording, code pattern).
@@ -43,6 +45,14 @@ A new learning was proven?
 - Do not approve guidance removal until the receiver asset preserves equivalent client-facing information for generated skills, prompts, or bootstrap flows.
 - Every durable learning must point to traceable evidence: link the repo proof in `docs/work/*` or the official source in `references/*.md` before treating it as reusable guidance.
 - Record freshness metadata for doc-sensitive claims: `status`, `last_confirmed_at`, `recheck_after`, and a concrete `recheck_trigger`.
+
+## Recent guardrail evidence
+
+- [docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md](../../../docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-04-27
+- `recheck_after`: 90d
+- `recheck_trigger`: another issue-number drift, a repeated hover flicker in a static tree or accordion, or a new user override that supersedes the active branch
 
 ## Retrospective Gate
 

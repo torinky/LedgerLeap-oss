@@ -29,6 +29,20 @@ Always pass these to every GitHub tool call.
 4. issue_write(method: update, state: closed)  — when all acceptance criteria are met
 ```
 
+## Numbering Guardrail
+
+- Always confirm the actual GitHub issue number and title before writing docs or checklists; sprint labels in local filenames are not authoritative.
+- When a plan or issue body uses Sprint numbers that map to different GitHub issue numbers, add or update a visible `GitHub 追跡` block so the mapping stays explicit.
+- If the user overrides scope or numbering, rewrite the affected issue body and companion docs in the same pass instead of leaving both old and new numbering visible.
+
+### Evidence
+
+- [docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md](../../../docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-04-27
+- `recheck_after`: 90d
+- `recheck_trigger`: a sprint/issue numbering mismatch, a stale checklist left behind after a scope override, or a new issue body that needs GitHub 追跡 mapping
+
 ## Issue Drafting Flow
 
 Use this flow for **bugs, improvements, feature additions, refactors, docs, and investigation issues**.
@@ -51,6 +65,9 @@ The issue form is the source of truth for issue structure. Do not duplicate the 
 ## Checklist Update Rule
 
 **Always update the body directly** — do not leave checkboxes unchecked and only post a comment.
+
+- When a checklist item is completed, include concrete evidence next to the checkbox and keep the issue body, plan, and completion report aligned.
+- If the issue number changes or was inferred incorrectly, correct the number in the body before adding evidence so the checklist does not preserve stale references.
 
 ```markdown
 - [x] Task completed

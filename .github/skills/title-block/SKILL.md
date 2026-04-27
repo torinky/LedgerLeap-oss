@@ -31,6 +31,8 @@ Is this the top visible block of a page or section?
 - Keep the first viewport compact and context-rich.
 - Use Mary UI components first, especially card, breadcrumbs, button, badge, and icon components when they fit.
 - Use daisyUI semantic classes for the title block role: `card`, `card-body`, `badge`, `tooltip`, `join`, `btn`, and `collapse` when helpful.
+- When a card title needs a visual anchor, build the title slot as a short icon + text row instead of adding a separate banner or floating icon wrapper.
+- If the section is an overview card with stats in the body, keep the title slot compact and let the stats carry the main content hierarchy.
 - Put the page title where users immediately understand what the page is.
 - Put compact metadata next to the title only when it adds immediate context.
 - Put one primary action near the title if the page needs it.
@@ -44,11 +46,13 @@ Is this the top visible block of a page or section?
 - If the title row includes badges or metadata, keep them short enough to scan quickly.
 - If a control is secondary, make it visually lighter than the title and primary action.
 - If the block is for a list or search page, keep the title block thin so the results area stays visible.
+- If the same card title pattern repeats for role / affiliation summaries, prefer a reusable title-slot icon row and keep the stat body responsible for the detailed labels.
 
 ## Evidence and references
 
 - Repo evidence: `docs/work/ui-ux/2026-04-18_design-workflow-reorganization-note.md`
 - Repo evidence: `docs/work/ui-ux/2026-04-18_ledger-detail-ui-redesign-retrospective.md`
+- Repo evidence: `docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md`
 - Related skill: `ledger-detail-header`
 - Official references that shaped this pattern:
   - daisyUI semantic component classes
@@ -58,7 +62,7 @@ Is this the top visible block of a page or section?
 ## Freshness
 
 - status: confirmed
-- last_confirmed_at: 2026-04-18
+- last_confirmed_at: 2026-04-27
 - recheck_after: 90d
 - recheck_trigger:
   - a new page-shell pattern appears in more than one feature
