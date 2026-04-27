@@ -62,7 +62,7 @@
 5. tooltip は補足説明に使い、主メッセージは本文側で読めるようにする。
 
 ## スプリント分解
-- [ ] Sprint 1: 情報設計とデザイン方針の確定
+- [x] Sprint 1: 情報設計とデザイン方針の確定
 - [ ] Sprint 2: マイポータル overview と遷移導線の再構成
 - [ ] Sprint 3: 台帳一覧の state handoff と回帰テスト
 
@@ -94,6 +94,16 @@
 - docs: `docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-plan.md`
 - docs: `docs/function/MyPortal.md`
 - Issue / PR: なし
+
+## Sprint 1 完了メモ
+- ポータルは overview、台帳一覧は workbench と役割分担する方針で確定した
+- アイコンは意味補助に限定し、ラベルなしで意味を成立させない方針で確定した
+- 所属、役割、権限、担当フォルダは近接させて一塊で読ませる方針で確定した
+- badge は短いメタ情報に限定し、tooltip は補足説明に限定する方針で確定した
+- 文字サイズとアイコンサイズは、desktop で読める標準寄りのサイズ感を優先する方針で確定した
+- フォルダツリーから台帳一覧への遷移は、既存の `currentFolderId` / `selectedFolderIds` 契約を再利用する方針で確定した
+- Sprint 2 以降は、この設計方針を前提に view と state handoff を実装する
+- 2026-04-27 時点で Sprint 1 は完了済み
 
 ## 確認事項
 - [x] 改善イシューであることを確認した
