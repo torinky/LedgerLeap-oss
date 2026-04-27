@@ -150,6 +150,7 @@
 - 文字サイズとアイコンサイズは、desktop で読める標準寄りのサイズ感を優先する方針で確定した
 - フォルダツリーから台帳一覧への遷移は、既存の `currentFolderId` / `selectedFolderIds` 契約を再利用する方針で確定した
 - Sprint 2 以降は、この設計方針を前提に view と state handoff を実装する
+- 2026-04-27 時点で Sprint 1 は完了済み
 
 ## 7. 関連ファイル
 
