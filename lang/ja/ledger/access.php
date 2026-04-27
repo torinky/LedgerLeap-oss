@@ -47,6 +47,7 @@ return [
         'users_with_access' => 'アクセス可能なユーザー',
         'users'=>'ユーザー',
         'your_permissions' => 'この リソース への あなたの権限',
+        'your_access_level' => 'あなたのアクセスレベル',
     ],
     'permission_description' => [
         'create_folders' => '新しいフォルダーを作成できます。',
