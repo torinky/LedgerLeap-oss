@@ -41,6 +41,8 @@
 
 - **[台帳リスト検索結果のタグ表示 / 列数切り替え レトロスペクティブ](./2026-04-26_ledger-search-tag-display-retrospective.md)** ✅ 完了: `#タグ` を本文検索に混ぜずにタグ表示へ分離し、検索結果パネルの列数をキーワード/タグの組み合わせで切り替えた記録。`SearchContextTest` / `RecordsTableQueryTest` / `IndexManagerIntegrationTest` で回帰を固定。
 
+- **[File Inspector 検索条件の再オープン維持メモ](./2026-04-27_file-inspector-search-reopen-retrospective.md)** ✅ 完了: 詳細画面 full mode の `attachment-card` が検索語を payload に載せ忘れていた点を修正し、配線確認と再オープン確認を分けて回帰固定した記録。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
