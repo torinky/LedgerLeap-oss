@@ -42,6 +42,7 @@ Is this the top visible block of a page or section?
 ## Practical layout guidance
 
 - Prefer one compact card or one compact header band instead of multiple stacked banners.
+- For actual announcement banners, alerts, or dismissible notices, use `notification-banner-alert-surface-pattern` instead of treating them as generic title blocks.
 - Prefer a single row with flexible wrap over several separate blocks when the content is short.
 - If the title row includes badges or metadata, keep them short enough to scan quickly.
 - If a control is secondary, make it visually lighter than the title and primary action.

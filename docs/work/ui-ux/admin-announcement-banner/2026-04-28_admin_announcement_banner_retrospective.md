@@ -28,10 +28,11 @@
 
 ## 4. 再利用できるパターン
 
-- バナーは単一 surface にし、左に本文、右に action cluster を置く。
+- 通知 surface は単一 surface にし、左に本文、右に action cluster を置く。
 - 右端の action cluster には published_at、CTA、close をまとめる。
 - preview は self-contained にして、main app bundle に依存しない Alpine 起動を持たせる。
 - dismiss 系 UI は `x-show` と leave transition を組み合わせ、offset 更新は transition 終了後に行う。
+- この共通パターンは [notification-banner-alert-surface-pattern](../../../.github/skills/notification-banner-alert-surface-pattern/SKILL.md) に昇格した。
 
 ## 5. 証拠
 
@@ -44,5 +45,5 @@
 
 ## 6. 次に残すと良いもの
 
-- この banner 構造が別の通知 UI に流用されるなら、右端 action cluster の pattern を skill か runbook に昇格させる。
+- 別の通知 UI に流用する場合は [notification-banner-alert-surface-pattern](../../../.github/skills/notification-banner-alert-surface-pattern/SKILL.md) を参照し、banner / alert / announcement の共通要素を先に決める。
 - そうでなければ、当面は docs/work と memory に留めておく。
