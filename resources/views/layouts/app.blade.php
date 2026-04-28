@@ -50,6 +50,12 @@
             <x-mary-toast />
         </template>
     </div>
+
+    @php($adminAnnouncement = config('ledgerleap.announcement_banner.current'))
+    @if (! empty($adminAnnouncement))
+        <x-admin.announcement-banner :announcement="$adminAnnouncement" />
+    @endif
+
     <div class="min-h-screen">
         @include('layouts.daisyuiNavigation')
 

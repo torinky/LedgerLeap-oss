@@ -51,7 +51,12 @@
         </template>
     </div>
 
-    <div class="fixed w-full z-30 top-0">
+    @php($adminAnnouncement = config('ledgerleap.announcement_banner.current'))
+    @if (! empty($adminAnnouncement))
+        <x-admin.announcement-banner :announcement="$adminAnnouncement" />
+    @endif
+
+    <div class="fixed w-full z-30" style="top: var(--admin-announcement-banner-offset, 0px);">
         @include('layouts.daisyuiNavigation', ['showDrawerButton' => true])
 
         @if (isset($header))
@@ -66,7 +71,7 @@
 
 
     {{--        <div class="drawer drawer-mobile"> --}}
-    <div class="drawer pt-20 xl:drawer-open">
+    <div class="drawer xl:drawer-open" style="padding-top: calc(5rem + var(--admin-announcement-banner-offset, 0px));">
 
         <input id="app-drawer" type="checkbox" class="drawer-toggle" />
 

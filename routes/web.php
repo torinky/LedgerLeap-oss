@@ -44,3 +44,8 @@ Route::middleware('auth')->group(function () {
         ->whereIn('style', ['solid', 'regular', 'brands'])
         ->name('api.fontawesome.icon');
 });
+
+if (app()->environment(['local', 'testing'])) {
+    Route::view('/__preview/admin-announcement-banner', 'ui-previews.admin-announcement-banner')
+        ->name('preview.admin-announcement-banner');
+}
