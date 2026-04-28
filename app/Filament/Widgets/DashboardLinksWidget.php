@@ -2,6 +2,7 @@
 
 namespace App\Filament\Widgets;
 
+use App\Filament\Pages\AdminAnnouncementBannerSettings;
 use App\Models\Tenant;
 use Filament\Notifications\Notification;
 use Filament\Widgets\Widget;
@@ -129,6 +130,12 @@ class DashboardLinksWidget extends Widget
                 'title' => __('ledger.settings.contents'),
                 'icon' => 'heroicon-o-cog-6-tooth',
                 'links' => [
+                    [
+                        'title' => __('ledger.admin_announcement_banner_title'),
+                        'icon' => 'heroicon-o-megaphone',
+                        'url' => AdminAnnouncementBannerSettings::getUrl().($fromTenantId ? '?tenant='.$fromTenantId : ''),
+                        'color' => 'warning',
+                    ],
                     [
                         'title' => __('ledger.tenant'),
                         'icon' => 'heroicon-o-building-office',

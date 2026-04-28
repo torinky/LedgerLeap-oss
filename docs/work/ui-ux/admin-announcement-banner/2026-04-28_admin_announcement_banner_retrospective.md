@@ -47,3 +47,9 @@
 
 - 別の通知 UI に流用する場合は [notification-banner-alert-surface-pattern](../../../.github/skills/notification-banner-alert-surface-pattern/SKILL.md) を参照し、banner / alert / announcement の共通要素を先に決める。
 - そうでなければ、当面は docs/work と memory に留めておく。
+
+## 7. Sprint 3-1 メモ
+
+- 実コンポーネントの [resources/views/components/admin/announcement-banner.blade.php](../../../resources/views/components/admin/announcement-banner.blade.php) をそのまま埋め込む形にしたことで、設定画面と公開側の見え方を分離しつつ再利用できた。
+- フォームは Filament の `beforeLabel()` でアイコンを足す方が、独自ラベル HTML を持ち込むより整合性が高かった。
+- heroicon 名の誤りは render-time 500 になったため、アイコン名は実機で一度通すか、既存利用例のある名前に寄せるのが安全だった。
