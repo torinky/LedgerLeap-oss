@@ -191,10 +191,11 @@ MVP の方針は「本文に Markdown を埋め込まず、主導線は `links` 
 
 ### Phase 3: 管理画面
 
-1. 登録フォームを作る
-2. 公開 / 停止の状態遷移を持たせる
-3. 管理者が期間、レベル、対象範囲を設定できるようにする
-4. プレビューを付ける
+1. 一覧画面を先に作る
+2. 下書き / 公開中 / 停止中を見分けられるようにする
+3. 管理者が作成・編集・公開・停止を一覧から分けて操作できるようにする
+4. 複数件の優先度、公開期間、対象範囲を並べて確認できるようにする
+5. プレビューは編集画面に付ける
 
 ### Phase 4: 通知センター統合
 
@@ -202,6 +203,82 @@ MVP の方針は「本文に Markdown を埋め込まず、主導線は `links` 
 2. 通知センター側に一覧表示する
 3. 再確認用のリンクを付ける
 4. 既読処理は既存の通知基盤に寄せる
+
+### 4-A 完了メモ (2026-04-28)
+
+- 同期先は既存の unread 通知基盤と分離し、管理者お知らせ専用の announcement feed を正本にする。
+- 1 件 MVP でも最初から list 形で扱い、`priority` / `starts_at` / `ends_at` / `scope` / `status` / `sticky` / `links` / `revision` を持たせる。
+- 既読相当の保持は `notification_user` ではなく、`announcement_id` + `revision` + tenant を含む localStorage key で行う。
+- 内容を編集したら `revision` を更新して再表示させる。ユーザーごとの DB 既読を積むより、公開期間とローカル保存を優先する。
+- 通知センターは同じ feed を履歴・再確認用に読むだけにし、既存の workflow / activity 通知には触れない。
+
+### 4-A 追加アイデア
+
+- 並び順は `priority` を主、同値時は `starts_at` と `updated_at` で deterministic に決める。
+- CTA は `links` 配列で受け、公開バナーでは先頭を primary として扱う。
+- `scope` は current tenant / all tenants に加え、将来の拡張用に `tenant_id` を明示しておくと、複数テナントの公開を壊しにくい。
+- dismiss key は本文のハッシュではなく `revision` ベースにして、文言調整で意図せず再表示される事故を避ける。
+- 既存通知との衝突回避のため、announcement feed の route / payload / blade は専用 namespace に閉じる。
+
+### 4-B 完了メモ (2026-04-28)
+
+- 通知センターは `AdminAnnouncementService` の feed を読むだけにし、既存の unread / activity / task 通知には触れない構成にした。
+- `NotificationController` から `adminAnnouncements` を渡し、`resources/views/notifications/index.blade.php` の先頭で announcement feed を表示するようにした。
+- `resources/views/layouts/app.blade.php` と `resources/views/layouts/appWithDrawer.blade.php` は `currentAnnouncement()` を通して同じ供給源を参照するように揃えた。
+- feed は `priority` 順で並べ、`draft` は notification center では出さないようにした。1 件 MVP でも list 形を崩していない。
+- 回帰テストで published 2 件 + draft 1 件を流し、通知センター上では published だけが出ることと、既存の通知一覧が引き続き表示されることを確認した。
+
+### 4-B 実装証跡
+
+- `app/Services/AdminAnnouncementService.php`
+- `resources/views/components/admin/announcement-feed.blade.php`
+- `resources/views/notifications/index.blade.php`
+- `resources/views/layouts/app.blade.php`
+- `resources/views/layouts/appWithDrawer.blade.php`
+- `tests/Feature/Http/Controllers/NotificationControllerTest.php`
+- `./vendor/bin/sail test tests/Feature/Http/Controllers/NotificationControllerTest.php tests/Feature/Views/AdminAnnouncementBannerTest.php tests/Feature/Livewire/Notifications/NotificationListTest.php` ✅
+
+### 4-C 管理側一覧と公開導線を作る
+
+- 目的: 管理者が告知を一覧で把握し、作成・編集・公開・停止まで完結できる画面を用意する。
+- 主な確認点: 下書き / 公開中 / 停止中の一覧表示、複数件の優先度順、公開期間、編集入口、管理側からの再確認導線。
+- 成果物: 管理者向けの一覧画面、編集・公開・停止の導線、複数通知の運用単位。
+
+### 4-C 完了メモ (2026-04-28)
+
+- 管理側一覧は `AdminAnnouncementResource` ベースで稼働している。
+- 作成・編集・プレビュー・ナビゲーション導線まで resource 側で揃えた。
+- 4-C の回帰テストは `tests/Feature/Filament/AdminAnnouncementResourceTest.php` で完了している。
+- `./vendor/bin/sail test tests/Feature/Filament/AdminAnnouncementResourceTest.php` で 7 passed / 30 assertions を確認済み。
+- テスト内の確認対象は次の 6 本。
+	- `resource_list_page_renders_successfully`
+	- `list_page_shows_existing_announcements`
+	- `create_page_can_persist_draft_to_list`
+	- `edit_page_prefills_existing_values`
+	- `edit_page_renders_preview_section`
+	- `edit_page_can_save_updates`
+- 付随して `dashboard_links_widget_includes_announcement_banner_link` で管理導線のリンクも確認済み。
+- 通知センター側の feed 確認は 4-B として [tests/Feature/Http/Controllers/NotificationControllerTest.php](tests/Feature/Http/Controllers/NotificationControllerTest.php) で別途担保している。
+
+### 4-D 既読と dismiss の責務分離を確認する
+
+- 目的: ユーザーのローカル保存と通知の再確認を混同しないようにする。
+- 主な確認点: `revision` 更新時の再表示、localStorage key の命名、ユーザーごとの DB 既読を積まない前提、公開期間との整合。
+- 成果物: 既読・dismiss・公開期間の責務分離ルール。
+
+### 4-E 回帰テストを追加する
+
+- 目的: 管理側一覧、上部バナー、通知センターの 3 画面がそれぞれ壊れていないことを固定する。
+- 対象: 管理者一覧の表示テスト / 公開・停止テスト / 通知センターの再確認テスト / 既存通知との衝突確認。
+- 成果物: feature / livewire / filament の回帰テスト一式。
+
+### 現在の進捗 (2026-04-28)
+
+- 完了: 4-A 同期方式と payload 仕様の確定
+- 完了: 4-B 通知センターへの再確認導線
+- 完了: 4-C 管理側一覧と公開導線
+- 未着手: 4-D 既読と dismiss の責務分離
+- 未着手: 4-E 回帰テスト
 
 ### Phase 5: UX 調整
 
@@ -261,6 +338,53 @@ MVP の方針は「本文に Markdown を埋め込まず、主導線は `links` 
 - 閉じても次回アクセスまで再表示されない
 - 管理者は登録、公開、停止を分けて操作できる
 - 通知センターで同じ告知を再確認できる
+
+## 10. Sprint 4 retrospective
+
+### 良かったこと
+
+- 管理側一覧を `AdminAnnouncementResource` に寄せたことで、作成・編集・公開・停止・プレビューが 1 つの導線にまとまった。
+- 通知センター側は `AdminAnnouncementService` の feed を再利用でき、上部表示と再確認導線の正本を分けすぎずに済んだ。
+- `tests/Feature/Filament/AdminAnnouncementResourceTest.php` で 7 passed / 30 assertions を明示でき、4-C の完了条件をテストと結び付けられた。
+- preview は外側のアプリ表示と同じ見た目を目指す方針に切り替えられ、単体カードからの脱却ができた。
+
+### 悪かったこと
+
+- preview の CSS / theme が Filament 側で外れたため、`app.scss` を読むだけでは見た目が揃わず、`data-theme` の適用まで確認し直す必要があった。
+- iframe による分離はサニタイズや実運用とのズレが出て、採用できなかった。
+- preview reset を Livewire のページメソッドに結び付けていたため、resource 側へ移した時点で壊れやすくなった。
+- GitHub issue body の同期は、コメント追加だけでは追従できず、本文そのものを canonical file から全体置換して検証する必要があった。
+
+### 上書き指示されたこと
+
+- カードのような内側プレビューは、本番アプリの上部表示に近い shell 表現へ上書きした。
+- iframe に逃がす案は、共有 shell + `@vite(['resources/sass/app.scss'])` + `data-theme` の直付けに上書きした。
+- `CTA文言` は `リンクテキスト` に上書きした。
+- 表示状態の補助ラベルは、`バナーの提示範囲と状態` という短い見出しに上書きした。
+- 4-C の進捗は「予定」ではなく「完了メモ」として正文を上書きした。
+
+### 技術要素
+
+- Filament Resource / Page / `View::make` / `CheckboxList` / `DateTimePicker` / `Toggle`
+- `AdminAnnouncementResource` を中心にした一覧・編集・公開・停止の導線
+- `AdminAnnouncementService` を通じた通知センター連携
+- DaisyUI / MaryUI の theme 変数と `data-theme`
+- `resources/views/components/admin/announcement-banner-preview-shell.blade.php` による共通 preview shell
+- preview reset の JavaScript 化と localStorage クリア
+- `gh issue edit --body-file` と `gh issue view` による issue 本文の canonical sync
+
+### 作業の進め方
+
+- まず local の canonical 文書を正にして、GitHub issue や doc に反映する前に証拠を揃える。
+- preview は banner 本体をいじる前に、外側の shell と theme から切り分ける。
+- 壊れやすい UI 操作は Livewire メソッドに寄せず、独立した JS の最小処理に落とす。
+- issue 本文はコメントで補足せず、全文差し替えと再取得で追従を確認する。
+
+### 次回へのブラッシュアップ
+
+- issue 本文更新は canonical markdown file を 1 つ持ち、編集後に remote body を必ず再取得して確認する。
+- preview の見た目差異は、コンポーネント本体より先に theme と asset 読み込みを疑う。
+- 再利用可能な issue 更新手順は runbook に逃がし、skill はその入口だけを持たせる。
 - info / warning / critical の差異が画面上で判別できる
 - バナーは overlay ではなく push で配置されている
 - critical のみ sticky で、info / warning は static になっている

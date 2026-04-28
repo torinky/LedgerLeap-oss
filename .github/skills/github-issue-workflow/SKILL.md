@@ -11,6 +11,12 @@ compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap)"
 `owner: torinky` / `repo: LedgerLeap`  
 Always pass these to every GitHub tool call.
 
+## Tool Priority
+
+1. Use MCP issue tools first when the requested GitHub operation is available through MCP.
+2. Use `gh` as the second choice when MCP does not expose the operation or when the body needs a full canonical-file sync.
+3. Avoid mixing both in the same step unless the workflow explicitly needs MCP for read/comment and `gh` for a write that MCP cannot do.
+
 ## Issue Read Flow
 
 ```
@@ -29,11 +35,22 @@ Always pass these to every GitHub tool call.
 4. issue_write(method: update, state: closed)  — when all acceptance criteria are met
 ```
 
+- Prefer MCP issue tools for these steps when available.
+- Fall back to `gh` only for operations the MCP tools cannot perform, such as a full body rewrite from a canonical markdown file.
+
+## Body Sync Rule
+
+- When the issue body needs a substantive rewrite, keep a canonical markdown file locally and update GitHub with a full-body replacement.
+- After `gh issue edit --body-file ...`, immediately re-fetch the issue body and verify the published content matches the canonical file.
+- If stale sections, old sprint numbers, or duplicated headings remain, rewrite the full body again instead of trying to repair the remote body with comments.
+- Prefer a single source of truth for the body file; see [GitHub Issue Body Sync Playbook](/docs/runbooks/github-issue-body-sync-playbook.md).
+
 ## Numbering Guardrail
 
 - Always confirm the actual GitHub issue number and title before writing docs or checklists; sprint labels in local filenames are not authoritative.
 - When a plan or issue body uses Sprint numbers that map to different GitHub issue numbers, add or update a visible `GitHub 追跡` block so the mapping stays explicit.
 - If the user overrides scope or numbering, rewrite the affected issue body and companion docs in the same pass instead of leaving both old and new numbering visible.
+- If issue body synchronization drifts, return to the canonical file and re-fetch pattern from the Body Sync Rule before adding more comments.
 
 ### Evidence
 
