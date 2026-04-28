@@ -47,6 +47,8 @@ class AdminAnnouncementBannerSettingsTest extends TestCase
     public function admin_announcement_banner_settings_mounts_default_draft(): void
     {
         Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->assertSet('data.status', 'draft')
+            ->assertFormFieldExists('status')
             ->assertFormFieldExists('title')
             ->assertFormFieldExists('body')
             ->assertFormFieldExists('level')
@@ -56,7 +58,97 @@ class AdminAnnouncementBannerSettingsTest extends TestCase
             ->assertFormFieldExists('ends_at')
             ->assertFormFieldExists('cta_label')
             ->assertFormFieldExists('cta_url')
-                ->assertSeeHtml('data-admin-announcement-banner');
+            ->assertSeeHtml('data-admin-announcement-banner')
+            ->assertSeeText(__('ledger.admin_announcement_banner_default_title'))
+            ->assertSeeText(__('ledger.admin_announcement_banner_default_body'));
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_preview_updates_with_input(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.title', '運用通知')
+            ->set('data.body', 'メンテナンス予定です。')
+            ->set('data.level', 'critical')
+            ->set('data.scope', 'all_tenants')
+            ->set('data.sticky', true)
+            ->set('data.cta_label', '詳細を見る')
+            ->set('data.cta_url', 'https://example.com')
+            ->assertSeeText('運用通知')
+            ->assertSeeText('メンテナンス予定です。')
+            ->assertSeeHtml('alert-error')
+            ->assertSeeText(__('ledger.admin_announcement_banner_scope_all_tenants'))
+            ->assertSeeText(__('ledger.admin_announcement_banner_sticky_on'))
+            ->assertSeeText('詳細を見る')
+            ->assertSeeHtml('href="https://example.com"');
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_critical_level_forces_sticky_on(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.sticky', false)
+            ->set('data.level', 'critical')
+            ->assertSet('data.sticky', true);
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_critical_preview_hides_close_button(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.level', 'critical')
+            ->assertSeeHtml('alert-error')
+            ->assertSeeText(__('ledger.admin_announcement_banner_sticky_on'))
+            ->assertDontSeeHtml('aria-label="'.__('ledger.close').'"');
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_preview_reset_increments_nonce(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->assertSet('previewResetNonce', 0)
+            ->call('resetPreviewBanner')
+            ->assertSet('previewResetNonce', 1);
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_save_draft_switches_status_to_draft(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.status', 'archived')
+            ->call('saveDraft')
+            ->assertSet('data.status', 'draft');
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_publish_switches_status_to_published(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.status', 'draft')
+            ->set('data.starts_at', '2026-04-28 10:00:00')
+            ->set('data.ends_at', '2026-04-28 11:00:00')
+            ->call('publishAnnouncement')
+            ->assertSet('data.status', 'published');
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_publish_rejects_invalid_period(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.status', 'draft')
+            ->set('data.starts_at', '2026-04-28 11:00:00')
+            ->set('data.ends_at', '2026-04-28 10:00:00')
+            ->call('publishAnnouncement')
+            ->assertHasErrors(['ends_at' => 'after_or_equal']);
+    }
+
+    #[Test]
+    public function admin_announcement_banner_settings_archive_switches_status_to_archived(): void
+    {
+        Livewire::test(AdminAnnouncementBannerSettings::class)
+            ->set('data.status', 'published')
+            ->call('archiveAnnouncement')
+            ->assertSet('data.status', 'archived');
     }
 
     #[Test]

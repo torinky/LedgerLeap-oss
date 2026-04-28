@@ -8,12 +8,18 @@
         $title = $announcement['title'] ?? '';
         $body = $announcement['body'] ?? '';
         $links = is_array($announcement['links'] ?? null) ? $announcement['links'] : [];
+        $scope = $announcement['scope'] ?? 'current_tenant';
+        $sticky = (bool) ($announcement['sticky'] ?? false);
         $publishedAt = $announcement['published_at'] ?? $announcement['starts_at'] ?? $announcement['issued_at'] ?? null;
         $dismissKey = $announcement['dismiss_storage_key'] ?? 'ledgerleap.admin_announcement_banner.dismissed';
         $levelLabel = match ($level) {
             'warning' => __('ledger.warning'),
             'critical' => __('ledger.critical'),
             default => __('ledger.info'),
+        };
+        $scopeLabel = match ($scope) {
+            'all_tenants' => __('ledger.admin_announcement_banner_scope_all_tenants'),
+            default => __('ledger.admin_announcement_banner_scope_current_tenant'),
         };
 
         $palette = match ($level) {
@@ -51,6 +57,7 @@
 
     <div
         data-admin-announcement-banner
+        wire:key="admin-announcement-banner-{{ $dismissKey }}"
         x-data="{
             visible: true,
             dismissKey: @js($dismissKey),
@@ -113,6 +120,16 @@
             </div>
 
             <div class="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2 md:flex-nowrap md:pl-4">
+                <span class="badge badge-ghost badge-sm">
+                    {{ $scopeLabel }}
+                </span>
+
+                @if ($sticky)
+                    <span class="badge badge-primary badge-sm">
+                        {{ __('ledger.admin_announcement_banner_sticky_on') }}
+                    </span>
+                @endif
+
                 @if (filled($publishedAt))
                     <span class="tooltip tooltip-bottom tooltip-primary" data-tip="{{ __('ledger.published_at') }}">
                         <span class="badge badge-outline badge-sm gap-1 px-2 py-3 font-mono text-[10px] sm:text-[11px]">

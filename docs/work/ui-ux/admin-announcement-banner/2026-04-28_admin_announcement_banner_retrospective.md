@@ -53,3 +53,27 @@
 - 実コンポーネントの [resources/views/components/admin/announcement-banner.blade.php](../../../resources/views/components/admin/announcement-banner.blade.php) をそのまま埋め込む形にしたことで、設定画面と公開側の見え方を分離しつつ再利用できた。
 - フォームは Filament の `beforeLabel()` でアイコンを足す方が、独自ラベル HTML を持ち込むより整合性が高かった。
 - heroicon 名の誤りは render-time 500 になったため、アイコン名は実機で一度通すか、既存利用例のある名前に寄せるのが安全だった。
+
+## 8. Sprint 3-2 メモ
+
+- preview 連動はフォーム側の `->live()` / `->live(onBlur: true)` を揃えるのが最小で確実だった。
+- preview に scope / sticky まで表示すると、単に値が更新されるだけでなく、入力と見え方の対応が追いやすくなる。
+- level はテキストよりも alert クラスの変化で検証した方が、実際の見た目に近い回帰テストになる。
+- dismiss key を入力状態に合わせて変えると、preview を閉じても次の入力変更で再表示できるため、UI 連動の確認がしやすかった。
+- preview リセットのボタンを別途用意すると、閉じた状態からでも同じ入力内容のまま再検証しやすかった。
+- critical は sticky を強制オンにして close ボタンを隠す方が、固定表示の意味がブレにくかった。
+- preview の reset は、ボタンだけではなく root の `wire:key` で再マウントまで揃えないと、Alpine の hidden state が残って復旧しなかった。
+
+## 9. Sprint 3-3 メモ
+
+- 公開状態は編集可能なフォーム項目ではなく、header actions で切り替える方が操作の意味を分けやすかった。
+- status を disabled の select で見せると、状態と公開期間の責務が分かれたまま現在値を確認できた。
+- publish の validation は starts_at / ends_at の前後関係を直接見る方が、運用時の失敗をそのまま防げた。
+- archive は confirmation を付けた header action にしておくと、停止操作の誤クリックを避けやすかった。
+- feature test で draft / published / archived の遷移を触ると、公開停止の意味が UI と揃っているかを確認しやすかった。
+
+## 10. Sprint 3-4 メモ
+
+- critical の sticky 強制は `afterStateUpdated` と publish 時の両方で押さえると、フォーム操作と公開操作のどちらからでも意味がぶれにくかった。
+- close 非表示は preview 側の DOM に対する回帰テストで固定すると、説明文ではなく挙動として守りやすかった。
+- browser preview で critical を一度確認すると、sticky と close 非表示の意味を実画面で再確認できた。
