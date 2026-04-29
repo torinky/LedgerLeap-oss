@@ -7,22 +7,27 @@
         $count = count($announcements);
     @endphp
 
-    <section class="rounded-2xl border border-base-300 bg-base-100 shadow-sm" data-admin-announcement-feed>
-        <div class="flex items-start justify-between gap-4 border-b border-base-200 px-4 py-4 sm:px-5">
-            <div class="space-y-1">
-                <div class="flex flex-wrap items-center gap-2">
-                    <h2 class="text-base font-bold sm:text-lg">{{ __('ledger.admin_announcement_banner_title') }}</h2>
-                    <span class="badge badge-secondary badge-sm">{{ $count }}</span>
-                </div>
-                <p class="text-sm leading-6 text-base-content/70">
-                    {{ __('ledger.admin_announcement_banner_preview_summary') }}
-                </p>
-            </div>
+    <x-mary-card
+        :subtitle="__('ledger.admin_announcement_banner_preview_summary')"
+        shadow="sm"
+        separator
+        class="border border-base-300 bg-base-100"
+        data-admin-announcement-feed
+    >
+        <x-slot:title>
+            <span class="flex items-center gap-2">
+                <x-mary-icon name="o-bell" class="h-5 w-5" />
+                {{ __('ledger.admin_announcement_banner_title') }}
+            </span>
+        </x-slot:title>
+        <x-slot:menu>
+            <span class="badge badge-secondary badge-sm gap-2">
+                <x-mary-icon name="o-bookmark" class="h-4 w-4" />
+                {{ $count }}
+            </span>
+        </x-slot:menu>
 
-            <span class="badge badge-outline badge-sm">{{ __('ledger.details') }}</span>
-        </div>
-
-        <div class="space-y-3 p-4 sm:p-5">
+        <div class="space-y-3">
             @foreach ($announcements as $announcement)
                 <x-admin.announcement-banner
                     :announcement="$announcement"
@@ -33,5 +38,5 @@
                 />
             @endforeach
         </div>
-    </section>
+    </x-mary-card>
 @endif

@@ -10,6 +10,8 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
+use App\Models\Tenant;
 
 /**
  * Livewire\Notifications\NotificationList テスト
@@ -19,13 +21,21 @@ use Tests\TestCase;
 #[CoversClass(NotificationList::class)]
 class NotificationListTest extends TestCase
 {
+    use RefreshDatabaseWithTenant;
+
     protected bool $tenancy = true;
+
+    protected Tenant $tenant;
 
     protected User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
+        tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
@@ -72,6 +82,33 @@ class NotificationListTest extends TestCase
 
         Livewire::test(NotificationList::class)
             ->assertSee(__('ledger.no_notification'));
+    }
+
+    #[Test]
+    public function component_renders_admin_announcements_without_workflow_notifications(): void
+    {
+        Livewire::test(NotificationList::class, [
+            'adminAnnouncements' => [
+                [
+                    'title' => 'システムメンテナンス',
+                    'body' => 'この時間帯は管理者お知らせだけが表示されます。',
+                    'level' => 'warning',
+                    'status' => 'published',
+                    'sticky' => false,
+                    'published_at' => '2026-04-28 10:00:00',
+                    'links' => [
+                        ['label' => __('ledger.details'), 'url' => '/announcements/system-maintenance'],
+                    ],
+                ],
+            ],
+        ])
+            ->assertSet('workflowNotificationCount', 0)
+            ->assertSet('totalNotifications', 1)
+            ->assertSee('data-admin-announcement-feed')
+            ->assertSee('data-admin-announcement-banner')
+            ->assertSee('システムメンテナンス')
+            ->assertDontSee(__('ledger.no_notification'))
+            ->assertDontSee(__('ledger.mark_all_as_read'));
     }
 
     #[Test]

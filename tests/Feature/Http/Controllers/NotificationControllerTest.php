@@ -57,6 +57,7 @@ class NotificationControllerTest extends TestCase
         $response->assertSee(__('ledger.notifications'));
         $response->assertSee(__('ledger.workflow.pending_tasks'));
         $response->assertSee(__('ledger.activity.title'));
+        $response->assertSee(__('ledger.no_notification'));
         $response->assertViewHas('activeTab', 'notifications');
     }
 
@@ -115,13 +116,13 @@ class NotificationControllerTest extends TestCase
         $html = $response->getContent();
 
         $response->assertOk();
+        $response->assertViewHas('initialNotificationCount', 2);
+        $response->assertViewHas('adminAnnouncements', fn (array $announcements) => count($announcements) === 2);
         $response->assertSee('data-admin-announcement-feed', false);
+        $response->assertSee('data-admin-announcement-banner', false);
         $response->assertSee('運用通知A', false);
         $response->assertSee('運用通知B', false);
-        $this->assertSame(2, substr_count($html, 'data-admin-announcement-banner'));
-        preg_match('/<section class="rounded-2xl border border-base-300 bg-base-100 shadow-sm" data-admin-announcement-feed>(.*?)<\/section>/s', $html, $matches);
-        $this->assertNotEmpty($matches[1] ?? null);
-        $this->assertStringNotContainsString(__('ledger.close'), $matches[1]);
+        $response->assertDontSee(__('ledger.no_notification'));
         $response->assertDontSee('時間外通知', false);
         $response->assertDontSee('下書き通知', false);
         $response->assertSee(__('ledger.notifications'));

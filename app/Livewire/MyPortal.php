@@ -7,6 +7,8 @@ use App\Models\Organization;
 use App\Models\User;
 use App\Repositories\WorkflowTaskRepository;
 use App\Repositories\WritableFolderRepository;
+use App\Services\AdminAnnouncementService;
+use App\Services\NotificationService;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\View\View;
@@ -49,6 +51,8 @@ class MyPortal extends BaseLivewireComponent
 
     // --- 承認待ち件数用 ---
     public int $pendingTaskCount = 0;
+
+    public int $notificationCount = 0;
     //    protected WorkflowTaskRepository $taskRepository;
 
     // 表示する主要権限リスト (ここで定義)
@@ -76,12 +80,17 @@ class MyPortal extends BaseLivewireComponent
     /**
      * コンポーネントのマウント時にデータを準備
      */
-    public function mount(): void
-    {
+    public function mount(
+        NotificationService $notificationService,
+        AdminAnnouncementService $adminAnnouncementService
+    ): void {
         $this->user = Auth::user();
         $this->primaryOrganization = $this->user->primaryOrganization(); // 主所属を取得 (NULL可能性あり)
         $otherOrgIds = $this->primaryOrganization ? [$this->primaryOrganization->id] : [];
-        $this->otherOrganizations = $this->user->organizations()->whereNotIn('organizations.id', $otherOrgIds)->orderBy('name')->get();
+        $this->otherOrganizations = $this->user->organizations()
+            ->whereNotIn('organizations.id', $otherOrgIds)
+            ->orderBy('name')
+            ->get();
         $this->activeRoles = $this->user->getAllUniqueRoles(); // 既存のメソッドを利用
 
         // 「主な役割/担当」文字列の生成 (初期版ロジック)
@@ -93,12 +102,10 @@ class MyPortal extends BaseLivewireComponent
         // ステップ4で追加: 全フォルダツリー用データの準備
         $this->prepareAllFolderTreeData();
 
-        // --- 承認待ち件数を取得 ---
-        //        $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // total() で総件数を取得
-        // --- 承認待ち件数を取得 (修正) ---
-        // $this->pendingTaskCount = $this->taskRepository->getPendingTasksForUser(Auth::user(), 1)->total(); // 古い方法
-        $this->pendingTaskCount = $this->user->pending_inspection_count + $this->user->pending_approval_count; // <<<--- 修正: User モデルから直接取得
-
+        $this->pendingTaskCount = $this->user->pending_inspection_count
+            + $this->user->pending_approval_count; // <<<--- 修正: User モデルから直接取得
+        $this->notificationCount = $notificationService->getUnreadNotificationCountForUser($this->user)
+            + count($adminAnnouncementService->notificationCenterAnnouncements());
     }
 
     /**
@@ -127,12 +134,20 @@ class MyPortal extends BaseLivewireComponent
         }
 
         // 主所属がある場合は "(主所属)" を付ける
-        $primaryBadge = $this->primaryOrganization ? ' ('.__('ledger.organizations.primary').')' : '';
+        $primaryBadge = '';
+
+        if ($this->primaryOrganization) {
+            $primaryBadge = ' ('.__('ledger.organizations.primary').')';
+        }
 
         $this->primaryOrganizationName = $orgName;
-        $this->primaryOrganizationNote = $this->primaryOrganization
-            ? __('ledger.organizations.primary')
-            : ($this->otherOrganizations->isNotEmpty() ? __('ledger.no_primary_organization') : __('ledger.no_organization_assigned'));
+        if ($this->primaryOrganization) {
+            $this->primaryOrganizationNote = __('ledger.organizations.primary');
+        } elseif ($this->otherOrganizations->isNotEmpty()) {
+            $this->primaryOrganizationNote = __('ledger.no_primary_organization');
+        } else {
+            $this->primaryOrganizationNote = __('ledger.no_organization_assigned');
+        }
         $this->primaryRoleName = $roleName;
 
         $this->roleDisplayString = sprintf('%s %s%s', $orgName, $roleName, $primaryBadge);

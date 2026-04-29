@@ -16,9 +16,16 @@ class NotificationList extends BaseLivewireComponent
 {
     use WithoutUrlPagination, WithPagination;
 
+    public array $adminAnnouncements = [];
+
     public int $totalNotifications = 0; // 合計件数用プロパティ
 
-    public function mount(NotificationService $notificationService) {}
+    public int $workflowNotificationCount = 0;
+
+    public function mount(array $adminAnnouncements = []): void
+    {
+        $this->adminAnnouncements = $adminAnnouncements;
+    }
 
     // 通知を既読にするメソッド (変更なし)
     public function markAsRead(NotificationService $notificationService, string $notificationId)
@@ -29,7 +36,6 @@ class NotificationList extends BaseLivewireComponent
         }
 
         $notificationService->markAsRead($user, $notificationId);
-
     }
 
     // 全ての通知を既読にする (変更なし)
@@ -40,31 +46,38 @@ class NotificationList extends BaseLivewireComponent
             return;
         }
         $notificationService->markAsRead($user);
-
     }
 
     public function render(NotificationService $notificationService)
     {
         $user = Auth::user();
         $query = $user ? $notificationService->unreadNotificationsForUser($user) : null;
+        $adminAnnouncementCount = count($this->adminAnnouncements);
 
         if ($query) {
-            $this->totalNotifications = $query->count();
+            $this->workflowNotificationCount = $query->count();
             $notifications = $query->paginate(10, ['*'], pageName: 'notification_page') // 1ページあたりの件数を調整
-                ->through(function ($notification) { // 各通知データを加工
+                ->through(function ($notification)
+                {
+                    // 各通知データを加工
                     $notification->displayData = $this->formatNotificationData($notification);
 
                     return $notification;
                 });
         } else {
-            $this->totalNotifications = 0;
+            $this->workflowNotificationCount = 0;
             $notifications = collect()->paginate(10);
         }
+
+        $this->totalNotifications = $this->workflowNotificationCount + $adminAnnouncementCount;
 
         $this->dispatch('update-tab-count', tab: 'notifications', count: $this->totalNotifications);
 
         return view('livewire.notifications.notification-list', [
             'notifications' => $notifications,
+            'adminAnnouncements' => $this->adminAnnouncements,
+            'adminAnnouncementCount' => $adminAnnouncementCount,
+            'workflowNotificationCount' => $this->workflowNotificationCount,
         ]);
     }
 
@@ -92,8 +105,6 @@ class NotificationList extends BaseLivewireComponent
         $subjectType = $payload['subject_type'] ?? null;
         $subjectId = $payload['subject_id'] ?? null;
         $event = $payload['event'] ?? ($payload['notification_type_name'] ?? null);
-        $routeName = $payload['route'] ?? null;
-        $routeParams = $payload['route_params'] ?? []; // payload に route_params があれば使う
 
         // --- Activity Log の changes 部分のフォーマット ---
         // Notification のデータに activity_log_id が含まれている場合

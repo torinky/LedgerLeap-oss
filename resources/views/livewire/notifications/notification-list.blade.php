@@ -1,17 +1,21 @@
 <div class="space-y-4">
-    @if($notifications->isEmpty())
-        <div class="rounded-2xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
-            <x-mary-icon name="o-bell" class="mx-auto h-12 w-12 text-base-content/40" />
-            <p class="mt-4 text-base font-medium text-base-content">{{ __('ledger.no_notification') }}</p>
-        </div>
-    @else
-        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300 bg-base-200/40 p-4 shadow-sm">
+    @php
+        $hasAdminAnnouncements = is_array($adminAnnouncements ?? null) && ! empty($adminAnnouncements);
+        $hasWorkflowNotifications = $notifications->isNotEmpty();
+    @endphp
+
+    @if ($hasAdminAnnouncements)
+        <x-admin.announcement-feed :announcements="$adminAnnouncements" />
+    @endif
+
+    @if($hasWorkflowNotifications)
+        <div class="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-base-300 bg-base-100 p-4 shadow-sm">
             <div class="flex items-center gap-2">
                 <span class="badge badge-secondary badge-lg gap-2">
                     <x-mary-icon name="o-bell" class="h-4 w-4" />
                     <span>{{ __('ledger.unread') }}</span>
                 </span>
-                <span class="text-sm text-base-content/60">{{ $totalNotifications }}</span>
+                <span class="text-sm text-base-content/60">{{ $workflowNotificationCount }}</span>
             </div>
 
             <button wire:click="markAllAsRead" class="btn btn-sm btn-primary">
@@ -90,6 +94,11 @@
 
         <div class="flex justify-center pt-2">
             {!! $notifications->links('components.common.pagination-links', ['position' => 'notification']) !!}
+        </div>
+    @elseif (! $hasAdminAnnouncements)
+        <div class="rounded-2xl border border-base-300 bg-base-100 p-8 text-center shadow-sm">
+            <x-mary-icon name="o-bell" class="mx-auto h-12 w-12 text-base-content/40" />
+            <p class="mt-4 text-base font-medium text-base-content">{{ __('ledger.no_notification') }}</p>
         </div>
     @endif
 </div>
