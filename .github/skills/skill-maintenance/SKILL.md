@@ -77,6 +77,7 @@ A new learning was proven?
 - What evidence should be preserved so the learning stays trustworthy?
 - What failed, and what proof showed the dead end was wrong?
 - If the same dead end appears twice, reclassify it before a third try instead of repeating the same investigation path.
+- Classify each learning as `local`, `reusable`, or `retire` after splitting it into `technical elements` and `process elements`.
 - If the learning is not yet reusable, keep it in `docs/work/*` and only promote it after the pattern is proven.
 
 ## Maintenance Loop
