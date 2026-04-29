@@ -8,6 +8,7 @@ use App\Filament\Resources\AdminAnnouncementResource\Pages\EditAdminAnnouncement
 use App\Filament\Resources\AdminAnnouncementResource\Pages\ListAdminAnnouncements;
 use App\Filament\Widgets\DashboardLinksWidget;
 use App\Models\AdminAnnouncement;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
@@ -16,6 +17,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 #[CoversClass(AdminAnnouncementResource::class)]
@@ -32,11 +34,14 @@ class AdminAnnouncementResourceTest extends TestCase
         parent::setUp();
         CarbonImmutable::setTestNow('2026-04-28 12:00:00');
 
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
         $this->tenant = Tenant::create();
         $this->tenant->domains()->create(['domain' => 'announcement-banner-test.localhost']);
         tenancy()->initialize($this->tenant);
 
         $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
+        $this->seedAdminAnnouncementPermissions($adminRole);
 
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole($adminRole);
@@ -50,10 +55,89 @@ class AdminAnnouncementResourceTest extends TestCase
         parent::tearDown();
     }
 
+    private function seedAdminAnnouncementPermissions(Role $role): void
+    {
+        $permissions = collect([
+            'create_admin_announcements' => '管理者お知らせを作成できる',
+            'update_admin_announcements' => '管理者お知らせを更新できる',
+            'delete_admin_announcements' => '管理者お知らせを削除できる',
+        ])->map(function (string $description, string $name): Permission {
+            return Permission::updateOrCreate([
+                'name' => $name,
+                'guard_name' => 'web',
+            ], [
+                'description' => $description,
+            ]);
+        });
+
+        $role->givePermissionTo($permissions->all());
+    }
+
     #[Test]
     public function resourceListPageRendersSuccessfully(): void
     {
         $this->get(AdminAnnouncementResource::getUrl('index'))->assertSuccessful();
+    }
+
+    #[Test]
+    public function resourceManagementEntrypointsDependOnAnnouncementPermissions(): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $createPermission = Permission::updateOrCreate([
+            'name' => 'create_admin_announcements',
+            'guard_name' => 'web',
+        ], [
+            'description' => '管理者お知らせを作成できる',
+        ]);
+
+        $updatePermission = Permission::updateOrCreate([
+            'name' => 'update_admin_announcements',
+            'guard_name' => 'web',
+        ], [
+            'description' => '管理者お知らせを更新できる',
+        ]);
+
+        $deletePermission = Permission::updateOrCreate([
+            'name' => 'delete_admin_announcements',
+            'guard_name' => 'web',
+        ], [
+            'description' => '管理者お知らせを削除できる',
+        ]);
+
+        $role = Role::firstOrCreate([
+            'name' => 'Announcement Editor',
+            'guard_name' => 'web',
+        ]);
+        $role->syncPermissions([$createPermission, $updatePermission]);
+
+        $editableAnnouncement = AdminAnnouncement::query()->forceCreate([
+            'title' => '編集可能なお知らせ',
+            'body' => '変更権限の確認用です。',
+            'level' => 'warning',
+            'status' => 'draft',
+            'scope' => ['current_tenant'],
+            'sticky' => false,
+            'priority' => 1,
+            'starts_at' => '2026-04-28 12:00:00',
+            'ends_at' => '2026-04-28 13:00:00',
+        ]);
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $this->actingAs($user);
+
+        $this->assertTrue(AdminAnnouncementResource::canViewAny());
+        $this->assertTrue(AdminAnnouncementResource::canCreate());
+        $this->assertTrue(AdminAnnouncementResource::canEdit($editableAnnouncement));
+        $this->assertFalse(AdminAnnouncementResource::canDelete($editableAnnouncement));
+        $this->assertFalse(AdminAnnouncementResource::canDeleteAny());
+
+        $role->givePermissionTo($deletePermission);
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $this->assertTrue(AdminAnnouncementResource::canDelete($editableAnnouncement));
+        $this->assertTrue(AdminAnnouncementResource::canDeleteAny());
     }
 
     #[Test]

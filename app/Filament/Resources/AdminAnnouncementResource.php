@@ -22,6 +22,7 @@ use Filament\Schemas\Components\View;
 use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class AdminAnnouncementResource extends Resource
 {
@@ -396,5 +397,38 @@ class AdminAnnouncementResource extends Resource
             ]
                 : null,
         ]));
+    }
+
+    public static function canViewAny(): bool
+    {
+        $user = auth()->user();
+
+        if (! $user) {
+            return false;
+        }
+
+        return $user->can('create_admin_announcements')
+            || $user->can('update_admin_announcements')
+            || $user->can('delete_admin_announcements');
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('create_admin_announcements') ?? false;
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        return auth()->user()?->can('update_admin_announcements') ?? false;
+    }
+
+    public static function canDelete(Model $record): bool
+    {
+        return auth()->user()?->can('delete_admin_announcements') ?? false;
+    }
+
+    public static function canDeleteAny(): bool
+    {
+        return auth()->user()?->can('delete_admin_announcements') ?? false;
     }
 }
