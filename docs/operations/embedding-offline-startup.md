@@ -35,16 +35,17 @@ HuggingFace Hub へのアクセスが省略されません。
 コンテナ起動
     │
     ▼
-_is_model_cached() で config.json の存在を確認
+`_is_model_cached()` / `_resolve_model_load_target()` で
+SentenceTransformer として読み込める **完全なスナップショット** を確認
     │
-    ├─ キャッシュなし（初回 / モデル未ダウンロード）
+    ├─ 完全なスナップショットなし（初回 / 途中失敗 / 欠損）
     │       │
     │       ▼
     │   local_files_only = False
     │   → HuggingFace Hub へ接続してダウンロード
     │   → キャッシュを ./storage/app/embedding/ に保存
     │
-    └─ キャッシュあり（2回目以降）
+    └─ 完全なスナップショットあり（2回目以降）
             │
             ▼
         local_files_only = True
@@ -66,19 +67,26 @@ _is_model_cached() で config.json の存在を確認
 
 ### 2回目以降の動作
 
-`config.json` のキャッシュ存在確認（`huggingface_hub.try_to_load_from_cache`）で
-ローカルキャッシュを検出し、`local_files_only=True` を指定してモデルをロードします。
-この場合 **一切のネットワークアクセスは発生しません**。
+`huggingface_hub.try_to_load_from_cache` でローカルキャッシュを検出し、
+`config.json` だけでなく `modules.json` / `sentence_bert_config.json` / `1_Pooling/config.json` / 重みファイル / tokenizer を含む
+完全な SentenceTransformer スナップショットかを確認します。
+
+完全なスナップショットがある場合は `local_files_only=True` を指定し、
+`SentenceTransformer` は **モデル ID のまま** `cache_folder` を参照してローカルキャッシュからロードします。
+不完全な場合は自動的にオンライン読み込みへフォールバックします。
 
 ---
 
-## EMBEDDING_OFFLINE 環境変数による制御
+## EMBEDDING_OFFLINE / EMBEDDING_CACHE_DIR 環境変数による制御
 
 | 値 | 動作 |
 |----|------|
 | **未設定（デフォルト）** | 自動検出: キャッシュあり→オフライン / なし→HFからダウンロード |
 | `EMBEDDING_OFFLINE=0` | 強制オンライン（常にHF Hubに接続して最新確認。更新時に使用） |
 | `EMBEDDING_OFFLINE=1` | 強制オフライン（キャッシュが存在しない場合は起動失敗） |
+
+`EMBEDDING_CACHE_DIR` を設定すると、`SentenceTransformer` のキャッシュ参照先を明示的に変更できます。
+デフォルトは `/app/models` です。
 
 ### .env への設定例
 
@@ -115,7 +123,8 @@ def _is_model_cached(model_name: str, cache_folder: str) -> bool:
         filename="config.json",   # 軽量ファイルで存在確認
         cache_dir=cache_folder,
     )
-    return isinstance(result, str)  # 文字列（パス）が返れば存在
+    # 実装ではこのあと snapshot 配下の必要ファイルが揃っているかを追加確認する
+    return isinstance(result, str)
 ```
 
 `try_to_load_from_cache` の戻り値:
@@ -126,6 +135,8 @@ def _is_model_cached(model_name: str, cache_folder: str) -> bool:
 ### モデルロード時の指定
 
 ```python
+local_files_only = _resolve_local_files_only(model_name_to_load, cache_folder)
+
 model = SentenceTransformer(
     model_name_to_load,
     device=device,
