@@ -2,7 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use App\Filament\Pages\AdminAnnouncementBannerSettings;
+use App\Filament\Resources\AdminAnnouncementResource;
 use App\Filament\Widgets\DashboardLinksWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -63,8 +63,8 @@ class AdminPanelProvider extends PanelProvider
                 NavigationItem::make(__('ledger.admin_announcement_banner_title'))
                     ->icon('heroicon-o-megaphone')
                     ->activeIcon('heroicon-s-megaphone')
-                    ->isActiveWhen(fn (): bool => request()->routeIs('filament.admin.pages.admin-announcement-banner-settings'))
-                    ->url(fn (): string => AdminAnnouncementBannerSettings::getUrl().($fromTenantId ? '?tenant='.$fromTenantId : ''))
+                    ->isActiveWhen(fn (): bool => request()->routeIs('filament.admin.resources.admin-announcements.*'))
+                    ->url(fn (): string => AdminAnnouncementResource::getUrl('index').($fromTenantId ? '?tenant='.$fromTenantId : ''))
                     ->sort(0),
                 NavigationItem::make(__('ledger.navigation.back_to_tenant'))
                     ->url(function () {

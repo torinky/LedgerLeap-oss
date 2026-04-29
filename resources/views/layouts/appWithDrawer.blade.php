@@ -22,10 +22,10 @@
                 // FilamentとTailwind用の 'dark' クラスを適用
                 document.documentElement.classList.add('dark');
                 // DaisyUI用のテーマ属性を設定
-                document.documentElement.setAttribute('data-theme', '{{ config('daisyui.themes.dark') }}');
+                document.documentElement.setAttribute("data-theme", "{{ config('daisyui.themes.dark') }}");
             } else {
                 document.documentElement.classList.remove('dark');
-                document.documentElement.setAttribute('data-theme', '{{ config('daisyui.themes.light') }}');
+                document.documentElement.setAttribute("data-theme", "{{ config('daisyui.themes.light') }}");
             }
         })();
     </script>
@@ -39,8 +39,7 @@
 
 </head>
 
-<body class="font-sans antialiased {{ $attributes->get('class') }}"
->
+<body class="font-sans antialiased {{ $attributes->get('class') }}">
 
     {{-- Tier 0: Global Progress Bar (Livewire通信中のみ表示) --}}
     <x-mary-loading wire:loading.delay class="text-primary fixed top-0 w-full h-1 z-110" />
@@ -51,12 +50,12 @@
         </template>
     </div>
 
-    @php($adminAnnouncement = config('ledgerleap.announcement_banner.current'))
-    @if (! empty($adminAnnouncement))
-        <x-admin.announcement-banner :announcement="$adminAnnouncement" />
+    @php($adminAnnouncements = app(\App\Services\AdminAnnouncementService::class)->notificationCenterAnnouncements())
+    @if (! empty($adminAnnouncements) && ! request()->routeIs('notifications.index', 'ledger.index', 'ledgersByFolderId', 'ledgersByDefineId'))
+        <x-admin.announcement-stack :announcements="$adminAnnouncements" />
     @endif
 
-    <div class="fixed w-full z-30" style="top: var(--admin-announcement-banner-offset, 0px);">
+    <div class="fixed top-0 w-full z-30">
         @include('layouts.daisyuiNavigation', ['showDrawerButton' => true])
 
         @if (isset($header))
@@ -71,7 +70,7 @@
 
 
     {{--        <div class="drawer drawer-mobile"> --}}
-    <div class="drawer xl:drawer-open" style="padding-top: calc(5rem + var(--admin-announcement-banner-offset, 0px));">
+    <div class="drawer xl:drawer-open" style="padding-top: 5rem;">
 
         <input id="app-drawer" type="checkbox" class="drawer-toggle" />
 
@@ -120,10 +119,10 @@
 
             if (isDark) {
                 document.documentElement.classList.add('dark');
-                document.documentElement.setAttribute('data-theme', '{{ config('daisyui.themes.dark') }}');
+                document.documentElement.setAttribute("data-theme", "{{ config('daisyui.themes.dark') }}");
             } else {
                 document.documentElement.classList.remove('dark');
-                document.documentElement.setAttribute('data-theme', '{{ config('daisyui.themes.light') }}');
+                document.documentElement.setAttribute("data-theme", "{{ config('daisyui.themes.light') }}");
             }
         }
 

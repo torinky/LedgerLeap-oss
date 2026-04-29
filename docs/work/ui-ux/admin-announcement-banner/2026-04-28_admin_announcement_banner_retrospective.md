@@ -77,3 +77,11 @@
 - critical の sticky 強制は `afterStateUpdated` と publish 時の両方で押さえると、フォーム操作と公開操作のどちらからでも意味がぶれにくかった。
 - close 非表示は preview 側の DOM に対する回帰テストで固定すると、説明文ではなく挙動として守りやすかった。
 - browser preview で critical を一度確認すると、sticky と close 非表示の意味を実画面で再確認できた。
+
+## 11. Sprint 4 メモ
+
+- feed では `announcement-banner` を再利用しつつ `respectDismissed=false` / `dismissible=false` に固定すると、通知センターを再確認専用の見え方にできた。
+- sticky はレイアウト全体よりも通知グループの配置が重要で、ledger list では `IndexManager` 内に stack を置く方が folder tree の stacking context に巻き込まれにくかった。
+- `AdminAnnouncementService` で複数件の有効通知を正規化し、`currentAnnouncement()` だけに依存しないようにすると、上部表示と通知センターを同じデータ源で扱いやすかった。
+- regression tests は banner / feed / ledger page の 3 視点で押さえると、見え方のズレを早く捕捉できた。
+- 次回同種の調整では、sticky の top 値や z-index を触る前に、DOM の一階層と overflow / transform の影響を先に確認する。

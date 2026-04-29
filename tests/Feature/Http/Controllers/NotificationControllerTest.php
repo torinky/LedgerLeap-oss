@@ -4,6 +4,8 @@ namespace Tests\Feature\Http\Controllers;
 
 use App\Enums\WorkflowStatus;
 use App\Http\Controllers\NotificationController;
+use App\Models\AdminAnnouncement;
+use Carbon\CarbonImmutable;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -36,6 +38,14 @@ class NotificationControllerTest extends TestCase
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
+        CarbonImmutable::setTestNow(CarbonImmutable::parse('2026-04-28 12:00:00'));
+    }
+
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
     }
 
     #[Test]
@@ -48,6 +58,74 @@ class NotificationControllerTest extends TestCase
         $response->assertSee(__('ledger.workflow.pending_tasks'));
         $response->assertSee(__('ledger.activity.title'));
         $response->assertViewHas('activeTab', 'notifications');
+    }
+
+    #[Test]
+    public function test_index_renders_admin_announcement_feed_for_published_items(): void
+    {
+        AdminAnnouncement::create([
+            'title' => '運用通知A',
+            'body' => '第一の告知です。',
+            'level' => 'info',
+            'status' => 'published',
+            'priority' => 20,
+            'scope' => 'current_tenant',
+            'starts_at' => '2026-04-28 09:00:00',
+            'ends_at' => '2026-04-28 18:00:00',
+            'links' => [
+                ['label' => '詳細', 'url' => '/announcements/a'],
+            ],
+        ]);
+
+        AdminAnnouncement::create([
+            'title' => '運用通知B',
+            'body' => '第二の告知です。',
+            'level' => 'warning',
+            'status' => 'published',
+            'priority' => 10,
+            'scope' => 'all_tenants',
+            'starts_at' => '2026-04-28 10:00:00',
+            'ends_at' => '2026-04-28 20:00:00',
+            'links' => [
+                ['label' => '詳細', 'url' => '/announcements/b'],
+            ],
+        ]);
+
+        AdminAnnouncement::create([
+            'title' => '時間外通知',
+            'body' => '公開期間外なので表示されないはずです。',
+            'level' => 'info',
+            'status' => 'published',
+            'priority' => 50,
+            'scope' => 'current_tenant',
+            'starts_at' => '2026-04-28 23:00:00',
+            'ends_at' => '2026-04-29 01:00:00',
+        ]);
+
+        AdminAnnouncement::create([
+            'title' => '下書き通知',
+            'body' => '表示されない下書きです。',
+            'level' => 'critical',
+            'status' => 'draft',
+            'priority' => 30,
+            'scope' => 'current_tenant',
+        ]);
+
+        $response = $this->get(route('notifications.index'));
+        $html = $response->getContent();
+
+        $response->assertOk();
+        $response->assertSee('data-admin-announcement-feed', false);
+        $response->assertSee('運用通知A', false);
+        $response->assertSee('運用通知B', false);
+        $this->assertSame(2, substr_count($html, 'data-admin-announcement-banner'));
+        preg_match('/<section class="rounded-2xl border border-base-300 bg-base-100 shadow-sm" data-admin-announcement-feed>(.*?)<\/section>/s', $html, $matches);
+        $this->assertNotEmpty($matches[1] ?? null);
+        $this->assertStringNotContainsString(__('ledger.close'), $matches[1]);
+        $response->assertDontSee('時間外通知', false);
+        $response->assertDontSee('下書き通知', false);
+        $response->assertSee(__('ledger.notifications'));
+        $response->assertSee(__('ledger.workflow.pending_tasks'));
     }
 
     #[Test]

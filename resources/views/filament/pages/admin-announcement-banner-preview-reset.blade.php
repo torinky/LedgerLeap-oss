@@ -2,8 +2,20 @@
     <button
         type="button"
         class="btn btn-ghost btn-sm"
-        wire:click="resetPreviewBanner"
+        onclick="window.resetAdminAnnouncementBannerPreview && window.resetAdminAnnouncementBannerPreview()"
     >
         {{ $label }}
     </button>
 </div>
+
+<script>
+    window.resetAdminAnnouncementBannerPreview = window.resetAdminAnnouncementBannerPreview || (() => {
+        const prefix = 'ledgerleap.admin_announcement_banner.preview:';
+
+        Object.keys(localStorage)
+            .filter((key) => key.startsWith(prefix))
+            .forEach((key) => localStorage.removeItem(key));
+
+        window.location.reload();
+    });
+</script>

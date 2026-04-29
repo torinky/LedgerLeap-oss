@@ -1,3 +1,24 @@
+@php
+    // IndexManager で監視すべき主要なアクションとプロパティ
+    // 重い処理（フォルダ切り替え、検索など）: スケルトンを表示する対象
+    $heavyMethods = 'changeCurrentFolder,search';
+    $heavyEvents = 'currentFolderChangeRequested';
+    $heavyTargets = $heavyMethods . ',' . $heavyEvents;
+
+    // 軽い処理（表示レベル変更、ソート、フィルタ、箇別のトグルなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
+    $lightMethods =
+        'displayLevel,updateDisplayLevel,sort,filter,updateFilterFromChild,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,openPermissionModal,openActivityModal';
+    // 子コンポーネントからの通知などは IndexManager 全体の透過 (opacity-50) で対応し、
+    // 頻繁に発生するイベント (recordsUpdated) や個別のフィルタ (filterUpdated) は Tier 1 / Tier 2 の対象外にする
+    $lightEvents =
+        'displayLevelRequested,sortRequested,perPageUpdated,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled,openPermissionModalRequested,openActivityModalRequested';
+    $lightTargets = $lightMethods . ',' . $lightEvents;
+
+    $allLoadingTargets = $heavyTargets . ',' . $lightTargets;
+
+    $adminAnnouncements = app(\App\Services\AdminAnnouncementService::class)->notificationCenterAnnouncements();
+@endphp
+
 <div>
     @push('scripts')
         @vite(['resources/js/ledgerIndex.js'])
@@ -34,26 +55,21 @@
         </div>
     </div>
 
-    @php
-        // IndexManager で監視すべき主要なアクションとプロパティ
-        // 重い処理（フォルダ切り替え、検索など）: スケルトンを表示する対象
-        $heavyMethods = 'changeCurrentFolder,search';
-        $heavyEvents = 'currentFolderChangeRequested';
-        $heavyTargets = $heavyMethods . ',' . $heavyEvents;
-
-        // 軽い処理（表示レベル変更、ソート、フィルタ、箇別のトグルなど）: 現在の表示を維持し、オーバーレイ/透過のみ行う対象
-        $lightMethods =
-            'displayLevel,updateDisplayLevel,sort,filter,updateFilterFromChild,filterStatus,perPage,orderBy,orderAsc,gotoPage,nextPage,previousPage,selectedLedgerDefineIds,selectedFolderIds,focusLedgerDefine,toggleFolderId,toggleLedgerDefineId,openPermissionModal,openActivityModal';
-        // 子コンポーネントからの通知などは IndexManager 全体の透過 (opacity-50) で対応し、
-        // 頻繁に発生するイベント (recordsUpdated) や個別のフィルタ (filterUpdated) は Tier 1 / Tier 2 の対象外にする
-        $lightEvents =
-            'displayLevelRequested,sortRequested,perPageUpdated,focusLedgerDefineRequested,folderIdToggled,ledgerDefineIdToggled,openPermissionModalRequested,openActivityModalRequested';
-        $lightTargets = $lightMethods . ',' . $lightEvents;
-
-        $allLoadingTargets = $heavyTargets . ',' . $lightTargets;
-    @endphp
-
     <div class="relative min-h-screen">
+        @if (! empty($adminAnnouncements))
+            <div class="sticky top-16 z-50">
+                <x-admin.announcement-stack
+                    :announcements="$adminAnnouncements"
+                    stack-class="space-y-2"
+                    :banner-sticky-override="false"
+                    :banner-sync-offset="false"
+                    :banner-respect-dismissed="false"
+                    :banner-dismissible="false"
+                    banner-container-class="m-0"
+                />
+            </div>
+        @endif
+
         {{-- Tier 1: Global Loading Overlay --}}
         {{-- .delay.longest (1秒) を使用し、非常に重い通信の時のみ中央にスピナーを表示する --}}
         <div wire:loading.delay.longest wire:target="{{ $allLoadingTargets }}"

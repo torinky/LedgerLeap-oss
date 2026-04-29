@@ -1,6 +1,11 @@
 <?php
 
 return [
+    'announcement_banner' => [
+        'current' => null,
+        'feed' => [],
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Auto Links Configuration

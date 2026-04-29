@@ -38,6 +38,26 @@ class AdminAnnouncementBannerTest extends TestCase
     }
 
     #[Test]
+    public function sticky_announcements_render_with_fixed_positioning_even_when_not_critical(): void
+    {
+        $html = view('components.admin.announcement-banner', [
+            'announcement' => [
+                'title' => '重要なお知らせ',
+                'body' => '通常レベルでも固定表示したい告知です。',
+                'level' => 'info',
+                'sticky' => true,
+                'dismiss_storage_key' => 'ledgerleap.test.banner.sticky',
+                'links' => [],
+            ],
+        ])->render();
+
+        $this->assertStringContainsString('sticky top-0 z-50', $html);
+        $this->assertStringContainsString('重要なお知らせ', $html);
+        $this->assertStringContainsString('通常レベルでも固定表示したい告知です。', $html);
+        $this->assertStringContainsString(__('ledger.close'), $html);
+    }
+
+    #[Test]
     public function critical_announcements_render_without_dismiss_button(): void
     {
         $html = view('components.admin.announcement-banner', [
@@ -52,6 +72,30 @@ class AdminAnnouncementBannerTest extends TestCase
 
         $this->assertStringContainsString('sticky top-0 z-50', $html);
         $this->assertStringContainsString('bg-error/20', $html);
+        $this->assertStringNotContainsString(__('ledger.close'), $html);
+    }
+
+    #[Test]
+    public function banner_can_force_visible_and_hide_dismiss_button(): void
+    {
+        $html = view('components.admin.announcement-banner', [
+            'announcement' => [
+                'title' => '強制表示のお知らせ',
+                'body' => '既読状態に関係なく表示される告知です。',
+                'level' => 'warning',
+                'dismiss_storage_key' => 'ledgerleap.test.banner.force-visible',
+                'links' => [],
+            ],
+            'respectDismissed' => false,
+            'dismissible' => false,
+        ])->render();
+
+        $this->assertStringContainsString('data-admin-announcement-banner', $html);
+        $this->assertStringContainsString('visible: true', $html);
+        $this->assertStringContainsString('respectDismissed: false', $html);
+        $this->assertStringContainsString('dismissible: false', $html);
+        $this->assertStringContainsString('強制表示のお知らせ', $html);
+        $this->assertStringContainsString('既読状態に関係なく表示される告知です。', $html);
         $this->assertStringNotContainsString(__('ledger.close'), $html);
     }
 
@@ -83,6 +127,42 @@ class AdminAnnouncementBannerTest extends TestCase
     }
 
     #[Test]
+    public function app_layout_renders_multiple_announcements_as_a_stack_when_available(): void
+    {
+        $user = User::factory()->create();
+        $this->actingAs($user);
+
+        config([
+            'ledgerleap.announcement_banner.current' => null,
+            'ledgerleap.announcement_banner.feed' => [
+                [
+                    'title' => 'お知らせA',
+                    'body' => '1件目です。',
+                    'level' => 'info',
+                    'status' => 'published',
+                    'dismiss_storage_key' => 'ledgerleap.test.banner.feed.a',
+                ],
+                [
+                    'title' => 'お知らせB',
+                    'body' => '2件目です。',
+                    'level' => 'warning',
+                    'status' => 'published',
+                    'dismiss_storage_key' => 'ledgerleap.test.banner.feed.b',
+                ],
+            ],
+        ]);
+
+        $html = view('layouts.app', [
+            'slot' => new HtmlString('<div>page body</div>'),
+            'attributes' => new ComponentAttributeBag([]),
+        ])->render();
+
+        $this->assertSame(3, substr_count($html, 'data-admin-announcement-banner'));
+        $this->assertStringContainsString('お知らせA', $html);
+        $this->assertStringContainsString('お知らせB', $html);
+    }
+
+    #[Test]
     public function drawer_layout_offsets_the_fixed_header_when_the_banner_is_present(): void
     {
         $user = User::factory()->create();
@@ -104,8 +184,8 @@ class AdminAnnouncementBannerTest extends TestCase
             'drawer' => '',
         ])->render();
 
-        $this->assertStringContainsString('style="top: var(--admin-announcement-banner-offset, 0px);"', $html);
-        $this->assertStringContainsString('style="padding-top: calc(5rem + var(--admin-announcement-banner-offset, 0px));"', $html);
+        $this->assertStringContainsString('class="fixed top-0 w-full z-30"', $html);
+        $this->assertStringContainsString('style="padding-top: 5rem;"', $html);
     }
 
     #[Test]

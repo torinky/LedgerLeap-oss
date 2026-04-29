@@ -62,6 +62,7 @@ class AdminAnnouncementBannerSettings extends \Filament\Pages\Page implements Ha
             ->statePath('data')
             ->components([
                 Grid::make(['xl' => 2])
+                    ->columnSpanFull()
                     ->schema([
                         Section::make(__('ledger.admin_announcement_banner_form_title'))
                             ->description(__('ledger.admin_announcement_banner_form_hint'))
@@ -263,7 +264,14 @@ class AdminAnnouncementBannerSettings extends \Filament\Pages\Page implements Ha
 
     protected function getHeaderActions(): array
     {
+        $fromTenantId = session('filament_from_tenant_id');
+
         return [
+            Action::make('backToList')
+                ->label(__('ledger.back_to_list'))
+                ->icon('heroicon-o-arrow-uturn-left')
+                ->color('gray')
+                ->url(fn (): string => AdminAnnouncementBannerIndex::getUrl().($fromTenantId ? '?tenant='.$fromTenantId : '')),
             Action::make('saveDraft')
                 ->label(__('ledger.admin_announcement_banner_save_draft_action'))
                 ->icon('heroicon-o-pencil-square')

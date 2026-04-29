@@ -8,7 +8,9 @@
 - Long examples and deep procedures: `/.github/skills/<name>/references/*.md`
 - Reusable evaluation harnesses / fixtures: `/docs/harnesses/*`
 - Human-readable operating procedures: `/docs/runbooks/*`
+- Project overview, docs hub, and current LLM strategy: `/README.md`, `/docs/README.md`, `/docs/work/llm-integration/README.md`
 - Client-facing AI capability manifests / bootstrap inputs: `/resources/ai/capabilities/*.yaml`
+- Capability manifest policy and generation notes: `/resources/ai/capabilities/README.md`
 - Implemented MCP / API public contracts: `/docs/development/MCP_Architecture_and_Flow.md`, `/docs/api/README.md`
 
 ## Routing Rules

@@ -88,6 +88,27 @@ class IndexManagerIntegrationTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_sticky_announcements_inside_the_ledger_page_context(): void
+    {
+        config([
+            'ledgerleap.announcement_banner.current' => [
+                'title' => '台帳リスト通知',
+                'body' => 'スクロールしても見える位置に出す通知です。',
+                'level' => 'warning',
+                'sticky' => true,
+                'dismiss_storage_key' => 'ledgerleap.test.banner.index-manager',
+                'links' => [],
+            ],
+        ]);
+
+        Livewire::test(IndexManager::class)
+            ->set('currentFolderId', $this->rootFolder->id)
+            ->assertSee('data-admin-announcement-banner')
+            ->assertSee('sticky top-16 z-50')
+            ->assertSee('台帳リスト通知');
+    }
+
+    #[Test]
     public function it_updates_search_keywords_reactively()
     {
         Ledger::factory()->create([

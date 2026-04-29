@@ -47,6 +47,8 @@
         class="py-4 sm:py-6"
     >
         <div class="mx-auto w-full max-w-screen-2xl space-y-4 sm:px-6 lg:px-8 2xl:px-10">
+            <x-admin.announcement-feed :announcements="$adminAnnouncements" />
+
             <div class="overflow-hidden rounded-2xl border border-base-300 bg-base-100 shadow-sm">
                 <x-mary-tabs
                     :selected="$activeTab"

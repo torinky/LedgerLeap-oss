@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AdminAnnouncementService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,7 +13,7 @@ class NotificationController extends Controller
     /**
      * 通知関連ページのインデックス（タブコンテナ）を表示
      */
-    public function index(Request $request, NotificationService $notificationService): View
+    public function index(Request $request, NotificationService $notificationService, AdminAnnouncementService $adminAnnouncementService): View
     {
         $user = Auth::user();
         $initialNotificationCount = $user ? $notificationService->getUnreadNotificationCountForUser($user) : 0;
@@ -30,6 +31,7 @@ class NotificationController extends Controller
             'initialNotificationCount' => $initialNotificationCount,
             'initialTaskCount' => $initialTaskCount,
             'activeTab' => $activeTab,
+            'adminAnnouncements' => $adminAnnouncementService->notificationCenterAnnouncements(),
         ]);
     }
 

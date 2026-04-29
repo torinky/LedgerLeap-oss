@@ -51,9 +51,9 @@
         </template>
     </div>
 
-    @php($adminAnnouncement = config('ledgerleap.announcement_banner.current'))
-    @if (! empty($adminAnnouncement))
-        <x-admin.announcement-banner :announcement="$adminAnnouncement" />
+    @php($adminAnnouncements = app(\App\Services\AdminAnnouncementService::class)->notificationCenterAnnouncements())
+    @if (! empty($adminAnnouncements) && ! request()->routeIs('notifications.index'))
+        <x-admin.announcement-stack :announcements="$adminAnnouncements" />
     @endif
 
     <div class="min-h-screen">
