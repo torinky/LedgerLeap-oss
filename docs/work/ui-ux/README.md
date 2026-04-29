@@ -45,6 +45,8 @@
 
 - **[管理者お知らせバナーのバリデーション / 公開状態整合 振り返り](./admin-announcement-banner/2026-04-29_admin_announcement_banner_validation_status_retrospective.md)** ✅ 完了: 作成 / 編集フォームに必須入力と開始・終了日の整合を追加し、一覧と編集フォームの公開状態表示を `displayStatusKey()` に揃えた記録。後続の通知スタック修正と Livewire テストのログ確認も含めて、`skill-maintenance` と `ai-asset-maintenance-playbook` の定型フローを整備。
 
+- **[システム管理者からの通知の編集権限 要件検討メモ](./admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_requirements.md)** 📝 検討中: ペルソナ、ユーザーシナリオ、現行の `notify` / テナント境界 / Filament 露出を踏まえ、管理者通知の閲覧・作成・編集・公開・削除をどこで分けるか整理した要件メモ。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備
