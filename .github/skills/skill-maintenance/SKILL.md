@@ -33,6 +33,7 @@ A new learning was proven?
 - When a Blade or Livewire edit breaks a narrow branch, prefer a clean branch rewrite over stacking fragment patches, then validate before widening the search.
 - Keep feature-local UI choreography (for example, "close one drawer before opening another" or browser-event URL bridging) in `docs/work/*` until the pattern has been proven reusable in more than one feature; do not promote it into a reusable skill too early.
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
+- For layout-sensitive UI work, if a small set of cards should become narrower, keep them inside the same visual flow container and tune width utilities there; do not split them into a separate row unless the user explicitly asked for a new section.
 - For static trees, accordions, and other hover-sensitive UI shells, do not assume `wire:ignore` or Livewire morphing is the whole cause of flicker; inspect tooltip, overflow, z-index, and pseudo-element layering next, and prefer static `title` / `aria-label` fallbacks over hover-only critical text.
 - When GitHub issue numbers and sprint labels can drift, treat the GitHub issue title/number as authoritative, add a visible `GitHub 追跡` mapping in the plan or issue body, and rewrite the affected branch immediately so the old numbering does not remain visible.
 - If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.
@@ -53,6 +54,12 @@ A new learning was proven?
 - `last_confirmed_at`: 2026-04-27
 - `recheck_after`: 90d
 - `recheck_trigger`: another issue-number drift, a repeated hover flicker in a static tree or accordion, or a new user override that supersedes the active branch
+
+- [docs/work/ui-ux/navigation/2026-04-29_my-portal-notification-pending-layout-retrospective.md](../../../docs/work/ui-ux/navigation/2026-04-29_my-portal-notification-pending-layout-retrospective.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-04-29
+- `recheck_after`: 90d
+- `recheck_trigger`: a user asks to rebalance stat cards, a masonry flow is broken by wrapper changes, or the same notification / pending-task pair is restyled again
 
 ## Retrospective Gate
 
