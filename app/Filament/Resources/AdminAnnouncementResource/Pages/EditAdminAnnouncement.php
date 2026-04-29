@@ -12,7 +12,7 @@ class EditAdminAnnouncement extends EditRecord
 {
     protected static string $resource = AdminAnnouncementResource::class;
 
-    public function getMaxContentWidth(): Width | string | null
+    public function getMaxContentWidth(): Width|string|null
     {
         return Width::Full;
     }
@@ -21,6 +21,7 @@ class EditAdminAnnouncement extends EditRecord
     {
         $link = $data['links'][0] ?? [];
 
+        $data['status'] = $this->record->displayStatusKey();
         $data['scope'] = AdminAnnouncementResource::normalizeScopeSelection($data['scope'] ?? ['current_tenant']);
         $data['cta_label'] = $link['label'] ?? null;
         $data['cta_url'] = $link['url'] ?? null;
@@ -30,6 +31,7 @@ class EditAdminAnnouncement extends EditRecord
 
     protected function mutateFormDataBeforeSave(array $data): array
     {
+        $data['status'] = $this->record->status;
         $data['scope'] = AdminAnnouncementResource::normalizeScopeSelection($data['scope'] ?? ['current_tenant']);
         $data['links'] = AdminAnnouncementResource::toLinksPayload($data);
         unset($data['cta_label'], $data['cta_url']);
@@ -45,7 +47,7 @@ class EditAdminAnnouncement extends EditRecord
                 ->label(__('ledger.admin_announcement_banner_save_draft_action'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('gray')
-                ->action(fn () => $this->save()),
+                ->action(fn() => $this->save()),
             Actions\Action::make('publishAnnouncement')
                 ->label(__('ledger.admin_announcement_banner_publish_action'))
                 ->icon('heroicon-o-megaphone')

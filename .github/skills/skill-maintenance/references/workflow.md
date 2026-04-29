@@ -31,6 +31,8 @@ When the failure is due to a test / config mismatch, capture the expected condit
 
 When a Blade change produces a syntax or rendering error that does not match the visible source, clear compiled views before widening the diagnosis; stale cache can make the wrong branch look guilty.
 
+Canonical sequence for a finished task: `docs/work/*` retrospective → primary `.github` destination update → neighbor sync → validation → `/skill-maintenance` → `/git-commit`. See `docs/runbooks/ai-asset-maintenance-playbook.md` for the exact steps.
+
 ## Step 2 — Route each finding to the primary destination
 
 | Finding type | Primary destination |

@@ -11,6 +11,7 @@ use App\Models\AdminAnnouncement;
 use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -29,6 +30,7 @@ class AdminAnnouncementResourceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        CarbonImmutable::setTestNow('2026-04-28 12:00:00');
 
         $this->tenant = Tenant::create();
         $this->tenant->domains()->create(['domain' => 'announcement-banner-test.localhost']);
@@ -41,16 +43,23 @@ class AdminAnnouncementResourceTest extends TestCase
         $this->actingAs($this->adminUser);
     }
 
+    protected function tearDown(): void
+    {
+        CarbonImmutable::setTestNow();
+
+        parent::tearDown();
+    }
+
     #[Test]
-    public function resource_list_page_renders_successfully(): void
+    public function resourceListPageRendersSuccessfully(): void
     {
         $this->get(AdminAnnouncementResource::getUrl('index'))->assertSuccessful();
     }
 
     #[Test]
-    public function list_page_shows_existing_announcements(): void
+    public function listPageShowsExistingAnnouncements(): void
     {
-        $published = AdminAnnouncement::create([
+        $published = AdminAnnouncement::query()->forceCreate([
             'title' => '公開中のお知らせ',
             'body' => '公開中の本文です。',
             'level' => 'warning',
@@ -64,7 +73,7 @@ class AdminAnnouncementResourceTest extends TestCase
             ],
         ]);
 
-        $draft = AdminAnnouncement::create([
+        $draft = AdminAnnouncement::query()->forceCreate([
             'title' => '下書きのお知らせ',
             'body' => '下書きの本文です。',
             'level' => 'info',
@@ -76,11 +85,152 @@ class AdminAnnouncementResourceTest extends TestCase
         ]);
 
         Livewire::test(ListAdminAnnouncements::class)
+            ->assertSeeHtmlInOrder([
+                __('ledger.admin_announcement_banner_status_label'),
+                __('ledger.admin_announcement_banner_field_title'),
+                __('ledger.admin_announcement_banner_level_label'),
+                __('ledger.admin_announcement_banner_publish_scope'),
+                __('ledger.admin_announcement_banner_starts_at'),
+                __('ledger.admin_announcement_banner_ends_at'),
+                __('ledger.updated_at'),
+                __('ledger.admin_announcement_banner_creator_label'),
+                __('ledger.admin_announcement_banner_modifier_label'),
+            ])
             ->assertCanSeeTableRecords([$published, $draft]);
     }
 
     #[Test]
-    public function create_page_can_persist_draft_to_list(): void
+    public function listPageShowsDisplayStatusLabels(): void
+    {
+        AdminAnnouncement::query()->forceCreate([
+            'title' => '公開中のお知らせ',
+            'body' => '公開中の本文です。',
+            'level' => 'warning',
+            'status' => 'published',
+            'scope' => ['all_tenants'],
+            'sticky' => true,
+            'priority' => 10,
+            'starts_at' => '2026-04-28 10:00:00',
+            'ends_at' => '2026-04-28 13:00:00',
+        ]);
+
+        AdminAnnouncement::query()->forceCreate([
+            'title' => '公開予定のお知らせ',
+            'body' => '公開予定の本文です。',
+            'level' => 'info',
+            'status' => 'published',
+            'scope' => ['current_tenant'],
+            'sticky' => false,
+            'priority' => 20,
+            'starts_at' => '2026-04-28 13:00:00',
+            'ends_at' => '2026-04-28 14:00:00',
+        ]);
+
+        AdminAnnouncement::query()->forceCreate([
+            'title' => '公開終了のお知らせ',
+            'body' => '公開終了の本文です。',
+            'level' => 'critical',
+            'status' => 'published',
+            'scope' => ['current_tenant'],
+            'sticky' => true,
+            'priority' => 30,
+            'starts_at' => '2026-04-28 10:00:00',
+            'ends_at' => '2026-04-28 11:00:00',
+        ]);
+
+        Livewire::test(ListAdminAnnouncements::class)
+            ->assertSeeText(__('ledger.admin_announcement_banner_status_published'))
+            ->assertSeeText(__('ledger.admin_announcement_banner_status_scheduled'))
+            ->assertSeeText(__('ledger.admin_announcement_banner_status_ended'));
+    }
+
+    #[Test]
+    public function listPageShowsStatusIndicatorsAndCanReplicateAnnouncements(): void
+    {
+        $published = AdminAnnouncement::query()->forceCreate([
+            'title' => '複製元のお知らせ',
+            'body' => '複製したい本文です。',
+            'level' => 'warning',
+            'status' => 'published',
+            'scope' => ['all_tenants'],
+            'sticky' => true,
+            'priority' => 15,
+            'starts_at' => '2026-04-28 10:00:00',
+            'ends_at' => '2026-04-29 10:00:00',
+            'links' => [
+                ['label' => '詳細', 'url' => 'https://example.com/source'],
+            ],
+        ]);
+
+        Livewire::test(ListAdminAnnouncements::class)
+            ->assertSeeText(__('ledger.admin_announcement_banner_status_published'))
+            ->assertSeeHtml(__('ledger.admin_announcement_banner_status_published'));
+
+        Livewire::test(ListAdminAnnouncements::class)
+            ->callTableAction('replicate', $published);
+
+        $this->assertSame(2, AdminAnnouncement::query()->count());
+        $this->assertTrue(AdminAnnouncement::query()->where([
+            'title' => '複製元のお知らせ',
+            'body' => '複製したい本文です。',
+            'level' => 'warning',
+            'status' => 'draft',
+            'sticky' => true,
+            'priority' => 15,
+        ])->exists());
+        $this->assertTrue(AdminAnnouncement::query()->where([
+            'title' => '複製元のお知らせ',
+            'body' => '複製したい本文です。',
+            'level' => 'warning',
+            'status' => 'published',
+        ])->exists());
+    }
+
+    #[Test]
+    public function createPageValidatesRequiredFields(): void
+    {
+        Livewire::test(CreateAdminAnnouncement::class)
+            ->fillForm([
+                'title' => '',
+                'body' => '',
+                'level' => '',
+                'scope' => [],
+                'starts_at' => null,
+                'ends_at' => null,
+            ])
+            ->call('create')
+            ->assertHasFormErrors([
+                'title' => 'required',
+                'body' => 'required',
+                'level' => 'required',
+                'scope' => 'required',
+                'starts_at' => 'required',
+                'ends_at' => 'required',
+            ]);
+    }
+
+    #[Test]
+    public function createPageValidatesEndsAtIsAfterStartsAt(): void
+    {
+        Livewire::test(CreateAdminAnnouncement::class)
+            ->fillForm([
+                'title' => '期間確認',
+                'body' => '期間の整合性を確認します。',
+                'level' => 'warning',
+                'scope' => ['current_tenant'],
+                'sticky' => false,
+                'priority' => 3,
+                'starts_at' => '2026-04-28 13:00:00',
+                'ends_at' => '2026-04-28 12:00:00',
+            ])
+            ->call('create')
+            ->assertHasFormErrors([
+                'ends_at' => 'after_or_equal',
+            ]);
+    }
+
+    #[Test]
+    public function createPageCanPersistDraftToList(): void
     {
         Livewire::test(CreateAdminAnnouncement::class)
             ->fillForm([
@@ -98,11 +248,11 @@ class AdminAnnouncementResourceTest extends TestCase
             ->call('create')
             ->assertHasNoFormErrors();
 
-        $this->assertDatabaseHas('admin_announcements', [
+        $this->assertTrue(AdminAnnouncement::query()->where([
             'title' => '新しい下書き',
             'status' => 'draft',
             'priority' => 3,
-        ]);
+        ])->exists());
 
         $this->get(AdminAnnouncementResource::getUrl('index'))
             ->assertSuccessful()
@@ -110,9 +260,9 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function edit_page_prefills_existing_values(): void
+    public function editPagePrefillsExistingValues(): void
     {
-        $announcement = AdminAnnouncement::create([
+        $announcement = AdminAnnouncement::query()->forceCreate([
             'title' => '編集対象',
             'body' => '編集対象の本文です。',
             'level' => 'critical',
@@ -132,6 +282,7 @@ class AdminAnnouncementResourceTest extends TestCase
                 'title' => '編集対象',
                 'body' => '編集対象の本文です。',
                 'level' => 'critical',
+                'status' => 'scheduled',
                 'scope' => ['all_tenants'],
                 'sticky' => true,
                 'priority' => 7,
@@ -141,9 +292,9 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function edit_page_renders_preview_section(): void
+    public function editPageRendersPreviewSection(): void
     {
-        $announcement = AdminAnnouncement::create([
+        $announcement = AdminAnnouncement::query()->forceCreate([
             'title' => 'プレビュー確認',
             'body' => 'プレビューの本文です。',
             'level' => 'warning',
@@ -167,14 +318,16 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function edit_page_can_save_updates(): void
+    public function editPageCanSaveUpdates(): void
     {
-        $announcement = AdminAnnouncement::create([
+        $announcement = AdminAnnouncement::query()->forceCreate([
             'title' => '元タイトル',
             'body' => '元本文',
             'level' => 'info',
             'status' => 'draft',
             'scope' => ['current_tenant'],
+            'starts_at' => '2026-04-28 12:00:00',
+            'ends_at' => '2026-04-28 13:00:00',
         ]);
 
         Livewire::test(EditAdminAnnouncement::class, ['record' => $announcement->getRouteKey()])
@@ -185,22 +338,24 @@ class AdminAnnouncementResourceTest extends TestCase
                 'scope' => ['all_tenants'],
                 'sticky' => true,
                 'priority' => 5,
+                'starts_at' => '2026-04-28 12:00:00',
+                'ends_at' => '2026-04-28 13:00:00',
                 'cta_label' => '詳細',
                 'cta_url' => 'https://example.com/update',
             ])
             ->call('save')
             ->assertHasNoFormErrors();
 
-        $this->assertDatabaseHas('admin_announcements', [
+        $this->assertTrue(AdminAnnouncement::query()->where([
             'id' => $announcement->id,
             'title' => '更新後タイトル',
             'status' => 'draft',
             'priority' => 5,
-        ]);
+        ])->exists());
     }
 
     #[Test]
-    public function dashboard_links_widget_includes_announcement_banner_link(): void
+    public function dashboardLinksWidgetIncludesAnnouncementBannerLink(): void
     {
         session()->put('filament_from_tenant_id', $this->tenant->id);
 
@@ -212,7 +367,10 @@ class AdminAnnouncementResourceTest extends TestCase
         $contentsGroup = collect($groups)->firstWhere('title', __('ledger.settings.contents'));
 
         $this->assertNotNull($contentsGroup);
-        $this->assertContains(__('ledger.admin_announcement_banner_title').' '.__('ledger.setting'), array_column($contentsGroup['links'], 'title'));
-        $this->assertContains(AdminAnnouncementResource::getUrl('index').'?tenant='.$this->tenant->id, array_column($contentsGroup['links'], 'url'));
+        $expectedTitle = __('ledger.admin_announcement_banner_title').' '.__('ledger.setting');
+        $expectedUrl = AdminAnnouncementResource::getUrl('index').'?tenant='.$this->tenant->id;
+
+        $this->assertContains($expectedTitle, array_column($contentsGroup['links'], 'title'));
+        $this->assertContains($expectedUrl, array_column($contentsGroup['links'], 'url'));
     }
 }

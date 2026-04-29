@@ -155,9 +155,50 @@
 - evidence から元資料へ辿れる
 - `today > last_confirmed_at + recheck_after` の主張が残っていない
 
+## 8. 振り返り → スキルブラッシュアップ → コミットの定型フロー
+
+この 3 段は、作業完了時に毎回同じ順で回す。
+
+### 8.1 事実を `docs/work/*` に残す
+
+- 変更したファイル
+- 期待値と実際の差分
+- 良かったこと / 悪かったこと
+- 上書き指示されたこと
+- こちらが直接修正したこと
+- 失敗した案と、その案が違うと分かった証拠
+
+### 8.2 再利用可能な学びだけを `.github` へ上げる
+
+- 進め方の学びは skill / prompt / runbook / AGENTS に分ける
+- 実装手法の学びは codegen ルールや skill の references に寄せる
+- まだ feature-local なら `docs/work/*` に留める
+
+### 8.3 近接資産を同期する
+
+- skill を変えたら runbook と references を確認する
+- runbook を変えたら skill と AGENTS を確認する
+- 既存の古い文言は、残すより先に消す
+
+### 8.4 検証してからコミットする
+
+1. 変更対象のテストを実行する
+2. 必要なら `./vendor/bin/sail pint` か対象ファイルの検査を行う
+3. `docs/work/*` と `.github` の差分を見比べる
+4. `/skill-maintenance` で assets の整合を確認する
+5. `/git-commit` でコミットする
+
+### 8.5 この流れの完了条件
+
+- 振り返りが `docs/work/*` に存在する
+- 再利用できる学びが 1 つ以上 `.github` へ反映されている
+- runbook が再現手順を 1 本にまとめている
+- テスト結果が残っている
+- コミット前に古い案が見えていない
+
 ---
 
-## 4. 完了条件
+## 9. 完了条件
 
 - [ ] 学びごとに primary destination を決めた
 - [ ] `.github` 以外を含む neighbor sync を確認した
@@ -169,7 +210,7 @@
 
 ---
 
-## 5. 推奨運用
+## 10. 推奨運用
 
 - バグ修正の完了前に `/skill-maintenance` を実行する
 - 新しい skill を作ったら、JetBrains 用に対応 prompt も用意する

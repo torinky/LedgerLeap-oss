@@ -38,12 +38,12 @@ class AdminAnnouncementResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('ledger.admin_announcement_banner_title');
+        return trim(__('ledger.admin_announcement_banner_title'));
     }
 
     public static function getPluralLabel(): string
     {
-        return __('ledger.admin_announcement_banner_title');
+        return sprintf('%s', __('ledger.admin_announcement_banner_title'));
     }
 
     public static function form(Schema $schema): Schema
@@ -60,7 +60,8 @@ class AdminAnnouncementResource extends Resource
                                     Select::make('status')
                                         ->label(__('ledger.admin_announcement_banner_status_label'))
                                         ->beforeLabel(Icon::make('heroicon-o-shield-check')->size('sm'))
-                                        ->options(self::statusOptions())
+                                        ->default('draft')
+                                        ->options(self::statusDisplayOptions())
                                         ->disabled()
                                         ->helperText(__('ledger.admin_announcement_banner_status_hint'))
                                         ->columnSpanFull(),
@@ -111,11 +112,14 @@ class AdminAnnouncementResource extends Resource
                                         ->label(__('ledger.admin_announcement_banner_starts_at'))
                                         ->beforeLabel(Icon::make('heroicon-o-play')->size('sm'))
                                         ->live()
+                                        ->required()
                                         ->seconds(false),
                                     DateTimePicker::make('ends_at')
                                         ->label(__('ledger.admin_announcement_banner_ends_at'))
                                         ->beforeLabel(Icon::make('heroicon-o-stop')->size('sm'))
                                         ->live()
+                                        ->required()
+                                        ->afterOrEqual('starts_at')
                                         ->seconds(false),
                                     TextInput::make('priority')
                                         ->label(__('ledger.default_sort_order'))
@@ -141,11 +145,11 @@ class AdminAnnouncementResource extends Resource
                         ->description(__('ledger.admin_announcement_banner_preview_hint'))
                         ->schema([
                             View::make('filament.pages.admin-announcement-banner-preview-reset')
-                                ->viewData(fn (): array => [
+                                ->viewData(fn(): array => [
                                     'label' => __('ledger.admin_announcement_banner_preview_reset'),
                                 ]),
                             View::make('components.admin.announcement-banner-preview-scoped')
-                                ->viewData(fn (Get $get): array => [
+                                ->viewData(fn(Get $get): array => [
                                     'announcement' => self::previewAnnouncement($get),
                                 ]),
                         ])
@@ -160,7 +164,7 @@ class AdminAnnouncementResource extends Resource
             'title' => $get('title') ?? '',
             'body' => $get('body') ?? '',
             'level' => $get('level') ?? 'info',
-            'sticky' => (bool) $get('sticky'),
+            'sticky' => (bool)$get('sticky'),
             'scope' => self::normalizeScopeSelection($get('scope')),
             'published_at' => self::formatPreviewDateTime($get('starts_at')),
             'starts_at' => self::formatPreviewDateTime($get('starts_at')),
@@ -168,9 +172,9 @@ class AdminAnnouncementResource extends Resource
             'links' => array_filter([
                 filled($get('cta_label')) && filled($get('cta_url'))
                     ? [
-                        'label' => $get('cta_label'),
-                        'url' => $get('cta_url'),
-                    ]
+                    'label' => $get('cta_label'),
+                    'url' => $get('cta_url'),
+                ]
                     : null,
             ]),
             'dismiss_storage_key' => self::previewDismissStorageKey($get),
@@ -184,7 +188,7 @@ class AdminAnnouncementResource extends Resource
             $get('body') ?? '',
             $get('level') ?? '',
             json_encode(self::normalizeScopeSelection($get('scope')), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            (string) ((bool) $get('sticky') ? 1 : 0),
+            (string)((bool)$get('sticky') ? 1 : 0),
             $get('starts_at') ?? '',
             $get('ends_at') ?? '',
             $get('cta_label') ?? '',
@@ -196,11 +200,11 @@ class AdminAnnouncementResource extends Resource
 
     protected static function formatPreviewDateTime(?string $value): string
     {
-        if (! filled($value)) {
+        if (!filled($value)) {
             return __('ledger.none');
         }
 
-        return CarbonImmutable::parse((string) $value)->format('Y/m/d H:i');
+        return CarbonImmutable::parse((string)$value)->format('Y/m/d H:i');
     }
 
     public static function table(Table $table): Table
@@ -208,18 +212,18 @@ class AdminAnnouncementResource extends Resource
         return $table
             ->defaultSort('updated_at', 'desc')
             ->columns([
-                Tables\Columns\TextColumn::make('creator.name')
-                    ->label(__('ledger.admin_announcement_banner_creator_label'))
-                    ->sortable()
-                    ->searchable(),
-                Tables\Columns\TextColumn::make('modifier.name')
-                    ->label(__('ledger.admin_announcement_banner_modifier_label'))
-                    ->sortable()
-                    ->searchable(),
                 Tables\Columns\TextColumn::make('status')
                     ->label(__('ledger.admin_announcement_banner_status_label'))
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => self::statusOptions()[$state] ?? $state),
+                    ->color(function (AdminAnnouncement $record): string {
+                        return self::statusDisplayColor($record->displayStatusKey());
+                    })
+                    ->icon(function (AdminAnnouncement $record): string {
+                        return self::statusDisplayIcon($record->displayStatusKey());
+                    })
+                    ->formatStateUsing(function (AdminAnnouncement $record): string {
+                        return self::statusDisplayLabel($record->displayStatusKey());
+                    }),
                 Tables\Columns\TextColumn::make('title')
                     ->label(__('ledger.admin_announcement_banner_field_title'))
                     ->searchable()
@@ -227,11 +231,11 @@ class AdminAnnouncementResource extends Resource
                 Tables\Columns\TextColumn::make('level')
                     ->label(__('ledger.admin_announcement_banner_level_label'))
                     ->badge()
-                    ->formatStateUsing(fn (string $state): string => __('ledger.'.$state)),
+                    ->formatStateUsing(fn(string $state): string => __('ledger.' . $state)),
                 Tables\Columns\TextColumn::make('scope')
                     ->label(__('ledger.admin_announcement_banner_publish_scope'))
                     ->badge()
-                    ->formatStateUsing(fn (mixed $state): string => self::formatScopeDisplay($state)),
+                    ->formatStateUsing(fn(mixed $state): string => self::formatScopeDisplay($state)),
                 Tables\Columns\TextColumn::make('starts_at')
                     ->label(__('ledger.admin_announcement_banner_starts_at'))
                     ->dateTime()
@@ -244,13 +248,33 @@ class AdminAnnouncementResource extends Resource
                     ->label(__('ledger.updated_at'))
                     ->dateTime()
                     ->sortable(),
+                Tables\Columns\TextColumn::make('creator.name')
+                    ->label(__('ledger.admin_announcement_banner_creator_label'))
+                    ->sortable()
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('modifier.name')
+                    ->label(__('ledger.admin_announcement_banner_modifier_label'))
+                    ->sortable()
+                    ->searchable(),
             ])
             ->filters([])
-            ->actions([
+            ->recordActions([
                 Actions\EditAction::make(),
+                Actions\ReplicateAction::make()
+                    ->label(__('actions.duplicate'))
+                    ->excludeAttributes([
+                        'creator_id',
+                        'modifier_id',
+                        'status',
+                        'published_at',
+                    ])
+                    ->beforeReplicaSaved(function (AdminAnnouncement $replica): void {
+                        $replica->status = 'draft';
+                        $replica->published_at = null;
+                    }),
                 Actions\DeleteAction::make(),
             ])
-            ->bulkActions([
+            ->toolbarActions([
                 Actions\BulkActionGroup::make([
                     Actions\DeleteBulkAction::make(),
                 ]),
@@ -300,15 +324,17 @@ class AdminAnnouncementResource extends Resource
 
     public static function normalizeScopeSelection(mixed $scope): array
     {
-        $scope = is_array($scope) ? $scope : (filled($scope) ? [(string) $scope] : []);
+        if (!is_array($scope)) {
+            $scope = filled($scope) ? [(string)$scope] : [];
+        }
 
-        return array_values(array_filter($scope, fn (mixed $value): bool => is_string($value) && $value !== ''));
+        return array_values(array_filter($scope, static fn(mixed $value): bool => is_string($value) && $value !== ''));
     }
 
     public static function scopeDisplayLabels(mixed $scope): array
     {
         return collect(self::normalizeScopeSelection($scope))
-            ->map(fn (string $value): string => self::scopeOptions()[$value] ?? $value)
+            ->map(fn(string $value): string => self::scopeOptions()[$value] ?? $value)
             ->values()
             ->all();
     }
@@ -320,13 +346,44 @@ class AdminAnnouncementResource extends Resource
         return $labels === [] ? __('ledger.none') : implode(' / ', $labels);
     }
 
-    public static function statusOptions(): array
+    public static function statusDisplayOptions(): array
     {
         return [
             'draft' => __('ledger.admin_announcement_banner_status_draft'),
             'published' => __('ledger.admin_announcement_banner_status_published'),
+            'scheduled' => __('ledger.admin_announcement_banner_status_scheduled'),
+            'ended' => __('ledger.admin_announcement_banner_status_ended'),
             'archived' => __('ledger.admin_announcement_banner_status_archived'),
         ];
+    }
+
+    public static function statusDisplayLabel(string $state): string
+    {
+        return self::statusDisplayOptions()[$state] ?? $state;
+    }
+
+    public static function statusDisplayColor(string $state): string
+    {
+        return match ($state) {
+            'published' => 'success',
+            'scheduled' => 'info',
+            'draft' => 'gray',
+            'ended' => 'secondary',
+            'archived' => 'warning',
+            default => 'secondary',
+        };
+    }
+
+    public static function statusDisplayIcon(string $state): string
+    {
+        return match ($state) {
+            'published' => 'heroicon-o-check-circle',
+            'scheduled' => 'heroicon-o-clock',
+            'draft' => 'heroicon-o-pencil-square',
+            'ended' => 'heroicon-o-archive-box',
+            'archived' => 'heroicon-o-archive-box',
+            default => 'heroicon-o-question-mark-circle',
+        };
     }
 
     public static function toLinksPayload(array $data): array
@@ -334,9 +391,9 @@ class AdminAnnouncementResource extends Resource
         return array_values(array_filter([
             filled($data['cta_label'] ?? null) && filled($data['cta_url'] ?? null)
                 ? [
-                    'label' => $data['cta_label'],
-                    'url' => $data['cta_url'],
-                ]
+                'label' => $data['cta_label'],
+                'url' => $data['cta_url'],
+            ]
                 : null,
         ]));
     }

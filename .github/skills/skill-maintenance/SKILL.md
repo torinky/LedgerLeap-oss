@@ -35,6 +35,7 @@ A new learning was proven?
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
 - For layout-sensitive UI work, if a small set of cards should become narrower, keep them inside the same visual flow container and tune width utilities there; do not split them into a separate row unless the user explicitly asked for a new section.
 - For static trees, accordions, and other hover-sensitive UI shells, do not assume `wire:ignore` or Livewire morphing is the whole cause of flicker; inspect tooltip, overflow, z-index, and pseudo-element layering next, and prefer static `title` / `aria-label` fallbacks over hover-only critical text.
+- For the retire-review-brushup-commit loop, use `docs/runbooks/ai-asset-maintenance-playbook.md` as the canonical sequence: write `docs/work/*` first, then update the primary `.github` destination, sync neighbors, validate, run `/skill-maintenance`, and finish with `/git-commit`.
 - When GitHub issue numbers and sprint labels can drift, treat the GitHub issue title/number as authoritative, add a visible `GitHub 追跡` mapping in the plan or issue body, and rewrite the affected branch immediately so the old numbering does not remain visible.
 - If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.
 - Keep local lessons in `docs/work/*` first; promote only durable guidance after the pattern is proven.
@@ -60,6 +61,12 @@ A new learning was proven?
 - `last_confirmed_at`: 2026-04-29
 - `recheck_after`: 90d
 - `recheck_trigger`: a user asks to rebalance stat cards, a masonry flow is broken by wrapper changes, or the same notification / pending-task pair is restyled again
+
+- [docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_banner_validation_status_retrospective.md](../../../docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_banner_validation_status_retrospective.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-04-29
+- `recheck_after`: 90d
+- `recheck_trigger`: banner validation rules or display-status semantics change again, or the retrospective→skill→commit flow stalls and needs a fresh runbook refresh
 
 ## Retrospective Gate
 

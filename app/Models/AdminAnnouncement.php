@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -60,6 +61,33 @@ class AdminAnnouncement extends Model
 
             $announcement->refreshRevision();
         });
+    }
+
+    public function isCurrentlyVisible(?CarbonImmutable $now = null): bool
+    {
+        return $this->displayStatusKey($now) === 'published';
+    }
+
+    public function displayStatusKey(?CarbonImmutable $now = null): string
+    {
+        if ($this->status !== 'published') {
+            return $this->status;
+        }
+
+        $now ??= CarbonImmutable::now();
+
+        $startsAt = filled($this->starts_at) ? CarbonImmutable::parse($this->starts_at) : null;
+        $endsAt = filled($this->ends_at) ? CarbonImmutable::parse($this->ends_at) : null;
+
+        if ($startsAt && $startsAt->greaterThan($now)) {
+            return 'scheduled';
+        }
+
+        if ($endsAt && $endsAt->lessThan($now)) {
+            return 'ended';
+        }
+
+        return 'published';
     }
 
     public function refreshRevision(): void
