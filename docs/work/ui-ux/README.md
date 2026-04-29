@@ -47,6 +47,8 @@
 
 - **[システム管理者からの通知の編集権限 要件検討メモ](./admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_requirements.md)** 📝 検討中: 閲覧は共通、変更系のみ権限化する前提で、なぜそうしたかの判断理由に加えて中規模見積りと 2 スプリント案まで整理した要件メモ。
 
+- **[システム管理者からの通知の編集権限 振り返り](./admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_retrospective.md)** ✅ 完了: 閲覧共通・変更系分離の権限設計、`AdminAnnouncementResource` の入口制御、通知センター回帰確認、そして issue 完了時の「技術要素 / 仕事の進め方 / 上書き指示」分解を記録した振り返り。
+
 - **[常時モニタ指標と回帰検知の整理 (Issue #114)](./2026-03-21_issue-114_performance_monitoring_and_regression_detection_report.md)** ✅ 実装・運用整理完了
   - 常時モニタと調査用メトリクスの分離
   - 閾値アラートと `performance` ログチャネルの整備

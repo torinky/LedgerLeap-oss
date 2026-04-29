@@ -40,6 +40,7 @@ class AdminAnnouncementResourceTest extends TestCase
         $this->tenant->domains()->create(['domain' => 'announcement-banner-test.localhost']);
         tenancy()->initialize($this->tenant);
 
+        /** @var Role $adminRole */
         $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
         $this->seedAdminAnnouncementPermissions($adminRole);
 
@@ -62,15 +63,66 @@ class AdminAnnouncementResourceTest extends TestCase
             'update_admin_announcements' => '管理者お知らせを更新できる',
             'delete_admin_announcements' => '管理者お知らせを削除できる',
         ])->map(function (string $description, string $name): Permission {
-            return Permission::updateOrCreate([
+            /** @var Permission $permission */
+            $permission = Permission::updateOrCreate([
                 'name' => $name,
                 'guard_name' => 'web',
             ], [
                 'description' => $description,
             ]);
+
+            return $permission;
         });
 
         $role->givePermissionTo($permissions->all());
+    }
+
+    private function loginAsRoleWithAnnouncementPermissions(string $roleName, array $permissionNames): void
+    {
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        $permissions = collect($permissionNames)->map(function (string $name): Permission {
+            /** @var Permission $permission */
+            $permission = Permission::updateOrCreate([
+                'name' => $name,
+                'guard_name' => 'web',
+            ], [
+                'description' => match ($name) {
+                    'create_admin_announcements' => '管理者お知らせを作成できる',
+                    'update_admin_announcements' => '管理者お知らせを更新できる',
+                    'delete_admin_announcements' => '管理者お知らせを削除できる',
+                    default => $name,
+                },
+            ]);
+
+            return $permission;
+        });
+
+        /** @var Role $role */
+        $role = Role::firstOrCreate([
+            'name' => $roleName,
+            'guard_name' => 'web',
+        ]);
+        $role->syncPermissions($permissions->all());
+
+        $user = User::factory()->create();
+        $user->assignRole($role);
+        $this->actingAs($user);
+    }
+
+    private function makePermissionCheckAnnouncement(): AdminAnnouncement
+    {
+        return AdminAnnouncement::query()->forceCreate([
+            'title' => '権限確認用のお知らせ',
+            'body' => '権限ごとの挙動確認用です。',
+            'level' => 'warning',
+            'status' => 'draft',
+            'scope' => ['current_tenant'],
+            'sticky' => false,
+            'priority' => 1,
+            'starts_at' => '2026-04-28 12:00:00',
+            'ends_at' => '2026-04-28 13:00:00',
+        ]);
     }
 
     #[Test]
@@ -80,64 +132,68 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function resourceManagementEntrypointsDependOnAnnouncementPermissions(): void
+    public function createOnlyRoleCanAccessCreateEntryPointAndCannotEditOrDelete(): void
     {
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-        $createPermission = Permission::updateOrCreate([
-            'name' => 'create_admin_announcements',
-            'guard_name' => 'web',
-        ], [
-            'description' => '管理者お知らせを作成できる',
-        ]);
-
-        $updatePermission = Permission::updateOrCreate([
-            'name' => 'update_admin_announcements',
-            'guard_name' => 'web',
-        ], [
-            'description' => '管理者お知らせを更新できる',
-        ]);
-
-        $deletePermission = Permission::updateOrCreate([
-            'name' => 'delete_admin_announcements',
-            'guard_name' => 'web',
-        ], [
-            'description' => '管理者お知らせを削除できる',
-        ]);
-
-        $role = Role::firstOrCreate([
-            'name' => 'Announcement Editor',
-            'guard_name' => 'web',
-        ]);
-        $role->syncPermissions([$createPermission, $updatePermission]);
-
-        $editableAnnouncement = AdminAnnouncement::query()->forceCreate([
-            'title' => '編集可能なお知らせ',
-            'body' => '変更権限の確認用です。',
-            'level' => 'warning',
-            'status' => 'draft',
-            'scope' => ['current_tenant'],
-            'sticky' => false,
-            'priority' => 1,
-            'starts_at' => '2026-04-28 12:00:00',
-            'ends_at' => '2026-04-28 13:00:00',
-        ]);
-
-        $user = User::factory()->create();
-        $user->assignRole($role);
-        $this->actingAs($user);
+        $announcement = $this->makePermissionCheckAnnouncement();
+        $this->loginAsRoleWithAnnouncementPermissions('Announcement Creator', ['create_admin_announcements']);
 
         $this->assertTrue(AdminAnnouncementResource::canViewAny());
         $this->assertTrue(AdminAnnouncementResource::canCreate());
-        $this->assertTrue(AdminAnnouncementResource::canEdit($editableAnnouncement));
-        $this->assertFalse(AdminAnnouncementResource::canDelete($editableAnnouncement));
+        $this->assertFalse(AdminAnnouncementResource::canEdit($announcement));
+        $this->assertFalse(AdminAnnouncementResource::canDelete($announcement));
         $this->assertFalse(AdminAnnouncementResource::canDeleteAny());
 
-        $role->givePermissionTo($deletePermission);
-        app(PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->get(AdminAnnouncementResource::getUrl('index'))->assertSuccessful();
+        $this->get(AdminAnnouncementResource::getUrl('create'))->assertSuccessful();
 
-        $this->assertTrue(AdminAnnouncementResource::canDelete($editableAnnouncement));
+        Livewire::test(ListAdminAnnouncements::class)
+            ->assertActionVisible('create')
+            ->assertTableActionHidden('edit', $announcement)
+            ->assertTableActionHidden('delete', $announcement)
+            ->assertTableBulkActionHidden('delete');
+    }
+
+    #[Test]
+    public function updateOnlyRoleCanAccessEditEntryPointAndCannotCreateOrDelete(): void
+    {
+        $announcement = $this->makePermissionCheckAnnouncement();
+        $this->loginAsRoleWithAnnouncementPermissions('Announcement Editor', ['update_admin_announcements']);
+
+        $this->assertTrue(AdminAnnouncementResource::canViewAny());
+        $this->assertFalse(AdminAnnouncementResource::canCreate());
+        $this->assertTrue(AdminAnnouncementResource::canEdit($announcement));
+        $this->assertFalse(AdminAnnouncementResource::canDelete($announcement));
+        $this->assertFalse(AdminAnnouncementResource::canDeleteAny());
+
+        $this->get(AdminAnnouncementResource::getUrl('index'))->assertSuccessful();
+        $this->get(AdminAnnouncementResource::getUrl('edit', ['record' => $announcement]))->assertSuccessful();
+
+        Livewire::test(ListAdminAnnouncements::class)
+            ->assertActionHidden('create')
+            ->assertTableActionVisible('edit', $announcement)
+            ->assertTableActionHidden('delete', $announcement)
+            ->assertTableBulkActionHidden('delete');
+    }
+
+    #[Test]
+    public function deleteOnlyRoleCanSeeDeleteActionsAndBulkDeleteButNotCreateOrEdit(): void
+    {
+        $announcement = $this->makePermissionCheckAnnouncement();
+        $this->loginAsRoleWithAnnouncementPermissions('Announcement Deleter', ['delete_admin_announcements']);
+
+        $this->assertTrue(AdminAnnouncementResource::canViewAny());
+        $this->assertFalse(AdminAnnouncementResource::canCreate());
+        $this->assertFalse(AdminAnnouncementResource::canEdit($announcement));
+        $this->assertTrue(AdminAnnouncementResource::canDelete($announcement));
         $this->assertTrue(AdminAnnouncementResource::canDeleteAny());
+
+        $this->get(AdminAnnouncementResource::getUrl('index'))->assertSuccessful();
+
+        Livewire::test(ListAdminAnnouncements::class)
+            ->assertActionHidden('create')
+            ->assertTableActionHidden('edit', $announcement)
+            ->assertTableActionVisible('delete', $announcement)
+            ->assertTableBulkActionVisible('delete');
     }
 
     #[Test]

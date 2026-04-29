@@ -38,6 +38,7 @@ A new learning was proven?
 - For the retire-review-brushup-commit loop, use `docs/runbooks/ai-asset-maintenance-playbook.md` as the canonical sequence: write `docs/work/*` first, then update the primary `.github` destination, sync neighbors, validate, run `/skill-maintenance`, and finish with `/git-commit`.
 - When GitHub issue numbers and sprint labels can drift, treat the GitHub issue title/number as authoritative, add a visible `GitHub 追跡` mapping in the plan or issue body, and rewrite the affected branch immediately so the old numbering does not remain visible.
 - If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.
+- For issue retrospectives, explicitly capture `良かったこと`, `悪かったこと`, and `上書き指示されたこと` before classifying the learning as technical or process-related.
 - Keep local lessons in `docs/work/*` first; promote only durable guidance after the pattern is proven.
 - Review learnings in two layers: (1) the process / approach (target selection, evidence order, hypothesis comparison, validation gate, handoff timing) and (2) the concrete technique / implementation detail (commands, config, UI changes, templates, wording, code pattern).
 - For tenant-aware test suites, reapply the testing DB connection at the start of setup and avoid assuming the previous class left `mysql_testing` in the right database; see `docs/work/testing/2026-04-16_issue-149-retrospective.md`.
@@ -67,6 +68,12 @@ A new learning was proven?
 - `last_confirmed_at`: 2026-04-29
 - `recheck_after`: 90d
 - `recheck_trigger`: banner validation rules or display-status semantics change again, or the retrospective→skill→commit flow stalls and needs a fresh runbook refresh
+
+- [docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_retrospective.md](../../../docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_retrospective.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-04-29
+- `recheck_after`: 90d
+- `recheck_trigger`: admin announcement permission scopes change again, issue-number drift reappears, or the retrospective structure needs another refresh
 
 ## Retrospective Gate
 

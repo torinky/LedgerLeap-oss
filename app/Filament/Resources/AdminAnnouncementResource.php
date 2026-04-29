@@ -260,7 +260,8 @@ class AdminAnnouncementResource extends Resource
             ])
             ->filters([])
             ->recordActions([
-                Actions\EditAction::make(),
+                Actions\EditAction::make()
+                    ->visible(fn (AdminAnnouncement $record): bool => self::canEdit($record)),
                 Actions\ReplicateAction::make()
                     ->label(__('actions.duplicate'))
                     ->excludeAttributes([
@@ -273,11 +274,13 @@ class AdminAnnouncementResource extends Resource
                         $replica->status = 'draft';
                         $replica->published_at = null;
                     }),
-                Actions\DeleteAction::make(),
+                Actions\DeleteAction::make()
+                    ->visible(fn (AdminAnnouncement $record): bool => self::canDelete($record)),
             ])
             ->toolbarActions([
                 Actions\BulkActionGroup::make([
-                    Actions\DeleteBulkAction::make(),
+                    Actions\DeleteBulkAction::make()
+                        ->visible(fn (): bool => self::canDeleteAny()),
                 ]),
             ]);
     }

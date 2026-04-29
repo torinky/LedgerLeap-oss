@@ -25,6 +25,8 @@ Before deciding where a learning belongs, record the answer to each of these:
 - What did we try that failed, and what proof showed it was the wrong path?
 - If the same dead end appeared twice, what should be reclassified before a third try?
 
+Write the findings first as `良かったこと`, `悪かったこと`, and `上書き指示されたこと`, then split each one into `技術要素` and `作業の進め方` before choosing a destination.
+
 Use the answer to decide whether the item stays in `docs/work/*` or graduates into `.github` assets.
 
 When the failure is due to a test / config mismatch, capture the expected condition, the actual runtime condition, and the smallest opt-in needed before promoting the learning.
@@ -88,6 +90,7 @@ Evidence anchor: issue `#135` scope was repeatedly re-centered on 2026-04-12, an
 - [ ] Skill and prompt cross-link when they cover the same domain
 - [ ] No duplicate rule remains in two places without an explicit reason
 - [ ] Failed operations and discarded approaches were captured alongside successful fixes
+- [ ] Issue completion retained both completion evidence and the rewritten body, not comments alone
 - [ ] All links resolve
 - [ ] Inventory reflects new or removed skills
 - [ ] For tool-description slimming, `tool = contract`, `capability = flow`, and `docs/work = rationale` are all true after the change
