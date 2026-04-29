@@ -157,7 +157,7 @@ class AdminAnnouncementBannerTest extends TestCase
             'attributes' => new ComponentAttributeBag([]),
         ])->render();
 
-        $this->assertSame(3, substr_count($html, 'data-admin-announcement-banner'));
+        $this->assertSame(2, substr_count($html, 'data-admin-announcement-banner'));
         $this->assertStringContainsString('お知らせA', $html);
         $this->assertStringContainsString('お知らせB', $html);
     }

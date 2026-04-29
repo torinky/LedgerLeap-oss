@@ -104,8 +104,9 @@ class IndexManagerIntegrationTest extends TestCase
         Livewire::test(IndexManager::class)
             ->set('currentFolderId', $this->rootFolder->id)
             ->assertSee('data-admin-announcement-banner')
-            ->assertSee('sticky top-16 z-50')
-            ->assertSee('台帳リスト通知');
+            ->assertSee('sticky top-0 z-50')
+            ->assertSee('台帳リスト通知')
+            ->assertSee('aria-label="'.__('ledger.close').'"', false);
     }
 
     #[Test]

@@ -1,11 +1,15 @@
-<div class="space-y-4">
+<div class="space-y-4" wire:poll.30s="refreshAnnouncements">
     @php
-        $hasAdminAnnouncements = is_array($adminAnnouncements ?? null) && ! empty($adminAnnouncements);
+        $hasAdminAnnouncements = filled($adminAnnouncements ?? null);
         $hasWorkflowNotifications = $notifications->isNotEmpty();
     @endphp
 
     @if ($hasAdminAnnouncements)
-        <x-admin.announcement-feed :announcements="$adminAnnouncements" />
+        <x-admin.announcement-feed
+            :announcements="$adminAnnouncements"
+            :respect-dismissed="false"
+            :dismissible="false"
+        />
     @endif
 
     @if($hasWorkflowNotifications)

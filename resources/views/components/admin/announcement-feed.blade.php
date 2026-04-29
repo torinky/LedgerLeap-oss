@@ -1,8 +1,10 @@
 @props([
     'announcements' => [],
+    'respectDismissed' => false,
+    'dismissible' => false,
 ])
 
-@if (is_array($announcements) && ! empty($announcements))
+@if (filled($announcements))
     @php
         $count = count($announcements);
     @endphp
@@ -11,7 +13,7 @@
         :subtitle="__('ledger.admin_announcement_banner_preview_summary')"
         shadow="sm"
         separator
-        class="border border-base-300 bg-base-100"
+        class="overflow-visible border border-base-300 bg-base-100"
         data-admin-announcement-feed
     >
         <x-slot:title>
@@ -33,8 +35,8 @@
                     :announcement="$announcement"
                     :sync-offset="false"
                     container-class="m-0"
-                    :respect-dismissed="false"
-                    :dismissible="false"
+                    :respect-dismissed="$respectDismissed"
+                    :dismissible="$dismissible"
                 />
             @endforeach
         </div>

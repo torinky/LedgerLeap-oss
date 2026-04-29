@@ -5,6 +5,7 @@ namespace App\Livewire\Notifications;
 use App\Helpers\ActivityLogFormatter;
 use App\Livewire\BaseLivewireComponent;
 use App\Models\CustomActivity;
+use App\Services\AdminAnnouncementService;
 use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Support\Facades\Auth;
@@ -48,11 +49,19 @@ class NotificationList extends BaseLivewireComponent
         $notificationService->markAsRead($user);
     }
 
+    public function refreshAnnouncements(): void
+    {
+        $this->adminAnnouncements = app(AdminAnnouncementService::class)->notificationCenterAnnouncements();
+    }
+
     public function render(NotificationService $notificationService)
     {
         $user = Auth::user();
         $query = $user ? $notificationService->unreadNotificationsForUser($user) : null;
-        $adminAnnouncementCount = count($this->adminAnnouncements);
+        $adminAnnouncements = $this->adminAnnouncements !== []
+            ? $this->adminAnnouncements
+            : app(AdminAnnouncementService::class)->notificationCenterAnnouncements();
+        $adminAnnouncementCount = count($adminAnnouncements);
 
         if ($query) {
             $this->workflowNotificationCount = $query->count();
@@ -75,7 +84,7 @@ class NotificationList extends BaseLivewireComponent
 
         return view('livewire.notifications.notification-list', [
             'notifications' => $notifications,
-            'adminAnnouncements' => $this->adminAnnouncements,
+            'adminAnnouncements' => $adminAnnouncements,
             'adminAnnouncementCount' => $adminAnnouncementCount,
             'workflowNotificationCount' => $this->workflowNotificationCount,
         ]);

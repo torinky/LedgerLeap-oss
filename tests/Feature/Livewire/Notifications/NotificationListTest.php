@@ -87,28 +87,41 @@ class NotificationListTest extends TestCase
     #[Test]
     public function component_renders_admin_announcements_without_workflow_notifications(): void
     {
-        Livewire::test(NotificationList::class, [
-            'adminAnnouncements' => [
-                [
-                    'title' => 'システムメンテナンス',
-                    'body' => 'この時間帯は管理者お知らせだけが表示されます。',
-                    'level' => 'warning',
-                    'status' => 'published',
-                    'sticky' => false,
-                    'published_at' => '2026-04-28 10:00:00',
-                    'links' => [
-                        ['label' => __('ledger.details'), 'url' => '/announcements/system-maintenance'],
-                    ],
-                ],
+        $adminAnnouncements = [[
+            'title' => 'システムメンテナンス',
+            'body' => 'この時間帯は管理者お知らせだけが表示されます。',
+            'level' => 'warning',
+            'sticky' => false,
+            'scope' => ['current_tenant'],
+            'status' => 'published',
+            'priority' => 10,
+            'starts_at' => now()->subMinute()->toDateTimeString(),
+            'ends_at' => now()->addDay()->toDateTimeString(),
+            'published_at' => now()->subMinute()->toDateTimeString(),
+            'links' => [
+                ['label' => __('ledger.details'), 'url' => '/announcements/system-maintenance'],
             ],
-        ])
+        ]];
+
+        $component = Livewire::test(NotificationList::class, [
+            'adminAnnouncements' => $adminAnnouncements,
+        ]);
+
+        $component
             ->assertSet('workflowNotificationCount', 0)
             ->assertSet('totalNotifications', 1)
-            ->assertSee('data-admin-announcement-feed')
-            ->assertSee('data-admin-announcement-banner')
-            ->assertSee('システムメンテナンス')
-            ->assertDontSee(__('ledger.no_notification'))
+            ->assertSee(__('ledger.admin_announcement_banner_title'))
             ->assertDontSee(__('ledger.mark_all_as_read'));
+
+        $adminAnnouncements = $component->viewData('adminAnnouncements');
+        $html = $component->html();
+
+        $this->assertCount(1, $adminAnnouncements);
+        $this->assertSame('システムメンテナンス', $adminAnnouncements[0]['title']);
+        $this->assertSame('この時間帯は管理者お知らせだけが表示されます。', $adminAnnouncements[0]['body']);
+        $this->assertStringContainsString('システムメンテナンス', $html);
+        $this->assertStringContainsString('この時間帯は管理者お知らせだけが表示されます。', $html);
+        $this->assertStringNotContainsString(__('ledger.no_notification'), $html);
     }
 
     #[Test]

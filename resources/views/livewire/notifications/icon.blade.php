@@ -2,7 +2,7 @@
     <div class="indicator">
         <a href="{{ route('notifications.index') }}"
            _target="LedgerLeap_PendingList"
-           wire:poll.600s="refreshCounts"
+           wire:poll.30s="refreshCounts"
                 @class([
                     'btn  btn-circle btn-sm',
                     'btn-ghost' => (($pendingTaskCount == 0) && ($notificationCount == 0)),

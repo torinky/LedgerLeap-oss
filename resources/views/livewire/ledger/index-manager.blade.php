@@ -57,17 +57,13 @@
 
     <div class="relative min-h-screen">
         @if (! empty($adminAnnouncements))
-            <div class="sticky top-16 z-50">
-                <x-admin.announcement-stack
-                    :announcements="$adminAnnouncements"
-                    stack-class="space-y-2"
-                    :banner-sticky-override="false"
-                    :banner-sync-offset="false"
-                    :banner-respect-dismissed="false"
-                    :banner-dismissible="false"
-                    banner-container-class="m-0"
-                />
-            </div>
+            <x-admin.announcement-stack
+                :announcements="$adminAnnouncements"
+                :banner-sync-offset="false"
+                :banner-respect-dismissed="true"
+                :banner-dismissible="true"
+                banner-container-class="m-0"
+            />
         @endif
 
         {{-- Tier 1: Global Loading Overlay --}}

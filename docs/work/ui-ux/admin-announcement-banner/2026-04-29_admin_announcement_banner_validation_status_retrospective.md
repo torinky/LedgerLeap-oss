@@ -86,3 +86,11 @@
 - `docs/runbooks/ai-asset-maintenance-playbook.md`
 - `.github/skills/skill-maintenance/SKILL.md`
 
+## 12. Sprint 4-2 メモ
+
+- `resources/views/components/admin/announcement-stack.blade.php` の外側 `div` を外し、各バナーを個別 surface として描画した方が sticky の重なりとスクロール流出を防げた。
+- `announcement-stack` の wrapper を残したまま `top` や `z-index` だけをいじると、複数通知のまとまり方が崩れやすかった。
+- `tests/Feature/Livewire/Notifications/NotificationListTest.php` の失敗箇所は、DB へ入れた admin announcement が Livewire 側の viewData に正しく渡っているかをログで確認して切り分けた。
+- Livewire のテストでは、HTML 断片のマーカーよりも `viewData()` と実際のレンダリング結果の両方を確認した方が、原因の切り分けが速かった。
+- 今回の学びは画面固有の DOM 構造とテスト診断に強く依存するため、当面は `docs/work` に留め、共通化が必要になった時だけ `.github` へ昇格する。
+

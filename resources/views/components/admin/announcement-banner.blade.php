@@ -119,7 +119,7 @@
             aria-live="{{ $isCritical ? 'assertive' : 'polite' }}"
             class="{{ $containerClass }} alert alert-soft {{ $levelClass }}
                 alert-vertical md:alert-horizontal items-center gap-3 overflow-hidden border border-base-300 bg-linear-to-r p-3 m-2 shadow-none
-                relative z-50 md:px-4 md:py-3.5 {{ $isSticky ? 'sticky top-0 z-50' : '' }} {{ $palette['surface'] }} "
+                md:px-4 md:py-3.5 {{ $isSticky ? 'sticky top-0 z-50' : 'relative z-40' }} {{ $palette['surface'] }} "
     >
         <div class="absolute inset-x-0 top-0 h-1 bg-linear-to-r {{ $palette['accent'] }} motion-safe:animate-pulse"></div>
 
