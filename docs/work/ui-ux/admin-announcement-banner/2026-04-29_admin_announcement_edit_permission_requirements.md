@@ -253,7 +253,88 @@ LedgerLeap の権限は次の二層で構成されている。
 4. 新権限は、既存の Seeder に無理なく段階的に割り当てる
 5. `Organization Admin` 以上にだけ削除を許可するかを先に決める
 
-## 9. 参照ファイル
+## 9. 見積り
+
+### 9.1 規模感
+
+**見積り**: 中規模
+
+### 9.2 理由
+
+- DB スキーマ追加は不要で、主な変更先は Seeder、Filament の権限制御、テスト、文書に限られる
+- ただし、権限は `AdminAnnouncementResource` だけでなく、管理画面の入口や既存 Seeder にも波及する
+- 閲覧を権限化しないとはいえ、変更系だけを追加するだけでも、ロールごとの整合確認が必要になる
+- `Project Manager` / `Editor` / `Organization Admin` のどこまで許可するかで確認範囲が変わるため、単純な小規模改修よりは広い
+
+### 9.3 見積りの前提
+
+- 閲覧は共通のままにする
+- 専用権限は `create_admin_announcements` / `update_admin_announcements` / `delete_admin_announcements` に絞る
+- `publish` / `archive` / `replicate` は今回の見積りに含めない
+- 既存の通知センター表示や上部バナー表示は権限変更の対象外とする
+
+### 9.4 作業分解
+
+1. 権限名とロール割当の確定
+2. Seeder への追加
+3. Filament の create / edit / delete の制御整理
+4. テスト追加・修正
+5. 文書更新と最終確認
+
+## 10. スプリント計画
+
+### Sprint 1: 権限設計と実装入口の確定
+
+**目的**: どのロールに何を許可するかを固定し、実装入口を作る。
+
+**作業**:
+
+- `RolesAndPermissionsSeeder.php` に新権限を追加する
+- `Super Admin` / `Organization Admin` / `Project Manager` / `Editor` の割当方針を確定する
+- `AdminAnnouncementResource` の create / edit / delete 制御方針を整理する
+- `AdminAnnouncementPolicy` を新設するか、Filament 側の権限制御で足りるかを判断する
+- 変更方針をテスト観点に落とす
+
+**完了条件**:
+
+- 権限名とロール割当が文書上で確定している
+- どの画面がどの権限を参照するか説明できる
+- 既存の通知閲覧導線に影響を与えないことを確認できる
+
+### Sprint 2: 実装・回帰確認
+
+**目的**: 権限制御を実装し、既存機能への影響をテストで固定する。
+
+**作業**:
+
+- Seeder を反映する
+- Filament の create / edit / delete 入口に権限制御を入れる
+- 必要な Feature テストを追加する
+- `notify` 受信や通知センター表示が壊れていないか確認する
+- 役割別の期待値をテストで固定する
+
+**完了条件**:
+
+- 主要ロールごとの作成・編集・削除可否がテストで確認できる
+- 閲覧は共通のまま維持されている
+- 通知センターと上部バナーの表示が回帰していない
+
+### Sprint 3: 追加権限を検討する場合のみ
+
+**条件**: `publish` / `archive` / `replicate` を個別権限として切り出したくなった場合のみ実施する。
+
+**作業**:
+
+- 追加権限の必要性を再評価する
+- 公開・停止・複製の責務を切り分ける
+- 既存テストを拡張する
+
+**判断理由**:
+
+- 今回は変更系の基礎を固めるのが先で、公開や複製は後からでも分離できるため
+- 先に権限の粒度を増やしすぎると、Seeder と運用説明が複雑になるため
+
+## 11. 参照ファイル
 
 - `app/Services/PermissionService.php`
 - `app/Http/Controllers/NotificationController.php`
