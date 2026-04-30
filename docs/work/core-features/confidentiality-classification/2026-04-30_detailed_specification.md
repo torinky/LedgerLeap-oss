@@ -1,7 +1,7 @@
 # 秘密区分表示機能 詳細仕様書
 
 **作成日:** 2026-04-29
-**最終更新:** 2026-04-30 (Rev.4)
+**最終更新:** 2026-04-30 (Rev.5)
 **対象機能:** フォルダ・台帳ごとの「秘密区分」表示機能
 
 > 📄 **基本仕様・設計判断・機能概要はこちら**: [秘密区分表示機能 基本仕様書](./2026-04-30_basic_specification.md)
@@ -11,6 +11,8 @@
 ## 1. データモデル設計指針
 
 ### 1.1 マイグレーション（追加カラム）
+
+#### 秘密区分・公開範囲カラム
 
 ```php
 // フォルダテーブル
@@ -28,7 +30,26 @@ Schema::table('ledger_defines', function (Blueprint $table) {
 
 - `ledgers` テーブル（Mroonga）への変更は**不要**（秘密区分は台帳定義層で管理）。
 - `nullable()` を必須とし、既存データへの互換性を保証する。
-- `confidentiality_scopes` はJSON配列として保存し、複数の組織名・ロール名を保持する。
+- `confidentiality_scopes` はJSONオブジェクトとして保存し、組織ID・ロールIDを区別して保持する（例：`{"org_ids":[1,2],"role_ids":[3,4]}`）。
+
+#### 略称カラム追加（Rev.5）
+
+現スキーマに略称カラムがないため、以下のマイグレーションを追加する：
+
+```php
+// organizations テーブルに略称カラム追加
+Schema::table('organizations', function (Blueprint $table) {
+    $table->string('abbreviation')->nullable()->after('name');
+});
+
+// roles テーブルに略称カラム追加
+Schema::table('roles', function (Blueprint $table) {
+    $table->string('abbreviation')->nullable()->after('description');
+});
+```
+
+- `organizations.name`（正式名）と `organizations.abbreviation`（略称）を両方保持。
+- `roles.description`（正式名・日本語表示名）と `roles.abbreviation`（略称）を両方保持。`roles.name` は Spatie Permission の内部識別子のため、表示には使用しない。
 
 ### 1.2 モデル変更
 
@@ -95,19 +116,56 @@ class ConfidentialityLevelService
         ])->values()->all();
     }
 
-    /** 設定ファイルから全公開範囲定義を取得 */
+    /** DBから公開範囲選択肢を取得（組織・ロール統合リスト） */
     public static function allScopes(): array
     {
-        return config('confidentiality.scopes', []);
+        $tenantId = tenant()?->id;
+        $cacheKey = "confidentiality_scopes:{$tenantId}";
+
+        return Cache::remember($cacheKey, now()->addHour(), function () {
+            $organizations = \App\Models\Organization::all()->map(fn ($org) => [
+                'id'    => "org:{$org->id}",
+                'name'  => $org->abbreviation ?? $org->name,
+                'full'  => $org->name,
+                'type'  => 'organization',
+            ]);
+
+            $roles = \App\Models\Role::all()->map(fn ($role) => [
+                'id'    => "role:{$role->id}",
+                'name'  => $role->abbreviation ?? $role->description ?? $role->name,
+                'full'  => $role->description ?? $role->name,
+                'type'  => 'role',
+            ]);
+
+            return $organizations->merge($roles)->values()->all();
+        });
     }
 
-    /** 公開範囲コード配列からラベル配列を取得 */
-    public static function scopeLabels(?array $codes): array
+    /** 保存された scopes JSON から表示ラベル配列を取得 */
+    public static function scopeLabels(?array $scopes): array
     {
-        if (empty($codes)) return [];
-        return collect($codes)->map(
-            fn ($code) => config("confidentiality.scopes.{$code}.label") ?? $code
-        )->all();
+        if (empty($scopes)) return [];
+
+        $orgIds = $scopes['org_ids'] ?? [];
+        $roleIds = $scopes['role_ids'] ?? [];
+
+        $labels = [];
+
+        if (!empty($orgIds)) {
+            $orgs = \App\Models\Organization::whereIn('id', $orgIds)->get();
+            foreach ($orgs as $org) {
+                $labels[] = $org->abbreviation ?? $org->name;
+            }
+        }
+
+        if (!empty($roleIds)) {
+            $roles = \App\Models\Role::whereIn('id', $roleIds)->get();
+            foreach ($roles as $role) {
+                $labels[] = $role->abbreviation ?? $role->description ?? $role->name;
+            }
+        }
+
+        return $labels;
     }
 
     /** フォルダ・台帳定義の秘密区分を解決（継承・上書き） */
@@ -191,11 +249,6 @@ return [
             'confidential'         => '社外への共有禁止の情報',
             'strictly_confidential' => '厳重に管理が必要な極秘情報',
         ],
-        'scope' => [
-            'all_employees'      => '全社員',
-            'hr_department'      => '人事部',
-            'executives'         => '経営層',
-        ],
         'form' => [
             'level_label'       => '秘密区分',
             'level_placeholder' => '秘密区分を選択（任意）',
@@ -227,8 +280,10 @@ return [
 
 | 修正対象ファイル | 変更内容 |
 |----------------|---------|
-| `config/confidentiality.php` | 秘密区分・公開範囲の設定ファイル新規作成 |
+| `config/confidentiality.php` | 秘密区分の設定ファイル新規作成（公開範囲はDBベースのため設定ファイルには含めない） |
 | `database/migrations/xxxx_add_confidentiality_level.php` | `folders`, `ledger_defines` への `confidentiality_level` / `confidentiality_scopes` カラム追加 |
+| `database/migrations/xxxx_add_abbreviation_to_organizations.php` | `organizations` テーブルへ `abbreviation` カラム追加 |
+| `database/migrations/xxxx_add_abbreviation_to_roles.php` | `roles` テーブルへ `abbreviation` カラム追加 |
 | `app/Services/ConfidentialityLevelService.php` | 設定ファイルアクセス・解決ロジック・由来情報構築の新規作成 |
 | `app/Models/Folder.php` | `$fillable`, `$casts` に追加 |
 | `app/Models/LedgerDefine.php` | `$fillable`, `$casts` に追加 |
@@ -346,10 +401,6 @@ class IndexManager extends Component
 @php
 $levelLabel = \App\Services\ConfidentialityLevelService::label($level);
 $scopeLabels = $scopes ? \App\Services\ConfidentialityLevelService::scopeLabels($scopes) : [];
-$displayText = $levelLabel;
-if (!empty($scopeLabels)) {
-    $displayText .= '・' . implode('、', $scopeLabels);
-}
 @endphp
 
 <div class="confidentiality-stamp-wrapper" x-data="{ open: false }">
@@ -518,13 +569,6 @@ return [
         ],
     ],
 
-    'scopes' => [
-        'all_employees'      => ['label' => '全社員'],
-        'hr_department'      => ['label' => '人事部'],
-        'executives'         => ['label' => '経営層'],
-        'project_nmrr'       => ['label' => 'NMR共同研究プロジェクト'],
-        'partner_a'          => ['label' => 'A社'],
-    ],
 ];
 ```
 
@@ -553,4 +597,5 @@ return [
 | 2026-04-30 | 2.0 | 設定ファイルベースへ変更。サービス設計指針を追加。スタンプコンポーネント実装詳細を追加。 |
 | 2026-04-30 | 3.0 | スクロール連動（Intersection Observer）の実装詳細を追加。ツールチップ・保守動線の実装詳細を追加。 |
 | 2026-04-30 | 3.1 | **ドキュメント分割**。基本仕様書と詳細仕様書に分離。データモデル・サービスコード・翻訳キー・実装マッピング・実装詳細を本ドキュメントに集約。 |
+| 2026-04-30 | 4.0 | **公開範囲をDBベースに変更**。設定ファイルから `organizations`・`roles` テーブル参照に変更。`abbreviation` カラム追加マイグレーション、ServiceのDBクエリ化、翻訳キーから固定scope定義を削除、設定ファイルからscopesセクションを削除。 |
 
