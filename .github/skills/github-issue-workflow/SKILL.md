@@ -100,6 +100,31 @@ The issue form is the source of truth for issue structure. Do not duplicate the 
 **Project targets** (from Epic #66):
 - Overall ≥65% (target 70%), Services ≥80%, Models ≥60%, Livewire ≥65%, Filament ≥30%
 
+## Sub-Issues and Epic/Sprint Hierarchy
+
+### Sub-Issues
+- GitHub Sub-issues **cannot** be created or linked via API, MCP, or `gh` CLI.
+- After creating an Epic and its Sprint issues, **manually open the Epic in the Web UI** and add each Sprint issue as a sub-issue.
+- Always include a visible `GitHub 追跡` block in the Epic body so the mapping stays explicit even if sub-issue linkage fails.
+
+```markdown
+## GitHub 追跡
+- Epic: #186（本 Issue）
+- Sprint 1: #187
+- Sprint 2: #188
+```
+
+### Epic / Sprint / Sub-task Structure
+- **Epic**: The parent issue that describes the overall goal, scope, non-scope, and acceptance criteria.
+- **Sprint**: Child issues that break the Epic into time-boxed, demo-able increments.
+- **Sub-task**: Checklist items inside a Sprint issue; keep them actionable and attach evidence on completion.
+
+### When to use mockup-first Sprints
+- If the user says "I cannot decide everything at once" or "I want to confirm the UI/UX before implementation," make **Sprint 1 a mockup/prototype sprint**.
+- Sprint 1 scope: placeholder UI components, no data persistence, browser verification, and design decision finalization.
+- Sprint 2 onward: backend implementation based on the decisions made in Sprint 1.
+- Evidence for mockup Sprints: browser screenshots, DevTools z-index stacks, responsive layout checks.
+
 ## Comment / Sprint Format
 
 See [references/comment-format.md](references/comment-format.md) for heading templates, emoji conventions, sprint plan structure, and evidence examples.
