@@ -23,6 +23,19 @@ class Organization extends Model
 
     public $guard_name = 'web';
 
+    protected static function booted()
+    {
+        static::saved(function ($organization) {
+            // 組織が作成・更新された際に、秘密区分関連キャッシュをクリア
+            \Illuminate\Support\Facades\Cache::tags(['confidentiality'])->flush();
+        });
+
+        static::deleted(function ($organization) {
+            // 組織が削除された際に、秘密区分関連キャッシュをクリア
+            \Illuminate\Support\Facades\Cache::tags(['confidentiality'])->flush();
+        });
+    }
+
     public static function getTreeLabelAttribute(): string
     {
         return 'name';  // 例：タイトル列が `name` の場合

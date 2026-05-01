@@ -29,12 +29,14 @@ class Role extends SpatieRole
 
     protected static function booted()
     {
-        static::updated(function ($role) {
-            \Illuminate\Support\Facades\Log::info('App\\Models\\Role::booted updated closure fired for Role ID: '.$role->id);
+        static::saved(function ($role) {
+            \Illuminate\Support\Facades\Log::info('App\\Models\\Role::booted saved closure fired for Role ID: '.$role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
             });
+            // 秘密区分関連キャッシュをクリア
+            \Illuminate\Support\Facades\Cache::tags(['confidentiality'])->flush();
         });
 
         static::deleted(function ($role) {
@@ -43,6 +45,8 @@ class Role extends SpatieRole
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
             });
+            // 秘密区分関連キャッシュをクリア
+            \Illuminate\Support\Facades\Cache::tags(['confidentiality'])->flush();
         });
     }
 
