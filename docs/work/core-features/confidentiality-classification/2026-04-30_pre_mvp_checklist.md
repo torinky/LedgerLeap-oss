@@ -102,10 +102,18 @@
 
 **決定済み（2026-05-01）:**
 - [x] **キャッシュタグ**: `['confidentiality', 'tenant_access']` を使用。`tenant_access` は既存キャッシュと同じクリアタイミングで扱える
-- [x] **キャッシュクリアタイミング**: Organization・Role 更新時に `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()` に加え、confidentiality タグもクリア。`Organization` / `Role` モデルの `booted()` イベントで対応
+- [x] **キャッシュクリアタイミング**: MVP では手動キャッシュクリア（`php artisan cache:clear`）で運用。自動クリアは Sprint 4 または Phase 2 で検討
 - [x] **テナントスコープの保証**: キャッシュキーに `tenant()?->id ?? 'global'` を含める。`null` の場合は `'global'` でフォールバック
 
 > **⚠️ Sprint 1 発見**: `Organization` モデルに `BelongsToTenant` trait が**適用されていない**。`Role` も同様。したがって公開範囲選択肢のテナントスコープは自動的には行われない。Sprint 2-5 で手動スコープの必要性を再確認すること。
+
+**エビデンス（Sprint 2-5）:**
+- キャッシュキー形式: `"confidentiality:{$tenantId}:scopes"`（Service コードで確認済み）
+- キャッシュドライバー: Redis（`CACHE_DRIVER=redis`）→ `Cache::tags()` 完全対応
+- `Cache::tags(['confidentiality'])->flush()` でキャッシュクリアできることを tinker で検証済み
+- ただし、Organization/Role 更新時の自動キャッシュクリアは未実装
+  - Role の `booted()` は `WritableFolderRepository::clearAllCache()` を呼ぶが、`ConfidentialityLevelService` のキャッシュまではクリアしない
+  - Organization の `booted()` は存在しない
 
 ### 3.3 設定ファイルの翻訳キー
 
@@ -167,6 +175,15 @@
   - したがって自動的なテナントスコープは発生せず、全件が選択肢に表示される
   - MVP ではこれを受け入れ、Phase 2 でテナントスコープが必要な場合は別途検討
 - [x] **削除済み組織・ロールの扱い**: SoftDeletes されている組織・ロールは選択肢に**表示しない**方針で確定
+
+**エビデンス（Sprint 2-5）:**
+```
+Organization uses BelongsToTenant: no
+Role uses BelongsToTenant: no
+Folder uses BelongsToTenant: yes
+```
+- `organizations` テーブルに `tenant_id` カラムなし
+- `roles` テーブルに `tenant_id` カラムなし
 
 ---
 
