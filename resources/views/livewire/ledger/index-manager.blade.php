@@ -28,7 +28,13 @@
     @endpush
 
     {{-- 秘密区分スタンプ（モックアップ） --}}
-    <x-ledger.confidentiality-stamp level="confidential" :scopes="[['name' => '人事部'], ['name' => '経営層']]" />
+    <x-ledger.confidentiality-stamp
+        level="confidential"
+        :scopes="[['name' => '人事部'], ['name' => '経営層']]"
+        source-type="folder"
+        source-name="日報"
+        :inherited="true"
+    />
 
     {{--
         台帳リスト初期化中オーバーレイ

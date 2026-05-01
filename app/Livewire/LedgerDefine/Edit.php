@@ -33,7 +33,7 @@ class Edit extends BaseLivewireComponent
 
     public bool $workflow_enabled = false;
 
-    public string $confidentialityLevel = '';
+    public string $confidentialityLevel = 'public';
 
     public array $confidentialityScopes = [];
 

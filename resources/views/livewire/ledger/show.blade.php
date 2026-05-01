@@ -1,4 +1,13 @@
 <div>
+    {{-- 秘密区分スタンプ（モックアップ） --}}
+    <x-ledger.confidentiality-stamp
+        level="confidential"
+        :scopes="[['name' => '人事部'], ['name' => '経営層']]"
+        source-type="ledger_define"
+        source-name="[DEMO] 営業日報"
+        :inherited="false"
+    />
+
     @php
         use App\Enums\WorkflowStatus;
         // Navigation targets that should affect the entire tab content area

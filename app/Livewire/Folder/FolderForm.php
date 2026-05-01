@@ -37,7 +37,7 @@ class FolderForm extends BaseLivewireComponent
 
     public bool $isCreating = false;
 
-    public string $confidentialityLevel = '';
+    public string $confidentialityLevel = 'public';
 
     public array $confidentialityScopes = [];
 
@@ -59,6 +59,7 @@ class FolderForm extends BaseLivewireComponent
                 'integer',
                 Rule::exists('folders', 'id')->whereNot('id', $this->folderId ?? 0),
             ],
+            'confidentialityLevel' => ['required', 'string', 'in:public,internal,confidential,secret'],
             'selectedInspectorRoleIds' => ['array'],
             'selectedInspectorRoleIds.*' => ['integer', 'exists:roles,id'],
             'selectedApproverRoleIds' => ['array'],
@@ -71,6 +72,7 @@ class FolderForm extends BaseLivewireComponent
         return [
             'title' => __('ledger.folder.form.label.title'),
             'parentId' => __('ledger.folder.form.label.parent_id'),
+            'confidentialityLevel' => __('ledger.confidentiality.confidentiality.level.label'),
             'selectedInspectorRoleIds' => __('ledger.folder.form.label.required_inspector_roles'),
             'selectedApproverRoleIds' => __('ledger.folder.form.label.required_approver_roles'),
         ];

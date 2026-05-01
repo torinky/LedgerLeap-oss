@@ -1,4 +1,13 @@
 <x-app-layout title="{{__('Ledger.editTitle')}}">
+    {{-- 秘密区分スタンプ（モックアップ） --}}
+    <x-ledger.confidentiality-stamp
+        level="secret"
+        :scopes="[['name' => '技術部']]"
+        source-type="ledger_define"
+        source-name="[DEMO] 営業日報"
+        :inherited="false"
+    />
+
     @push('scripts')
         @vite(['resources/js/ledgerEdit.js'])
     @endpush
