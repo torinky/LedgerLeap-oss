@@ -27,6 +27,9 @@
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
+    {{-- 秘密区分スタンプ（モックアップ） --}}
+    <x-ledger.confidentiality-stamp level="confidential" :scopes="[['name' => '人事部'], ['name' => '経営層']]" />
+
     {{--
         台帳リスト初期化中オーバーレイ
         - Alpine.js x-data で制御。livewire:navigated を @window で受け取り非表示にする。

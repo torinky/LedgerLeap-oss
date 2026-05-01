@@ -22,6 +22,28 @@
                             wire:model="parentFolderId" required
                             class="select-bordered focus:select-primary"
                     />
+
+                    <hr class="border-base-200">
+
+                    {{-- 秘密区分・公開範囲（モックアップ） --}}
+                    <x-mary-select
+                            label="{{ __('ledger.confidentiality.level.label') }}"
+                            wire:model="confidentialityLevel"
+                            :options="$confidentialityLevelOptions"
+                            placeholder="{{ __('ledger.folder.form.placeholder.select_roles') }}"
+                            allow-clear
+                            class="select-bordered focus:select-primary"
+                    />
+
+                    <x-mary-choices-offline
+                            label="{{ __('ledger.confidentiality.scope.label') }}"
+                            wire:model="confidentialityScopes"
+                            :options="$confidentialityScopeOptions"
+                            multiple
+                            searchable
+                            placeholder="{{ __('ledger.confidentiality.scope.placeholder') }}"
+                            no-result-text="{{ __('messages.info.no_results_found') }}"
+                    />
                 </div>
             </div>
 

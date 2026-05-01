@@ -24,6 +24,27 @@
         <div class="card-body space-y-4 p-4 {{ $formDisabled ? 'opacity-50 pointer-events-none' : '' }}"> {{-- 削除後は無効化 --}}
             <x-mary-input label="{{ __('ledger.folder.form.label.title') }}" wire:model="title" required/>
 
+            {{-- 秘密区分・公開範囲（モックアップ） --}}
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <x-mary-select
+                        label="{{ __('ledger.confidentiality.level.label') }}"
+                        wire:model="confidentialityLevel"
+                        :options="$confidentialityLevelOptions"
+                        placeholder="{{ __('ledger.folder.form.placeholder.select_roles') }}"
+                        allow-clear
+                />
+
+                <x-mary-choices-offline
+                        label="{{ __('ledger.confidentiality.scope.label') }}"
+                        wire:model="confidentialityScopes"
+                        :options="$confidentialityScopeOptions"
+                        multiple
+                        searchable
+                        placeholder="{{ __('ledger.confidentiality.scope.placeholder') }}"
+                        no-result-text="{{ __('messages.info.no_results_found') }}"
+                />
+            </div>
+
             {{-- 親フォルダ選択 --}}
             @if($isCreating && App\Models\Folder::count() === 0)
                 <p class="text-sm text-gray-500">{{ __('ledger.folder.form.message.first_folder_is_root') }}</p>

@@ -37,6 +37,10 @@ class FolderForm extends BaseLivewireComponent
 
     public bool $isCreating = false;
 
+    public string $confidentialityLevel = '';
+
+    public array $confidentialityScopes = [];
+
     // --- 削除確認モーダル用 ---
     public bool $confirmingFolderDeletion = false;
 
@@ -392,8 +396,23 @@ class FolderForm extends BaseLivewireComponent
 
     public function render()
     {
-        return view('livewire.folder.folder-form')
-            ->layout('layouts.app', ['title' => __('ledger.folder.settings')]);
+        $confidentialityLevelOptions = [
+            ['id' => 'public', 'name' => __('ledger.confidentiality.level.public')],
+            ['id' => 'internal', 'name' => __('ledger.confidentiality.level.internal')],
+            ['id' => 'confidential', 'name' => __('ledger.confidentiality.level.confidential')],
+            ['id' => 'secret', 'name' => __('ledger.confidentiality.level.secret')],
+        ];
 
+        $confidentialityScopeOptions = [
+            ['id' => 'org_1', 'name' => '人事部'],
+            ['id' => 'org_2', 'name' => '経理部'],
+            ['id' => 'role_1', 'name' => '管理者'],
+            ['id' => 'role_2', 'name' => '一般ユーザー'],
+        ];
+
+        return view('livewire.folder.folder-form', [
+            'confidentialityLevelOptions' => $confidentialityLevelOptions,
+            'confidentialityScopeOptions' => $confidentialityScopeOptions,
+        ])->layout('layouts.app', ['title' => __('ledger.folder.settings')]);
     }
 }

@@ -33,9 +33,30 @@ class Edit extends BaseLivewireComponent
 
     public bool $workflow_enabled = false;
 
+    public string $confidentialityLevel = '';
+
+    public array $confidentialityScopes = [];
+
     public function render()
     {
-        return view('livewire.ledger-define.edit');
+        $confidentialityLevelOptions = [
+            ['id' => 'public', 'name' => __('ledger.confidentiality.level.public')],
+            ['id' => 'internal', 'name' => __('ledger.confidentiality.level.internal')],
+            ['id' => 'confidential', 'name' => __('ledger.confidentiality.level.confidential')],
+            ['id' => 'secret', 'name' => __('ledger.confidentiality.level.secret')],
+        ];
+
+        $confidentialityScopeOptions = [
+            ['id' => 'org_1', 'name' => '人事部'],
+            ['id' => 'org_2', 'name' => '経理部'],
+            ['id' => 'role_1', 'name' => '管理者'],
+            ['id' => 'role_2', 'name' => '一般ユーザー'],
+        ];
+
+        return view('livewire.ledger-define.edit', [
+            'confidentialityLevelOptions' => $confidentialityLevelOptions,
+            'confidentialityScopeOptions' => $confidentialityScopeOptions,
+        ]);
     }
 
     /**
