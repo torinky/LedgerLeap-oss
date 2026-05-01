@@ -6,6 +6,7 @@
         source-type="ledger_define"
         source-name="[DEMO] 営業日報"
         source-id="1"
+        edit-url="/demo-tenant/ledgerDefine/edit/1"
         :inherited="false"
     />
 

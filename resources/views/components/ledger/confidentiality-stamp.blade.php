@@ -60,25 +60,29 @@ if (! $resolvedEditUrl && $sourceType && $sourceId) {
 
 @if($level || $label)
     {{-- z-[45]: navbar dropdown z-[30] より上、validation badge / sticky announcement z-[50] より下。
-         DaisyUI tooltip（::before 擬似要素）はレイアウトボックスに影響しないため、
-         カスタムHTMLツールチップによる高さ変化・スタッキングコンテキスト問題を回避。 --}}
-    <div class="fixed top-16 right-4 z-[45]" wire:ignore>
-        <div class="tooltip tooltip-left whitespace-pre-line"
-             data-tip="{{ $tooltipText }}">
-            @if($resolvedEditUrl)
-                <a href="{{ $resolvedEditUrl }}" class="block">
-            @endif
-                {{-- スタンプ本体: パディング抑えめ・文字大きめ --}}
-                <div class="inline-flex items-center px-3 py-1 text-2xl font-black tracking-wider text-red-600 bg-transparent border-[3px] border-red-600 shadow-lg backdrop-blur-sm transform rotate-2 hover:rotate-0 transition-transform duration-200 cursor-default whitespace-nowrap">
-                    {{ $displayLabel }}
-                    @if($scopeText)
-                        <span class="mx-1 text-xl">・</span>
-                        <span class="text-lg font-bold">{{ $scopeText }}</span>
-                    @endif
-                </div>
-            @if($resolvedEditUrl)
-                </a>
+         <a> タグ自体を fixed 配置し、DaisyUI tooltip（::before 擬似要素）を直接持たせる。
+         これにより pointer-events-none の副作用（子要素へのイベント伝播失敗）を回避。 --}}
+    @if($resolvedEditUrl)
+        <a href="{{ $resolvedEditUrl }}"
+           class="fixed top-16 right-4 z-[55] block tooltip tooltip-left whitespace-pre-line"
+           data-tip="{{ $tooltipText }}"
+           wire:ignore>
+    @else
+        <div class="fixed top-16 right-4 z-[45] tooltip tooltip-left whitespace-pre-line"
+             data-tip="{{ $tooltipText }}"
+             wire:ignore>
+    @endif
+        {{-- スタンプ本体: パディング抑えめ・文字大きめ --}}
+        <div class="inline-flex items-center px-3 py-1 text-2xl font-black tracking-wider text-red-600 bg-transparent border-[3px] border-red-600 shadow-lg backdrop-blur-sm transform rotate-2 hover:rotate-0 transition-transform duration-200 cursor-pointer whitespace-nowrap">
+            {{ $displayLabel }}
+            @if($scopeText)
+                <span class="mx-1 text-xl">・</span>
+                <span class="text-lg font-bold">{{ $scopeText }}</span>
             @endif
         </div>
-    </div>
+    @if($resolvedEditUrl)
+        </a>
+    @else
+        </div>
+    @endif
 @endif

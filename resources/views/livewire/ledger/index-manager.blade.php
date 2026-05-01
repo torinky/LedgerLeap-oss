@@ -34,6 +34,7 @@
         source-type="folder"
         source-name="日報"
         source-id="1"
+        edit-url="/demo-tenant/folders/1/edit"
         :inherited="true"
     />
 
