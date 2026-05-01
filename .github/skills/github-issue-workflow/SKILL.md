@@ -135,6 +135,12 @@ The issue form is the source of truth for issue structure. Do not duplicate the 
   4. **Open questions**: decisions still pending that the next Sprint must resolve.
 - Rationale: Session context is lost between sprints; a single handover section prevents re-discovery of file locations and design intent.
 
+### Preparation vs Implementation
+- **"準備してください"** (prepare) means planning, branch creation, issue updates, and checklist reviews. **Do NOT write migrations, create services, or modify models** until the user explicitly says "着手してください" (start implementation) or similar.
+- **"着手してください"** (start) means actual coding: migrations, services, model changes, UI integration.
+- If unsure whether the user wants preparation or implementation, **ask explicitly**: "準備（計画・ブランチ作成）まででよろしいでしょうか、それとも実装（マイグレーション・コーディング）も含めて進めてよろしいでしょうか？"
+- Evidence: Sprint 2 (#188) — user said "着手準備をしてください" but I implemented migrations anyway, causing a correction.
+
 ## Comment / Sprint Format
 
 See [references/comment-format.md](references/comment-format.md) for heading templates, emoji conventions, sprint plan structure, and evidence examples.

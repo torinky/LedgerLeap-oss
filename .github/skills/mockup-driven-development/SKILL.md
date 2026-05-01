@@ -94,3 +94,12 @@ New feature with UI surface?
 - `last_confirmed_at`: 2026-05-01
 - `recheck_after`: 90d
 - `recheck_trigger`: a new feature where the user asks for UI confirmation before backend work, a mockup Sprint leaves production dummies behind, or a cross-session handover lacks a structured handover section in the Epic
+
+## Cross-Sprint TODO Updates
+
+When a mockup Sprint's `TODO(#<issue>-Sprint<N>)` markers carry over into the next Sprint:
+1. **Update the TODO marker** to the next Sprint issue number (e.g., `TODO(#187-Sprint2)` → `TODO(#189-Sprint3)`).
+2. **Update the comment text** to reference the newly implemented Service/Model instead of "DB から取得".
+3. **Do NOT remove the TODO until the actual implementation is done** — the marker helps the next session find the exact lines that need wiring.
+
+Evidence: `FolderForm.php` and `Edit.php` TODOs were updated from `#187-Sprint2` to `#189-Sprint3` after `ConfidentialityLevelService` was implemented in Sprint 2.

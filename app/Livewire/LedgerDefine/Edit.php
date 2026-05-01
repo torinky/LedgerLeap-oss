@@ -39,7 +39,7 @@ class Edit extends BaseLivewireComponent
 
     public function render()
     {
-        // TODO(#187-Sprint2): DBから秘密区分レベル定義を取得（config/confidentiality.php 経由）
+        // TODO(#189-Sprint3): ConfidentialityLevelService::selectOptions() を使用
         $confidentialityLevelOptions = [
             ['id' => 'public', 'name' => __('ledger.confidentiality.level.public')],
             ['id' => 'internal', 'name' => __('ledger.confidentiality.level.internal')],
@@ -47,7 +47,7 @@ class Edit extends BaseLivewireComponent
             ['id' => 'secret', 'name' => __('ledger.confidentiality.level.secret')],
         ];
 
-        // TODO(#187-Sprint2): DBから組織・ロール一覧を取得（tenantスコープ + abbreviation優先）
+        // TODO(#189-Sprint3): ConfidentialityLevelService::allScopes() を使用
         // Sprint 1 モックアップ（ダミーデータ）:
         // $confidentialityScopeOptions = [
         //     ['id' => 'org_1', 'name' => '人事部'],
