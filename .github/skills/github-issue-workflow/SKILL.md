@@ -55,10 +55,11 @@ Always pass these to every GitHub tool call.
 ### Evidence
 
 - [docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md](../../../docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md)
+- [docs/work/core-features/confidentiality-classification/2026-05-01_retrospective.md](../../../docs/work/core-features/confidentiality-classification/2026-05-01_retrospective.md)
 - `status`: confirmed
-- `last_confirmed_at`: 2026-04-27
+- `last_confirmed_at`: 2026-05-01
 - `recheck_after`: 90d
-- `recheck_trigger`: a sprint/issue numbering mismatch, a stale checklist left behind after a scope override, or a new issue body that needs GitHub 追跡 mapping
+- `recheck_trigger`: a sprint/issue numbering mismatch, a stale checklist left behind after a scope override, a new issue body that needs GitHub 追跡 mapping, or a cross-session sprint handover that lacks structured file/TODO locations in the Epic body
 
 ## Issue Drafting Flow
 
@@ -124,6 +125,15 @@ The issue form is the source of truth for issue structure. Do not duplicate the 
 - Sprint 1 scope: placeholder UI components, no data persistence, browser verification, and design decision finalization.
 - Sprint 2 onward: backend implementation based on the decisions made in Sprint 1.
 - Evidence for mockup Sprints: browser screenshots, DevTools z-index stacks, responsive layout checks.
+
+### Sprint Handover Section in Epic
+- When a Sprint finishes and the next Sprint will start in a **new session**, add a **"Sprint N 引継ぎ情報"** section to the Epic body.
+- Include:
+  1. **Branch name**: the branch where the Sprint was completed, and the recommended branch name for the next Sprint.
+  2. **Changed files table**: file path, what was changed, and how to treat it in the next Sprint (reuse / comment-out / replace).
+  3. **TODO comment locations**: list files where `TODO(#issue-SprintN)` markers were placed.
+  4. **Open questions**: decisions still pending that the next Sprint must resolve.
+- Rationale: Session context is lost between sprints; a single handover section prevents re-discovery of file locations and design intent.
 
 ## Comment / Sprint Format
 

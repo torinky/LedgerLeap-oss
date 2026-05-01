@@ -56,7 +56,11 @@ New feature with UI surface?
 
 ## Cleanup Rule
 
-- After decisions are finalized, **remove all mockup-only code** from production Blade files.
+- After decisions are finalized, **remove or disable all mockup-only data** from production Blade / PHP files.
+- **Preferred cleanup pattern** (proven in #187 Sprint 1-4):
+  - **Blade**: Comment out the dummy component call and leave a commented usage example showing how to wire it with dynamic data in Sprint 2.
+  - **PHP (render methods)**: Comment out dummy option arrays with `TODO(#<issue>-Sprint2)` markers, return empty arrays `[]` instead, and keep the UI structure in Blade untouched.
+  - **Rationale**: The UI layout (grid, spacing, z-index) is reused in production; only the data source changes. Full removal forces re-design in Sprint 2.
 - If the component file itself is still needed, replace hard-coded data with props/bindings.
 - Keep mockup screenshots in `docs/work/ui-ux/<feature>/` for future reference.
 
@@ -89,4 +93,4 @@ New feature with UI surface?
 - `status`: confirmed
 - `last_confirmed_at`: 2026-05-01
 - `recheck_after`: 90d
-- `recheck_trigger`: a new feature where the user asks for UI confirmation before backend work, or a mockup Sprint leaves production dummies behind
+- `recheck_trigger`: a new feature where the user asks for UI confirmation before backend work, a mockup Sprint leaves production dummies behind, or a cross-session handover lacks a structured handover section in the Epic
