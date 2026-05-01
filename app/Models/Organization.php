@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Activitylog\LogOptions;
@@ -26,13 +27,11 @@ class Organization extends Model
     protected static function booted()
     {
         static::saved(function ($organization) {
-            // 組織が作成・更新された際に、秘密区分関連キャッシュをクリア
-            \Illuminate\Support\Facades\Cache::tags(['confidentiality'])->flush();
+            Cache::forget("confidentiality:{$organization->tenant_id}:scopes");
         });
 
         static::deleted(function ($organization) {
-            // 組織が削除された際に、秘密区分関連キャッシュをクリア
-            \Illuminate\Support\Facades\Cache::tags(['confidentiality'])->flush();
+            Cache::forget("confidentiality:{$organization->tenant_id}:scopes");
         });
     }
 

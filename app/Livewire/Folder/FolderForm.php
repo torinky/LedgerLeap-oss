@@ -6,6 +6,7 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Role;
+use App\Services\ConfidentialityLevelService;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -60,6 +61,8 @@ class FolderForm extends BaseLivewireComponent
                 Rule::exists('folders', 'id')->whereNot('id', $this->folderId ?? 0),
             ],
             'confidentialityLevel' => ['required', 'string', 'in:public,internal,confidential,secret'],
+            'confidentialityScopes' => ['nullable', 'array'],
+            'confidentialityScopes.*' => ['string'],
             'selectedInspectorRoleIds' => ['array'],
             'selectedInspectorRoleIds.*' => ['integer', 'exists:roles,id'],
             'selectedApproverRoleIds' => ['array'],
@@ -73,6 +76,7 @@ class FolderForm extends BaseLivewireComponent
             'title' => __('ledger.folder.form.label.title'),
             'parentId' => __('ledger.folder.form.label.parent_id'),
             'confidentialityLevel' => __('ledger.confidentiality.confidentiality.level.label'),
+            'confidentialityScopes' => __('ledger.confidentiality.confidentiality.scope.label'),
             'selectedInspectorRoleIds' => __('ledger.folder.form.label.required_inspector_roles'),
             'selectedApproverRoleIds' => __('ledger.folder.form.label.required_approver_roles'),
         ];
@@ -118,6 +122,8 @@ class FolderForm extends BaseLivewireComponent
             $this->parentId = $this->folder->parent_id;
             $this->selectedInspectorRoleIds = $this->folder->requiredInspectorRoles()->pluck('roles.id')->toArray();
             $this->selectedApproverRoleIds = $this->folder->requiredApproverRoles()->pluck('roles.id')->toArray();
+            $this->confidentialityLevel = $this->folder->confidentiality_level ?? 'public';
+            $this->confidentialityScopes = ConfidentialityLevelService::buildScopeChoices($this->folder->confidentiality_scopes);
         } else {
             // 新規作成モードの初期化
             if (is_null($this->parentId) && Folder::count() > 0) {
@@ -184,6 +190,8 @@ class FolderForm extends BaseLivewireComponent
                 $this->folder = Folder::find($this->folderId);
             }
             $this->folder->title = $this->title;
+            $this->folder->confidentiality_level = $this->confidentialityLevel;
+            $this->folder->confidentiality_scopes = ConfidentialityLevelService::parseScopeChoices($this->confidentialityScopes);
             $this->folder->modifier_id = Auth::id();
             $isNewRecordBeforeSave = $this->isCreating; // 保存前の状態を保持
             if ($this->isCreating) {
@@ -389,6 +397,8 @@ class FolderForm extends BaseLivewireComponent
         // $this->parentId = null; // または $this->parentId = request()->input('parent_id', Folder::whereIsRoot()->first()?->id);
         $this->selectedInspectorRoleIds = [];
         $this->selectedApproverRoleIds = [];
+        $this->confidentialityLevel = 'public';
+        $this->confidentialityScopes = [];
         $this->isCreating = true;
         $this->formDisabled = false;
         $this->justSaved = false;
@@ -398,23 +408,8 @@ class FolderForm extends BaseLivewireComponent
 
     public function render()
     {
-        // TODO(#189-Sprint3): ConfidentialityLevelService::selectOptions() を使用
-        $confidentialityLevelOptions = [
-            ['id' => 'public', 'name' => __('ledger.confidentiality.level.public')],
-            ['id' => 'internal', 'name' => __('ledger.confidentiality.level.internal')],
-            ['id' => 'confidential', 'name' => __('ledger.confidentiality.level.confidential')],
-            ['id' => 'secret', 'name' => __('ledger.confidentiality.level.secret')],
-        ];
-
-        // TODO(#189-Sprint3): ConfidentialityLevelService::allScopes() を使用
-        // Sprint 1 モックアップ（ダミーデータ）:
-        // $confidentialityScopeOptions = [
-        //     ['id' => 'org_1', 'name' => '人事部'],
-        //     ['id' => 'org_2', 'name' => '経理部'],
-        //     ['id' => 'role_1', 'name' => '管理者'],
-        //     ['id' => 'role_2', 'name' => '一般ユーザー'],
-        // ];
-        $confidentialityScopeOptions = [];
+        $confidentialityLevelOptions = ConfidentialityLevelService::selectOptions();
+        $confidentialityScopeOptions = ConfidentialityLevelService::allScopes();
 
         return view('livewire.folder.folder-form', [
             'confidentialityLevelOptions' => $confidentialityLevelOptions,

@@ -60,18 +60,17 @@ class ConfidentialityLevelService
     {
         $tenantId = tenant()?->id ?? 'global';
         $cacheKey = "confidentiality:{$tenantId}:scopes";
-        $cacheTags = config('confidentiality.cache.tags', ['confidentiality', 'tenant_access']);
         $cacheTtl = config('confidentiality.cache.ttl', 3600);
 
-        return Cache::tags($cacheTags)->remember($cacheKey, $cacheTtl, function () {
-            $organizations = Organization::all()->map(fn ($org) => [
+        return Cache::remember($cacheKey, $cacheTtl, function () {
+            $organizations = collect(Organization::all())->map(fn ($org) => [
                 'id' => "org:{$org->id}",
                 'name' => $org->abbreviation ?? $org->name,
                 'full' => $org->name,
                 'type' => 'organization',
             ]);
 
-            $roles = Role::all()->map(fn ($role) => [
+            $roles = collect(Role::all())->map(fn ($role) => [
                 'id' => "role:{$role->id}",
                 'name' => $role->abbreviation ?? $role->description ?? $role->name,
                 'full' => $role->description ?? $role->name,
@@ -227,5 +226,67 @@ class ConfidentialityLevelService
             'source' => null,
             'inherited' => false,
         ];
+    }
+
+    /**
+     * DB保存形式の scopes を ChoicesOffline 用の文字列ID配列に変換
+     */
+    public static function buildScopeChoices(?array $scopes): array
+    {
+        if (empty($scopes)) {
+            return [];
+        }
+
+        $choices = [];
+
+        foreach ($scopes['org_ids'] ?? [] as $org) {
+            $id = is_array($org) ? ($org['id'] ?? null) : $org;
+            if ($id) {
+                $choices[] = "org:{$id}";
+            }
+        }
+
+        foreach ($scopes['role_ids'] ?? [] as $role) {
+            $id = is_array($role) ? ($role['id'] ?? null) : $role;
+            if ($id) {
+                $choices[] = "role:{$id}";
+            }
+        }
+
+        return $choices;
+    }
+
+    /**
+     * ChoicesOffline の文字列ID配列を DB保存形式に変換
+     */
+    public static function parseScopeChoices(array $choices): array
+    {
+        $orgIds = [];
+        $roleIds = [];
+
+        foreach ($choices as $choice) {
+            if (is_array($choice)) {
+                $choice = $choice['id'] ?? null;
+                if (! $choice) {
+                    continue;
+                }
+            }
+            $parts = explode(':', $choice, 2);
+            if (count($parts) !== 2) {
+                continue;
+            }
+            [$type, $id] = $parts;
+            $id = (int) $id;
+
+            if ($type === 'org') {
+                $org = Organization::find($id);
+                $orgIds[] = ['id' => $id, 'name' => $org?->abbreviation ?? $org?->name ?? "org:{$id}"];
+            } elseif ($type === 'role') {
+                $role = Role::find($id);
+                $roleIds[] = ['id' => $id, 'name' => $role?->abbreviation ?? $role?->description ?? $role?->name ?? "role:{$id}"];
+            }
+        }
+
+        return ['org_ids' => $orgIds, 'role_ids' => $roleIds];
     }
 }
