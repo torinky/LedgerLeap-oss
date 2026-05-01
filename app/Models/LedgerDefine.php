@@ -32,6 +32,7 @@ class LedgerDefine extends Model
     protected $casts = [
         'column_define' => AsColumnDefinesArrayJson::class,
         'workflow_enabled' => 'boolean',
+        'confidentiality_scopes' => 'array',
     ];
 
     protected $fillable = [
@@ -48,6 +49,8 @@ class LedgerDefine extends Model
         'recommended_approver_id',
         'recommended_inspector_role_id',
         'recommended_approver_role_id',
+        'confidentiality_level',
+        'confidentiality_scopes',
     ];
 
     public function ledgers()

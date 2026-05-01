@@ -26,6 +26,12 @@ class Folder extends Model
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id', 'parent_id', 'tenant_id',
+        'confidentiality_level',
+        'confidentiality_scopes',
+    ];
+
+    protected $casts = [
+        'confidentiality_scopes' => 'array',
     ];
 
     /**
