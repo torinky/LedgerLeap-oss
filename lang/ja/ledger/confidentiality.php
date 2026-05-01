@@ -22,6 +22,12 @@ return [
             'ledger_define' => '台帳定義「:name」',
             'folder' => 'フォルダ「:name」',
             'inherited' => '（継承）',
+            // 1行表示用（ツールチップ簡潔版）
+            'ledger_define_short' => '台帳定義「:name」',
+            'folder_short' => 'フォルダ「:name」',
+            'inherited_from' => '継承元：:name',
+            'direct_from' => '設定元：:name',
+            'scope_label' => '対象：:scopes',
         ],
     ],
 ];

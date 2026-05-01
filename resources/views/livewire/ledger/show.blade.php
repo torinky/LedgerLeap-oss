@@ -5,6 +5,7 @@
         :scopes="[['name' => '人事部'], ['name' => '経営層']]"
         source-type="ledger_define"
         source-name="[DEMO] 営業日報"
+        source-id="1"
         :inherited="false"
     />
 

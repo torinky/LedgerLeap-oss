@@ -33,6 +33,7 @@
         :scopes="[['name' => '人事部'], ['name' => '経営層']]"
         source-type="folder"
         source-name="日報"
+        source-id="1"
         :inherited="true"
     />
 
