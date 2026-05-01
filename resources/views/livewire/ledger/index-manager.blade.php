@@ -27,16 +27,17 @@
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
-    {{-- 秘密区分スタンプ（モックアップ） --}}
-    <x-ledger.confidentiality-stamp
-        level="confidential"
-        :scopes="[['name' => '人事部'], ['name' => '経営層']]"
-        source-type="folder"
-        source-name="日報"
-        source-id="1"
-        edit-url="/demo-tenant/folders/1/edit"
-        :inherited="true"
-    />
+    {{-- Sprint 1 モックアップ: 秘密区分スタンプ
+         本実装時は動的データを渡す:
+         <x-ledger.confidentiality-stamp
+             :level="$resolvedLevel"
+             :scopes="$resolvedScopes"
+             :source-type="$sourceType"
+             :source-name="$sourceName"
+             :source-id="$sourceId"
+             :inherited="$isInherited"
+         />
+    --}}
 
     {{--
         台帳リスト初期化中オーバーレイ

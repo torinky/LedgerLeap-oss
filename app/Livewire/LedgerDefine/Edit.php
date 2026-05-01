@@ -39,6 +39,7 @@ class Edit extends BaseLivewireComponent
 
     public function render()
     {
+        // TODO(#187-Sprint2): DBから秘密区分レベル定義を取得（config/confidentiality.php 経由）
         $confidentialityLevelOptions = [
             ['id' => 'public', 'name' => __('ledger.confidentiality.level.public')],
             ['id' => 'internal', 'name' => __('ledger.confidentiality.level.internal')],
@@ -46,12 +47,15 @@ class Edit extends BaseLivewireComponent
             ['id' => 'secret', 'name' => __('ledger.confidentiality.level.secret')],
         ];
 
-        $confidentialityScopeOptions = [
-            ['id' => 'org_1', 'name' => '人事部'],
-            ['id' => 'org_2', 'name' => '経理部'],
-            ['id' => 'role_1', 'name' => '管理者'],
-            ['id' => 'role_2', 'name' => '一般ユーザー'],
-        ];
+        // TODO(#187-Sprint2): DBから組織・ロール一覧を取得（tenantスコープ + abbreviation優先）
+        // Sprint 1 モックアップ（ダミーデータ）:
+        // $confidentialityScopeOptions = [
+        //     ['id' => 'org_1', 'name' => '人事部'],
+        //     ['id' => 'org_2', 'name' => '経理部'],
+        //     ['id' => 'role_1', 'name' => '管理者'],
+        //     ['id' => 'role_2', 'name' => '一般ユーザー'],
+        // ];
+        $confidentialityScopeOptions = [];
 
         return view('livewire.ledger-define.edit', [
             'confidentialityLevelOptions' => $confidentialityLevelOptions,
