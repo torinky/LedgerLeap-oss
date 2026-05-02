@@ -60,6 +60,8 @@ class EditTest extends TestCase
         $component->instance()->title = $this->ledgerDefine->title;
         $component->instance()->parentFolderId = $this->ledgerDefine->folder_id;
         $component->instance()->workflow_enabled = (bool) $this->ledgerDefine->workflow_enabled;
+        $component->instance()->confidentialityLevel = $this->ledgerDefine->confidentiality_level ?? 'public';
+        $component->instance()->confidentialityScopes = [];
 
         return $component;
     }
@@ -106,6 +108,8 @@ class EditTest extends TestCase
         $edit->title = 'Updated Title';
         $edit->parentFolderId = $this->folder->id;
         $edit->workflow_enabled = false;
+        $edit->confidentialityLevel = 'public';
+        $edit->confidentialityScopes = [];
         $edit->store();
 
         $this->assertDatabaseHas('ledger_defines', [
@@ -122,6 +126,8 @@ class EditTest extends TestCase
         $edit->title = $this->ledgerDefine->title;
         $edit->parentFolderId = $this->folder->id;
         $edit->workflow_enabled = true;
+        $edit->confidentialityLevel = 'public';
+        $edit->confidentialityScopes = [];
         $edit->store();
 
         $this->ledgerDefine->refresh();
@@ -143,6 +149,8 @@ class EditTest extends TestCase
         $edit->title = 'Event Test';
         $edit->parentFolderId = $this->folder->id;
         $edit->workflow_enabled = false;
+        $edit->confidentialityLevel = 'public';
+        $edit->confidentialityScopes = [];
         $edit->store();
 
         $this->assertDatabaseHas('ledger_defines', [
@@ -172,6 +180,8 @@ class EditTest extends TestCase
         $edit->title = $enabledDefine->title;
         $edit->parentFolderId = $enabledDefine->folder_id;
         $edit->workflow_enabled = false; // 有効 → 無効
+        $edit->confidentialityLevel = 'public';
+        $edit->confidentialityScopes = [];
         $edit->store();
 
         $ledger->refresh();
@@ -197,5 +207,64 @@ class EditTest extends TestCase
         $this->mountedComponent()
             ->call('toggleDescriptionGroup', 'listDescription')
             ->assertDispatched('toggleDescriptionGroup');
+    }
+
+    // ================================================================
+    // confidentiality
+    // ================================================================
+
+    #[Test]
+    public function confidentiality_level_is_set_correctly(): void
+    {
+        $this->ledgerDefine->update([
+            'confidentiality_level' => 'confidential',
+            'confidentiality_scopes' => ['org_ids' => [['id' => 1, 'name' => 'Test Org']]],
+        ]);
+        $this->ledgerDefine->refresh();
+
+        $component = $this->mountedComponent();
+        $component->assertSet('confidentialityLevel', 'confidential');
+    }
+
+    #[Test]
+    public function store_updates_confidentiality_settings(): void
+    {
+        $edit = new Edit;
+        $edit->ledgerDefineRecord = $this->ledgerDefine;
+        $edit->title = $this->ledgerDefine->title;
+        $edit->parentFolderId = $this->folder->id;
+        $edit->workflow_enabled = false;
+        $edit->confidentialityLevel = 'internal';
+        $edit->confidentialityScopes = ['org:1'];
+        $edit->store();
+
+        $this->ledgerDefine->refresh();
+        $this->assertEquals('internal', $this->ledgerDefine->confidentiality_level);
+        $this->assertEquals(
+            ['org_ids' => [['id' => 1, 'name' => 'org:1']], 'role_ids' => []],
+            $this->ledgerDefine->confidentiality_scopes
+        );
+    }
+
+    #[Test]
+    public function store_clears_confidentiality_scopes_when_empty(): void
+    {
+        $this->ledgerDefine->update([
+            'confidentiality_level' => 'confidential',
+            'confidentiality_scopes' => ['org_ids' => [['id' => 1, 'name' => 'Test Org']]],
+        ]);
+
+        $edit = new Edit;
+        $edit->ledgerDefineRecord = $this->ledgerDefine;
+        $edit->title = $this->ledgerDefine->title;
+        $edit->parentFolderId = $this->folder->id;
+        $edit->workflow_enabled = false;
+        $edit->confidentialityLevel = 'public';
+        $edit->confidentialityScopes = [];
+        $edit->store();
+
+        $this->ledgerDefine->refresh();
+        $this->assertEquals('public', $this->ledgerDefine->confidentiality_level);
+        $this->assertEquals(['org_ids' => [], 'role_ids' => []], $this->ledgerDefine->confidentiality_scopes);
     }
 }

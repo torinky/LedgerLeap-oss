@@ -25,7 +25,7 @@
 
                     <hr class="border-base-200">
 
-                    {{-- 秘密区分・公開範囲（モックアップ） --}}
+                    {{-- 秘密区分・公開範囲 --}}
                     <x-mary-select
                             label="{{ __('ledger.confidentiality.level.label') }}"
                             wire:model="confidentialityLevel"

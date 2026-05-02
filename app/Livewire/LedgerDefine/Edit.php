@@ -4,12 +4,14 @@ namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
 use App\Livewire\BaseLivewireComponent;
+use App\Services\ConfidentialityLevelService;
 use App\Livewire\Traits\HasFolderTree;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Renderless;
 use Mary\Traits\Toast;
 
@@ -37,25 +39,32 @@ class Edit extends BaseLivewireComponent
 
     public array $confidentialityScopes = [];
 
+    protected function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'parentFolderId' => ['required', 'integer', 'exists:folders,id'],
+            'confidentialityLevel' => ['required', 'string', 'in:public,internal,confidential,secret'],
+            'confidentialityScopes' => ['nullable', 'array'],
+            'confidentialityScopes.*' => ['string'],
+            'workflow_enabled' => ['boolean'],
+        ];
+    }
+
+    protected function validationAttributes(): array
+    {
+        return [
+            'title' => __('ledger.define.title'),
+            'parentFolderId' => __('ledger.folder.containing'),
+            'confidentialityLevel' => __('ledger.confidentiality.level.label'),
+            'confidentialityScopes' => __('ledger.confidentiality.scope.label'),
+        ];
+    }
+
     public function render()
     {
-        // TODO(#189-Sprint3): ConfidentialityLevelService::selectOptions() を使用
-        $confidentialityLevelOptions = [
-            ['id' => 'public', 'name' => __('ledger.confidentiality.level.public')],
-            ['id' => 'internal', 'name' => __('ledger.confidentiality.level.internal')],
-            ['id' => 'confidential', 'name' => __('ledger.confidentiality.level.confidential')],
-            ['id' => 'secret', 'name' => __('ledger.confidentiality.level.secret')],
-        ];
-
-        // TODO(#189-Sprint3): ConfidentialityLevelService::allScopes() を使用
-        // Sprint 1 モックアップ（ダミーデータ）:
-        // $confidentialityScopeOptions = [
-        //     ['id' => 'org_1', 'name' => '人事部'],
-        //     ['id' => 'org_2', 'name' => '経理部'],
-        //     ['id' => 'role_1', 'name' => '管理者'],
-        //     ['id' => 'role_2', 'name' => '一般ユーザー'],
-        // ];
-        $confidentialityScopeOptions = [];
+        $confidentialityLevelOptions = ConfidentialityLevelService::selectOptions();
+        $confidentialityScopeOptions = ConfidentialityLevelService::allScopes();
 
         return view('livewire.ledger-define.edit', [
             'confidentialityLevelOptions' => $confidentialityLevelOptions,
@@ -89,14 +98,18 @@ class Edit extends BaseLivewireComponent
         $this->listDescription = $this->ledgerDefineRecord->list_description;
         $this->detailDescription = $this->ledgerDefineRecord->detail_description;
         $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
-
-        $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
+        $this->confidentialityLevel = $this->ledgerDefineRecord->confidentiality_level ?? 'public';
+        $this->confidentialityScopes = ConfidentialityLevelService::buildScopeChoices(
+            $this->ledgerDefineRecord->confidentiality_scopes
+        );
 
         $this->initializeFolderTree($this->parentFolderId);
     }
 
     public function store(): void
     {
+        $this->validate();
+
         // --- ステップ5: ワークフロー設定変更時の処理 ---
         $originalWorkflowEnabled = (bool) $this->ledgerDefineRecord->getOriginal('workflow_enabled');
         $newWorkflowEnabled = $this->workflow_enabled;
@@ -142,6 +155,10 @@ class Edit extends BaseLivewireComponent
         $this->ledgerDefineRecord->list_description = $this->listDescription;
         $this->ledgerDefineRecord->detail_description = $this->detailDescription;
         $this->ledgerDefineRecord->workflow_enabled = $this->workflow_enabled;
+        $this->ledgerDefineRecord->confidentiality_level = $this->confidentialityLevel;
+        $this->ledgerDefineRecord->confidentiality_scopes = ConfidentialityLevelService::parseScopeChoices(
+            $this->confidentialityScopes
+        );
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
         $this->success(__('ledger.has_been_updated'));
