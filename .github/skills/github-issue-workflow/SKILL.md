@@ -56,8 +56,9 @@ Always pass these to every GitHub tool call.
 
 - [docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md](../../../docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md)
 - [docs/work/core-features/confidentiality-classification/2026-05-01_retrospective.md](../../../docs/work/core-features/confidentiality-classification/2026-05-01_retrospective.md)
+- [docs/work/core-features/confidentiality-classification/2026-05-02_retrospective_sprint3.md](../../../docs/work/core-features/confidentiality-classification/2026-05-02_retrospective_sprint3.md)
 - `status`: confirmed
-- `last_confirmed_at`: 2026-05-01
+- `last_confirmed_at`: 2026-05-02
 - `recheck_after`: 90d
 - `recheck_trigger`: a sprint/issue numbering mismatch, a stale checklist left behind after a scope override, a new issue body that needs GitHub 追跡 mapping, or a cross-session sprint handover that lacks structured file/TODO locations in the Epic body
 
@@ -135,6 +136,23 @@ The issue form is the source of truth for issue structure. Do not duplicate the 
   4. **Open questions**: decisions still pending that the next Sprint must resolve.
 - Rationale: Session context is lost between sprints; a single handover section prevents re-discovery of file locations and design intent.
 
+### Additional Sprint Naming (Sprint N-A)
+- When a Sprint finishes and **new unimplemented items are discovered** during a spec-vs-implementation diff analysis, create a follow-up issue.
+- **Naming rule**: Use `Sprint N-A` (e.g., `Sprint 3A`) instead of incrementing the main number. This avoids collision with an already-existing Sprint N+1 issue.
+- **Scope**: Sprint N-A should only contain items discovered from the diff analysis or deferred from Sprint N. Do NOT mix unrelated new features.
+- **Epic update**: Add the new sprint to the Epic's `GitHub 追跡` block immediately. Update the Epic's sprint decomposition table to show `Sprint N-A` between `Sprint N` and `Sprint N+1`.
+- Evidence: Sprint 3 (#189) completion revealed 4 unimplemented items; Sprint 3A (#191) was created to avoid collision with existing Sprint 4 (#190).
+
+### Pre-Sprint Codebase Scan
+- **Always scan the codebase before starting implementation** in a new session, even if the issue checkboxes are unchecked.
+- Previous sessions may have partially or fully implemented some items without updating the issue body.
+- **Scan checklist**:
+  1. `git log --grep="#<issue-number>"` — find commits from previous sessions
+  2. `grep -r "keyword" app/ resources/ --include="*.php" --include="*.blade.php"` — locate existing code
+  3. Run relevant tests: `./vendor/bin/sail test <path>` — verify if implementation already passes
+  4. If implementation is already present, update the issue body checkboxes and evidence immediately instead of re-implementing
+- **Rationale**: Prevents duplicate work and stale issue state. Sprint 3-2 (LedgerDefineEdit integration) was already fully implemented in the codebase, saving ~30 minutes of redundant work.
+
 ### Preparation vs Implementation
 - **"準備してください"** (prepare) means planning, branch creation, issue updates, and checklist reviews. **Do NOT write migrations, create services, or modify models** until the user explicitly says "着手してください" (start implementation) or similar.
 - **"着手してください"** (start) means actual coding: migrations, services, model changes, UI integration.
@@ -145,9 +163,24 @@ The issue form is the source of truth for issue structure. Do not duplicate the 
 
 See [references/comment-format.md](references/comment-format.md) for heading templates, emoji conventions, sprint plan structure, and evidence examples.
 
+## Spec-vs-Implementation Diff Analysis
+
+- **Perform a diff analysis after every Sprint completion**, before declaring the Epic complete.
+- Compare the issue's acceptance criteria, the spec documents (`docs/work/...`), and the actual codebase.
+- **Discovery rule**: If the spec mandates something that the implementation lacks, do NOT silently add it to the current Sprint's scope. Instead:
+  1. Document the gaps in a structured comment on the completed Sprint issue
+  2. Create a new Sprint N-A issue for the gaps
+  3. Update the Epic body to reflect the new Sprint
+- **Priority classification**:
+  - 🔴 Operationally required: blocks production use (e.g., admin UI for a new DB column)
+  - 🟡 Within original MVP scope: spec said MVP but was missed
+  - 🟢 Minor deviation: acceptable trade-off; document only
+- Evidence: Sprint 3 (#189) diff analysis uncovered 4 gaps (abbreviation admin UI, Create form integration, multi-level inheritance tooltip, Intersection Observer scroll tracking), leading to Sprint 3A (#191).
+
 ## Key Rules
 
 - Fetch latest state before every write operation (prevent stale overwrites)
 - Always include concrete evidence in comments (file path, coverage %, test counts)
 - No duplicate sprint completion comments (check existing comments first)
 - If coverage misses target by ≥2pt, do NOT close — post next sprint plan instead
+- **Always perform a spec-vs-implementation diff analysis before closing an Epic or major Sprint**

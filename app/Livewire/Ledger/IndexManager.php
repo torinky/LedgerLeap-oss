@@ -9,6 +9,7 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\LogPerformance;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
+use App\Services\ConfidentialityLevelService;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
 use App\Services\PermissionService; // 追加
@@ -531,6 +532,13 @@ class IndexManager extends BaseLivewireComponent
             'filterStatus' => $this->filterStatus,
         ]);
 
+        $confidentiality = null;
+        $canEditConfidentiality = false;
+        if ($this->currentFolder) {
+            $confidentiality = ConfidentialityLevelService::getEffectiveLevel($this->currentFolder);
+            $canEditConfidentiality = auth()->user()->can('update', $this->currentFolder);
+        }
+
         return view('livewire.ledger.index-manager', [
             'keywords' => $this->keywords ?? [],
             'tags' => $this->tags ?? [],
@@ -545,6 +553,8 @@ class IndexManager extends BaseLivewireComponent
             'ledgerDefineRecords' => $this->ledgerDefineRecords,
             'currentFolder' => $this->currentFolder,
             'currentUserPermissionForFolder' => $this->currentUserPermissionForFolder,
+            'confidentiality' => $confidentiality,
+            'canEditConfidentiality' => $canEditConfidentiality,
         ])->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }
 }

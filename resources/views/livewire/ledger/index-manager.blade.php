@@ -27,17 +27,17 @@
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
-    {{-- Sprint 1 モックアップ: 秘密区分スタンプ
-         本実装時は動的データを渡す:
-         <x-ledger.confidentiality-stamp
-             :level="$resolvedLevel"
-             :scopes="$resolvedScopes"
-             :source-type="$sourceType"
-             :source-name="$sourceName"
-             :source-id="$sourceId"
-             :inherited="$isInherited"
-         />
-    --}}
+    @if($confidentiality && $confidentiality['level'] !== 'public')
+        <x-ledger.confidentiality-stamp
+            :level="$confidentiality['level']"
+            :label="$confidentiality['label']"
+            :scopes="$confidentiality['scope_labels']"
+            :source-type="$canEditConfidentiality ? ($confidentiality['source']['type'] ?? null) : null"
+            :source-name="$confidentiality['source']['name'] ?? null"
+            :source-id="$canEditConfidentiality ? ($confidentiality['source']['id'] ?? null) : null"
+            :inherited="$confidentiality['inherited']"
+        />
+    @endif
 
     {{--
         台帳リスト初期化中オーバーレイ
