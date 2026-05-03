@@ -19,11 +19,10 @@
                     <div class="flex justify-center items-center">
                         <button class="btn btn-ghost" wire:click.prevent="toggleFolderId({{ $folderRecord->id }})"
                             wire:key="selected_folder_{{ $folderRecord->id }}">
-                            <span class="fa-layers fa-fw text-3xl">
+                            <span class="relative inline-flex items-center justify-center text-3xl w-[1.25em] h-[1.25em]">
                                 <i
                                     class="fa-solid {{ in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder' }} "></i>
-                                <span class="fa-layers-text text-secondary" data-fa-transform="shrink-8 down-1"
-                                    style="font-weight:900">{{ $folderRecord->descendantCount() }}</span>
+                                <span class="absolute text-[0.4em] text-secondary font-black mt-2">{{ $folderRecord->descendantCount() }}</span>
                             </span>
                         </button>
                         {{-- 階層移動ボタン --}}

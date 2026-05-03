@@ -63,10 +63,9 @@
                                     target="folderEdit_{{$folderRecord->id}}}}"
                                 >
 
-                                    <span class="fa-layers fa-fw">
-                                        <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
-                                        <i class="fa-solid  fa-pencil text-2xl text-base-100/70"
-                                           data-fa-transform=" right-5 up-3"></i>
+                                    <span class="relative inline-flex items-center justify-center w-10 h-10">
+                                        <i class="fa-solid fa-folder text-3xl"></i>
+                                        <i class="fa-solid fa-pencil text-xl text-base-100/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                                     </span>
                                 </a>
                             @else
@@ -76,12 +75,8 @@
                                     target="folderEdit_{{$folderRecord->id}}}}"
                                 >
 
-                                    <span class="fa-layers fa-fw">
-                                        <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
-{{--
-                                        <i class="fa-solid  fa-pencil text-2xl text-base-100/70"
-                                           data-fa-transform=" right-5 up-3"></i>
---}}
+                                    <span class="relative inline-flex items-center justify-center w-10 h-10">
+                                        <i class="fa-solid fa-folder text-3xl"></i>
                                     </span>
                                 </a>
 
@@ -120,10 +115,9 @@
                 >
                     <div class="flex justify-center items-center">
                         {{--                    <i class="fa-solid fa-book text-3xl "></i>--}}
-                        <span class="fa-layers fa-fw">
-                            <i class="fa-solid fa-book text-3xl" data-fa-transform="left-5 "></i>
-                            <i class="fa-solid  fa-pencil text-2xl text-secondary-content/70"
-                               data-fa-transform=" right-5 up-3"></i>
+                        <span class="relative inline-flex items-center justify-center w-10 h-10">
+                            <i class="fa-solid fa-book text-3xl"></i>
+                            <i class="fa-solid fa-pencil text-xl text-secondary-content/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                         </span>
 
                     </div>
@@ -171,20 +165,18 @@
                             <a href="{{ route('folder.create',['tenant' => $this->tenantId, 'parentId' => $currentFolderId])}}"
                                class="btn btn-primary btn-lg shadow-md px-6"
                                target="folderCreate">
-                                <span class="fa-layers fa-fw mr-2">
-                                    <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
-                                    <i class="fa-solid  fa-plus-circle text-base-100/70"
-                                       data-fa-transform=" right-6 up-10"></i>
+                                <span class="relative inline-flex items-center justify-center w-8 h-8 mr-2">
+                                    <i class="fa-solid fa-folder text-2xl"></i>
+                                    <i class="fa-solid fa-plus-circle text-lg text-base-100/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                                 </span>
                                 {{__('ledger.folder.create')}}
                             </a>
                         @else
                             <div class="tooltip" data-tip="{{__('ledger.folder.not_allow_create')}}">
                                 <div class="btn btn-neutral btn-lg opacity-50 shadow-md px-6">
-                                    <span class="fa-layers fa-fw mr-2">
-                                        <i class="fa-solid fa-folder text-2xl" data-fa-transform="left-6 "></i>
-                                        <i class="fa-solid  fa-plus-circle text-base-100/70"
-                                           data-fa-transform=" right-6 up-10"></i>
+                                    <span class="relative inline-flex items-center justify-center w-8 h-8 mr-2">
+                                        <i class="fa-solid fa-folder text-2xl"></i>
+                                        <i class="fa-solid fa-plus-circle text-lg text-base-100/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                                     </span>
                                     {{__('ledger.folder.create')}}
                                 </div>
@@ -196,20 +188,18 @@
                                class="btn btn-primary btn-lg shadow-md px-6"
                                target="ledgerDefineCreate"
                             >
-                                <span class="fa-layers fa-fw mr-2">
-                                    <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
-                                    <i class="fa-solid  fa-plus-circle text-base-100/70"
-                                       data-fa-transform=" right-6 up-10"></i>
+                                <span class="relative inline-flex items-center justify-center w-8 h-8 mr-2">
+                                    <i class="fa-solid fa-book text-2xl"></i>
+                                    <i class="fa-solid fa-plus-circle text-lg text-base-100/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                                 </span>
                                 {{__('ledger.define.create')}}
                             </a>
                         @else
                             <div class="tooltip" data-tip="{{__('ledger.define.not_allow_create')}}">
                                 <div class="btn btn-neutral btn-lg opacity-50 shadow-md px-6">
-                                    <span class="fa-layers fa-fw mr-2">
-                                        <i class="fa-solid fa-book text-2xl" data-fa-transform="left-6 "></i>
-                                        <i class="fa-solid  fa-plus-circle text-base-100/70"
-                                           data-fa-transform=" right-6 up-10"></i>
+                                    <span class="relative inline-flex items-center justify-center w-8 h-8 mr-2">
+                                        <i class="fa-solid fa-book text-2xl"></i>
+                                        <i class="fa-solid fa-plus-circle text-lg text-base-100/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                                     </span>
                                     {{__('ledger.define.create')}}
                                 </div>

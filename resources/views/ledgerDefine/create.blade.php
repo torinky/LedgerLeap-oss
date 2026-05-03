@@ -2,10 +2,9 @@
     <x-slot name="header" class="sticky top-0 z-10 ">
         <div class="ttl_3d5 warn md:flex md:items-center space-x-4 bg-warning/40 rounded">
             <h2 class="font-black text-xl text-warning-content/70 md:text-2xl flex items-center">
-                <span class="fa-layers fa-fw mr-2">
-                    <i class="fa-solid fa-book text-3xl" data-fa-transform="left-6 "></i>
-                    <i class="fa-solid  fa-plus-circle text-xl text-warning-content/60"
-                       data-fa-transform=" right-5 up-7"></i>
+                <span class="relative inline-flex items-center justify-center w-10 h-10 mr-2">
+                    <i class="fa-solid fa-book text-3xl"></i>
+                    <i class="fa-solid fa-plus-circle text-xl text-warning-content/90 absolute -top-1 -right-1 drop-shadow-md"></i>
                 </span>
             {{ __('ledger.define.create_title') }}
         </div>
