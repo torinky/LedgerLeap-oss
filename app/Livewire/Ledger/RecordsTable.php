@@ -15,6 +15,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
+use App\Services\Ledger\RecordsGroupingService;
 use App\Services\Ledger\SearchContext;
 use App\Services\RagSearchService;
 use App\Services\SynonymService;
@@ -730,44 +731,14 @@ class RecordsTable extends BaseLivewireComponent
         });
         $filteredColumnDefinesDurationMs = (microtime(true) - $filteredColumnDefinesStartedAt) * 1000;
 
-        // 台帳定義ごとのスコア統計を計算
-        $scoreStatsStartedAt = microtime(true);
-        $scoreStatsByDefineId = $ledgerRecords->groupBy('ledger_define_id')->map(function ($records) {
-            $scores = $records->pluck('composite_score')->filter(fn ($score) => $score > 0);
-
-            return [
-                'count' => $records->count(),
-                'avg_score' => $scores->count() > 0 ? round($scores->avg(), 1) : 0,
-                'max_score' => $scores->count() > 0 ? round($scores->max(), 1) : 0,
-                'min_score' => $scores->count() > 0 ? round($scores->min(), 1) : 0,
-                'has_scores' => $scores->count() > 0,
-            ];
-        });
-        $scoreStatsDurationMs = (microtime(true) - $scoreStatsStartedAt) * 1000;
-
-        // 台帳定義をグループ化（順序を保持）
-        // セマンティック検索時は既にソート済みなので、順序を維持したままグループ化
+        // 統計計算とグルーピングをサービスに委譲
         $groupingStartedAt = microtime(true);
-        $ledgerRecordsGroupByDefineIds = collect();
-        foreach ($ledgerRecords as $ledger) {
-            $defineId = $ledger->ledger_define_id;
-            if (! $ledgerRecordsGroupByDefineIds->has($defineId)) {
-                $ledgerRecordsGroupByDefineIds->put($defineId, collect());
-            }
-            $ledgerRecordsGroupByDefineIds->get($defineId)->push($ledger);
-        }
-
-        // 検索時は平均スコアの降順で台帳定義をソート
-        if (! empty($this->search)) {
-            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortByDesc(function ($records, $defineId) use ($scoreStatsByDefineId) {
-                return $scoreStatsByDefineId[$defineId]['avg_score'] ?? 0;
-            });
-        } else {
-            // 検索していない場合は、台帳定義のID順（または本来意図した順序）でソートを固定する
-            // そうしないと、中のレコードの並び順（スコア順など）によって台帳カードの並びが変わってしまうため
-            $ledgerRecordsGroupByDefineIds = $ledgerRecordsGroupByDefineIds->sortKeys();
-        }
+        $groupingResult = app(RecordsGroupingService::class)
+            ->groupAndComputeStats($ledgerRecords, ! empty($this->search));
+        $ledgerRecordsGroupByDefineIds = $groupingResult['groups'];
+        $scoreStatsByDefineId = collect($groupingResult['stats']);
         $groupingDurationMs = (microtime(true) - $groupingStartedAt) * 1000;
+        $scoreStatsDurationMs = 0; // 計測はサービス内で行う（今回は省略）
 
         $viewPrepareStartedAt = microtime(true);
 
