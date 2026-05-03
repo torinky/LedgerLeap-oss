@@ -49,7 +49,7 @@
                 class=" place-self-center fa-solid {{ in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book' }} text-3xl "></i>
             <div class="ledgerTitle text-base mt-2 mb-2 break-all">{{ $ledgerDefineRecord->title }}
 
-                @if (($ledgerDefineRecord->ledgers_count ?? $ledgerDefineRecord->ledgers()->count()) == 0)
+                @if (($ledgerDefineRecord->ledgers_count ?? 0) == 0)
                     <a href="{{ route('ledger.create', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}"
                         class="btn btn-xs btn-neutral tooltip items-center pt-1"
                         target="ledgerCreate_{{ $ledgerDefineRecord->id }}}}" data-tip="{{ __('ledger.create') }}"><i
