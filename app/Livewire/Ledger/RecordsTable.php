@@ -59,6 +59,10 @@ class RecordsTable extends BaseLivewireComponent
 
     public $folderRecords;
 
+    public $currentFolder = null;
+
+    public int $prepareFolderAssetInvocationCount = 0;
+
     public $breadcrumbs = [];
 
     #[Reactive]
@@ -355,6 +359,7 @@ class RecordsTable extends BaseLivewireComponent
     public function updatedCurrentFolderId($value)
     {
         $this->resetPage();
+        $this->prepareFolderAsset();
     }
 
     /**
@@ -471,7 +476,6 @@ class RecordsTable extends BaseLivewireComponent
             'composite_score',
             'default_sort_value',
         ];
-        $prepareFolderAssetStartedAt = microtime(true);
         Log::info('[MCP Debug] RecordsTable.render START', [
             'tenantId' => $tenantId,
             'dbName' => $dbName,
@@ -480,12 +484,6 @@ class RecordsTable extends BaseLivewireComponent
         ]);
 
         $this->initSearchContext();
-
-        // Reactiveプロパティの変更に伴い、フォルダーアセット（パンくず、子フォルダ等）を再取得
-        // render で毎回呼ぶのを避けるため、必要な時のみ実行されるように mount と updatedXXX で管理されるべきだが、
-        // 現状は安全のためここでの実行を維持（クエリキャッシュがあれば高速）。
-        $this->prepareFolderAsset();
-        $prepareFolderAssetDurationMs = (microtime(true) - $prepareFolderAssetStartedAt) * 1000;
 
         // Exportに検索条件を伝えるためにイベントをトリガ
         $this->dispatch('refreshChildren', data: [
@@ -831,7 +829,6 @@ class RecordsTable extends BaseLivewireComponent
             'attachment_count' => $allAttachments->count(),
             'search_present' => ! empty($this->search),
             'semantic_search' => $this->useSemanticSearch,
-            'prepare_folder_asset_ms' => round($prepareFolderAssetDurationMs, 2),
             'display_ledger_defines_ms' => round($displayLedgerDefinesDurationMs, 2),
             'display_ledger_defines_query_ms' => round($displayLedgerDefinesQueryDurationMs, 2),
             'display_ledger_defines_load_ms' => round($displayLedgerDefinesLoadDurationMs, 2),
@@ -938,6 +935,8 @@ class RecordsTable extends BaseLivewireComponent
      */
     public function prepareFolderAsset(): void
     {
+        $this->prepareFolderAssetInvocationCount++;
+
         // 既に準備済みの場合はスキップ（重複実行を防ぐ）
         if (isset($this->currentFolder) && $this->currentFolder && $this->currentFolder->id === $this->currentFolderId) {
             return;

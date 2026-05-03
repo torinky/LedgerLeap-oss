@@ -42,6 +42,8 @@ class RecordsTableActionsTest extends TestCase
 
     private Folder $folder;
 
+    private Folder $rootFolder;
+
     protected Tenant $tenant;
 
     /** @var array<string, mixed> 共通マウントパラメータ */
@@ -60,8 +62,8 @@ class RecordsTableActionsTest extends TestCase
         Permission::firstOrCreate(['name' => 'view_auto_links', 'guard_name' => 'web']);
         $this->user->givePermissionTo(['view_ledger_defines', 'ledgerView', 'view_auto_links']);
 
-        $rootFolder = Folder::factory()->create(['parent_id' => null]);
-        $this->folder = Folder::factory()->create(['parent_id' => $rootFolder->id]);
+        $this->rootFolder = Folder::factory()->create(['parent_id' => null]);
+        $this->folder = Folder::factory()->create(['parent_id' => $this->rootFolder->id]);
 
         $this->ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $this->folder->id,
@@ -249,10 +251,14 @@ class RecordsTableActionsTest extends TestCase
     {
         $component = Livewire::test(RecordsTable::class, $this->mountProps);
 
+        $component->assertSet('prepareFolderAssetInvocationCount', 1);
+
         // ledgerStored イベントが refresh を呼ぶことを確認
         $component->dispatch('ledgerStored');
 
-        $component->assertOk();
+        $component
+            ->assertOk()
+            ->assertSet('prepareFolderAssetInvocationCount', 2);
     }
 
     #[Test]
@@ -274,7 +280,6 @@ class RecordsTableActionsTest extends TestCase
 
                 return $message === '[Performance] ledger_records_render'
                     && ($context['component'] ?? null) === 'RecordsTable'
-                    && array_key_exists('prepare_folder_asset_ms', $context)
                     && array_key_exists('ledger_records_query_ms', $context)
                     && array_key_exists('attachments_fetch_ms', $context)
                     && array_key_exists('normalize_ms', $context)
@@ -310,8 +315,10 @@ class RecordsTableActionsTest extends TestCase
         Log::spy();
 
         Livewire::test(RecordsTable::class, $this->mountProps)
+            ->assertSet('prepareFolderAssetInvocationCount', 1)
             ->call('openPermissionModal', 'Folder', $this->folder->id, 'テストフォルダ')
-            ->assertSet('showPermissionModal', true);
+            ->assertSet('showPermissionModal', true)
+            ->assertSet('prepareFolderAssetInvocationCount', 1);
 
         Log::shouldHaveReceived('info')
             ->withArgs(function (...$args): bool {
@@ -407,7 +414,15 @@ class RecordsTableActionsTest extends TestCase
     {
         $component = Livewire::test(RecordsTable::class, $this->mountProps);
 
-        $component->instance()->updatedCurrentFolderId($this->folder->id);
+        $component->assertSet('prepareFolderAssetInvocationCount', 1);
+
+        $component->instance()->currentFolderId = $this->rootFolder->id;
+        $component->instance()->updatedCurrentFolderId($this->rootFolder->id);
+
+        $this->assertSame($this->rootFolder->id, $component->instance()->currentFolderId);
+        $component->assertSet('prepareFolderAssetInvocationCount', 2);
+
+        $this->assertNotNull($component->instance()->currentFolder);
 
         $component->assertOk();
     }
