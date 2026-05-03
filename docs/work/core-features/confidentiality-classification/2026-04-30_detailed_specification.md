@@ -1,7 +1,7 @@
 # 秘密区分表示機能 詳細仕様書
 
 **作成日:** 2026-04-29
-**最終更新:** 2026-04-30 (Rev.5)
+**最終更新:** 2026-05-03 (Rev.6)
 **対象機能:** フォルダ・台帳ごとの「秘密区分」表示機能
 
 > 📄 **基本仕様・設計判断・機能概要はこちら**: [秘密区分表示機能 基本仕様書](./2026-04-30_basic_specification.md)
@@ -598,4 +598,5 @@ return [
 | 2026-04-30 | 3.0 | スクロール連動（Intersection Observer）の実装詳細を追加。ツールチップ・保守動線の実装詳細を追加。 |
 | 2026-04-30 | 3.1 | **ドキュメント分割**。基本仕様書と詳細仕様書に分離。データモデル・サービスコード・翻訳キー・実装マッピング・実装詳細を本ドキュメントに集約。 |
 | 2026-04-30 | 4.0 | **公開範囲をDBベースに変更**。設定ファイルから `organizations`・`roles` テーブル参照に変更。`abbreviation` カラム追加マイグレーション、ServiceのDBクエリ化、翻訳キーから固定scope定義を削除、設定ファイルからscopesセクションを削除。 |
+| 2026-05-03 | 5.0 | **Sprint 3A 実装反映**。①`OrganizationResource`・`RoleResource` に `abbreviation` 入力欄を追加。②`LedgerDefine\Create` に `confidentialityLevel`・`confidentialityScopes` プロパティ・バリデーション・保存処理を追加。③`ConfidentialityLevelService::buildFolderPath()` で継承パス構築、スタンプツールチップに `source_path` 表示を追加。④`IndexManager` に `activeLedgerDefineId`・`updateActiveConfidentiality()` を追加、`records-table.blade.php` に Intersection Observer を実装。⑤`ConfidentialityStampTest`・`ConfidentialityLevelServiceTest` を新規作成。 |
 

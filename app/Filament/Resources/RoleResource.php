@@ -2,24 +2,28 @@
 
 namespace App\Filament\Resources;
 
-use Filament\Resources\Resource;
 use App\Enums\FolderPermissionType;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderPermissionRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\UserRelationManager;
 use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Folder;
 use App\Models\NotificationType;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Tables;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
@@ -91,6 +95,10 @@ class RoleResource extends Resource
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(Role::class, 'name', ignoreRecord: true),
+                                TextInput::make('abbreviation')
+                                    ->label(__('role.abbreviation'))
+                                    ->placeholder(__('role.abbreviation_placeholder'))
+                                    ->maxLength(255),
                                 Select::make('guard_name')
                                     ->label(__('role.guard_name'))
                                     ->options(config('filament-spatie-roles-permissions.guard_names'))
@@ -195,11 +203,11 @@ class RoleResource extends Resource
 
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('name')
+                TextColumn::make('name')
                     ->label(__('role.name'))
                     ->searchable()
                     ->sortable(),
-                Tables\Columns\TextColumn::make('folders')
+                TextColumn::make('folders')
                     ->label(__('ledger.folder.scoped'))
                     ->getStateUsing(function ($record): array {
                         //                        dd($record);
@@ -225,10 +233,10 @@ class RoleResource extends Resource
                     ->separator(' ') // バッジ間の区切り文字
                     ->wrap()         // 長い場合は折り返し
                     ->translateLabel(),
-                Tables\Columns\TextColumn::make('organizations.name')
+                TextColumn::make('organizations.name')
                     ->label(__('ledger.organizations.scoped'))
                     ->badge(),
-                Tables\Columns\TextColumn::make('permissions.name')
+                TextColumn::make('permissions.name')
                     ->label(__('ledger.settings.permissions'))
                     ->badge(),
                 TextColumn::make('permissions.name')
@@ -238,10 +246,10 @@ class RoleResource extends Resource
                     })
                     ->badge(),
 
-                Tables\Columns\TextColumn::make('guard_name')
+                TextColumn::make('guard_name')
                     ->label(__('role.guard_name'))
                     ->badge(),
-                Tables\Columns\TextColumn::make('description')
+                TextColumn::make('description')
                     ->label(__('ledger.description'))
                     ->sortable()
                     ->searchable(),
@@ -251,12 +259,12 @@ class RoleResource extends Resource
                 //
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }
@@ -266,7 +274,7 @@ class RoleResource extends Resource
         return [
             //            PermissionRelationManager::class,
             OrganizationRelationManager::class,
-            \App\Filament\Resources\RoleResource\RelationManagers\UserRelationManager::class,
+            UserRelationManager::class,
             FolderPermissionRelationManager::class,
             NotificationSettingsRelationManager::class,
         ];

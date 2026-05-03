@@ -35,6 +35,7 @@
             :source-type="$canEditConfidentiality ? ($confidentiality['source']['type'] ?? null) : null"
             :source-name="$confidentiality['source']['name'] ?? null"
             :source-id="$canEditConfidentiality ? ($confidentiality['source']['id'] ?? null) : null"
+            :source-path="$confidentiality['source_path'] ?? null"
             :inherited="$confidentiality['inherited']"
         />
     @endif

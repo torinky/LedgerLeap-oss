@@ -290,6 +290,8 @@ return [
     'optimized_pdf' => '最適化PDF',
     'options' => '選択肢',
     'organization' => '組織',
+    'organization_abbreviation' => '略称',
+    'organization_abbreviation_placeholder' => '正式名を省略した表記（例：総務部）',
     'organization_empty' => '所属している組織やプロジェクトはありません。',
     'organization_section_description' => 'あなたが所属している組織やプロジェクトの一覧です。',
     'organization_section_title' => '所属組織/プロジェクト',

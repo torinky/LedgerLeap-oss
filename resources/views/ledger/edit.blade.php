@@ -1,14 +1,20 @@
 <x-app-layout title="{{__('Ledger.editTitle')}}">
-    {{-- 秘密区分スタンプ（モックアップ） --}}
-    <x-ledger.confidentiality-stamp
-        level="secret"
-        :scopes="[['name' => '技術部']]"
-        source-type="ledger_define"
-        source-name="[DEMO] 営業日報"
-        source-id="1"
-        edit-url="/demo-tenant/ledgerDefine/edit/1"
-        :inherited="false"
-    />
+    @php
+        $confidentiality = \App\Services\ConfidentialityLevelService::getEffectiveLevel($ledgerDefineRecord);
+        $canEditConfidentiality = auth()->user()->can('update', $ledgerDefineRecord);
+    @endphp
+    @if($confidentiality && $confidentiality['level'] !== 'public')
+        <x-ledger.confidentiality-stamp
+            :level="$confidentiality['level']"
+            :label="$confidentiality['label']"
+            :scopes="$confidentiality['scope_labels']"
+            :source-type="$canEditConfidentiality ? ($confidentiality['source']['type'] ?? null) : null"
+            :source-name="$confidentiality['source']['name'] ?? null"
+            :source-id="$canEditConfidentiality ? ($confidentiality['source']['id'] ?? null) : null"
+            :source-path="$confidentiality['source_path'] ?? null"
+            :inherited="$confidentiality['inherited']"
+        />
+    @endif
 
     @push('scripts')
         @vite(['resources/js/ledgerEdit.js'])

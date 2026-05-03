@@ -192,6 +192,7 @@ class ConfidentialityLevelService
             'scopes' => $resolved['scopes'] ?? [],
             'scope_labels' => self::scopeLabels($resolved['scopes'] ?? []),
             'source' => $resolved['source'] ?? null,
+            'source_path' => $resolved['source']['path'] ?? null,
             'inherited' => $resolved['inherited'] ?? false,
         ];
     }
@@ -201,16 +202,36 @@ class ConfidentialityLevelService
      */
     private static function buildResolvedArray(Folder|LedgerDefine $model, string $type, bool $inherited = false): array
     {
+        $source = [
+            'type' => $type,
+            'name' => $model instanceof Folder ? $model->title : $model->title,
+            'id' => $model->id,
+        ];
+
+        if ($model instanceof Folder) {
+            $source['path'] = self::buildFolderPath($model);
+        }
+
         return [
             'level' => $model->confidentiality_level,
             'scopes' => $model->confidentiality_scopes,
-            'source' => [
-                'type' => $type,
-                'name' => $model instanceof Folder ? $model->title : $model->title,
-                'id' => $model->id,
-            ],
+            'source' => $source,
             'inherited' => $inherited,
         ];
+    }
+
+    /**
+     * Folder の祖先パス文字列を構築
+     */
+    private static function buildFolderPath(Folder $folder): string
+    {
+        if ($folder->relationLoaded('ancestors')) {
+            $names = $folder->ancestors->pluck('title')->push($folder->title);
+        } else {
+            $names = $folder->ancestorsAndSelf($folder->id)->pluck('title');
+        }
+
+        return $names->implode(' > ');
     }
 
     /**

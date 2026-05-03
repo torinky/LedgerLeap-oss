@@ -14,6 +14,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 #[CoversClass(OrganizationResource::class)]
@@ -40,10 +41,10 @@ class OrganizationResourceTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         foreach (self::PERMISSIONS as $perm) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
         }
         $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        $adminRole->givePermissionTo(Permission::all());
 
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole($adminRole);
@@ -131,6 +132,23 @@ class OrganizationResourceTest extends TestCase
         $this->assertDatabaseHas('organizations', ['name' => 'NewOrganization']);
     }
 
+    #[Test]
+    public function create_page_can_create_organization_with_abbreviation(): void
+    {
+        Livewire::test(CreateOrganization::class)
+            ->fillForm([
+                'name' => 'NewOrganization',
+                'abbreviation' => 'NewOrg',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('organizations', [
+            'name' => 'NewOrganization',
+            'abbreviation' => 'NewOrg',
+        ]);
+    }
+
     // ================================================================
     // 編集フォーム
     // ================================================================
@@ -155,6 +173,19 @@ class OrganizationResourceTest extends TestCase
             ->assertHasNoFormErrors();
 
         $this->assertDatabaseHas('organizations', ['id' => $org->id, 'name' => 'UpdatedOrgName']);
+    }
+
+    #[Test]
+    public function edit_page_can_save_updated_abbreviation(): void
+    {
+        $org = Organization::factory()->create(['name' => 'OldOrgName', 'abbreviation' => 'Old']);
+
+        Livewire::test(EditOrganization::class, ['record' => $org->getRouteKey()])
+            ->fillForm(['abbreviation' => 'Updated'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('organizations', ['id' => $org->id, 'abbreviation' => 'Updated']);
     }
 
     // ================================================================

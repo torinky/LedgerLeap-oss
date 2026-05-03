@@ -17,6 +17,25 @@
                 {{--            wire:change="applyParentFolder"--}}
                 wire:model="parentFolderId" required
             />
+
+            <x-mary-select
+                label="{{ __('ledger.confidentiality.level.label') }}"
+                wire:model="confidentialityLevel"
+                :options="$confidentialityLevelOptions"
+                placeholder="{{ __('ledger.folder.form.placeholder.select_roles') }}"
+                allow-clear
+                class="select-bordered focus:select-primary"
+            />
+
+            <x-mary-choices-offline
+                label="{{ __('ledger.confidentiality.scope.label') }}"
+                wire:model="confidentialityScopes"
+                :options="$confidentialityScopeOptions"
+                multiple
+                searchable
+                placeholder="{{ __('ledger.confidentiality.scope.placeholder') }}"
+                no-result-text="{{ __('messages.info.no_results_found') }}"
+            />
             {{-- 統一アクションバー（透過・ホバー＆スライドアップ対応） --}}
             <div class="mx-auto w-full lg:w-2/3 fixed bottom-0 lg:bottom-4 inset-x-0 z-50 lg:px-4 transition-transform duration-300 ease-in-out"
                  x-data="{ expanded: false, isLg: window.innerWidth >= 1024 }"

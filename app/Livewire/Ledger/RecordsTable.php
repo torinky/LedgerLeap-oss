@@ -864,6 +864,8 @@ class RecordsTable extends BaseLivewireComponent
             'page_ledger_define_count' => $pageLedgerDefineCount ?? 0,
         ]);
 
+        $this->dispatch('ledger-sections-rendered');
+
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,
             'ledgerRecordsGroupByDefineIds' => $ledgerRecordsGroupByDefineIds,

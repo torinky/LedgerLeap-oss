@@ -8,9 +8,9 @@ use App\Models\Organization;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms;
 use Filament\Panel;
-use Filament\Schemas\Schema;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -71,6 +71,10 @@ class OrganizationResource extends Resource
                 Forms\Components\TextInput::make('name')
                     ->label(__('ledger.organizations.name'))
                     ->required()
+                    ->maxLength(255),
+                Forms\Components\TextInput::make('abbreviation')
+                    ->label(__('ledger.organization_abbreviation'))
+                    ->placeholder(__('ledger.organization_abbreviation_placeholder'))
                     ->maxLength(255),
                 Forms\Components\Textarea::make('description')
                     ->label(__('ledger.description'))

@@ -6,6 +6,7 @@
     'sourceType' => null,   // 'folder' | 'ledger_define' | null
     'sourceName' => null,
     'sourceId' => null,
+    'sourcePath' => null,
     'inherited' => false,
 ])
 
@@ -24,7 +25,11 @@ $scopeText = collect($scopes)->map(fn ($s) => is_array($s) ? ($s['name'] ?? $s) 
 // ツールチップ内容構築（1行で簡潔に）
 $tooltipParts = [];
 
-if ($sourceType && $sourceName) {
+if ($sourcePath) {
+    $tooltipParts[] = $inherited
+        ? __('ledger.confidentiality.tooltip.inherited_from', ['name' => $sourcePath])
+        : __('ledger.confidentiality.tooltip.direct_from', ['name' => $sourcePath]);
+} elseif ($sourceType && $sourceName) {
     $sourceLabel = match ($sourceType) {
         'ledger_define' => __('ledger.confidentiality.tooltip.ledger_define_short', ['name' => $sourceName]),
         'folder' => __('ledger.confidentiality.tooltip.folder_short', ['name' => $sourceName]),

@@ -15,8 +15,10 @@
     $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 
-<div class="relative" x-data="{}"
-    x-on:file-inspector-selection-applied.window="if ($event.detail.selectedLedgerId) { $nextTick(() => { const row = document.getElementById('ledger-row-' + $event.detail.selectedLedgerId); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.focus({ preventScroll: true }); } }); }">
+<div class="relative" x-data="confidentialityScrollTracker()"
+    x-on:file-inspector-selection-applied.window="if ($event.detail.selectedLedgerId) { $nextTick(() => { const row = document.getElementById('ledger-row-' + $event.detail.selectedLedgerId); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.focus({ preventScroll: true }); } }); }"
+    x-init="init()"
+    x-on:ledger-sections-rendered.window="init()">
 
     {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">
@@ -58,7 +60,8 @@
                             ]);
                         @endphp
                         <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden"
-                            wire:key="ledger_record_{{ $ledgerDefineId }}">
+                            wire:key="ledger_record_{{ $ledgerDefineId }}"
+                            data-ledger-define-section="{{ $ledgerDefineId }}">
                             <div class="card-body pt-0 px-0">
                                 <x-ledgerDefine.header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine" :search="$search"
                                     :filter="$filter" :keywords="$keywords" :canManage="$canManage" :canCreate="$canCreate"
@@ -147,3 +150,82 @@
     {{-- 添付ファイルのドロワーを一覧ページにも常駐配置 --}}
     <livewire:attached-file.file-inspector />
 </div>
+
+<script>
+function confidentialityScrollTracker() {
+    return {
+        observer: null,
+        lastRatio: {},
+
+        init() {
+            console.log('[confidentialityScrollTracker] init() called');
+
+            // 古い Observer をクリーンアップ（Livewire 更新時の再実行対策）
+            if (this.observer) {
+                this.observer.disconnect();
+                this.observer = null;
+            }
+            this.lastRatio = {};
+
+            if (! ('IntersectionObserver' in window)) {
+                console.log('[confidentialityScrollTracker] IntersectionObserver not supported');
+                return;
+            }
+
+            this.$nextTick(() => {
+                try {
+                    const sections = this.$el.querySelectorAll('[data-ledger-define-section]');
+                    console.log('[confidentialityScrollTracker] sections found:', sections.length);
+                    if (sections.length === 0) {
+                        console.log('[confidentialityScrollTracker] no sections, returning');
+                        return;
+                    }
+
+                    // 単一セクションの場合も、そのセクションの LedgerDefine ID を通知する
+                    if (sections.length === 1) {
+                        const id = sections[0].getAttribute('data-ledger-define-section');
+                        console.log('[confidentialityScrollTracker] single section, dispatching id:', id);
+                        Livewire.dispatch('confidentialitySectionChanged', {
+                            ledgerDefineId: parseInt(id, 10),
+                        });
+                        return;
+                    }
+
+                    console.log('[confidentialityScrollTracker] setting up IntersectionObserver');
+                    this.observer = new IntersectionObserver(
+                    (entries) => {
+                        entries.forEach((entry) => {
+                            const id = entry.target.getAttribute('data-ledger-define-section');
+                            this.lastRatio[id] = entry.intersectionRatio;
+                        });
+
+                        let bestId = null;
+                        let bestRatio = 0;
+                        for (const [id, ratio] of Object.entries(this.lastRatio)) {
+                            if (ratio > bestRatio) {
+                                bestRatio = ratio;
+                                bestId = id;
+                            }
+                        }
+
+                        if (bestId !== null) {
+                            Livewire.dispatch('confidentialitySectionChanged', {
+                                ledgerDefineId: parseInt(bestId, 10),
+                            });
+                        }
+                    },
+                    {
+                        root: null,
+                        threshold: [0, 0.25, 0.5, 0.75, 1.0],
+                    }
+                );
+
+                sections.forEach((section) => this.observer.observe(section));
+                } catch (e) {
+                    console.error('[confidentialityScrollTracker] error:', e);
+                }
+            });
+        },
+    };
+}
+</script>

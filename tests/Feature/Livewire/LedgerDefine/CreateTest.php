@@ -143,4 +143,37 @@ class CreateTest extends TestCase
         // column_define は Collection または空配列として返る
         $this->assertEmpty($define->column_define);
     }
+
+    #[Test]
+    public function store_saves_confidentiality_level_and_scopes(): void
+    {
+        $title = 'Confidentiality Test '.uniqid();
+
+        try {
+            Livewire::test(Create::class)
+                ->set('title', $title)
+                ->set('parentFolderId', $this->folder->id)
+                ->set('confidentialityLevel', 'confidential')
+                ->set('confidentialityScopes', [])
+                ->call('store');
+        } catch (\Exception $e) {
+            // route() のテナントバインディング問題は無視
+        }
+
+        $define = LedgerDefine::where('title', $title)->first();
+        $this->assertNotNull($define);
+        $this->assertEquals('confidential', $define->confidentiality_level);
+        $this->assertEquals(['org_ids' => [], 'role_ids' => []], $define->confidentiality_scopes);
+    }
+
+    #[Test]
+    public function store_validates_confidentiality_level(): void
+    {
+        Livewire::test(Create::class)
+            ->set('title', 'Invalid Level')
+            ->set('parentFolderId', $this->folder->id)
+            ->set('confidentialityLevel', 'invalid-level')
+            ->call('store')
+            ->assertHasErrors(['confidentialityLevel' => 'in']);
+    }
 }
