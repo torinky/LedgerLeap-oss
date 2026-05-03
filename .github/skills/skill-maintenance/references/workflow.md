@@ -12,6 +12,7 @@ After a bug fix, sprint, or investigation, gather:
 - What routing or discovery rule should agents know automatically?
 - What failed operation or discarded approach exposed the mismatch?
 - What expectation was wrong: implementation, test config, or workflow?
+- For UI regressions, what clickable target failed: rendered text, `href`, `route()` generation, or the actual navigation after click?
 ```
 
 ## Step 1.5 — Run a short retrospective
@@ -26,6 +27,8 @@ Before deciding where a learning belongs, record the answer to each of these:
 - If the same dead end appeared twice, what should be reclassified before a third try?
 
 Write the findings first as `良かったこと`, `悪かったこと`, and `上書き指示されたこと`, then split each one into `技術要素` and `作業の進め方` before choosing a destination.
+
+If the task involved a tenant-aware Blade / Livewire link, record whether the parent passed `tenantId` explicitly and whether the UI test asserted the destination URL, not just the rendered element.
 
 Use the answer to decide whether the item stays in `docs/work/*` or graduates into `.github` assets.
 

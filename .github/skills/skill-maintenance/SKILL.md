@@ -35,6 +35,7 @@ A new learning was proven?
 - For layout-sensitive UI work, record the approved breakpoint ladder and any scroll-occlusion threshold (for example, how much sticky content hides below the fold) in `docs/work/*` before considering it reusable.
 - For layout-sensitive UI work, if a small set of cards should become narrower, keep them inside the same visual flow container and tune width utilities there; do not split them into a separate row unless the user explicitly asked for a new section.
 - For static trees, accordions, and other hover-sensitive UI shells, do not assume `wire:ignore` or Livewire morphing is the whole cause of flicker; inspect tooltip, overflow, z-index, and pseudo-element layering next, and prefer static `title` / `aria-label` fallbacks over hover-only critical text.
+- For clickable Livewire / Blade UI, verify the rendered target and the actual navigation target; when a shared tenant-aware component builds `route()` URLs, pass `tenantId` from the parent instead of relying only on `tenant()` inside the component.
 - For the retire-review-brushup-commit loop, use `docs/runbooks/ai-asset-maintenance-playbook.md` as the canonical sequence: write `docs/work/*` first, then update the primary `.github` destination, sync neighbors, validate, run `/skill-maintenance`, and finish with `/git-commit`.
 - When GitHub issue numbers and sprint labels can drift, treat the GitHub issue title/number as authoritative, add a visible `GitHub 追跡` mapping in the plan or issue body, and rewrite the affected branch immediately so the old numbering does not remain visible.
 - If a task finishes, run a short retrospective before routing the result. Capture what went well, what caused rework, what should be promoted, what should be retired, what failed, and which dead ends were proven to be dead ends.
@@ -74,6 +75,12 @@ A new learning was proven?
 - `last_confirmed_at`: 2026-04-29
 - `recheck_after`: 90d
 - `recheck_trigger`: admin announcement permission scopes change again, issue-number drift reappears, or the retrospective structure needs another refresh
+
+- [docs/work/core-features/confidentiality-classification/2026-05-03_retrospective_issue191.md](../../../docs/work/core-features/confidentiality-classification/2026-05-03_retrospective_issue191.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-05-03
+- `recheck_after`: 90d
+- `recheck_trigger`: a clickable tenant-aware Blade component fails to navigate again, a Livewire UI test only checks rendering and not the link target, or a retrospective body forgets to capture cause / fix / tests / commit in one place
 
 ## Retrospective Gate
 
