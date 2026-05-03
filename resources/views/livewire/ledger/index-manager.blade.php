@@ -32,6 +32,7 @@
             :level="$confidentiality['level']"
             :label="$confidentiality['label']"
             :scopes="$confidentiality['scope_labels']"
+            :tenant-id="$this->resolveTenantId($currentTenantId)"
             :source-type="$canEditConfidentiality ? ($confidentiality['source']['type'] ?? null) : null"
             :source-name="$confidentiality['source']['name'] ?? null"
             :source-id="$canEditConfidentiality ? ($confidentiality['source']['id'] ?? null) : null"

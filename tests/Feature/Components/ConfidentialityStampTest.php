@@ -40,6 +40,69 @@ class ConfidentialityStampTest extends TestCase
     }
 
     #[Test]
+    public function it_renders_a_tenant_aware_edit_link_for_ledger_defines(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'confidentiality_level' => 'secret',
+            'confidentiality_scopes' => [],
+        ]);
+
+        $effective = ConfidentialityLevelService::getEffectiveLevel($ledgerDefine);
+        $tenantId = tenant('id');
+
+        $view = $this->blade(
+            '<x-ledger.confidentiality-stamp :level="$level" :label="$label" :scopes="$scopes" :tenant-id="$tenantId" :source-type="$sourceType" :source-name="$sourceName" :source-id="$sourceId" :inherited="$inherited" />',
+            [
+                'level' => $effective['level'],
+                'label' => $effective['label'],
+                'scopes' => $effective['scope_labels'],
+                'tenantId' => $tenantId,
+                'sourceType' => $effective['source']['type'] ?? null,
+                'sourceName' => $effective['source']['name'] ?? null,
+                'sourceId' => $effective['source']['id'] ?? null,
+                'inherited' => $effective['inherited'],
+            ]
+        );
+
+        $view->assertSee(
+            route('ledgerDefine.edit', ['tenant' => $tenantId, 'ledgerDefineId' => $ledgerDefine->id]),
+            false
+        );
+    }
+
+    #[Test]
+    public function it_renders_a_tenant_aware_edit_link_for_folders(): void
+    {
+        $folder = Folder::factory()->create([
+            'title' => 'SecretFolder',
+            'confidentiality_level' => 'secret',
+            'confidentiality_scopes' => [],
+        ]);
+
+        $effective = ConfidentialityLevelService::getEffectiveLevel($folder);
+        $tenantId = tenant('id');
+
+        $view = $this->blade(
+            '<x-ledger.confidentiality-stamp :level="$level" :label="$label" :scopes="$scopes" :tenant-id="$tenantId" :source-type="$sourceType" :source-name="$sourceName" :source-id="$sourceId" :inherited="$inherited" />',
+            [
+                'level' => $effective['level'],
+                'label' => $effective['label'],
+                'scopes' => $effective['scope_labels'],
+                'tenantId' => $tenantId,
+                'sourceType' => $effective['source']['type'] ?? null,
+                'sourceName' => $effective['source']['name'] ?? null,
+                'sourceId' => $effective['source']['id'] ?? null,
+                'inherited' => $effective['inherited'],
+            ]
+        );
+
+        $view->assertSee(
+            route('folder.edit', ['tenant' => $tenantId, 'folder' => $folder->id]),
+            false
+        );
+    }
+
+    #[Test]
     public function it_renders_with_folder_source_path(): void
     {
         $grandParent = Folder::factory()->create(['title' => 'GrandParent']);

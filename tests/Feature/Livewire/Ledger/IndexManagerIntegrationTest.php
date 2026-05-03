@@ -359,9 +359,11 @@ class IndexManagerIntegrationTest extends TestCase
         // defineA をアクティブにする
         $component->dispatch('confidentialitySectionChanged', ledgerDefineId: $defineA->id);
         $component->assertSet('activeLedgerDefineId', $defineA->id);
+        $component->assertSee(__('ledger.confidentiality.level.confidential'));
 
         // defineB をアクティブにする
         $component->dispatch('confidentialitySectionChanged', ledgerDefineId: $defineB->id);
         $component->assertSet('activeLedgerDefineId', $defineB->id);
+        $component->assertSee(__('ledger.confidentiality.level.secret'));
     }
 }

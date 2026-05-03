@@ -2,6 +2,7 @@
     'level' => null,
     'scopes' => [],
     'editUrl' => null,
+    'tenantId' => null,
     'label' => null,
     'sourceType' => null,   // 'folder' | 'ledger_define' | null
     'sourceName' => null,
@@ -50,11 +51,13 @@ $tooltipText = implode(' | ', $tooltipParts);
 
 // 編集リンクURL構築（仕様書 §6 準拠）
 $resolvedEditUrl = $editUrl;
+$resolvedTenantId = $tenantId ?? request()->route()?->originalParameters()['tenant'] ?? tenant('id');
+
 if (! $resolvedEditUrl && $sourceType && $sourceId) {
     try {
         $resolvedEditUrl = match ($sourceType) {
-            'ledger_define' => route('ledgerDefine.edit', ['ledgerDefineId' => $sourceId]),
-            'folder' => route('folder.edit', ['folder' => $sourceId]),
+            'ledger_define' => route('ledgerDefine.edit', ['tenant' => $resolvedTenantId, 'ledgerDefineId' => $sourceId]),
+            'folder' => route('folder.edit', ['tenant' => $resolvedTenantId, 'folder' => $sourceId]),
             default => null,
         };
     } catch (\Throwable $e) {
@@ -70,12 +73,10 @@ if (! $resolvedEditUrl && $sourceType && $sourceId) {
     @if($resolvedEditUrl)
         <a href="{{ $resolvedEditUrl }}"
            class="fixed top-16 right-4 z-[55] block tooltip tooltip-left whitespace-pre-line"
-           data-tip="{{ $tooltipText }}"
-           wire:ignore>
+           data-tip="{{ $tooltipText }}">
     @else
         <div class="fixed top-16 right-4 z-[45] tooltip tooltip-left whitespace-pre-line"
-             data-tip="{{ $tooltipText }}"
-             wire:ignore>
+             data-tip="{{ $tooltipText }}">
     @endif
         {{-- スタンプ本体: パディング抑えめ・文字大きめ --}}
         <div class="inline-flex items-center px-3 py-1 text-2xl font-black tracking-wider text-red-600 bg-transparent border-[3px] border-red-600 shadow-lg backdrop-blur-sm transform rotate-2 hover:rotate-0 transition-transform duration-200 cursor-pointer whitespace-nowrap">
