@@ -224,31 +224,6 @@ class RecordsTable extends BaseLivewireComponent
         );
     }
 
-    protected function resolveFileSelectionState($allAttachments): void
-    {
-        $this->selectedLedgerId = null;
-
-        if (! $this->selectedFileId) {
-            return;
-        }
-
-        foreach ($allAttachments as $ledgerId => $attachments) {
-            foreach ($attachments as $attachment) {
-                if ((int) $attachment->id !== (int) $this->selectedFileId) {
-                    continue;
-                }
-
-                $this->selectedLedgerId = (int) $ledgerId;
-
-                if ($this->selectedColumnId === null) {
-                    $this->selectedColumnId = (int) ($attachment->column_id ?? 0) ?: null;
-                }
-
-                return;
-            }
-        }
-    }
-
     /**
      * 検索コンテキストを初期化
      *
@@ -707,17 +682,6 @@ class RecordsTable extends BaseLivewireComponent
         }
         $breadcrumbsPreparedDurationMs = (microtime(true) - $breadcrumbsPreparedStartedAt) * 1000;
 
-        // 表示される台帳レコードIDリストを取得
-        $attachmentsFetchStartedAt = microtime(true);
-        $ledgerIds = $ledgerRecords->pluck('id');
-        // 関連する添付ファイル情報を一括で取得
-        $allAttachments = AttachedFile::whereIn('ledger_id', $ledgerIds)
-            ->get()
-            ->groupBy('ledger_id'); // ledger_id ごとにグループ化
-        $attachmentsFetchDurationMs = (microtime(true) - $attachmentsFetchStartedAt) * 1000;
-
-        $this->resolveFileSelectionState($allAttachments);
-
         // 検索結果のフラグを設定
         $normalizeStartedAt = microtime(true);
         $contentNormalizeDurationMs = 0.0;
@@ -766,6 +730,7 @@ class RecordsTable extends BaseLivewireComponent
             return $ledger;
         });
         $normalizeDurationMs = (microtime(true) - $normalizeStartedAt) * 1000;
+        $attachmentsFetchDurationMs = 0.0;
 
         $currentFolder = $this->currentFolder;
 
@@ -826,7 +791,7 @@ class RecordsTable extends BaseLivewireComponent
         $this->logPerformance('ledger_records_render', (microtime(true) - $startedAt) * 1000, [
             'record_count' => method_exists($ledgerRecords, 'count') ? $ledgerRecords->count() : 0,
             'group_count' => $ledgerRecordsGroupByDefineIds->count(),
-            'attachment_count' => $allAttachments->count(),
+            'attachment_count' => 0,
             'search_present' => ! empty($this->search),
             'semantic_search' => $this->useSemanticSearch,
             'display_ledger_defines_ms' => round($displayLedgerDefinesDurationMs, 2),
@@ -865,7 +830,6 @@ class RecordsTable extends BaseLivewireComponent
             'displayLevel' => $this->displayLevel,
             'currentFolder' => $currentFolder,
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
-            'allAttachments' => $allAttachments,
             'filteredColumnDefines' => $filteredColumnDefines,
             'scoreStatsByDefineId' => $scoreStatsByDefineId,
             'keywords' => $this->keywords,

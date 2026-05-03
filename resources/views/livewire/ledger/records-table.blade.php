@@ -45,12 +45,8 @@
                                 continue;
                             }
                             $canManage = auth()->user()->can('update', $ledgerDefine);
-                            $canCreate = auth()
-                                ->user()
-                                ->can('ledgerCreate', $ledgerDefine);
-                            $canUpdate = auth()
-                                ->user()
-                                ->can('ledgerUpdate', $ledgerDefine);
+                            $canCreate = auth()->user()->can('ledgerCreate', $ledgerDefine);
+                            $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefine);
                             $canView = auth()->user()->can('ledgerView', $ledgerDefine);
                             \Log::info('RecordsTable render loop: permissions', [
                                 'ledgerDefineId' => $ledgerDefineId,
@@ -58,6 +54,7 @@
                                 'canUpdate' => $canUpdate,
                                 'user' => auth()->user()->email
                             ]);
+                            $emptyAttachments = collect();
                         @endphp
                         <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden"
                             wire:key="ledger_record_{{ $ledgerDefineId }}"
@@ -89,11 +86,19 @@
                                         </thead>
                                         <tbody>
                                             @foreach ($ledgerDefineAndRecords as $ledgerRecordValues)
-                                                <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search"
-                                                    :canUpdate="$canUpdate" :canView="$canView" :allAttachments="$allAttachments"
-                                                    :filteredColumnDefines="$displayColumnsWithMock" :currentTenantId="$currentTenantId"
-                                                    :selectedFileId="$selectedFileId" :selectedLedgerId="$selectedLedgerId"
-                                                    :selectedColumnId="$selectedColumnId" />
+                                                <x-ledger.table-row
+                                                    :ledgerRecord="$ledgerRecordValues"
+                                                    :highlightKeyword="$search"
+                                                    :canUpdate="$canUpdate"
+                                                    :canView="$canView"
+                                                    :allAttachments="$emptyAttachments"
+                                                    :filteredColumnDefines="$displayColumnsWithMock"
+                                                    :currentTenantId="$currentTenantId"
+                                                    :relatedBadge="null"
+                                                    :selectedFileId="$selectedFileId"
+                                                    :selectedLedgerId="$selectedLedgerId"
+                                                    :selectedColumnId="$selectedColumnId"
+                                                />
                                             @endforeach
                                         </tbody>
                                     </table>

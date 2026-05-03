@@ -2,14 +2,15 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\RecordsTable;
+use App\Livewire\Ledger\RecordsTableRow;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -119,6 +120,7 @@ class RecordsTableActionsTest extends TestCase
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
             'content' => $fileLedgerDefine->normalizeByColumnDefine([0 => 'first-term second-term']),
+            'status' => WorkflowStatus::NONE,
         ]);
 
         $file = AttachedFile::factory()->create([
@@ -145,51 +147,130 @@ class RecordsTableActionsTest extends TestCase
                 isOpen: true,
             );
 
+        $component->assertOk();
+    }
+
+    #[Test]
+    public function deferred_records_table_row_renders_attachment_list_with_search_context(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [0 => ['hash-attachment' => 'search-context.pdf']],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+            'filename' => 'search-context.pdf',
+            'hashedbasename' => 'hash-attachment',
+            'original_mime_type' => 'application/pdf',
+            'mime' => 'application/pdf',
+            'status' => 'completed',
+            'optimized' => true,
+        ]);
+
+        $component = Livewire::withoutLazyLoading()->test(RecordsTableRow::class, [
+            'ledgerId' => $ledger->id,
+            'columnId' => 0,
+            'highlightKeyword' => 'second-term',
+            'canView' => true,
+            'currentTenantId' => $this->tenant->id,
+            'selectedFileId' => $file->id,
+        ]);
+
+        $component->assertOk();
+
         $html = $component->html();
 
-        $this->assertStringContainsString('id="ledger-row-'.$ledger->id.'"', $html);
-        $this->assertStringContainsString('id="ledger-cell-'.$ledger->id.'-0"', $html);
-        $this->assertStringContainsString('ring-2 ring-primary/40 bg-primary/5', $html);
+        $this->assertStringContainsString('data-search="second-term"', $html);
+        $this->assertStringContainsString('closest(\'[data-search]\')', $html);
+        $this->assertStringContainsString('this.$dispatch(\'open-file-inspector\', {', $html);
+        $this->assertStringContainsString('direct-download-link', $html);
+        $this->assertStringContainsString('fa-solid fa-download', $html);
+        $this->assertStringContainsString('search-context.pdf', $html);
+        $this->assertStringContainsString(
+            route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]),
+            $html
+        );
+        $this->assertStringContainsString(__('ledger.download_optimized'), $html);
         $this->assertStringContainsString('ring-2 ring-primary/60 bg-primary/5', $html);
     }
 
     #[Test]
-    public function attachment_list_rerenders_the_current_search_context_for_file_inspector(): void
+    public function deferred_records_table_row_shows_more_button_for_many_attachments(): void
     {
-        $files = [[
-            'id' => 1001,
-            'filename' => 'search-context.pdf',
-            'mime' => 'application/pdf',
-            'status' => 'completed',
-            'column_id' => 0,
-            'downloadUrl' => '#',
-        ]];
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
 
-        $tenantId = $this->tenant->id;
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [
+                0 => [
+                    'hash-1' => 'file-1.pdf',
+                    'hash-2' => 'file-2.pdf',
+                    'hash-3' => 'file-3.pdf',
+                    'hash-4' => 'file-4.pdf',
+                    'hash-5' => 'file-5.pdf',
+                    'hash-6' => 'file-6.pdf',
+                ],
+            ],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
 
-        $firstRender = Blade::render(
-            '<x-ledger.attachment-list :files="$files" mode="icon-only" :column-id="$columnId" :tenant-id="$tenantId" :search="$search" />',
-            [
-                'files' => $files,
-                'columnId' => 0,
-                'tenantId' => $tenantId,
-                'search' => 'first-term',
-            ]
-        );
+        foreach (range(1, 6) as $index) {
+            AttachedFile::factory()->create([
+                'ledger_id' => $ledger->id,
+                'ledger_define_id' => $ledgerDefine->id,
+                'column_id' => 0,
+                'tenant_id' => $this->tenant->id,
+                'filename' => "file-{$index}.pdf",
+                'hashedbasename' => "hash-{$index}",
+                'original_mime_type' => 'application/pdf',
+                'mime' => 'application/pdf',
+                'status' => 'completed',
+            ]);
+        }
 
-        $secondRender = Blade::render(
-            '<x-ledger.attachment-list :files="$files" mode="icon-only" :column-id="$columnId" :tenant-id="$tenantId" :search="$search" />',
-            [
-                'files' => $files,
-                'columnId' => 0,
-                'tenantId' => $tenantId,
-                'search' => 'second-term',
-            ]
-        );
+        $component = Livewire::withoutLazyLoading()->test(RecordsTableRow::class, [
+            'ledgerId' => $ledger->id,
+            'columnId' => 0,
+            'highlightKeyword' => null,
+            'canView' => true,
+            'currentTenantId' => $this->tenant->id,
+        ]);
 
-        $this->assertStringContainsString('data-search="first-term"', $firstRender);
-        $this->assertStringContainsString('data-search="second-term"', $secondRender);
-        $this->assertStringContainsString("closest('[data-search]')", $firstRender);
+        $component->assertOk();
+
+        $html = $component->html();
+
+        $this->assertStringContainsString('x-on:click="toggleShowAll()"', $html);
+        $this->assertStringContainsString(__('ledger.show_more'), $html);
+        $this->assertStringContainsString('(+2)', $html);
+        $this->assertStringContainsString(__('ledger.collapse'), $html);
     }
 
     #[Test]
@@ -281,7 +362,7 @@ class RecordsTableActionsTest extends TestCase
                 return $message === '[Performance] ledger_records_render'
                     && ($context['component'] ?? null) === 'RecordsTable'
                     && array_key_exists('ledger_records_query_ms', $context)
-                    && array_key_exists('attachments_fetch_ms', $context)
+                    && ($context['attachments_fetch_ms'] ?? null) === 0.0
                     && array_key_exists('normalize_ms', $context)
                     && array_key_exists('content_normalize_ms', $context)
                     && array_key_exists('content_attached_normalize_ms', $context)
@@ -567,10 +648,11 @@ class RecordsTableActionsTest extends TestCase
             'ledger_define_id' => $this->ledgerDefine->id,
         ]);
 
-        $component = Livewire::test(RecordsTable::class, $this->mountProps);
+        $component = new RecordsTable;
+        $component->perPage = 100;
+        $component->totalRecords = 150;
 
-        // perPage=100 のときに 150件 → lastPage = 2 (ceil()はfloatを返す)
-        $lastPage = $component->instance()->lastPage();
+        $lastPage = $component->lastPage();
         $this->assertIsNumeric($lastPage);
         $this->assertGreaterThan(0, $lastPage);
     }
