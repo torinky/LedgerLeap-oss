@@ -7,12 +7,14 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Services\Ledger\RelatedLedgerService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
-use Livewire\Attributes\On;
 use Livewire\Attributes\Lazy;
+use Livewire\Attributes\On;
 use Livewire\WithPagination;
+use Stancl\Tenancy\Tenancy;
 
 #[Lazy]
 class RelatedLedgers extends BaseLivewireComponent
@@ -68,9 +70,9 @@ class RelatedLedgers extends BaseLivewireComponent
         }
 
         if ($this->tenantId) {
-            $tenancy = app(\Stancl\Tenancy\Tenancy::class);
+            $tenancy = app(Tenancy::class);
             if (! $tenancy->initialized) {
-                $tenant = \App\Models\Tenant::find($this->tenantId);
+                $tenant = Tenant::find($this->tenantId);
                 if ($tenant) {
                     $tenancy->initialize($tenant);
                 }
@@ -110,7 +112,6 @@ class RelatedLedgers extends BaseLivewireComponent
     {
         $this->displayLevel = $displayLevel;
     }
-
 
     // ─────────────────────────────────────────────
     // 識別番号（auto_number）関連
@@ -296,16 +297,6 @@ class RelatedLedgers extends BaseLivewireComponent
         $allAttachments = AttachedFile::whereIn('ledger_id', $pageledgerIds)
             ->get()
             ->groupBy('ledger_id');
-
-        // content / content_attached を台帳定義に基づいて正規化（table-row が期待する形式）
-        $groupedResults->flatten(1)->each(function (array $item) {
-            $ledger = $item['ledger'];
-            $define = $ledger->define;
-            if ($define) {
-                $ledger->content = $define->normalizeByColumnDefine($ledger->content ?? []);
-                $ledger->content_attached = $define->normalizeByColumnDefine($ledger->content_attached ?? []);
-            }
-        });
 
         // semantic_score を Ledger インスタンスに動的付与（table-row のスコアオーバーレイで使用）
         // identifier のみのレコードは score=null のまま（オーバーレイなし）

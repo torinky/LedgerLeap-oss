@@ -363,9 +363,6 @@ class RecordsTableActionsTest extends TestCase
                     && ($context['component'] ?? null) === 'RecordsTable'
                     && array_key_exists('ledger_records_query_ms', $context)
                     && ($context['attachments_fetch_ms'] ?? null) === 0.0
-                    && array_key_exists('normalize_ms', $context)
-                    && array_key_exists('content_normalize_ms', $context)
-                    && array_key_exists('content_attached_normalize_ms', $context)
                     && array_key_exists('search_hit_mark_ms', $context)
                     && array_key_exists('display_ledger_defines_query_ms', $context)
                     && array_key_exists('display_ledger_defines_load_ms', $context)

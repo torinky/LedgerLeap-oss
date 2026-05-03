@@ -12,8 +12,8 @@ compatibility: LedgerLeap (AsColumnArrayJson cast, LedgerDefine column_define, L
 content[n] returns null or wrong value?
 │
 ├─ Is test data created with Ledger::factory()->create() directly?
-│   YES → normalizeByColumnDefine() is NOT called. Gaps in column IDs shift indices.
-│          FIX: fill all indices 0..maxId (see references/test-data-patterns.md)
+│   YES → normalizeByColumnDefine() is called automatically on saving since 2026-05-03.
+│          FIX: call $ledger->fresh() before asserting content[n]
 │
 ├─ Using data_get($ledger->content, '1')?
 │   YES → AsColumnArrayJson uses ___serialized___ prefix; data_get() breaks.
@@ -31,10 +31,11 @@ content[n] returns null or wrong value?
 ## content Storage Pipeline
 
 ```text
-Livewire input : [1 => 'text', 3 => 'val']         ← column IDs as keys
-normalizeByColumnDefine() : [0=>'', 1=>'text', 2=>'', 3=>'val']
-AsColumnArrayJson::set() : array_values() → ["","text","","val"]  ← stored JSON
-AsColumnArrayJson::get() : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
+Livewire input : [1 => 'text', 3 => 'val']              ← column IDs as keys
+Ledger::saving event      : normalizeByColumnDefine()   ← automatic since 2026-05-03
+  → [0=>'', 1=>'text', 2=>'', 3=>'val']
+AsColumnArrayJson::set()  : array_values() → ["","text","","val"]  ← stored JSON
+AsColumnArrayJson::get()  : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
 ```
 
 ## Key Rules
@@ -49,7 +50,7 @@ AsColumnArrayJson::get() : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
 
 ## Checklist
 
-- [ ] Test data uses consecutive indices from 0 to maxColumnId
+- [ ] `Ledger::factory()->create()` 後は `$ledger->fresh()` で正規化済み内容を確認する
 - [ ] No `data_get()` on `content` or `content_attached`
 - [ ] `content_attached` includes `0 => []`
 - [ ] `latest_diff_id` set explicitly with `$ledger->update()`

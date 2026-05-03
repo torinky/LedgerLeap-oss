@@ -682,26 +682,11 @@ class RecordsTable extends BaseLivewireComponent
         }
         $breadcrumbsPreparedDurationMs = (microtime(true) - $breadcrumbsPreparedStartedAt) * 1000;
 
-        // 検索結果のフラグを設定
-        $normalizeStartedAt = microtime(true);
-        $contentNormalizeDurationMs = 0.0;
-        $contentAttachedNormalizeDurationMs = 0.0;
+        // 検索ヒットのマーキング
         $searchHitMarkDurationMs = 0.0;
         $ledgerRecords->getCollection()->transform(function ($ledger) use (
-            &$contentNormalizeDurationMs,
-            &$contentAttachedNormalizeDurationMs,
             &$searchHitMarkDurationMs
         ) {
-            // DBから取得したデータを正規化（二重エンコード等の破損データへの耐性を持たせる）
-            // これにより、content_attached が文字列（破損データ）の場合でも配列に復元される。
-            $contentNormalizeStartedAt = microtime(true);
-            $ledger->content = $ledger->define->normalizeByColumnDefine($ledger->content ?? []);
-            $contentNormalizeDurationMs += (microtime(true) - $contentNormalizeStartedAt) * 1000;
-
-            $contentAttachedNormalizeStartedAt = microtime(true);
-            $ledger->content_attached = $ledger->define->normalizeByColumnDefine($ledger->content_attached ?? []);
-            $contentAttachedNormalizeDurationMs += (microtime(true) - $contentAttachedNormalizeStartedAt) * 1000;
-
             if (empty($ledger->content_attached) || empty($this->search)) {
                 return $ledger;
             }
@@ -726,10 +711,8 @@ class RecordsTable extends BaseLivewireComponent
             $searchHitMarkDurationMs += (microtime(true) - $searchHitMarkStartedAt) * 1000;
             $ledger->content_attached = $contentAttached;
 
-            //            dd($ledger->content_attached,$hits);
             return $ledger;
         });
-        $normalizeDurationMs = (microtime(true) - $normalizeStartedAt) * 1000;
         $attachmentsFetchDurationMs = 0.0;
 
         $currentFolder = $this->currentFolder;
@@ -800,9 +783,6 @@ class RecordsTable extends BaseLivewireComponent
             'breadcrumbs_prepared_ms' => round($breadcrumbsPreparedDurationMs, 2),
             'ledger_records_query_ms' => round($ledgerRecordsQueryDurationMs, 2),
             'attachments_fetch_ms' => round($attachmentsFetchDurationMs, 2),
-            'normalize_ms' => round($normalizeDurationMs, 2),
-            'content_normalize_ms' => round($contentNormalizeDurationMs, 2),
-            'content_attached_normalize_ms' => round($contentAttachedNormalizeDurationMs, 2),
             'search_hit_mark_ms' => round($searchHitMarkDurationMs, 2),
             'filtered_column_defines_ms' => round($filteredColumnDefinesDurationMs, 2),
             'score_stats_ms' => round($scoreStatsDurationMs, 2),

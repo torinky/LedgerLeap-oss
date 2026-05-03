@@ -8,11 +8,13 @@ use App\Casts\AsColumnArrayJson;
 use App\Enums\WorkflowStatus;
 use App\Services\Ledger\SearchContext;
 use Exception;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Lang;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
@@ -45,17 +47,29 @@ class Ledger extends Model
 
     /**
      * モデルの作成と更新イベントを処理するメソッドです。
-     *
-     * @return void
      */
-    /*    protected static function booted(): void
-        {
-            static::saving(static function ($ledger) {
-                // update イベントの処理
-                $ledger->normalizeContent();
-            });
+    protected static function booted(): void
+    {
+        static::saving(static function ($ledger) {
+            $ledger->normalizeContent();
+        });
+    }
 
-        }*/
+    /**
+     * content / content_attached を LedgerDefine の column_define に基づいて正規化する。
+     * 保存時に欠番を埋め、DB に正規化済みデータを永続化する。
+     */
+    public function normalizeContent(): void
+    {
+        $define = $this->define ?? LedgerDefine::find($this->ledger_define_id);
+
+        if (! $define) {
+            return;
+        }
+
+        $this->content = $define->normalizeByColumnDefine($this->content ?? []);
+        $this->content_attached = $define->normalizeByColumnDefine($this->content_attached ?? []);
+    }
 
     /**
      * 指定されたフリーワードで content を検索するスコープです。
@@ -211,7 +225,7 @@ class Ledger extends Model
     {
         if (! empty($folderId)) {
             $folderIds = Folder::descendantsAndSelf($folderId)->pluck('id');
-            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($folderIds) {
+            $query->whereHas('define.folder', function (Builder $q) use ($folderIds) {
                 $q->whereIn('id', $folderIds);
             });
         }
@@ -228,7 +242,7 @@ class Ledger extends Model
         if (! empty($tags)) {
             $tagNames = is_string($tags) ? array_filter(explode(',', $tags)) : $tags;
             if (! empty($tagNames)) {
-                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                $query->whereHas('define.tags', function (Builder $q) use ($tagNames) {
                     $q->whereIn('name', $tagNames);
                 }, '=', count($tagNames));
             }
@@ -246,7 +260,7 @@ class Ledger extends Model
         if (! empty($excludeTags)) {
             $excludeTagNames = is_string($excludeTags) ? array_filter(explode(',', $excludeTags)) : $excludeTags;
             if (! empty($excludeTagNames)) {
-                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                $query->whereDoesntHave('define.tags', function (Builder $q) use ($excludeTagNames) {
                     $q->whereIn('name', $excludeTagNames);
                 });
             }
@@ -255,11 +269,11 @@ class Ledger extends Model
         return $query;
     }
 
-    public function scopeApiSearch(\Illuminate\Database\Eloquent\Builder $query, array $params)
+    public function scopeApiSearch(Builder $query, array $params)
     {
         // キーワード検索
         if (! empty($params['q'])) {
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+            $query->where(function (Builder $q) use ($params) {
                 $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$params['q']])
                     ->orWhereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$params['q']]);
             });
@@ -268,7 +282,7 @@ class Ledger extends Model
         // 除外キーワード検索 (全文検索のNOT演算子を利用)
         if (! empty($params['exclude_q'])) {
             $excludeKeywords = '-'.implode(' -', explode(' ', $params['exclude_q']));
-            $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeKeywords) {
+            $query->where(function (Builder $q) use ($excludeKeywords) {
                 $q->whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$excludeKeywords])
                     ->whereRaw('match(`content_attached`) against (? IN BOOLEAN MODE)', [$excludeKeywords]);
             });
@@ -281,7 +295,7 @@ class Ledger extends Model
 
         // フォルダIDでの絞り込み (再帰的)
         if (! empty($params['folder_id'])) {
-            $query->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($params) {
+            $query->whereHas('define.folder', function (Builder $q) use ($params) {
                 $folderIds = Folder::descendantsAndSelf($params['folder_id'])->pluck('id');
                 $q->whereIn('id', $folderIds);
             });
@@ -291,7 +305,7 @@ class Ledger extends Model
         if (! empty($params['tags'])) {
             $tagNames = array_filter(explode(',', $params['tags']));
             if (! empty($tagNames)) {
-                $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                $query->whereHas('define.tags', function (Builder $q) use ($tagNames) {
                     $q->whereIn('name', $tagNames);
                 }, '=', count($tagNames));
             }
@@ -301,7 +315,7 @@ class Ledger extends Model
         if (! empty($params['exclude_tags'])) {
             $excludeTagNames = array_filter(explode(',', $params['exclude_tags']));
             if (! empty($excludeTagNames)) {
-                $query->whereDoesntHave('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($excludeTagNames) {
+                $query->whereDoesntHave('define.tags', function (Builder $q) use ($excludeTagNames) {
                     $q->whereIn('name', $excludeTagNames);
                 });
             }
@@ -654,8 +668,8 @@ class Ledger extends Model
             case 'YMD':
             case 'YMDHM':
                 try {
-                    return \Illuminate\Support\Carbon::parse($value)->format('Y-m-d');
-                } catch (\Exception $e) {
+                    return Carbon::parse($value)->format('Y-m-d');
+                } catch (Exception $e) {
                     return '0000-00-00';
                 }
 

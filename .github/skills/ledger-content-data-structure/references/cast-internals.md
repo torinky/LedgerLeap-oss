@@ -3,6 +3,9 @@
 ## Serialization flow
 
 ```
+Ledger::saving event
+  normalizeByColumnDefine($content)   ← fills gaps 0..maxId (auto since 2026-05-03)
+
 Eloquent set()
   array_values($value)   ← converts associative → sequential
   json_encode()          ← stored as JSON string in DB
