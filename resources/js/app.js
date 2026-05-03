@@ -1,8 +1,6 @@
 import './bootstrap';
 
-// import '@fortawesome/fontawesome-free/js/solid.min.js';
-// import '@fortawesome/fontawesome-free/js/fontawesome.js';
-import '@fortawesome/fontawesome-free/js/all'
+import '@fortawesome/fontawesome-free/css/all.min.css';
 
 import expandableContent from './components/expandable-content.js';
 import ledgerInitOverlay from './components/ledger-init-overlay.js';

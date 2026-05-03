@@ -24,15 +24,6 @@
 // FilePondのインポートが必要な場合はコメント解除
 // @import 'filepond/dist/filepond.min.css';
 
-/* FontAwesomeのフォント読み込み */
-$fa-font-path: "@fortawesome/fontawesome-free/webfonts";
-@font-face {
-    font-family: "Font Awesome 6 Free";
-    font-style: normal;
-    font-display: block;
-    src: url("#{$fa-font-path}/fa-solid-900.woff2") format("woff2");
-}
-
 .icon-input {
     font-family: "Font Awesome 7 Free", "Avenir", "Helvetica Neue", "Helvetica", "Arial",
         "Hiragino Sans", "ヒラギノ角ゴシック", "メイリオ", "Meiryo", "YuGothic",

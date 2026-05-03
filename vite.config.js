@@ -25,7 +25,6 @@ export default defineConfig(({ mode }) => {
                     'resources/js/ledgerShow.js',
                     'resources/js/ledgerDefineEdit.js',
                     'resources/js/admin-announcement-banner-preview.js',
-                    'resources/sass/app.scss',
                 ],
                 refresh: true,
             }),
