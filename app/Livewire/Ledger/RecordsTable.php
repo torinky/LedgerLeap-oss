@@ -16,7 +16,6 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
-use App\Services\PermissionService; // 追加
 use App\Services\RagSearchService;
 use App\Services\SynonymService;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -771,9 +770,6 @@ class RecordsTable extends BaseLivewireComponent
         $normalizeDurationMs = (microtime(true) - $normalizeStartedAt) * 1000;
 
         $currentFolder = $this->currentFolder;
-        $currentUserPermissionStartedAt = microtime(true);
-        $currentUserPermission = $currentFolder ? app(PermissionService::class)->getCurrentUserHighestPermission($currentFolder->id, 'Folder') : null;
-        $currentUserPermissionDurationMs = (microtime(true) - $currentUserPermissionStartedAt) * 1000;
 
         // Filter column_define for each ledgerDefine based on displayLevel
         $filteredColumnDefinesStartedAt = microtime(true);
@@ -846,7 +842,6 @@ class RecordsTable extends BaseLivewireComponent
             'content_normalize_ms' => round($contentNormalizeDurationMs, 2),
             'content_attached_normalize_ms' => round($contentAttachedNormalizeDurationMs, 2),
             'search_hit_mark_ms' => round($searchHitMarkDurationMs, 2),
-            'current_user_permission_ms' => round($currentUserPermissionDurationMs, 2),
             'filtered_column_defines_ms' => round($filteredColumnDefinesDurationMs, 2),
             'score_stats_ms' => round($scoreStatsDurationMs, 2),
             'grouping_ms' => round($groupingDurationMs, 2),
@@ -872,7 +867,6 @@ class RecordsTable extends BaseLivewireComponent
             'ledgerDefineRecordsKeyById' => $ledgerDefineRecords,
             'displayLevel' => $this->displayLevel,
             'currentFolder' => $currentFolder,
-            'currentUserPermissionForFolder' => $currentUserPermission,
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'allAttachments' => $allAttachments,
             'filteredColumnDefines' => $filteredColumnDefines,
