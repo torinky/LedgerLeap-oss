@@ -61,6 +61,7 @@
                             :ledgerDefine="$ledgerDefine"
                             :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine"
                             :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null"
+                            :overallStats="$overallStatsByDefineId[$ledgerDefineId] ?? null"
                             :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
                             :search="$search"
                             :filter="$filter"

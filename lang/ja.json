@@ -1522,6 +1522,7 @@
     "ledger.scoring.score_label": "スコア:",
     "ledger.scoring.score_order": "スコア順",
     "ledger.scoring.sorted_by_score": "検索時は台帳定義をスコア順（平均値の降順）で表示しています",
+    "ledger.scoring.this_page": "このページ内",
     "ledger.search": "検索する",
     "ledger.search_active": "検索語あり",
     "ledger.search_hero_description": "キーワード、同義語、技術用語で素早く絞り込めます",

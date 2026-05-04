@@ -15,6 +15,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Services\Config\SynonymServiceConfig;
+use App\Services\Ledger\LedgerDefineStatsService;
 use App\Services\Ledger\RecordsGroupingService;
 use App\Services\Ledger\SearchContext;
 use App\Services\RagSearchService;
@@ -731,14 +732,27 @@ class RecordsTable extends BaseLivewireComponent
         });
         $filteredColumnDefinesDurationMs = (microtime(true) - $filteredColumnDefinesStartedAt) * 1000;
 
-        // 統計計算とグルーピングをサービスに委譲
+        // 統計計算とグルーピングをサービスに委譲（キャッシュ付き）
         $groupingStartedAt = microtime(true);
         $groupingResult = app(RecordsGroupingService::class)
-            ->groupAndComputeStats($ledgerRecords, ! empty($this->search));
+            ->groupAndComputeStats($ledgerRecords, ! empty($this->search), $this->currentTenantId);
         $ledgerRecordsGroupByDefineIds = $groupingResult['groups'];
         $scoreStatsByDefineId = collect($groupingResult['stats']);
+        $groupingTiming = $groupingResult['timing'];
         $groupingDurationMs = (microtime(true) - $groupingStartedAt) * 1000;
-        $scoreStatsDurationMs = 0; // 計測はサービス内で行う（今回は省略）
+        $scoreStatsDurationMs = $groupingTiming['stats_compute_ms'] ?? 0;
+
+        // 台帳定義全体統計の計算（SQL集計・キャッシュ付き）
+        $overallStatsStartedAt = microtime(true);
+        $overallStatsByDefineId = collect(
+            app(LedgerDefineStatsService::class)
+                ->computeOverallStats(
+                    $searchTargetLedgerDefineIds ?? [],
+                    $this->currentTenantId,
+                    auth()->user()
+                )
+        );
+        $overallStatsDurationMs = (microtime(true) - $overallStatsStartedAt) * 1000;
 
         $viewPrepareStartedAt = microtime(true);
 
@@ -758,12 +772,14 @@ class RecordsTable extends BaseLivewireComponent
             'filtered_column_defines_ms' => round($filteredColumnDefinesDurationMs, 2),
             'score_stats_ms' => round($scoreStatsDurationMs, 2),
             'grouping_ms' => round($groupingDurationMs, 2),
+            'overall_stats_ms' => round($overallStatsDurationMs, 2),
             'view_prepare_ms' => round((microtime(true) - $viewPrepareStartedAt) * 1000, 2),
             'ledger_records_query_prep_ms' => round($ledgerRecordsQueryPrepDurationMs ?? 0.0, 2),
             'related_ledger_define_ids_ms' => round($relatedLedgerDefineIdsDurationMs ?? 0.0, 2),
             'missing_define_fetch_ms' => round($missingDefineFetchDurationMs ?? 0.0, 2),
             'ledger_records_query_count_ms' => round($ledgerRecordsQueryCountDurationMs ?? 0.0, 2),
             'ledger_records_query_count_cache_hit' => $ledgerRecordsQueryCountCacheHit,
+            'grouping_cache_hit' => $groupingTiming['cache_hit'] ?? false,
             'ledger_records_query_paginate_ms' => round($ledgerRecordsQueryPaginateDurationMs ?? 0.0, 2),
             'ledger_records_define_load_ms' => round($ledgerRecordsDefineLoadDurationMs, 2),
             'search_target_ledger_define_ids_ms' => round($searchTargetLedgerDefineIdsDurationMs, 2),
@@ -783,6 +799,7 @@ class RecordsTable extends BaseLivewireComponent
             'breadcrumbsPerLedgerDefine' => $breadcrumbsPerLedgerDefine,
             'filteredColumnDefines' => $filteredColumnDefines,
             'scoreStatsByDefineId' => $scoreStatsByDefineId,
+            'overallStatsByDefineId' => $overallStatsByDefineId,
             'keywords' => $this->keywords,
             'tags' => $this->tags,
             'synonyms' => $this->synonyms,

@@ -40,28 +40,38 @@
     <div class="grid grid-cols-1 lg:grid-cols-[auto_1fr] gap-x-6 gap-y-4 items-start">
         {{-- Left: Identity & Functional Actions --}}
         <div class="space-y-4">
-            {{-- Score Stats --}}
-            @if($scoreStats && $scoreStats['has_scores'])
+            {{-- Score Stats: overall优先，page作为注释 --}}
+            @php
+                $displayStats = $overallStats ?? $scoreStats ?? null;
+                $pageStats = $scoreStats ?? null;
+            @endphp
+            @if($displayStats && $displayStats['has_scores'])
                 <div class="flex flex-wrap gap-1.5 items-center">
                     @php
                         $avgScoreClass = match(true) {
-                            $scoreStats['avg_score'] >= 70 => 'badge-success text-white',
-                            $scoreStats['avg_score'] >= 40 => 'badge-primary text-white',
-                            $scoreStats['avg_score'] >= 20 => 'badge-info text-white',
+                            $displayStats['avg_score'] >= 70 => 'badge-success text-white',
+                            $displayStats['avg_score'] >= 40 => 'badge-primary text-white',
+                            $displayStats['avg_score'] >= 20 => 'badge-info text-white',
                             default => 'badge-ghost'
                         };
                     @endphp
-                    <x-mary-badge :value="__('ledger.scoring.avg_score') . ': ' . $scoreStats['avg_score']"
+                    <x-mary-badge :value="__('ledger.scoring.avg_score') . ': ' . $displayStats['avg_score']"
                                  icon="o-chart-bar"
                                  class="{{ $avgScoreClass }} badge-sm font-bold shadow-sm" />
-                    
-                    <x-mary-badge :value="__('ledger.scoring.max') . ': ' . $scoreStats['max_score']"
+
+                    <x-mary-badge :value="__('ledger.scoring.max') . ': ' . $displayStats['max_score']"
                                  icon="o-arrow-trending-up"
                                  class="badge-ghost badge-sm font-medium opacity-70" />
-                    
+
                     <div class="text-[10px] text-base-content/40 font-medium px-1">
-                        ({{ $scoreStats['count'] }}{{ __('ledger.records') }})
+                        ({{ $displayStats['count'] }}{{ __('ledger.records') }})
                     </div>
+
+                    @if($overallStats && $pageStats && $pageStats['count'] !== $overallStats['count'])
+                        <div class="text-[10px] text-base-content/30 font-medium px-1">
+                            {{ __('ledger.scoring.this_page') }}: {{ $pageStats['avg_score'] }} / {{ $pageStats['count'] }}{{ __('ledger.records') }}
+                        </div>
+                    @endif
                 </div>
             @endif
 

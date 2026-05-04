@@ -29,6 +29,7 @@
             :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
             :filteredColumnDefines="$displayColumnsWithMock"
             :scoreStats="$scoreStats"
+            :overallStats="$overallStats"
             :currentTenantId="$currentTenantId"
         />
 
