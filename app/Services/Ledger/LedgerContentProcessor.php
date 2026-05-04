@@ -138,6 +138,7 @@ class LedgerContentProcessor
                         $currentValueHtml = (string) $this->columnHtmlService
                             ->setAttachmentCollection($allAttachments)
                             ->setAttachmentContents($attachedMetaData)
+                            ->setSource('ledger-content-processor')
                             ->show($columnDefine, $change['current_value'], true, [], '', false, $ledgerRecord, $highlight);
                     }
 
@@ -150,6 +151,7 @@ class LedgerContentProcessor
                         $oldValueHtml = (string) $this->columnHtmlService
                             ->setAttachmentCollection($allAttachments)
                             ->setAttachmentContents([]) // 過去の個別指定はクリア
+                            ->setSource('ledger-content-processor')
                             ->show($columnDefine, $change['old_value'], true, [], '', false, $ledgerRecord, $highlight);
                     }
 

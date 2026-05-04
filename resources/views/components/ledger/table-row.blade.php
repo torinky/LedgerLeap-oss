@@ -134,6 +134,7 @@
                             $allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'),
                         )
                             ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
+                            ->setSource('table-row')
                             ->show(
                                 $columnDefine,
                                 $ledgerRecord->content[$columnDefine->id],

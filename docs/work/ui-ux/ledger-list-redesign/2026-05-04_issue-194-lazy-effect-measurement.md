@@ -83,9 +83,10 @@ standalone RecordsTable:
   4904ms  461KB   ← 同上
  12867ms  860KB   ← 台帳数が多いフォルダ
 ```
-- 原因は `ColumnHtmlService::show()` の `view()->render()` を毎セル実行している Blade ループ
-  （Issue #194 の直前コメント「方針B」に相当）
-- 台帳数 × 列数 = 数百回の PHP サブビューコンパイルが 1 リクエスト内で直列実行
+- `ColumnHtmlService::show()` の files 列は分離計測済みで、4 添付の代表ケースでは `show()` median **8.761ms** / `prepareFilesData()` median **2.293ms** / Blade render median **4.751ms**
+- Blade render の方が `prepareFilesData()` より重いが、単体セルのコストは ms オーダーに収まっており、一覧本体の 5〜13s を直接説明する主因とは言いにくい
+- 添付ファイルカラム自体は `RecordsTableRow` の lazy-load 経路に分離されているため、一覧本体の主因としては引き続き切り離して考える
+- 台帳数 × 列数 = 数百回の PHP サブビュー描画が 1 リクエスト内で直列実行される可能性は残るが、まずは `RecordsTable::render()` 側と他の再描画経路を優先して見る
 
 #### 体感的な「完了までの時間」は未改善
 - `localhost2.har`: content complete = interactive = 6〜15s
@@ -97,8 +98,8 @@ standalone RecordsTable:
 ## 5. 今後の要処置（優先度順）
 
 ### 優先度 1 — 方針B: ColumnHtmlService サブビュー描画の置き換え
-- `ColumnHtmlService::show()` 内の `view('components.ledger.attachment-list', [...]) ->render()` を HTML 直接生成に置き換える
-- 目標: RecordsTable 単独ロードを **<1s** に短縮
+- `ColumnHtmlService::show()` 内の `view('components.ledger.attachment-list', [...])->render()` を、まずは `prepareFilesData()` / Blade render / セル描画に分けて計測する
+- 目標: どの経路が支配的かを特定し、最適化対象を事実ベースで決める
 - 関連 Issue: #194 Sprint 5、方針B
 
 ### 優先度 2 — #200 状態ベースキャッシュ
@@ -125,6 +126,8 @@ python3 docs/harnesses/browser-har-analysis/scripts/har_lazy_analysis.py \
 ## 7. 参照
 
 - Issue: [#194](https://github.com/torinky/LedgerLeap/issues/194)
+- フォローアップ草案: `docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-performance-hotspot-reassessment-draft.md`
+- ベンチマーク runner: `docs/work/ui-ux/ledger-list-redesign/2026-05-04_column_html_benchmark.php`
 - コミット: `0c6f0f99` (方針A: lazy-load RecordsTable)
 - ハーネス: `docs/harnesses/browser-har-analysis/scripts/har_lazy_analysis.py`
 - 先行証跡: `docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md`

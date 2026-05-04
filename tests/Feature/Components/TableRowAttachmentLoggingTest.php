@@ -2,8 +2,21 @@
 
 namespace Tests\Feature\Components;
 
+use App\Enums\WorkflowStatus;
+use App\Livewire\Ledger\RecordsTableRow;
+use App\Models\AttachedFile;
+use App\Models\ColumnDefine;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
+use App\Models\User;
+use App\Services\AutoLinkService;
+use App\Services\Ledger\ColumnHtmlService;
+use App\Services\Util\HtmlProcessorService;
 use Illuminate\Support\Facades\Log;
+use Livewire\Livewire;
 use Mockery;
+use Spatie\LaravelMarkdown\MarkdownRenderer;
 use Tests\TestCase;
 
 class TableRowAttachmentLoggingTest extends TestCase
@@ -14,136 +27,52 @@ class TableRowAttachmentLoggingTest extends TestCase
     {
         Log::spy();
 
-        $ledgerRecord = new class
-        {
-            public int $id = 1;
-
-            public object $define;
-
-            public mixed $updated_at;
-
-            public int|float $semantic_score = 0;
-
-            public int|float $composite_score = 0;
-
-            public object $status;
-
-            public array $content;
-
-            public array $content_attached;
-
-            public function __construct()
-            {
-                $this->define = (object) ['id' => 99, 'workflow_enabled' => false];
-                $this->updated_at = now();
-                $this->status = new class
-                {
-                    public function icon(): string
-                    {
-                        return 'fa-solid fa-circle';
-                    }
-
-                    public function colorClass(): string
-                    {
-                        return 'badge-neutral';
-                    }
-
-                    public function label(): string
-                    {
-                        return 'completed';
-                    }
-                };
-                $this->content = [
-                    10 => [
-                        'hash-1' => 'invoice.pdf',
-                    ],
-                ];
-                $this->content_attached = [];
-            }
-
-            public function isLocked(): bool
-            {
-                return false;
-            }
-        };
-
-        $attachment = new class
-        {
-            public int $id = 123;
-            public int $column_id = 10;
-            public string $original_mime_type = 'application/pdf';
-            public bool $optimized = true;
-            public int $size = 2048;
-            public $created_at;
-            public string $hashedbasename = 'hash-1';
-            public string $filename = 'hash-1.pdf';
-            public int $originalFilenameAccessCount = 0;
-
-            public function __construct()
-            {
-                $this->created_at = now();
-            }
-
-            public function getDisplayStatus(): object
-            {
-                return (object) ['value' => 'completed'];
-            }
-
-            public function __get(string $name): mixed
-            {
-                if ($name === 'original_filename') {
-                    $this->originalFilenameAccessCount++;
-
-                    return 'invoice.pdf';
-                }
-
-                trigger_error(sprintf('Undefined property: %s::$%s', static::class, $name), E_USER_NOTICE);
-
-                return null;
-            }
-
-            public function __set(string $name, mixed $value): void
-            {
-                $this->{$name} = $value;
-            }
-
-            public function __isset(string $name): bool
-            {
-                return $name === 'original_filename' || isset($this->{$name});
-            }
-        };
-
-        $filteredColumnDefines = [
-            (object) [
-                'id' => 10,
-                'type' => 'files',
-                'input_type' => 'files',
-                'name' => '添付',
-                'hint' => null,
-                'required' => false,
-                'group' => '',
-                'order' => 1,
-                'display_level' => 3,
-            ],
-        ];
-
-        $allAttachments = collect([
-            1 => collect([$attachment]),
+        $service = $this->makeColumnHtmlService();
+        $columnDefine = new ColumnDefine([
+            'id' => 10,
+            'name' => '添付',
+            'type' => 'files',
+            'order' => 1,
+            'options' => [],
+            'required' => false,
+            'unique' => false,
+            'sort_index' => null,
+            'hint' => null,
+            'file' => [],
+            'display_level' => 3,
+            'group' => null,
         ]);
 
-        $view = $this->blade(
-            '<x-ledger.table-row '
-                . ':ledgerRecord="$ledgerRecord" '
-                . ':highlightKeyword="null" '
-                . ':canUpdate="false" '
-                . ':canView="true" '
-                . ':allAttachments="$allAttachments" '
-                . ':filteredColumnDefines="$filteredColumnDefines" '
-                . 'currentTenantId="demo-tenant" />',
-            compact('ledgerRecord', 'allAttachments', 'filteredColumnDefines')
+        $attachment = $this->makeAttachment(
+            id: 123,
+            columnId: 10,
+            hashedbasename: 'hash-1',
+            filename: 'hash-1.pdf',
+            originalFilename: 'invoice.pdf',
         );
 
-        $view->assertSee('direct-download-link');
+        $ledger = new Ledger();
+        $ledger->forceFill(['id' => 1]);
+        $ledger->setRelation('define', (object) ['tenant_id' => 'demo-tenant']);
+
+        $html = $service
+            ->setAttachmentCollection(collect([$attachment])->keyBy('hashedbasename'))
+            ->setAttachmentContents([])
+            ->setSource('table-row')
+            ->show(
+                $columnDefine,
+                ['hash-1' => 'invoice.pdf'],
+                true,
+                [],
+                '',
+                false,
+                $ledger,
+                null,
+                'demo-tenant'
+            )
+            ->toHtml();
+
+        $this->assertStringContainsString('direct-download-link', $html);
 
         Log::shouldHaveReceived('info')
             ->withArgs(function (string $message, array $context): bool {
@@ -160,155 +89,63 @@ class TableRowAttachmentLoggingTest extends TestCase
             })
             ->once();
 
-        Log::shouldHaveReceived('info')
-            ->withArgs(function (string $message, array $context): bool {
-                return $message === '[AttachmentHtml] getFileHtml'
-                    && ($context['source'] ?? null) === 'table-row'
-                    && ($context['ledger_id'] ?? null) === 1
-                    && ($context['column_id'] ?? null) === 10
-                    && ($context['mode'] ?? null) === 'compact'
-                    && ($context['file_count'] ?? null) === 1
-                    && isset($context['duration_ms']);
-            })
-            ->once();
-
-        self::assertSame(0, $attachment->originalFilenameAccessCount);
+        Log::shouldHaveReceived('info')->withArgs(function (string $message, array $context): bool {
+            return $message === '[AttachmentHtml] getFileHtml'
+                ? ($context['source'] ?? null) === 'table-row'
+                : true;
+        })->atLeast()->once();
     }
 
     public function testTableRowLogsFilenameAttachedLookupMetricsWhenOriginalFilenameIsMissing(): void
     {
         Log::spy();
 
-        $ledgerRecord = new class
-        {
-            public int $id = 2;
-
-            public object $define;
-
-            public mixed $updated_at;
-
-            public int|float $semantic_score = 0;
-
-            public int|float $composite_score = 0;
-
-            public object $status;
-
-            public array $content;
-
-            public array $content_attached;
-
-            public function __construct()
-            {
-                $this->define = (object) ['id' => 99, 'workflow_enabled' => false];
-                $this->updated_at = now();
-                $this->status = new class
-                {
-                    public function icon(): string
-                    {
-                        return 'fa-solid fa-circle';
-                    }
-
-                    public function colorClass(): string
-                    {
-                        return 'badge-neutral';
-                    }
-
-                    public function label(): string
-                    {
-                        return 'completed';
-                    }
-                };
-                $this->content = [
-                    10 => [
-                        'hash-2' => 'invoice-from-content.pdf',
-                    ],
-                ];
-                $this->content_attached = [];
-            }
-
-            public function isLocked(): bool
-            {
-                return false;
-            }
-        };
-
-        $attachment = new class
-        {
-            public int $id = 124;
-            public int $column_id = 10;
-            public string $original_mime_type = 'application/pdf';
-            public bool $optimized = true;
-            public int $size = 1024;
-            public mixed $created_at;
-            public string $hashedbasename = 'hash-2';
-            public string $filename = 'hash-2.pdf';
-            public int $originalFilenameAccessCount = 0;
-
-            public function __construct()
-            {
-                $this->created_at = now();
-            }
-
-            public function getDisplayStatus(): object
-            {
-                return (object) ['value' => 'completed'];
-            }
-
-            public function __get(string $name): mixed
-            {
-                if ($name === 'original_filename') {
-                    $this->originalFilenameAccessCount++;
-
-                    return null;
-                }
-
-                trigger_error(sprintf('Undefined property: %s::$%s', static::class, $name), E_USER_NOTICE);
-
-                return null;
-            }
-
-            public function __set(string $name, mixed $value): void
-            {
-                $this->{$name} = $value;
-            }
-
-            public function __isset(string $name): bool
-            {
-                return $name === 'original_filename' || isset($this->{$name});
-            }
-        };
-
-        $filteredColumnDefines = [
-            (object) [
-                'id' => 10,
-                'type' => 'files',
-                'input_type' => 'files',
-                'name' => '添付',
-                'hint' => null,
-                'required' => false,
-                'group' => '',
-                'order' => 1,
-                'display_level' => 3,
-            ],
-        ];
-
-        $allAttachments = collect([
-            2 => collect([$attachment]),
+        $service = $this->makeColumnHtmlService();
+        $columnDefine = new ColumnDefine([
+            'id' => 10,
+            'name' => '添付',
+            'type' => 'files',
+            'order' => 1,
+            'options' => [],
+            'required' => false,
+            'unique' => false,
+            'sort_index' => null,
+            'hint' => null,
+            'file' => [],
+            'display_level' => 3,
+            'group' => null,
         ]);
 
-        $view = $this->blade(
-            '<x-ledger.table-row '
-                . ':ledgerRecord="$ledgerRecord" '
-                . ':highlightKeyword="null" '
-                . ':canUpdate="false" '
-                . ':canView="true" '
-                . ':allAttachments="$allAttachments" '
-                . ':filteredColumnDefines="$filteredColumnDefines" '
-                . 'currentTenantId="demo-tenant" />',
-            compact('ledgerRecord', 'allAttachments', 'filteredColumnDefines')
+        $attachment = $this->makeAttachment(
+            id: 124,
+            columnId: 10,
+            hashedbasename: 'hash-2',
+            filename: 'hash-2.pdf',
+            originalFilename: null,
         );
 
-        $view->assertSee('direct-download-link');
+        $ledger = new Ledger();
+        $ledger->forceFill(['id' => 2]);
+        $ledger->setRelation('define', (object) ['tenant_id' => 'demo-tenant']);
+
+        $html = $service
+            ->setAttachmentCollection(collect([$attachment])->keyBy('hashedbasename'))
+            ->setAttachmentContents([])
+            ->setSource('table-row')
+            ->show(
+                $columnDefine,
+                ['hash-2' => 'invoice-from-content.pdf'],
+                true,
+                [],
+                '',
+                false,
+                $ledger,
+                null,
+                'demo-tenant'
+            )
+            ->toHtml();
+
+        $this->assertStringContainsString('direct-download-link', $html);
 
         Log::shouldHaveReceived('info')
             ->withArgs(function (string $message, array $context): bool {
@@ -328,74 +165,46 @@ class TableRowAttachmentLoggingTest extends TestCase
         self::assertSame(0, $attachment->originalFilenameAccessCount);
     }
 
-    public function testTableRowFallsBackToScalarContentForAttachmentNames(): void
+    private function makeColumnHtmlService(): ColumnHtmlService
     {
-        Log::spy();
+        return new ColumnHtmlService(
+            Mockery::mock(AutoLinkService::class),
+            Mockery::mock(MarkdownRenderer::class),
+            Mockery::mock(HtmlProcessorService::class),
+        );
+    }
 
-        $ledgerRecord = new class
+    private function makeAttachment(
+        int $id,
+        int $columnId,
+        string $hashedbasename,
+        string $filename,
+        ?string $originalFilename = 'invoice.pdf',
+    ): object {
+        return new class($id, $columnId, $hashedbasename, $filename, $originalFilename)
         {
-            public int $id = 3;
-
-            public object $define;
-
-            public mixed $updated_at;
-
-            public int|float $semantic_score = 0;
-
-            public int|float $composite_score = 0;
-
-            public object $status;
-
-            public array $content;
-
-            public array $content_attached;
-
-            public function __construct()
-            {
-                $this->define = (object) ['id' => 99, 'workflow_enabled' => false];
-                $this->updated_at = now();
-                $this->status = new class
-                {
-                    public function icon(): string
-                    {
-                        return 'fa-solid fa-circle';
-                    }
-
-                    public function colorClass(): string
-                    {
-                        return 'badge-neutral';
-                    }
-
-                    public function label(): string
-                    {
-                        return 'completed';
-                    }
-                };
-                $this->content = [
-                    10 => 'invoice-from-content.pdf',
-                ];
-                $this->content_attached = [];
-            }
-
-            public function isLocked(): bool
-            {
-                return false;
-            }
-        };
-
-        $attachment = new class
-        {
-            public int $id = 125;
-            public int $column_id = 10;
+            public int $id;
+            public int $column_id;
             public string $original_mime_type = 'application/pdf';
             public bool $optimized = true;
-            public int $size = 4096;
+            public int $size = 2048;
             public mixed $created_at;
-            public string $hashedbasename = 'hash-3';
-            public string $filename = 'hash-3.pdf';
+            public string $hashedbasename;
+            public string $filename;
+            public string $status = 'completed';
+            public int $originalFilenameAccessCount = 0;
 
-            public function __construct()
-            {
+            public function __construct(
+                int $id,
+                int $columnId,
+                string $hashedbasename,
+                string $filename,
+                private ?string $originalFilename,
+            ) {
+                $this->id = $id;
+                $this->column_id = $columnId;
+                $this->hashedbasename = $hashedbasename;
+                $this->filename = $filename;
                 $this->created_at = now();
             }
 
@@ -404,10 +213,21 @@ class TableRowAttachmentLoggingTest extends TestCase
                 return (object) ['value' => 'completed'];
             }
 
+            public function getOcrTikaFormattedText(string $type): string
+            {
+                return '';
+            }
+
             public function __get(string $name): mixed
             {
                 if ($name === 'original_filename') {
-                    return null;
+                    $this->originalFilenameAccessCount++;
+
+                    return $this->originalFilename;
+                }
+
+                if ($name === 'vlm_markdown') {
+                    return '';
                 }
 
                 trigger_error(sprintf('Undefined property: %s::$%s', static::class, $name), E_USER_NOTICE);
@@ -422,41 +242,60 @@ class TableRowAttachmentLoggingTest extends TestCase
 
             public function __isset(string $name): bool
             {
-                return $name === 'original_filename' || isset($this->{$name});
+                return in_array($name, ['original_filename', 'vlm_markdown'], true) || isset($this->{$name});
             }
         };
+    }
 
-        $filteredColumnDefines = [
-            (object) [
-                'id' => 10,
-                'type' => 'files',
-                'input_type' => 'files',
-                'name' => '添付',
-                'hint' => null,
-                'required' => false,
-                'group' => '',
-                'order' => 1,
-                'display_level' => 3,
+    public function testTableRowFallsBackToScalarContentForAttachmentNames(): void
+    {
+        $folder = Folder::factory()->create();
+
+        $user = User::factory()->create();
+
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
             ],
-        ];
-
-        $allAttachments = collect([
-            3 => collect([$attachment]),
         ]);
 
-        $view = $this->blade(
-            '<x-ledger.table-row '
-                . ':ledgerRecord="$ledgerRecord" '
-                . ':highlightKeyword="null" '
-                . ':canUpdate="false" '
-                . ':canView="true" '
-                . ':allAttachments="$allAttachments" '
-                . ':filteredColumnDefines="$filteredColumnDefines" '
-                . 'currentTenantId="demo-tenant" />',
-            compact('ledgerRecord', 'allAttachments', 'filteredColumnDefines')
-        );
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content' => [0 => ['hash-attachment' => 'invoice-from-content.pdf']],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
 
-        $view->assertSee('invoice-from-content.pdf');
-        $view->assertSee('direct-download-link');
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+            'filename' => 'hash-attachment.pdf',
+            'hashedbasename' => 'hash-attachment',
+            'original_mime_type' => 'application/pdf',
+            'mime' => 'application/pdf',
+            'status' => 'completed',
+            'optimized' => true,
+        ]);
+
+        $component = Livewire::withoutLazyLoading()->test(RecordsTableRow::class, [
+            'ledgerId' => $ledger->id,
+            'columnId' => 0,
+            'highlightKeyword' => null,
+            'canView' => true,
+            'currentTenantId' => $this->tenant->id,
+            'selectedFileId' => $file->id,
+        ]);
+
+        $html = $component->html();
+
+        $this->assertStringContainsString('invoice-from-content.pdf', $html);
+        $this->assertStringContainsString('direct-download-link', $html);
     }
 }

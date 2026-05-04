@@ -4,6 +4,7 @@ namespace App\Services\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Helpers\SearchHelper;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Services\AutoLinkService;
@@ -15,6 +16,8 @@ use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 class ColumnHtmlService
 {
+    use LogPerformance;
+
     private AutoLinkService $autoLinkService;
 
     private MarkdownRenderer $markdownRenderer;
@@ -40,6 +43,10 @@ class ColumnHtmlService
     private $nameBase = '';
 
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
+
+    private ?Ledger $record = null;
+
+    private string $source = 'unknown';
 
     public const BADGE_CLASS_NAME = 'badge badge-outline badge-secondary text-base md:text-lg md:badge-lg gap-1';
 
@@ -86,6 +93,8 @@ class ColumnHtmlService
         ?string $highlight = null,
         ?string $tenantId = null
     ): HtmlString {
+        $startedAt = microtime(true);
+
         if (! $canView) {
             return new HtmlString('');
         }
@@ -96,6 +105,7 @@ class ColumnHtmlService
         }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
+        $this->record = $record;
         $this->tenantId = $tenantId ?? $record?->define?->tenant_id ?? null;
 
         // Mock Attachment Column Support
@@ -109,6 +119,7 @@ class ColumnHtmlService
             foreach ($mockFiles as &$mf) {
                 $mf['is_hit'] = SearchHelper::isFileDataHit($mf, $keywords);
             }
+            unset($mf);
 
             $html = view('components.ledger.attachment-list', [
                 'files' => $mockFiles,
@@ -116,6 +127,10 @@ class ColumnHtmlService
                 'tenantId' => $this->tenantId,
                 'search' => $highlight, // 検索キーワードを渡す
             ])->render();
+
+            $this->logPerformance('column_html_show_ms', (microtime(true) - $startedAt) * 1000, [
+                'render_kind' => 'mock_attachment',
+            ]);
 
             return new HtmlString($html);
         }
@@ -191,6 +206,12 @@ class ColumnHtmlService
             $html = '<div class="prose dark:prose-invert max-w-none">'.$html.'</div>';
         }
 
+        $this->logPerformance('column_html_show_ms', (microtime(true) - $startedAt) * 1000, [
+            'render_kind' => $type === 'files' ? 'files' : ($type ?? 'unknown'),
+            'has_highlight' => (bool) $highlight,
+            'as_create' => $asCreate,
+        ]);
+
         return new HtmlString($html ?? '');
     }
 
@@ -235,6 +256,13 @@ class ColumnHtmlService
         $this->id = $idPrefix.$this->valueNameBase;
     }
 
+    public function setSource(string $source): static
+    {
+        $this->source = $source;
+
+        return $this;
+    }
+
     private function getColumnDefineProperty(string $key, $default = null)
     {
         if (is_object($this->columnDefineData) && isset($this->columnDefineData->{$key})) {
@@ -245,6 +273,18 @@ class ColumnHtmlService
         }
 
         return $default;
+    }
+
+    protected function getPerformanceContext(): array
+    {
+        return [
+            'source' => $this->source,
+            'ledger_id' => $this->record?->id,
+            'column_id' => $this->getColumnDefineProperty('id'),
+            'column_type' => $this->getColumnDefineProperty('type'),
+            'mode' => $this->attrs['mode'] ?? null,
+            'tenant_id' => $this->tenantId,
+        ];
     }
 
     public function setAttachmentCollection(Collection $attachments): static
@@ -304,22 +344,41 @@ class ColumnHtmlService
 
         $startedAt = microtime(true);
 
+        $prepareStartedAt = microtime(true);
         $files = $this->prepareFilesData($highlight);
+        $prepareFilesDurationMs = (microtime(true) - $prepareStartedAt) * 1000;
 
-        Log::info('[AttachmentHtml] getFileHtml', [
-            'mode' => $mode,
-            'column_id' => $this->getColumnDefineProperty('id'),
-            'file_count' => count($files),
-            'attachment_count' => $this->attachments->count(),
-            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
-        ]);
-
-        return view('components.ledger.attachment-list', [
+        $bladeRenderStartedAt = microtime(true);
+        $html = view('components.ledger.attachment-list', [
             'files' => $files,
             'mode' => $mode,
             'tenantId' => $this->tenantId,
             'search' => $highlight,
         ])->render();
+        $bladeRenderDurationMs = (microtime(true) - $bladeRenderStartedAt) * 1000;
+
+        $this->logPerformance('column_html_prepare_files_ms', $prepareFilesDurationMs, [
+            'mode' => $mode,
+            'file_count' => count($files),
+        ]);
+        $this->logPerformance('column_html_blade_render_ms', $bladeRenderDurationMs, [
+            'mode' => $mode,
+            'file_count' => count($files),
+        ]);
+
+        Log::info('[AttachmentHtml] getFileHtml', [
+            'source' => $this->source,
+            'ledger_id' => $this->record?->id,
+            'column_id' => $this->getColumnDefineProperty('id'),
+            'mode' => $mode,
+            'file_count' => count($files),
+            'attachment_count' => $this->attachments->count(),
+            'prepare_files_ms' => round($prepareFilesDurationMs, 2),
+            'blade_render_ms' => round($bladeRenderDurationMs, 2),
+            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+        ]);
+
+        return $html;
     }
 
     /**
@@ -332,21 +391,58 @@ class ColumnHtmlService
     {
         $startedAt = microtime(true);
         $files = [];
+        $filenameMap = [];
         $lookupDurationMs = 0.0;
         $urlBuildDurationMs = 0.0;
         $hitDetectionDurationMs = 0.0;
         $missingAttachmentCount = 0;
 
+        $filenameMapStartedAt = microtime(true);
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
+            $filenameMap[$hashedFilename] = $originalFilename;
+        }
+        $filenameMapBuildDurationMs = (microtime(true) - $filenameMapStartedAt) * 1000;
+
+        $filenameOriginalDurationMs = 0.0;
+        $filenameAttachedLookupDurationMs = 0.0;
+        $filenameBasenameDurationMs = 0.0;
+        $arrayAssemblyDurationMs = 0.0;
+        $payloadBuildDurationMs = 0.0;
+        $fileBuildDurationMs = 0.0;
+        $fallbackBuildDurationMs = 0.0;
+        $routeBuildDurationMs = 0.0;
+        $downloadBundleDurationMs = 0.0;
+        $scalarFieldDurationMs = 0.0;
+        $hitFlagDurationMs = 0.0;
+        $filenameResolveDurationMs = 0.0;
+
+        foreach ($filenameMap as $hashedFilename => $originalFilename) {
+            $fileStartedAt = microtime(true);
+
             $phaseStartedAt = microtime(true);
             $attachment = $this->attachments->get($hashedFilename);
             $lookupDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $filenameAttachedLookupDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             if (! $attachment) {
                 $missingAttachmentCount++;
 
+                $fallbackBuildDurationMs += (microtime(true) - $fileStartedAt) * 1000;
                 continue;
             }
+
+            $resolveStartedAt = microtime(true);
+            $phaseStartedAt = microtime(true);
+            $originalFilenameResolved = $originalFilename;
+            if (! is_string($originalFilenameResolved) || $originalFilenameResolved === '') {
+                $originalFilenameResolved = $attachment->original_filename ?? $attachment->filename ?? '';
+            }
+            $filenameOriginalDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+
+            $phaseStartedAt = microtime(true);
+            $basename = pathinfo($originalFilenameResolved, PATHINFO_FILENAME);
+            $filenameBasenameDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $filenameResolveDurationMs += (microtime(true) - $resolveStartedAt) * 1000;
 
             // ダウンロードURLの構築
             $phaseStartedAt = microtime(true);
@@ -366,12 +462,13 @@ class ColumnHtmlService
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
                 $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
             }
-            $urlBuildDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $routeBuildDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             // ダウンロードリンクの整理
             $primaryDownload = null;
             $secondaryDownload = null;
 
+            $phaseStartedAt = microtime(true);
             if (str_starts_with($attachment->original_mime_type, 'image/')) {
                 // 画像ファイル
                 // メイン: 元画像 (original=true)
@@ -411,11 +508,13 @@ class ColumnHtmlService
                     'icon' => 'fa-download',
                 ];
             }
+            $downloadBundleDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
+            $phaseStartedAt = microtime(true);
             $fileData = [
                 'id' => $attachment->id,
                 'column_id' => $attachment->column_id,
-                'filename' => $originalFilename,
+                'filename' => $originalFilenameResolved,
                 'mime' => $attachment->original_mime_type ?? $attachment->mime,
                 'status' => $attachment->status instanceof AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得
                 'size' => $attachment->size,
@@ -426,6 +525,7 @@ class ColumnHtmlService
                 // エラーメッセージなどが必要ならここに追加
                 'error_message' => $attachment->error_message ?? null,
             ];
+            $payloadBuildDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             // 検索ヒット判定を追加
             $phaseStartedAt = microtime(true);
@@ -434,7 +534,7 @@ class ColumnHtmlService
                 // ファイル名、VLMテキスト、OCR/Tikaテキストで検索ヒット判定
                 $ocrText = $attachment->getOcrTikaFormattedText('ocr');
                 $tikaText = $attachment->getOcrTikaFormattedText('tika');
-                $fileData['is_hit'] = SearchHelper::hasHit($originalFilename, $keywords)
+                $fileData['is_hit'] = SearchHelper::hasHit($originalFilenameResolved, $keywords)
                     || SearchHelper::hasHit($attachment->vlm_markdown, $keywords)
                     || SearchHelper::hasHit($ocrText, $keywords)
                     || SearchHelper::hasHit($tikaText, $keywords);
@@ -442,18 +542,36 @@ class ColumnHtmlService
                 $fileData['is_hit'] = false;
             }
             $hitDetectionDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $hitFlagDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
+            $phaseStartedAt = microtime(true);
             $files[] = $fileData;
+            $arrayAssemblyDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+
+            $fileBuildDurationMs += (microtime(true) - $fileStartedAt) * 1000;
         }
 
         Log::info('[AttachmentHtml] prepareFilesData', [
+            'source' => $this->source,
+            'ledger_id' => $this->record?->id,
             'column_id' => $this->getColumnDefineProperty('id'),
             'file_count' => count($files),
             'attachment_count' => $this->attachments->count(),
             'missing_attachment_count' => $missingAttachmentCount,
             'lookup_ms' => round($lookupDurationMs, 2),
-            'url_build_ms' => round($urlBuildDurationMs, 2),
-            'hit_detection_ms' => round($hitDetectionDurationMs, 2),
+            'route_build_ms' => round($routeBuildDurationMs, 2),
+            'download_bundle_ms' => round($downloadBundleDurationMs, 2),
+            'scalar_field_ms' => round($scalarFieldDurationMs, 2),
+            'hit_flag_ms' => round($hitFlagDurationMs, 2),
+            'filename_resolve_ms' => round($filenameResolveDurationMs, 2),
+            'filename_map_build_ms' => round($filenameMapBuildDurationMs, 2),
+            'filename_original_ms' => round($filenameOriginalDurationMs, 2),
+            'filename_attached_lookup_ms' => round($filenameAttachedLookupDurationMs, 2),
+            'filename_basename_ms' => round($filenameBasenameDurationMs, 2),
+            'array_assembly_ms' => round($arrayAssemblyDurationMs, 2),
+            'payload_build_ms' => round($payloadBuildDurationMs, 2),
+            'file_build_ms' => round($fileBuildDurationMs, 2),
+            'fallback_build_ms' => round($fallbackBuildDurationMs, 2),
             'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
         ]);
 

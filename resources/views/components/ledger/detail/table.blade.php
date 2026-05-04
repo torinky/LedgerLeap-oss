@@ -18,11 +18,11 @@
                     @endphp
                     @foreach($columnsToDisplay as $cKey => $columnDefine)
                         <tr class="hover:bg-base-300">
-                            <th class="w-1/3 lg:w-1/4 break-words">
+                            <th class="w-1/3 lg:w-1/4 wrap-break-word">
                                 {{-- $columnDefine が配列かオブジェクトか判定 --}}
                                 {{ data_get($columnDefine, 'name') }}
                             </th>
-                            <td class="break-words">
+                            <td class="wrap-break-word">
                                 @php
                                     $columnId = data_get($columnDefine, 'id');
                                 @endphp
@@ -33,6 +33,7 @@
                                 @else
                                     {!! ColumnHtml::setAttachmentCollection($allAttachments->keyBy('hashedbasename'))
                                         ->setAttachmentContents($ledgerRecord->content_attached[$columnId] ?? [])
+                                        ->setSource('ledger-detail-table')
                                         ->show($columnDefine, $ledgerRecord->content[$columnId] ?? '', $canView, [], '', false, $ledgerRecord, $highlight = null) !!}
                                 @endif
                             </td>
