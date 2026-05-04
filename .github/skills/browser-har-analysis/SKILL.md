@@ -86,6 +86,30 @@ Typical output should answer:
 - Is RecordsTable being lazy-loaded (separate from IndexManager)?
 - Did debug noise disappear between captures?
 
+### パフォーマンスログ集計（HAR と組み合わせて使う）
+```bash
+python3 docs/harnesses/browser-har-analysis/scripts/analyze_perf_log.py \
+    storage/logs/laravel-YYYY-MM-DD.log
+```
+
+`column_html_show_ms` エントリを集計する。HAR の wait time と照合することでサーバサイドのボトルネックを特定できる。
+
+出力に含まれる情報:
+- **render_kind 別集計**（count / sum / mean / median / max）
+- **source 別集計**（table-row / ledger-detail-table など呼び出し元別）
+- **ledger_id 別 Top 15**（特定台帳でコストが集中していないかの確認）
+- **20ms 超スパイク一覧**（column型・ledger・column_id 付きで降順）
+
+#### 確認パターン
+
+| 観察 | 示唆 |
+|------|------|
+| `textarea` が sum の 80% 超 | `MarkdownRenderer` + `AutoLinkService` がボトルネック → キャッシュ検討 |
+| `auto_number` に 100ms 超スパイク | `AutoLinkService` の正規表現が特定 ledger で遅い可能性 |
+| `select` / `chk` が遅い | ColumnDefine の eager load 漏れを疑う |
+| wait ≈ total（HAR） | 全遅延がサーバサイド PHP 処理 |
+| wait << total（HAR） | ネットワーク受信が遅い（レスポンスボディが大きい）|
+
 ## Output Contract
 
 When reporting results, include:
@@ -112,12 +136,17 @@ When reporting results, include:
    - `RT_med`: RecordsTable 単独ロード時間
    - content complete = IM + RT
 
-5. **Comparison summary**
+5. **パフォーマンスログ照合（analyze_perf_log.py）**
+   - `textarea` の sum が全体の何 % か
+   - 20ms 超スパイクの render_kind は何か
+   - wait ≈ total であればサーバサイドが主因
+
+6. **Comparison summary**
    - before / after deltas
    - what disappeared
    - what remains
 
-6. **Next action**
+7. **Next action**
    - whether to keep investigating network/DOM/UI layering
    - whether the bottleneck has moved to HTML, assets, or rerenders
 
@@ -133,10 +162,11 @@ When reporting results, include:
 
 - [`docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md`](../../../docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md)
 - [`docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-194-lazy-effect-measurement.md`](../../../docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-194-lazy-effect-measurement.md)
+- [`docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-localhost4-har-perf-analysis.md`](../../../docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-localhost4-har-perf-analysis.md)
 
 ## Freshness
 
 - status: confirmed
 - last_confirmed_at: 2026-05-04
 - recheck_after: 2026-08-04
-- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, or `har_lazy_analysis.py` being updated
+- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, or `analyze_perf_log.py` being updated
