@@ -57,6 +57,9 @@ class DefaultSortTest extends TestCase
             'permission' => \App\Enums\FolderPermissionType::READ,
             'modifier_id' => $this->user->id,
         ]);
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     /**

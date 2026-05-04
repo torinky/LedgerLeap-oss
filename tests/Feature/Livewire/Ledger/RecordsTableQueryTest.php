@@ -40,6 +40,9 @@ class RecordsTableQueryTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
+
         $this->originalRagEnabled = config('rag.enabled', false);
 
         $this->tenant = Tenant::create(['id' => 'test-'.uniqid('', true)]);
@@ -118,13 +121,18 @@ class RecordsTableQueryTest extends TestCase
     #[Test]
     public function it_shows_list_on_zero_matches()
     {
-        Livewire::withQueryParams([
-            'q' => 'non-existent-term',
-            'f' => [$this->folder->id],
-            'l' => [$this->ledgerDefine->id],
-            'cf' => $this->folder->id,
-        ])
-            ->test(IndexManager::class) // IndexManager を対象に
+        // RecordsTable は #[Lazy] により IndexManager から独立してレンダリングされるため、
+        // RecordsTable を直接テストして select_message が表示されることを確認する（setUp で withoutLazyLoading 済み）。
+        Livewire::actingAs($this->user)
+            ->test(
+                RecordsTable::class,
+                [
+                    'search' => 'non-existent-term',
+                    'selectedFolderIds' => [$this->folder->id],
+                    'selectedLedgerDefineIds' => [$this->ledgerDefine->id],
+                    'currentFolderId' => $this->folder->id,
+                ]
+            )
             ->assertOk()
             ->assertSee(__('ledger.select_message'));
     }

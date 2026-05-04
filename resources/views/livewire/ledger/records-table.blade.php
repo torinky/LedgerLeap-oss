@@ -48,12 +48,7 @@
                             $canCreate = auth()->user()->can('ledgerCreate', $ledgerDefine);
                             $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefine);
                             $canView = auth()->user()->can('ledgerView', $ledgerDefine);
-                            \Log::info('RecordsTable render loop: permissions', [
-                                'ledgerDefineId' => $ledgerDefineId,
-                                'canView' => $canView,
-                                'canUpdate' => $canUpdate,
-                                'user' => auth()->user()->email
-                            ]);
+
                         @endphp
                         <x-ledger.records-section
                             :ledgerDefineId="$ledgerDefineId"

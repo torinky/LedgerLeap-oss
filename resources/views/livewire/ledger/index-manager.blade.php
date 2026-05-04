@@ -340,7 +340,8 @@
                                                        :hasWorkflowEnabled="$hasWorkflowEnabled"
                                                        :keywords="$this->keywords" :tags="$tags" :highlights="$this->highlights"
                                                        :synonyms="$this->synonyms"
-                                                       wire:key="ledger-records-table-stable"/>
+                                                       :tenantId="$this->tenantId"
+                                                       wire:key="ledger-records-table-folder-{{ $currentFolderId }}"/>
                     </div>
                 </div>
 

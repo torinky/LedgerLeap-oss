@@ -2,18 +2,22 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\IndexManager;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\Notification;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -43,7 +47,10 @@ class TenantIsolationTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
 
         Notification::fake();
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     /**
@@ -77,7 +84,7 @@ class TenantIsolationTest extends TestCase
         ];
 
         foreach ($allPermissionNames as $permissionName) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $permissionName, 'guard_name' => 'web']);
         }
 
         // 作成した全ての権限をSuper Adminロールに同期
@@ -105,10 +112,10 @@ class TenantIsolationTest extends TestCase
             ]);
 
             // フォルダ権限を作成
-            \App\Models\RoleFolderPermission::create([
+            RoleFolderPermission::create([
                 'role_id' => $superAdminRole->id,
                 'folder_id' => $folder->id,
-                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'permission' => FolderPermissionType::ADMIN,
                 'creator_id' => self::$adminUser->id,
                 'modifier_id' => self::$adminUser->id,
             ]);
@@ -141,19 +148,19 @@ class TenantIsolationTest extends TestCase
             ]);
 
             // SuperAdmin には tenant2 のフォルダ権限も付与
-            \App\Models\RoleFolderPermission::create([
+            RoleFolderPermission::create([
                 'role_id' => $superAdminRole->id,
                 'folder_id' => $folder->id,
-                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'permission' => FolderPermissionType::ADMIN,
                 'creator_id' => self::$adminUser->id,
                 'modifier_id' => self::$adminUser->id,
             ]);
 
             // Tenant2User には tenant2 のフォルダ権限のみ付与
-            \App\Models\RoleFolderPermission::create([
+            RoleFolderPermission::create([
                 'role_id' => $tenant2Role->id,
                 'folder_id' => $folder->id,
-                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'permission' => FolderPermissionType::ADMIN,
                 'creator_id' => self::$adminUser->id,
                 'modifier_id' => self::$adminUser->id,
             ]);
@@ -223,7 +230,7 @@ class TenantIsolationTest extends TestCase
     /**
      * @Test
      *
-     * @see \Tests\Feature\TenantIsolationTest::validation_prevents_creating_relations_across_tenants
+     * @see TenantIsolationTest::validation_prevents_creating_relations_across_tenants
      * このテストは、台帳作成時に他テナントのフォルダIDを指定できてしまう脆弱性を検証する目的だったが、
      * アプリケーションの設計上、その操作自体が不可能であることが判明したため不要となった。
      * 経緯はドキュメントに記録済み。
@@ -246,7 +253,10 @@ class TenantIsolationTest extends TestCase
         $this->actingAs(self::$adminUser);
 
         // Context: tenant1
+        // Livewire::test() calls flushState() after each render, resetting $disableWhileTesting.
+        // So we must call withoutLazyLoading() before each Livewire::test() call.
         self::$tenant1->run(function () {
+            Livewire::withoutLazyLoading();
             Livewire::test(IndexManager::class, ['defineId' => self::$tenant1LedgerDefine->id])
                 ->assertSee('tenant1-data')
                 ->assertDontSee('tenant2-data');
@@ -254,6 +264,7 @@ class TenantIsolationTest extends TestCase
 
         // Context: tenant2
         self::$tenant2->run(function () {
+            Livewire::withoutLazyLoading();
             Livewire::test(IndexManager::class, ['defineId' => self::$tenant2LedgerDefine->id])
                 ->assertSee('tenant2-data')
                 ->assertDontSee('tenant1-data');

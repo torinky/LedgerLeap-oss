@@ -24,6 +24,8 @@ use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
+use Illuminate\View\View;
+use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive;
 use Livewire\WithPagination;
@@ -31,6 +33,7 @@ use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
+#[Lazy(isolate: false)]
 class RecordsTable extends BaseLivewireComponent
 {
     use HasSortingLabels, InitializesTenantContext, LogPerformance, Toast, WithPagination;
@@ -141,6 +144,16 @@ class RecordsTable extends BaseLivewireComponent
     public bool $isFileInspectorOpen = false;
 
     /**
+     * #[Lazy] プレースホルダー
+     * フォルダ切替時は IndexManager の応答（~100ms）にこのスケルトンが含まれる。
+     * 実コンテンツは別リクエストで非同期レンダリングされる。
+     */
+    public function placeholder(): View
+    {
+        return view('livewire.ledger.records-table-placeholder');
+    }
+
+    /**
      * コンポーネントが初めてリクエストされた時に実行される初期化処理
      *
      * @return void
@@ -162,7 +175,9 @@ class RecordsTable extends BaseLivewireComponent
             $this->success(session('success'));
         }
 
-        $this->currentTenantId = tenant()?->id;
+        $this->currentTenantId = tenant()?->id
+            ?? $this->tenantId  // #[Lazy] ロード時: boot() が $this->tenantId からテナント初期化済み
+            ?? null;
 
         // 状態初期化の多くは IndexManager (親) に移行したため、
         // RecordsTable では計算が必要なプロパティの初期化のみを行う。

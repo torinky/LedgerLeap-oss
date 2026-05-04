@@ -260,7 +260,7 @@
                     </div>
                 @elseif($isCompact)
                     {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
-                    <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
+                    <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20 ml-1 mt-1' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
                         x-show="showAll || {{ $index }} < displayLimit"
                         x-transition:enter="transition ease-out"
                         x-transition:enter-start="opacity-0 translate-y-1"

@@ -49,6 +49,9 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         $this->user->givePermissionTo('view_ledger_defines');
         Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
         $this->user->givePermissionTo('ledgerView');
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     protected function tearDown(): void

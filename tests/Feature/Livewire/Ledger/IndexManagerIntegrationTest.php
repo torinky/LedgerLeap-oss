@@ -61,6 +61,9 @@ class IndexManagerIntegrationTest extends TestCase
         ]);
 
         $this->be($this->user);
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     #[Test]
