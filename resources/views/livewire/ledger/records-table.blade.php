@@ -15,10 +15,9 @@
     $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 
-<div class="relative" x-data="confidentialityScrollTracker()"
+<div class="relative" x-data="confidentialityScrollTracker"
     x-on:file-inspector-selection-applied.window="if ($event.detail.selectedLedgerId) { $nextTick(() => { const row = document.getElementById('ledger-row-' + $event.detail.selectedLedgerId); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.focus({ preventScroll: true }); } }); }"
-    x-init="init()"
-    x-on:ledger-sections-rendered.window="init()">
+    x-on:ledger-sections-rendered.window="setupObserver()">
 
     {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">
@@ -125,74 +124,4 @@
     <livewire:attached-file.file-inspector />
 </div>
 
-<script>
-function confidentialityScrollTracker() {
-    return {
-        observer: null,
-        lastRatio: {},
 
-        init() {
-            // 古い Observer をクリーンアップ（Livewire 更新時の再実行対策）
-            if (this.observer) {
-                this.observer.disconnect();
-                this.observer = null;
-            }
-            this.lastRatio = {};
-
-            if (! ('IntersectionObserver' in window)) {
-                return;
-            }
-
-            this.$nextTick(() => {
-                try {
-                    const sections = this.$el.querySelectorAll('[data-ledger-define-section]');
-                    if (sections.length === 0) {
-                        return;
-                    }
-
-                    // 単一セクションの場合も、そのセクションの LedgerDefine ID を通知する
-                    if (sections.length === 1) {
-                        const id = sections[0].getAttribute('data-ledger-define-section');
-                        Livewire.dispatch('confidentialitySectionChanged', {
-                            ledgerDefineId: parseInt(id, 10),
-                        });
-                        return;
-                    }
-
-                    this.observer = new IntersectionObserver(
-                    (entries) => {
-                        entries.forEach((entry) => {
-                            const id = entry.target.getAttribute('data-ledger-define-section');
-                            this.lastRatio[id] = entry.intersectionRatio;
-                        });
-
-                        let bestId = null;
-                        let bestRatio = 0;
-                        for (const [id, ratio] of Object.entries(this.lastRatio)) {
-                            if (ratio > bestRatio) {
-                                bestRatio = ratio;
-                                bestId = id;
-                            }
-                        }
-
-                        if (bestId !== null) {
-                            Livewire.dispatch('confidentialitySectionChanged', {
-                                ledgerDefineId: parseInt(bestId, 10),
-                            });
-                        }
-                    },
-                    {
-                        root: null,
-                        threshold: [0, 0.25, 0.5, 0.75, 1.0],
-                    }
-                );
-
-                sections.forEach((section) => this.observer.observe(section));
-                } catch (e) {
-                    console.error('[confidentialityScrollTracker] error:', e);
-                }
-            });
-        },
-    };
-}
-</script>
