@@ -56,6 +56,9 @@ class RecordsTableActionsTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
         $this->tenant = $this->getTenant();
 
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
+
         $this->user = User::factory()->create();
 
         Permission::firstOrCreate(['name' => 'view_ledger_defines', 'guard_name' => 'web']);
@@ -209,6 +212,61 @@ class RecordsTableActionsTest extends TestCase
         );
         $this->assertStringContainsString(__('ledger.download_optimized'), $html);
         $this->assertStringContainsString('ring-2 ring-primary/60 bg-primary/5', $html);
+    }
+
+    #[Test]
+    public function records_table_row_highlight_keyword_is_reactive(): void
+    {
+        $reflection = new \ReflectionClass(RecordsTableRow::class);
+        $property = $reflection->getProperty('highlightKeyword');
+        $attributes = $property->getAttributes(\Livewire\Attributes\Reactive::class);
+
+        $this->assertCount(1, $attributes, 'highlightKeyword must have #[Reactive] attribute');
+    }
+
+    #[Test]
+    public function search_change_propagates_highlight_keyword_to_attachment_row(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [0 => ['hash-attachment' => 'search-context.pdf']],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+            'filename' => 'search-context.pdf',
+            'hashedbasename' => 'hash-attachment',
+            'original_mime_type' => 'application/pdf',
+            'mime' => 'application/pdf',
+            'status' => 'completed',
+        ]);
+
+        $component = Livewire::test(RecordsTable::class, array_merge($this->mountProps, [
+            'selectedLedgerDefineIds' => [$ledgerDefine->id],
+            'search' => 'search-context',
+        ]));
+
+        $html = $component->html();
+
+        // RecordsTableRow コンポーネントに highlightKeyword が含まれることを確認
+        $this->assertStringContainsString('highlightKeyword', $html);
+        $this->assertStringContainsString('search-context', $html);
     }
 
     #[Test]
@@ -410,44 +468,87 @@ class RecordsTableActionsTest extends TestCase
             ->once();
     }
 
+    /**
+     * @internal Log::spy() は同一テストメソッド内で2回目以降の呼び出しで isMock() = true となり
+     * 新しいスパイを作成しない (null を返す) ため、各モードを独立したテストメソッドに分割して
+     * setUp/tearDown 毎に Mockery コンテナをリセットする。
+     */
     #[Test]
-    public function render_logs_search_target_ledger_define_modes(): void
+    public function render_logs_search_target_ledger_define_mode_selected(): void
     {
         config(['ledgerleap.performance.enabled' => true]);
         config(['ledgerleap.performance.log_destination' => 'log']);
 
-        $assertMode = function (array $mountProps, string $expectedMode): void {
-            Log::spy();
+        Log::spy();
 
-            Livewire::test(RecordsTable::class, $mountProps)
-                ->assertOk();
+        Livewire::test(RecordsTable::class, $this->mountProps)
+            ->assertOk();
 
-            Log::shouldHaveReceived('info')
-                ->withArgs(function (...$args) use ($expectedMode): bool {
-                    [$message, $context] = array_pad($args, 2, []);
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (...$args): bool {
+                [$message, $context] = array_pad($args, 2, []);
 
-                    return $message === '[Performance] ledger_records_render'
-                        && ($context['component'] ?? null) === 'RecordsTable'
-                        && ($context['search_target_ledger_define_ids_mode'] ?? null) === $expectedMode;
-                })
-                ->atLeast()
-                ->once();
-        };
+                return $message === '[Performance] ledger_records_render'
+                    && ($context['component'] ?? null) === 'RecordsTable'
+                    && ($context['search_target_ledger_define_ids_mode'] ?? null) === 'selected';
+            })
+            ->atLeast()
+            ->once();
+    }
 
-        $assertMode($this->mountProps, 'selected');
+    #[Test]
+    public function render_logs_search_target_ledger_define_mode_unscoped(): void
+    {
+        config(['ledgerleap.performance.enabled' => true]);
+        config(['ledgerleap.performance.log_destination' => 'log']);
 
-        $assertMode([
+        Log::spy();
+
+        Livewire::test(RecordsTable::class, [
             'currentFolderId' => $this->folder->id,
             'selectedFolderIds' => [],
             'selectedLedgerDefineIds' => [],
-        ], 'unscoped');
+        ])
+            ->assertOk();
 
-        $assertMode([
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (...$args): bool {
+                [$message, $context] = array_pad($args, 2, []);
+
+                return $message === '[Performance] ledger_records_render'
+                    && ($context['component'] ?? null) === 'RecordsTable'
+                    && ($context['search_target_ledger_define_ids_mode'] ?? null) === 'unscoped';
+            })
+            ->atLeast()
+            ->once();
+    }
+
+    #[Test]
+    public function render_logs_search_target_ledger_define_mode_global(): void
+    {
+        config(['ledgerleap.performance.enabled' => true]);
+        config(['ledgerleap.performance.log_destination' => 'log']);
+
+        Log::spy();
+
+        Livewire::test(RecordsTable::class, [
             'currentFolderId' => $this->folder->id,
             'selectedFolderIds' => [],
             'selectedLedgerDefineIds' => [],
             'search' => '全体',
-        ], 'global');
+        ])
+            ->assertOk();
+
+        Log::shouldHaveReceived('info')
+            ->withArgs(function (...$args): bool {
+                [$message, $context] = array_pad($args, 2, []);
+
+                return $message === '[Performance] ledger_records_render'
+                    && ($context['component'] ?? null) === 'RecordsTable'
+                    && ($context['search_target_ledger_define_ids_mode'] ?? null) === 'global';
+            })
+            ->atLeast()
+            ->once();
     }
 
     // ===================================================================

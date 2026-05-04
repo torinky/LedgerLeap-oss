@@ -9,9 +9,10 @@ use App\Models\AttachedFile;
 use App\Models\Ledger;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Lazy;
+use Livewire\Attributes\Reactive;
 use Stancl\Tenancy\Tenancy;
 
-#[Lazy]
+#[Lazy(isolate: false)]
 class RecordsTableRow extends BaseLivewireComponent
 {
     use InitializesTenantContext;
@@ -22,6 +23,7 @@ class RecordsTableRow extends BaseLivewireComponent
 
     public bool $canView = false;
 
+    #[Reactive]
     public ?string $highlightKeyword = null;
 
     public string|int|null $currentTenantId = null;
