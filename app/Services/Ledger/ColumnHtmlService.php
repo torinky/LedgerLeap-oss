@@ -10,6 +10,7 @@ use App\Models\Ledger;
 use App\Services\AutoLinkService;
 use App\Services\Util\HtmlProcessorService;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
@@ -147,14 +148,34 @@ class ColumnHtmlService
         } elseif ($type === 'select') {
             $html = '<span class="'.self::SELECT_BADGE_CLASS_NAME.'">'.e($this->initialValue).'</span>';
         } elseif ($type === 'textarea') {
-            // 1. MarkdownをHTMLに変換
-            $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+            $currentTenantId = $this->tenantId ?? tenant()?->id ?? $record?->define?->tenant_id ?? 'global';
+            $colId = $this->getColumnDefineProperty('id');
 
-            // 2. 自動リンクを適用
-            $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+            // ハイライトあり / レコード未設定時はキャッシュをバイパス
+            if ($highlight || ! $record) {
+                $cacheHit = false;
+                $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+                $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+                $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+            } else {
+                $cacheKey = "textarea_html:{$currentTenantId}:{$record->id}:{$colId}:{$record->updated_at->getTimestamp()}";
+                $ttl = config('ledgerleap.cache.textarea_html_ttl', 86400);
 
-            // 3. 展開可能なコンテンツ用のマーカーを追加
-            $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+                $html = Cache::remember($cacheKey, $ttl, function () use ($record, $highlight) {
+                    $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+                    $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+
+                    return '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+                });
+
+                $cacheHit = Cache::has($cacheKey);
+            }
+
+            $this->logPerformance('textarea_cache_hit', $cacheHit ? 1 : 0, [
+                'tenant_id' => $currentTenantId,
+                'ledger_id' => $record?->id,
+                'column_id' => $colId,
+            ]);
 
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';

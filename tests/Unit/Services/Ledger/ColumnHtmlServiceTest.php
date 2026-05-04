@@ -365,3 +365,157 @@ it('getColumnDefineProperty returns value from array column define', function ()
     // 存在しないキーはデフォルト値
     expect($method->invoke($service, 'nonexistent', 'default'))->toBe('default');
 });
+
+// ================================================================
+// キャッシュ機能テスト
+// ================================================================
+
+it('caches textarea html and returns cached result on second call', function () {
+    $columnDefine = new ColumnDefine(
+        1, 'test_textarea', 'textarea', 1,
+        [], false, false, null, '', [], 3, null
+    );
+
+    $markdownInput = '**Hello** World';
+    $htmlFromMarkdown = '<p><strong>Hello</strong> World</p>';
+    $linkedHtml = '<p><strong>Hello</strong> World</p>';
+
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockMarkdownRenderer->shouldReceive('toHtml')
+        ->once()
+        ->with($markdownInput)
+        ->andReturn($htmlFromMarkdown);
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->once()
+        ->andReturn($linkedHtml);
+
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')
+        ->andReturnUsing(fn ($html, $callback) => $html);
+
+    $ledger = new Ledger();
+    $ledger->id = 1;
+    $ledger->updated_at = now();
+    $ledger->define = (object)['tenant_id' => 'test-tenant'];
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+
+    // 1回目の呼び出し（キャッシュMISS）
+    $result1 = $columnHtml->show($columnDefine, $markdownInput, true, [], '', false, $ledger);
+
+    // 2回目の呼び出し（キャッシュHIT）
+    $result2 = $columnHtml->show($columnDefine, $markdownInput, true, [], '', false, $ledger);
+
+    expect($result1->toHtml())->toBe($result2->toHtml());
+    expect($result1->toHtml())->toContain('expandable-textarea-content');
+});
+
+it('does not share cache across tenants', function () {
+    $columnDefine = new ColumnDefine(
+        1, 'test_textarea', 'textarea', 1,
+        [], false, false, null, '', [], 3, null
+    );
+
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockMarkdownRenderer->shouldReceive('toHtml')
+        ->twice()
+        ->andReturn('<p>test</p>');
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->twice()
+        ->andReturn('<p>test</p>');
+
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')
+        ->andReturnUsing(fn ($html, $callback) => $html);
+
+    $ledgerA = new Ledger();
+    $ledgerA->id = 1;
+    $ledgerA->updated_at = now();
+    $ledgerA->define = (object)['tenant_id' => 'tenant-a'];
+
+    $ledgerB = new Ledger();
+    $ledgerB->id = 1;
+    $ledgerB->updated_at = now();
+    $ledgerB->define = (object)['tenant_id' => 'tenant-b'];
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+
+    // テナントAで呼び出し
+    $columnHtml->show($columnDefine, 'test', true, [], '', false, $ledgerA);
+
+    // テナントBで呼び出し（同じledger_idでも別キャッシュのため再計算）
+    $columnHtml->show($columnDefine, 'test', true, [], '', false, $ledgerB);
+});
+
+it('bypasses cache when highlight is provided', function () {
+    $columnDefine = new ColumnDefine(
+        1, 'test_textarea', 'textarea', 1,
+        [], false, false, null, '', [], 3, null
+    );
+
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockMarkdownRenderer->shouldReceive('toHtml')
+        ->twice()
+        ->andReturn('<p>test</p>');
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->twice()
+        ->andReturn('<p>test</p>');
+
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')
+        ->andReturnUsing(fn ($html, $callback) => $html);
+
+    $ledger = new Ledger();
+    $ledger->id = 1;
+    $ledger->updated_at = now();
+    $ledger->define = (object)['tenant_id' => 'test-tenant'];
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+
+    // ハイライトありで2回呼び出し → キャッシュを使わないので2回計算される
+    $columnHtml->show($columnDefine, 'test', true, [], '', false, $ledger, 'keyword');
+    $columnHtml->show($columnDefine, 'test', true, [], '', false, $ledger, 'keyword');
+});
+
+it('invalidates cache when ledger updated_at changes', function () {
+    $columnDefine = new ColumnDefine(
+        1, 'test_textarea', 'textarea', 1,
+        [], false, false, null, '', [], 3, null
+    );
+
+    $mockMarkdownRenderer = mock(MarkdownRenderer::class);
+    $mockMarkdownRenderer->shouldReceive('toHtml')
+        ->twice()
+        ->andReturn('<p>test</p>');
+
+    $mockAutoLinkService = mock(AutoLinkService::class);
+    $mockAutoLinkService->shouldReceive('convert')
+        ->twice()
+        ->andReturn('<p>test</p>');
+
+    $mockHtmlProcessor = mock(HtmlProcessorService::class);
+    $mockHtmlProcessor->shouldReceive('processTextNodes')
+        ->andReturnUsing(fn ($html, $callback) => $html);
+
+    $ledger = new Ledger();
+    $ledger->id = 1;
+    $ledger->updated_at = now();
+    $ledger->define = (object)['tenant_id' => 'test-tenant'];
+
+    $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
+
+    // 1回目の呼び出し（キャッシュ作成）
+    $columnHtml->show($columnDefine, 'test', true, [], '', false, $ledger);
+
+    // updated_at を変更
+    $ledger->updated_at = now()->addSecond();
+
+    // 2回目の呼び出し（キャッシュキーが変わるので再計算）
+    $columnHtml->show($columnDefine, 'test', true, [], '', false, $ledger);
+});

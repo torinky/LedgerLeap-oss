@@ -51,6 +51,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
+        $columnHtmlServiceMock->shouldReceive('setSource')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn ($def, $val) => new HtmlString(strval($val)));
 
         $ledgerDiffProcessorMock = Mockery::mock(LedgerDiffProcessor::class);
@@ -118,6 +119,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
+        $columnHtmlServiceMock->shouldReceive('setSource')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn ($def, $val) => new HtmlString(strval($val)));
 
         // ★このテストの核心：LedgerDiffProcessorが返す値をコントロールする★
@@ -174,6 +176,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
+        $columnHtmlServiceMock->shouldReceive('setSource')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')
             ->twice()
             ->andReturn(new HtmlString($expectedHtml));
