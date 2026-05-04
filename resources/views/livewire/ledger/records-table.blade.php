@@ -137,8 +137,6 @@ function confidentialityScrollTracker() {
         lastRatio: {},
 
         init() {
-            console.log('[confidentialityScrollTracker] init() called');
-
             // 古い Observer をクリーンアップ（Livewire 更新時の再実行対策）
             if (this.observer) {
                 this.observer.disconnect();
@@ -147,30 +145,25 @@ function confidentialityScrollTracker() {
             this.lastRatio = {};
 
             if (! ('IntersectionObserver' in window)) {
-                console.log('[confidentialityScrollTracker] IntersectionObserver not supported');
                 return;
             }
 
             this.$nextTick(() => {
                 try {
                     const sections = this.$el.querySelectorAll('[data-ledger-define-section]');
-                    console.log('[confidentialityScrollTracker] sections found:', sections.length);
                     if (sections.length === 0) {
-                        console.log('[confidentialityScrollTracker] no sections, returning');
                         return;
                     }
 
                     // 単一セクションの場合も、そのセクションの LedgerDefine ID を通知する
                     if (sections.length === 1) {
                         const id = sections[0].getAttribute('data-ledger-define-section');
-                        console.log('[confidentialityScrollTracker] single section, dispatching id:', id);
                         Livewire.dispatch('confidentialitySectionChanged', {
                             ledgerDefineId: parseInt(id, 10),
                         });
                         return;
                     }
 
-                    console.log('[confidentialityScrollTracker] setting up IntersectionObserver');
                     this.observer = new IntersectionObserver(
                     (entries) => {
                         entries.forEach((entry) => {

@@ -10,9 +10,9 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Livewire\Livewire;
 use Maatwebsite\Excel\Facades\Excel;
 use PHPUnit\Framework\Attributes\CoversClass;
-use Livewire\Livewire;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -255,7 +255,7 @@ class LedgerExportTest extends TestCase
         Storage::fake('public');
         Storage::disk('public')->put('ledger-export.csv', "dummy\n");
 
-        $component = new LedgerExportComponent();
+        $component = new LedgerExportComponent;
         $component->exportFilename = 'ledger-export.csv';
 
         $response = $component->downloadExport();
@@ -292,15 +292,17 @@ class LedgerExportTest extends TestCase
             [$this->ledgerDefine->id, [], [], $this->ledgerDefine->title]
         )
             ->assertSeeHtml('wire:key="ledger_export_request-')
-            ->assertSeeHtml('wire:key="ledger_export_download-')
-            ->assertSeeHtml('pointer-events-none opacity-50');
+            ->assertDontSeeHtml('wire:key="ledger_export_download-');
 
         $component->set('exporting', true)
             ->set('exportFinished', false)
+            ->assertSeeHtml('wire:key="ledger_export_request-')
             ->assertSeeHtml('disabled="disabled"')
-            ->assertSeeHtml('pointer-events-none opacity-50');
+            ->assertDontSeeHtml('wire:key="ledger_export_download-');
 
         $component->set('exportFinished', true)
-            ->assertDontSeeHtml('pointer-events-none opacity-50');
+            ->assertSeeHtml('wire:key="ledger_export_download-')
+            ->assertDontSeeHtml('wire:key="ledger_export_request-')
+            ->assertDontSeeHtml('disabled="disabled"');
     }
 }

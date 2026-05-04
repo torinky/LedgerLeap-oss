@@ -185,6 +185,7 @@ return [
     'export_csv' => 'CSVをエクスポート',
     'export_finished' => 'エクスポート完了',
     'exporting' => 'エクスポート中です。お待ちください・・・',
+    'export_ready' => 'CSVの準備が完了しました。ダウンロードできます。',
     'file' => 'ファイル',
     'file_list' => '添付ファイル一覧',
     'file_upload_failed' => 'ファイルアップロード失敗: :filename',

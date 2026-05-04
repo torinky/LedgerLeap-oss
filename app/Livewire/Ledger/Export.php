@@ -9,6 +9,7 @@ use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
+use Mary\Traits\Toast;
 
 /**
  * Ledgerのエクスポートを管理するLivewireコンポーネント
@@ -16,6 +17,7 @@ use Livewire\Attributes\On;
 class Export extends BaseLivewireComponent
 {
     use InitializesTenantContext;
+    use Toast;
 
     public $batchId;
 
@@ -56,12 +58,9 @@ class Export extends BaseLivewireComponent
     public function mount($ledgerDefineId, $keywords, $filter, $ledgerDefineTitle = null)
     {
         $this->ledgerDefineId = $ledgerDefineId;
-        //        $this->keywords = json_decode($keywords, true);
         $this->keywords = $keywords;
-        //        $this->filter = json_decode($filter, true);
         $this->filter = $filter;
 
-        // 親から渡された場合はそれを使用、なければDB取得
         if ($ledgerDefineTitle) {
             $this->exportFilename = $ledgerDefineTitle.'.csv';
         } else {
@@ -116,6 +115,7 @@ class Export extends BaseLivewireComponent
 
         if ($this->exportFinished) {
             $this->exporting = false;
+            $this->success(__('ledger.export_ready'));
         }
     }
 
