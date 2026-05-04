@@ -8,7 +8,6 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
-use Livewire\Attributes\On;
 use Mary\Traits\Toast;
 
 /**
@@ -33,19 +32,6 @@ class Export extends BaseLivewireComponent
 
     public ?int $ledgerDefineId = null;
 
-    //    protected $listeners = ['refreshChildren' => 'updateFromParent'];
-
-    /**
-     * 親からの更新を受け取るメソッド
-     *
-     * @param  array  $data  キーワードとフィルター情報を含む配列
-     */
-    #[On('refreshChildren')]
-    public function updateFromParent($data)
-    {
-        $this->keywords = $data['keywords'];
-        $this->filter = $data['filter'];
-    }
 
     /**
      * コンポーネントをマウントするメソッド
@@ -68,8 +54,25 @@ class Export extends BaseLivewireComponent
         }
     }
 
-    public function export()
+    /**
+     * エクスポートを開始する
+     *
+     * Alpine.js から現在の keywords / filter を引数として受け取る。
+     * 渡された値が空の場合は mount 時に保存した値にフォールバックする。
+     *
+     * @param  array  $keywords  検索キーワード（Alpine.js 側の最新値）
+     * @param  array  $filter    フィルター条件（Alpine.js 側の最新値）
+     */
+    public function export(array $keywords = [], array $filter = [])
     {
+        // Alpine.js から渡された最新の検索条件を優先し、なければ mount 時の値を使用する
+        if (! empty($keywords)) {
+            $this->keywords = $keywords;
+        }
+        if (! empty($filter)) {
+            $this->filter = $filter;
+        }
+
         $columnDefines = LedgerDefine::findOrFail($this->ledgerDefineId)->column_define
             ->sortBy('order')
             ->values();

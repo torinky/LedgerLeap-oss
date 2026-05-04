@@ -1,4 +1,24 @@
-<div class="flex flex-wrap items-center gap-3">
+{{--
+    x-data: keywords/filter の最新値を Alpine.js 側で保持する。
+    @refreshChildren.window: RecordsTable が render() 内で dispatch('refreshChildren') すると
+      Livewire はそれをブラウザ CustomEvent としても window 上に発火する。
+      ここで PHP #[On] を使わず Alpine.js だけで受け取ることで、
+      Export コンポーネントへのサーバーラウンドトリップを完全に排除し
+      セッションロック起因のリクエスト直列化（数十秒遅延）を防ぐ。
+    wire:click="export(localKeywords, localFilter)":
+      エクスポートボタン押下時に Alpine.js の最新値を PHP メソッドに渡す。
+--}}
+<div class="flex flex-wrap items-center gap-3"
+     x-data="{
+         localKeywords: @json($keywords ?? []),
+         localFilter:   @json($filter ?? [])
+     }"
+     x-on:refresh-children.window="
+         if ($event.detail && $event.detail.data) {
+             localKeywords = $event.detail.data.keywords ?? localKeywords;
+             localFilter   = $event.detail.data.filter   ?? localFilter;
+         }
+     ">
     @php
         $isExporting = $exporting && !$exportFinished;
         $exportLabel = $isExporting ? __('ledger.exporting') : __('ledger.export_csv');
@@ -6,7 +26,7 @@
 
     @if(!$exportFinished)
         <x-mary-button
-            wire:click="export"
+            wire:click="export(localKeywords, localFilter)"
             icon="o-arrow-down-tray"
             :label="$exportLabel"
             class="btn-outline btn-secondary w-48 justify-start"

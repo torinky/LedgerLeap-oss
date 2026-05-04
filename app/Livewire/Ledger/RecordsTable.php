@@ -462,8 +462,10 @@ class RecordsTable extends BaseLivewireComponent
 
         $this->initSearchContext();
 
-        // Exportに検索条件を伝えるためにイベントをトリガ
-        $this->dispatch('refreshChildren', data: [
+        // Export コンポーネントに検索条件をブラウザイベントとして通知する。
+        // PHP の #[On] ではなく Alpine.js の x-on:refresh-children.window で受け取ることで
+        // サーバーラウンドトリップを発生させず、セッションロック起因の遅延を防ぐ。
+        $this->dispatch('refresh-children', data: [
             'keywords' => $this->keywords,
             'filter' => $this->filter,
         ]);
