@@ -270,6 +270,160 @@ class RecordsTableActionsTest extends TestCase
     }
 
     #[Test]
+    public function records_table_row_renders_placeholder_for_lazy_loading(): void
+    {
+        $component = new RecordsTableRow;
+        $component->ledgerId = 1;
+        $component->columnId = 0;
+
+        $placeholder = $component->placeholder();
+
+        $this->assertInstanceOf(\Illuminate\Contracts\View\View::class, $placeholder);
+        $html = $placeholder->render();
+        $this->assertStringContainsString('loading loading-spinner', $html);
+        $this->assertStringContainsString(__('ledger.loading'), $html);
+    }
+
+    #[Test]
+    public function records_table_row_shows_empty_state_when_no_attachments(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [0 => []],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        $component = Livewire::withoutLazyLoading()->test(RecordsTableRow::class, [
+            'ledgerId' => $ledger->id,
+            'columnId' => 0,
+            'highlightKeyword' => null,
+            'canView' => true,
+            'currentTenantId' => $this->tenant->id,
+        ]);
+
+        $html = $component->html();
+
+        $this->assertStringContainsString(__('ledger.empty'), $html);
+        $this->assertStringContainsString('fa-cube', $html);
+    }
+
+    #[Test]
+    public function records_table_row_shows_unauthorized_when_can_view_is_false(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [0 => ['hash-1' => 'restricted.pdf']],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+            'filename' => 'restricted.pdf',
+            'hashedbasename' => 'hash-1',
+        ]);
+
+        $component = Livewire::withoutLazyLoading()->test(RecordsTableRow::class, [
+            'ledgerId' => $ledger->id,
+            'columnId' => 0,
+            'canView' => false,
+            'currentTenantId' => $this->tenant->id,
+        ]);
+
+        $html = $component->html();
+
+        $this->assertStringContainsString(__('ledger.not_allow_view'), $html);
+        $this->assertStringNotContainsString('restricted.pdf', $html);
+    }
+
+    #[Test]
+    public function records_table_row_highlights_matching_files_only(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 0, 'name' => '添付', 'type' => 'files', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => [0 => ['hash-alpha' => 'alpha-report.pdf', 'hash-beta' => 'beta-summary.pdf']],
+            'content_attached' => [0 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+            'filename' => 'alpha-report.pdf',
+            'hashedbasename' => 'hash-alpha',
+            'original_mime_type' => 'application/pdf',
+            'mime' => 'application/pdf',
+            'status' => 'completed',
+        ]);
+
+        AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 0,
+            'tenant_id' => $this->tenant->id,
+            'filename' => 'beta-summary.pdf',
+            'hashedbasename' => 'hash-beta',
+            'original_mime_type' => 'application/pdf',
+            'mime' => 'application/pdf',
+            'status' => 'completed',
+        ]);
+
+        $component = Livewire::withoutLazyLoading()->test(RecordsTableRow::class, [
+            'ledgerId' => $ledger->id,
+            'columnId' => 0,
+            'highlightKeyword' => 'alpha',
+            'canView' => true,
+            'currentTenantId' => $this->tenant->id,
+        ]);
+
+        $html = $component->html();
+
+        // alpha-report.pdf はヒットするため is_hit=true でレンダリングされる
+        $this->assertStringContainsString('alpha-report.pdf', $html);
+        // beta-summary.pdf も表示されるがハイライトはされない
+        $this->assertStringContainsString('beta-summary.pdf', $html);
+    }
+
+    #[Test]
     public function deferred_records_table_row_shows_more_button_for_many_attachments(): void
     {
         $ledgerDefine = LedgerDefine::factory()->create([
