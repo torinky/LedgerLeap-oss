@@ -12,6 +12,7 @@ class LogPerformanceTest extends TestCase
     protected function tearDown(): void
     {
         parent::tearDown();
+        \App\Services\PerformanceLogBuffer::clear();
         \Mockery::close();
     }
 
@@ -120,6 +121,7 @@ class LogPerformanceTest extends TestCase
         $statsFile = storage_path('logs/performance_stats.json');
         $existingContents = file_exists($statsFile) ? file_get_contents($statsFile) : null;
         file_put_contents($statsFile, '');
+        \App\Services\PerformanceLogBuffer::clear();
 
         Log::shouldReceive('info')->once();
         Log::shouldNotReceive('channel');
@@ -128,6 +130,9 @@ class LogPerformanceTest extends TestCase
         try {
             $stub = $this->makePerformanceStub();
             $stub->record('ledger_records_query_paginate_ms', 10);
+
+            // テスト環境では middleware の terminate() が自動実行されないため手動フラッシュ
+            \App\Services\PerformanceLogBuffer::flush();
 
             $stats = json_decode(file_get_contents($statsFile), true);
             $this->assertIsArray($stats);

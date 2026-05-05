@@ -44,15 +44,9 @@ trait LogPerformance
             \Illuminate\Support\Facades\Log::info("[Performance] {$metric}", $logData);
         }
 
-        // JSON統計ファイルへの記録
+        // JSON統計ファイルへの記録（バッファリングして一括書き込み）
         if (in_array($logDestination, ['json', 'both'])) {
-            $statsFile = storage_path('logs/performance_stats.json');
-            $stats = file_exists($statsFile) ? json_decode(file_get_contents($statsFile), true) : [];
-            if (! is_array($stats)) {
-                $stats = [];
-            }
-            $stats[] = array_merge($logData, ['timestamp' => now()->toISOString()]);
-            file_put_contents($statsFile, json_encode($stats, JSON_PRETTY_PRINT));
+            \App\Services\PerformanceLogBuffer::push(array_merge($logData, ['timestamp' => now()->toISOString()]));
         }
 
         $this->warnIfPerformanceThresholdExceeded($metric, $duration, $logData);
