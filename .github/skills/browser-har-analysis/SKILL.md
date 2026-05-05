@@ -248,16 +248,60 @@ private function getCachedIconHtml(string $iconName): string
 
 **証跡**: [docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md](../../../docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md)
 
+### `Cache::remember()` の落とし穴と対処
+
+```text
+Cache::remember() のクロージャが正しく保存されない?
+├─ Cache::get() + Cache::put() に変更する
+└─ リクエスト内インメモリキャッシュで Redis 往復を回避
+```
+
+**パターン**:
+```php
+private static array $requestCache = [];
+
+public function show(...)
+{
+    $cacheKey = "...";
+    
+    // リクエスト内キャッシュ（~0.01ms）
+    if (isset(self::$requestCache[$cacheKey])) {
+        return self::$requestCache[$cacheKey];
+    }
+    
+    // Redis キャッシュ（~5ms）
+    $cached = Cache::get($cacheKey);
+    if ($cached !== null) {
+        self::$requestCache[$cacheKey] = $cached;
+        return $cached;
+    }
+    
+    // 生成 → 両方に保存
+    $html = $this->generateHtml(...);
+    Cache::put($cacheKey, $html, $ttl);
+    self::$requestCache[$cacheKey] = $html;
+    return $html;
+}
+```
+
+**効果**:
+- `Cache::get()` Redis 往復: ~5ms
+- リクエスト内キャッシュ: ~0.01ms
+- セル数が多い場合（数百セル）に顕著
+
+**証跡**: [Issue #200 コメント](https://github.com/torinky/LedgerLeap/issues/200#issuecomment-4376836885)
+
 ## Evidence
 
 - [`docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md`](../../../docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md)
 - [`docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-194-lazy-effect-measurement.md`](../../../docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-194-lazy-effect-measurement.md)
 - [`docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-localhost4-har-perf-analysis.md`](../../../docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-localhost4-har-perf-analysis.md)
 - [`docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md`](../../../docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md)
+- [Issue #200: 状態ベースキャッシュで派生結果を再利用する](https://github.com/torinky/LedgerLeap/issues/200)
 
 ## Freshness
 
 - status: confirmed
 - last_confirmed_at: 2026-05-05
 - recheck_after: 2026-08-05
-- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, `analyze_perf_log.py` being updated, `#[Lazy]` lifecycle changes, Alpine.js / Livewire dirty-check behavior changes, or new Blade component render spikes in `column_html_show_ms`
+- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, `analyze_perf_log.py` being updated, `#[Lazy]` lifecycle changes, Alpine.js / Livewire dirty-check behavior changes, new Blade component render spikes in `column_html_show_ms`, or Cache driver changes (Redis → array/file)

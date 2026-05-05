@@ -279,7 +279,7 @@ def print_comparison(summaries: list[tuple[Path, list[LwRequest]]]) -> None:
             continue
         lazy_count = sum(1 for s in seqs if s['lazy'])
         im_times = [s['index_manager_req'].time_ms for s in seqs]
-        rt_times = [s['records_table_req'].time_ms for s in seqs if s['records_table_req'] is not s['index_manager_req']]
+        rt_times = [s['records_table_req'].time_ms for s in seqs if s['records_table_req'] is not None and s['records_table_req'] is not s['index_manager_req']]
         im_times_s = sorted(im_times)
         med_im = im_times_s[len(im_times_s) // 2] if im_times_s else 0
         med_rt = sorted(rt_times)[len(rt_times) // 2] if rt_times else 0
