@@ -82,6 +82,8 @@ class IndexManager extends BaseLivewireComponent
 
     public bool $totalRecordsLoaded = false;
 
+    public int $recordsTableMountKey = 0;
+
     public $highlights = [];
 
     public ?int $activeLedgerDefineId = null;
@@ -374,6 +376,7 @@ class IndexManager extends BaseLivewireComponent
             }
         }
         $this->currentFolderId = $newFolderId;
+        $this->recordsTableMountKey++;
         $this->updateSearchMetadata();
         $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
 

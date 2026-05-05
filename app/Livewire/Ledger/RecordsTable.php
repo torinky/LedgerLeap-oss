@@ -43,6 +43,8 @@ class RecordsTable extends BaseLivewireComponent
 
     public string|int|null $currentTenantId = null;
 
+    public bool $hasDispatchedLedgerSectionsRendered = false;
+
     #[Reactive]
     public $search = '';
 
@@ -805,7 +807,10 @@ class RecordsTable extends BaseLivewireComponent
             'page_ledger_define_count' => $pageLedgerDefineCount ?? 0,
         ]);
 
-        $this->dispatch('ledger-sections-rendered');
+        if (! $this->hasDispatchedLedgerSectionsRendered) {
+            $this->dispatch('ledger-sections-rendered');
+            $this->hasDispatchedLedgerSectionsRendered = true;
+        }
 
         return view('livewire.ledger.records-table', [
             'ledgerRecords' => $ledgerRecords,

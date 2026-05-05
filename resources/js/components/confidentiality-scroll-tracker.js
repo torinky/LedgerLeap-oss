@@ -1,6 +1,7 @@
 export default () => ({
     observer: null,
     lastRatio: {},
+    lastSectionCount: null,
 
     init() {
         this.setupObserver();
@@ -11,15 +12,11 @@ export default () => ({
             this.observer.disconnect();
             this.observer = null;
         }
+        this.lastRatio = {};
+        this.lastSectionCount = null;
     },
 
     setupObserver() {
-        if (this.observer) {
-            this.observer.disconnect();
-            this.observer = null;
-        }
-        this.lastRatio = {};
-
         if (! ('IntersectionObserver' in window)) {
             return;
         }
@@ -27,11 +24,25 @@ export default () => ({
         this.$nextTick(() => {
             try {
                 const sections = this.$el.querySelectorAll('[data-ledger-define-section]');
-                if (sections.length === 0) {
+                const sectionCount = sections.length;
+
+                // Skip if no sections or DOM structure hasn't changed
+                if (sectionCount === 0) {
+                    return;
+                }
+                if (sectionCount === this.lastSectionCount && this.observer) {
                     return;
                 }
 
-                if (sections.length === 1) {
+                // Tear down existing observer before creating a new one
+                if (this.observer) {
+                    this.observer.disconnect();
+                    this.observer = null;
+                }
+                this.lastRatio = {};
+                this.lastSectionCount = sectionCount;
+
+                if (sectionCount === 1) {
                     const id = sections[0].getAttribute('data-ledger-define-section');
                     Livewire.dispatch('confidentialitySectionChanged', {
                         ledgerDefineId: parseInt(id, 10),

@@ -158,6 +158,66 @@ When reporting results, include:
 - Keep repo proof in `docs/work/*` and reference it from this skill.
 - **`har_summary.py` の livewire/update count が 0 の場合**は URL パターン不一致を疑い `har_lazy_analysis.py` を使う。
 
+## Advanced Patterns
+
+### `lazyLoaded` フィールドの解釈
+
+Livewire v3 の HAR payload には `components[0].snapshot.data.lazyLoaded` フィールドが存在する。
+
+| 値 | 意味 | 判断 |
+|---|---|---|
+| `0` | `#[Lazy]` が有効で、まだ実コンテンツをロードしていない | lazy ✅ |
+| `None` / `null` | `#[Lazy]` が認識されていない、または既にマウント済み | lazy ❌ |
+
+**確認方法**: `python3 docs/harnesses/browser-har-analysis/scripts/har_lazy_analysis.py` の出力 `lazy%` を確認。`lazy=✅` の割合が期待値より低い場合、`lazyLoaded` フィールドを個別に確認する。
+
+### `$commit` NO UPDATES の診断
+
+`updates` が空の `$commit` リクエストが定期的に発生する場合：
+
+```
+[ 15] 9072ms ['$commit'] (+10.3s) ← NO UPDATES
+[ 17]  897ms ['$commit'] (+9.4s)  ← NO UPDATES
+```
+
+**診断フロー**:
+1. `wire:poll` コンポーネント単位検索: `grep -r 'wire:poll' resources/views/livewire/ledger/`
+2. Alpine.js `x-data` + `$nextTick` + `IntersectionObserver` の追跡
+3. `#[Reactive]` プロパティの影響確認（子コンポーネント単独で dirty 判定が走る可能性）
+4. Livewire DevTools などデバッグツールの干渉確認
+
+### `wire:key` 動的変更による `#[Lazy]` 強制再マウント
+
+同一ページ内で子コンポーネントを再利用したい場合、`wire:key` を動的に変更する。
+
+```php
+// 親コンポーネント (IndexManager)
+public $recordsTableMountKey = 0;
+
+public function changeCurrentFolder($folderId)
+{
+    $this->currentFolderId = $folderId;
+    $this->recordsTableMountKey++;
+    $this->dispatch('folderChanged', folderId: $folderId);
+}
+```
+
+```blade
+<livewire:ledger.records-table
+    wire:key="ledger-records-table-mount-{{ $recordsTableMountKey }}"
+    :keywords="$keywords"
+    ... />
+```
+
+**効果**: `wire:key` が変化すると Livewire は既存コンポーネントを破棄して新規マウントするため、`#[Lazy]` の placeholder → 実コンテンツのライフサイクルが再現される。
+
+### Alpine.js `x-data` + `IntersectionObserver` と Livewire の相互作用
+
+`render()` ごとに `dispatch('ledger-sections-rendered')` → Alpine.js `setupObserver()` → `IntersectionObserver` 再設定 という連鎖が発生する場合：
+
+- `$nextTick` で DOM クエリ → Alpine.js 内部の reactive 依存関係が変化 → dirty フラグが立つ可能性
+- **対策**: observer の生存期間を `init()` / `destroy()` で明示的に管理し、`setupObserver()` に変更検知（DOM 構造が変わった場合のみ再設定）を入れる
+
 ## Evidence
 
 - [`docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md`](../../../docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md)
@@ -167,6 +227,6 @@ When reporting results, include:
 ## Freshness
 
 - status: confirmed
-- last_confirmed_at: 2026-05-04
-- recheck_after: 2026-08-04
-- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, or `analyze_perf_log.py` being updated
+- last_confirmed_at: 2026-05-05
+- recheck_after: 2026-08-05
+- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, `analyze_perf_log.py` being updated, `#[Lazy]` lifecycle changes, or Alpine.js / Livewire dirty-check behavior changes

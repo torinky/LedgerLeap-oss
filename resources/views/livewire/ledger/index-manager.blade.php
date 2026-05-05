@@ -329,7 +329,7 @@
                 {{-- Main Content: ヘビーな通信時は一定時間(200ms)経過後に隠す。ライトな通信時は表示を維持しつつ透明度だけ変える。 --}}
                 <div wire:loading.remove.delay wire:target="{{ $heavyTargets }}">
                     <div wire:loading.class="opacity-50 pointer-events-none" wire:target="{{ $lightTargets }}">
-                        <livewire:ledger.records-table :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc"
+                        <livewire:ledger.records-table lazy :search="$search" :orderBy="$orderBy" :orderAsc="$orderAsc"
                                                        :filterStatus="$filterStatus" :filter="$filter"
                                                        :selectedLedgerDefineIds="$selectedLedgerDefineIds"
                                                        :selectedFolderIds="$selectedFolderIds"
@@ -340,8 +340,8 @@
                                                        :hasWorkflowEnabled="$hasWorkflowEnabled"
                                                        :keywords="$this->keywords" :tags="$tags" :highlights="$this->highlights"
                                                        :synonyms="$this->synonyms"
-                                                       :tenantId="$this->tenantId"
-                                                       wire:key="ledger-records-table-folder-{{ $currentFolderId }}"/>
+                                                        :tenantId="$this->tenantId"
+                                                        wire:key="ledger-records-table-mount-{{ $recordsTableMountKey }}"/>
                     </div>
                 </div>
 

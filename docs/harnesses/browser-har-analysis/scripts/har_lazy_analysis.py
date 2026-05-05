@@ -52,6 +52,8 @@ def _parse_components(postdata_text: str) -> list[str]:
                     names.append(json.loads(snap).get('memo', {}).get('name', '?'))
                 except Exception:
                     pass
+            elif isinstance(snap, dict):
+                names.append(snap.get('memo', {}).get('name', '?'))
     except Exception:
         pass
     return names
@@ -61,8 +63,21 @@ def _parse_resp_components(content: dict[str, Any]) -> list[dict[str, Any]]:
     text = content.get('text', '')
     if not text:
         return []
+
+    # HAR may store response body as base64 when binary or large
+    if content.get('encoding') == 'base64':
+        import base64
+        try:
+            text = base64.b64decode(text).decode('utf-8', errors='replace')
+        except Exception:
+            return []
+
     try:
         data = json.loads(text)
+    except Exception:
+        return []
+
+    try:
         result = []
         for c in data.get('components', []):
             snap_str = c.get('snapshot', '{}')
@@ -83,7 +98,8 @@ def is_livewire_update(url: str) -> bool:
 
 
 def load_lw_requests(path: Path) -> list[LwRequest]:
-    data = json.loads(path.read_text(encoding='utf-8'))
+    raw = path.read_text(encoding='utf-8', errors='replace')
+    data = json.loads(raw)
     result: list[LwRequest] = []
     for idx, entry in enumerate(data.get('log', {}).get('entries', [])):
         url = entry.get('request', {}).get('url', '')
@@ -91,7 +107,14 @@ def load_lw_requests(path: Path) -> list[LwRequest]:
             continue
         timings = entry.get('timings', {})
         content = entry.get('response', {}).get('content', {})
-        postdata = entry.get('request', {}).get('postData', {}).get('text', '') or ''
+
+        # postData may be missing or have a different shape
+        postdata_obj = entry.get('request', {}).get('postData', {}) or {}
+        if isinstance(postdata_obj, dict):
+            postdata = postdata_obj.get('text', '') or ''
+        else:
+            postdata = ''
+
         result.append(LwRequest(
             index=idx,
             started=entry.get('startedDateTime', '')[:23],
