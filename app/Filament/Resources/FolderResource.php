@@ -5,21 +5,34 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
+use App\Models\Tenant;
+use App\Services\ConfidentialityLevelService;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
 use Filament\Forms\Components\Select;
 use Filament\Panel;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Schema;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Route; // 追加
+use Illuminate\Support\Facades\Route;
+use Stancl\Tenancy\Facades\Tenancy;
+
+ // 追加
 
 class FolderResource extends Resource
 {
@@ -68,11 +81,11 @@ class FolderResource extends Resource
                             ->label(__('ledger.folder.title'))
                             ->required()
                             ->maxLength(255),
-                        Forms\Components\Select::make('tenant_id')
+                        Select::make('tenant_id')
                             ->label(__('ledger.tenant'))
                             ->options(
-                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
-                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
+                                Tenancy::central(function () {
+                                    return Tenant::all()->mapWithKeys(function ($tenant) {
                                         return [$tenant->id => $tenant->name ?: $tenant->id];
                                     });
                                 })
@@ -95,7 +108,7 @@ class FolderResource extends Resource
                                 'parent', // name
                                 'title', // titleAttribute
                                 'parent_id', // parentAttribute
-                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => Tenancy::central(function () use ($query, $get) {
                                     $selectedTenantId = $get('tenant_id');
                                     if ($selectedTenantId) {
                                         $query->where('tenant_id', $selectedTenantId);
@@ -108,6 +121,10 @@ class FolderResource extends Resource
                             ->defaultOpenLevel(1)
                             ->searchable(), // 親フォルダの検索を可能にする
                     ])->columns(2),
+
+                Section::make(__('ledger.confidentiality.level.label'))
+                    ->schema(static::confidentialityFormFields())
+                    ->columns(2),
 
                 Section::make(__('ledger.workflow.required_roles_setting'))
                     ->description(__('ledger.workflow.required_roles_setting_helper'))
@@ -155,6 +172,44 @@ class FolderResource extends Resource
             ]);
     }
 
+    public static function confidentialityFormFields(): array
+    {
+        return [
+            Select::make('confidentiality_level')
+                ->label(__('ledger.confidentiality.level.label'))
+                ->default('public')
+                ->required()
+                ->options(static::confidentialityLevelOptions()),
+            Select::make('confidentiality_scopes')
+                ->label(__('ledger.confidentiality.scope.label'))
+                ->multiple()
+                ->searchable()
+                ->preload()
+                ->default([])
+                ->options(static::confidentialityScopeOptions())
+                ->afterStateHydrated(function (Select $component, $state): void {
+                    $component->state(ConfidentialityLevelService::buildScopeChoices($state));
+                })
+                ->dehydrateStateUsing(function ($state): array {
+                    return ConfidentialityLevelService::parseScopeChoices($state ?? []);
+                }),
+        ];
+    }
+
+    protected static function confidentialityLevelOptions(): array
+    {
+        return collect(ConfidentialityLevelService::selectOptions())
+            ->mapWithKeys(fn (array $option) => [$option['id'] => $option['name']])
+            ->all();
+    }
+
+    protected static function confidentialityScopeOptions(): array
+    {
+        return collect(ConfidentialityLevelService::allScopes())
+            ->mapWithKeys(fn (array $option) => [$option['id'] => $option['name']])
+            ->all();
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -180,18 +235,18 @@ class FolderResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\RestoreAction::make()->visible(fn ($record) => $record->trashed()),
-                \Filament\Actions\DeleteAction::make(),
-                \Filament\Actions\ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
+                EditAction::make(),
+                RestoreAction::make()->visible(fn ($record) => $record->trashed()),
+                DeleteAction::make(),
+                ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
             ])
             ->bulkActions([
-                \Filament\Actions\DeleteBulkAction::make(),
-                \Filament\Actions\RestoreBulkAction::make(),
-                \Filament\Actions\ForceDeleteBulkAction::make(),
+                DeleteBulkAction::make(),
+                RestoreBulkAction::make(),
+                ForceDeleteBulkAction::make(),
             ])
             ->headerActions([
-                \Filament\Actions\CreateAction::make(),
+                CreateAction::make(),
             ]);
 
     }

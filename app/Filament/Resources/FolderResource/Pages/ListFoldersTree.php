@@ -62,6 +62,7 @@ class ListFoldersTree extends TreePage
                 ->label(__('ledger.folder.title'))
                 ->required()
                 ->maxLength(255),
+            ...FolderResource::confidentialityFormFields(),
         ];
     }
 
