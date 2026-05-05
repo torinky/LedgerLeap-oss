@@ -17,6 +17,9 @@ class AutoLinkService
     /** @var array<int, Collection> リクエスト内フォルダ子孫キャッシュ */
     private array $folderDescendantsCache = [];
 
+    /** @var array<string, string> アイコンHTMLキャッシュ */
+    private static array $iconHtmlCache = [];
+
     public function __construct(
         private HtmlProcessorService $htmlProcessorService,
         private AutoNumberPatternService $autoNumberPatternService,
@@ -141,6 +144,17 @@ class AutoLinkService
         }
     }
 
+    private function getCachedIconHtml(string $iconName): string
+    {
+        $cacheKey = $iconName;
+
+        if (! isset(self::$iconHtmlCache[$cacheKey])) {
+            self::$iconHtmlCache[$cacheKey] = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+        }
+
+        return self::$iconHtmlCache[$cacheKey];
+    }
+
     private function createCustomLink(AutoLink $autoLink, array $matches, ?string $highlight = null): string
     {
         $url = $autoLink->url_template;
@@ -176,7 +190,7 @@ class AutoLinkService
         $target = $autoLink->open_in_new_tab ? ' target="_blank"' : '';
         $iconName = config('ledgerleap.auto_links.link_types.'.$autoLink->link_type.'.icon', 'o-link');
         $tooltip = $autoLink->label;
-        $iconHtml = Blade::render("<x-mary-icon name='{$iconName}' class='inline-block h-4 w-4 mr-1 -mt-1' />");
+        $iconHtml = $this->getCachedIconHtml($iconName);
 
         return '<div class="tooltip mx-2" data-tip="'.e($tooltip).'"><a href="'.e($url).'"'.$target.' class="font-bold text-primary-500 hover:underline">'.$iconHtml.' '.e($matches[0]).'</a></div>';
     }
