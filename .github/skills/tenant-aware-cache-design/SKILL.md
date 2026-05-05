@@ -125,17 +125,121 @@ class ConfidentialityLevelService
 }
 ```
 
+## Laravel 13 `Cache::memo()` — Request-Level Memoization
+
+`Cache::memo()` creates a `MemoizedStore` wrapper that caches resolved values **in memory** for the current request/job. This eliminates repeated Redis round-trips when the same key is read multiple times.
+
+### When to use
+- The same cache key is read **>1 time per request** (e.g. table cell rendering)
+- Redis latency (~5ms) is larger than the compute time being cached
+
+### Pattern
+```php
+use Illuminate\Support\Facades\Cache;
+
+// In Service method — reads from Redis on first call, memory on repeats
+$cached = Cache::memo()->get($cacheKey);
+if ($cached !== null) {
+    return $cached;
+}
+
+$html = $this->expensiveRender($data);
+Cache::memo()->put($cacheKey, $html, $ttl);
+
+return $html;
+```
+
+### Why not `static $requestCache`?
+- `static` arrays leak across tests and require manual `tearDown()` cleanup
+- `Cache::memo()` is managed by Laravel, auto-cleared per request/job
+- `flush()` invalidates both memory **and** underlying store consistently
+
+### Test cleanup
+```php
+protected function tearDown(): void
+{
+    Cache::memo()->flush();
+    parent::tearDown();
+}
+```
+
+## Early-Return Cache Pattern
+
+When a Service has heavy initialization (`mount()`, DI resolution, etc.), check the cache **before** setup to avoid wasted work.
+
+```php
+public function show($columnDefineData, $initialValue, ..., ?Ledger $record = null)
+{
+    // Convert array to object early so type/id are accessible
+    if (is_array($columnDefineData)) {
+        $columnDefineData = new ColumnDefine($columnDefineData);
+    }
+
+    // Early cache hit: skip mount() and all rendering logic
+    if (! $asCreate && ! $highlight && $record && is_object($columnDefineData)) {
+        $type = $columnDefineData->type ?? null;
+        if (in_array($type, ['textarea', 'auto_number', 'text', 'url', 'number'])) {
+            $cacheKey = "column_html:{$type}:{$tenantId}:{$record->id}:{$colId}";
+            $cached = Cache::memo()->get($cacheKey);
+            if ($cached !== null) {
+                // Wrap cached fragment in outer container if needed
+                $html = $type === 'textarea'
+                    ? '<div class="prose ...">' . $cached . '</div>'
+                    : $cached;
+                return new HtmlString($html);
+            }
+        }
+    }
+
+    // Cache miss: perform full initialization
+    $this->mount($columnDefineData, $initialValue, ...);
+    // ... rest of rendering
+}
+```
+
+## Invalidation with Memoization
+
+When invalidating Redis keys directly (e.g. pattern delete), `MemoizedStore` may still hold stale values in memory. Always flush the memo cache too.
+
+```php
+public function clearCacheForLedger(Ledger $ledger): void
+{
+    // Flush memoized memory FIRST so subsequent reads hit Redis
+    Cache::memo()->flush();
+
+    // Then delete underlying Redis keys
+    if (Cache::getStore() instanceof RedisStore) {
+        $keys = Redis::keys("*column_html:*:{$tenantId}:{$ledger->id}:*");
+        if (! empty($keys)) {
+            Redis::del($keys);
+        }
+    }
+}
+```
+
+## Performance Impact
+
+| Metric | Before | After | Driver |
+|---|---|---|---|
+| `textarea` cache hit | ~14ms (file I/O) | ~1ms (memory) | `logPerformance` JSON buffering |
+| `textarea` cache hit | ~5ms (Redis) | ~0.01ms (memory) | `Cache::memo()` |
+| `auto_number` median | 4.1ms | 0.63ms | `Cache::memo()` |
+| `text` median | 3.2ms | 0.63ms | `Cache::memo()` |
+
 ## Evidence
 
 - `app/Services/ConfidentialityLevelService.php` — tenant-aware key + tags
 - `app/Models/Organization.php` — `saved`/`deleted` cache flush
 - `app/Models/Role.php` — `saved`/`deleted` cache flush
+- `app/Services/Ledger/ColumnHtmlService.php` — `Cache::memo()` + early return
 - `.github/instructions/php-laravel.instructions.md` — Multi-Tenant Cache section
+- `.github/skills/tenant-aware-cache-design/references/column-html-service-cache.md` — full implementation walkthrough
 
 ## Related Skills
 
 - `permission-model` — WritableFolderRepository cache patterns
 - `livewire-tenant-context` — Tenant null handling in render()
+- `browser-har-analysis` — Measuring cache hit effectiveness
 
 ## Freshness
 

@@ -214,11 +214,8 @@ class ColumnHtmlServiceCacheTest extends TestCase
     {
         Mockery::close();
 
-        // リクエスト内キャッシュをクリア
-        $reflection = new \ReflectionClass(ColumnHtmlService::class);
-        $property = $reflection->getProperty('requestCache');
-        $property->setAccessible(true);
-        $property->setValue(null, []);
+        // MemoizedStore のメモリキャッシュをクリア
+        Cache::memo()->flush();
 
         parent::tearDown();
     }

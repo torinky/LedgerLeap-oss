@@ -62,10 +62,7 @@ class ColumnHtmlService
      */
     private array $attachmentContents;
 
-    /**
-     * リクエスト内インメモリキャッシュ
-     */
-    private static array $requestCache = [];
+
 
     public function __construct(
         AutoLinkService $autoLinkService,
@@ -110,6 +107,31 @@ class ColumnHtmlService
         // ★ 配列で渡された場合は、ColumnDefine オブジェクトに変換する
         if (is_array($columnDefineData)) {
             $columnDefineData = new ColumnDefine($columnDefineData);
+        }
+
+        // 早期キャッシュヒット: mount() 前に判定してコストを回避
+        if (! $asCreate && ! $highlight && $record && is_object($columnDefineData)) {
+            $type = $columnDefineData->type ?? null;
+            if (in_array($type, ['textarea', 'auto_number', 'text', 'url', 'number'])) {
+                $currentTenantId = $tenantId ?? $record?->define?->tenant_id ?? tenant()?->id ?? 'global';
+                $colId = $columnDefineData->id;
+                $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}";
+                $cached = Cache::memo()->get($cacheKey);
+                if ($cached !== null) {
+                    $html = $cached;
+                    if ($type === 'textarea') {
+                        $html = '<div class="prose dark:prose-invert max-w-none">' . $html . '</div>';
+                    }
+                    $this->logPerformance('column_html_show_ms', (microtime(true) - $startedAt) * 1000, [
+                        'render_kind' => $type,
+                        'has_highlight' => false,
+                        'as_create' => false,
+                        'cache_hit' => true,
+                    ]);
+
+                    return new HtmlString($html);
+                }
+            }
         }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
@@ -168,24 +190,16 @@ class ColumnHtmlService
                 $cacheKey = "column_html:textarea:{$currentTenantId}:{$record->id}:{$colId}";
                 $ttl = config('ledgerleap.cache.column_html_ttl', 86400);
 
-                // リクエスト内インメモリキャッシュ（Redis 往復より高速）
-                if (isset(self::$requestCache[$cacheKey])) {
+                $cached = Cache::memo()->get($cacheKey);
+                if ($cached !== null) {
                     $cacheHit = true;
-                    $html = self::$requestCache[$cacheKey];
+                    $html = $cached;
                 } else {
-                    $cached = Cache::get($cacheKey);
-                    if ($cached !== null) {
-                        $cacheHit = true;
-                        $html = $cached;
-                        self::$requestCache[$cacheKey] = $cached;
-                    } else {
-                        $cacheHit = false;
-                        $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
-                        $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
-                        $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
-                        Cache::put($cacheKey, $html, $ttl);
-                        self::$requestCache[$cacheKey] = $html;
-                    }
+                    $cacheHit = false;
+                    $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+                    $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+                    $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+                    Cache::memo()->put($cacheKey, $html, $ttl);
                 }
             }
 
@@ -633,21 +647,13 @@ class ColumnHtmlService
         $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}";
         $ttl = config('ledgerleap.cache.column_html_ttl', 3600);
 
-        // リクエスト内インメモリキャッシュ（Redis 往復より高速）
-        if (isset(self::$requestCache[$cacheKey])) {
-            return self::$requestCache[$cacheKey];
-        }
-
-        $cached = Cache::get($cacheKey);
+        $cached = Cache::memo()->get($cacheKey);
         if ($cached !== null) {
-            self::$requestCache[$cacheKey] = $cached;
-
             return $cached;
         }
 
         $html = $this->autoLinkService->convert($rawHtml, $this->columnDefineData, $record, $highlight);
-        Cache::put($cacheKey, $html, $ttl);
-        self::$requestCache[$cacheKey] = $html;
+        Cache::memo()->put($cacheKey, $html, $ttl);
 
         return $html;
     }
@@ -658,6 +664,9 @@ class ColumnHtmlService
     public function clearCacheForLedger(Ledger $ledger): void
     {
         $tenantId = $ledger->define?->tenant_id ?? tenant()?->id ?? 'global';
+
+        // MemoizedStore のメモリキャッシュもクリア（同一リクエスト内での古い値参照を防ぐ）
+        Cache::memo()->flush();
 
         if (Cache::getStore() instanceof RedisStore) {
             $pattern = '*column_html:*:'.$tenantId.':'.$ledger->id.':*';
