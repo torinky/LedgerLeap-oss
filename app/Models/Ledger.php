@@ -53,6 +53,10 @@ class Ledger extends Model
         static::saving(static function ($ledger) {
             $ledger->normalizeContent();
         });
+
+        static::saved(static function ($ledger) {
+            app('ColumnHtml')?->clearCacheForLedger($ledger);
+        });
     }
 
     /**

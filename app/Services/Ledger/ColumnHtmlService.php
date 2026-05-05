@@ -9,9 +9,11 @@ use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Services\AutoLinkService;
 use App\Services\Util\HtmlProcessorService;
+use Illuminate\Cache\RedisStore;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
@@ -59,6 +61,11 @@ class ColumnHtmlService
      * @var array|mixed
      */
     private array $attachmentContents;
+
+    /**
+     * リクエスト内インメモリキャッシュ
+     */
+    private static array $requestCache = [];
 
     public function __construct(
         AutoLinkService $autoLinkService,
@@ -158,17 +165,28 @@ class ColumnHtmlService
                 $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
                 $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
             } else {
-                $cacheKey = "textarea_html:{$currentTenantId}:{$record->id}:{$colId}:{$record->updated_at->getTimestamp()}";
-                $ttl = config('ledgerleap.cache.textarea_html_ttl', 86400);
+                $cacheKey = "column_html:textarea:{$currentTenantId}:{$record->id}:{$colId}";
+                $ttl = config('ledgerleap.cache.column_html_ttl', 86400);
 
-                $html = Cache::remember($cacheKey, $ttl, function () use ($record, $highlight) {
-                    $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
-                    $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
-
-                    return '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
-                });
-
-                $cacheHit = Cache::has($cacheKey);
+                // リクエスト内インメモリキャッシュ（Redis 往復より高速）
+                if (isset(self::$requestCache[$cacheKey])) {
+                    $cacheHit = true;
+                    $html = self::$requestCache[$cacheKey];
+                } else {
+                    $cached = Cache::get($cacheKey);
+                    if ($cached !== null) {
+                        $cacheHit = true;
+                        $html = $cached;
+                        self::$requestCache[$cacheKey] = $cached;
+                    } else {
+                        $cacheHit = false;
+                        $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+                        $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+                        $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+                        Cache::put($cacheKey, $html, $ttl);
+                        self::$requestCache[$cacheKey] = $html;
+                    }
+                }
             }
 
             $this->logPerformance('textarea_cache_hit', $cacheHit ? 1 : 0, [
@@ -180,11 +198,12 @@ class ColumnHtmlService
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
             $value = $this->initialValue;
-            $html = '<span>' . e($value) . '</span>' . ($unit ? '<span class="opacity-50 ml-1">' . e($unit) . '</span>' : '');
-            $html = $this->autoLinkService->convert($html, $this->columnDefineData, $record, $highlight);
+            $html = '<span>'.e($value).'</span>'.($unit ? '<span class="opacity-50 ml-1">'.e($unit).'</span>' : '');
+            $html = $this->getCachedColumnHtml($type, $record, $html, $highlight);
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record, $highlight);
+            $rawHtml = htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8');
+            $html = $this->getCachedColumnHtml($type, $record, $rawHtml, $highlight);
 
         }
 
@@ -252,7 +271,7 @@ class ColumnHtmlService
             }
 
             return ! empty($displayLabels)
-                ? '<div class="flex flex-wrap gap-1">' . implode('', array_map(fn($label) => '<span class="'.self::BADGE_CLASS_NAME.'">'.e($label).'</span>', $displayLabels)) . '</div>'
+                ? '<div class="flex flex-wrap gap-1">'.implode('', array_map(fn ($label) => '<span class="'.self::BADGE_CLASS_NAME.'">'.e($label).'</span>', $displayLabels)).'</div>'
                 : '';
         }
 
@@ -449,6 +468,7 @@ class ColumnHtmlService
                 $missingAttachmentCount++;
 
                 $fallbackBuildDurationMs += (microtime(true) - $fileStartedAt) * 1000;
+
                 continue;
             }
 
@@ -597,5 +617,63 @@ class ColumnHtmlService
         ]);
 
         return $files;
+    }
+
+    /**
+     * カラムHTMLをキャッシュから取得または生成する
+     */
+    private function getCachedColumnHtml(string $type, ?Ledger $record, string $rawHtml, ?string $highlight): string
+    {
+        if ($highlight || ! $record) {
+            return $this->autoLinkService->convert($rawHtml, $this->columnDefineData, $record, $highlight);
+        }
+
+        $currentTenantId = $this->tenantId ?? tenant()?->id ?? $record?->define?->tenant_id ?? 'global';
+        $colId = $this->getColumnDefineProperty('id');
+        $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}";
+        $ttl = config('ledgerleap.cache.column_html_ttl', 3600);
+
+        // リクエスト内インメモリキャッシュ（Redis 往復より高速）
+        if (isset(self::$requestCache[$cacheKey])) {
+            return self::$requestCache[$cacheKey];
+        }
+
+        $cached = Cache::get($cacheKey);
+        if ($cached !== null) {
+            self::$requestCache[$cacheKey] = $cached;
+
+            return $cached;
+        }
+
+        $html = $this->autoLinkService->convert($rawHtml, $this->columnDefineData, $record, $highlight);
+        Cache::put($cacheKey, $html, $ttl);
+        self::$requestCache[$cacheKey] = $html;
+
+        return $html;
+    }
+
+    /**
+     * 指定された台帳レコードのカラムHTMLキャッシュをクリアする
+     */
+    public function clearCacheForLedger(Ledger $ledger): void
+    {
+        $tenantId = $ledger->define?->tenant_id ?? tenant()?->id ?? 'global';
+
+        if (Cache::getStore() instanceof RedisStore) {
+            $pattern = '*column_html:*:'.$tenantId.':'.$ledger->id.':*';
+
+            try {
+                $keys = Redis::keys($pattern);
+                if (! empty($keys)) {
+                    Redis::del($keys);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to clear column html cache', [
+                    'ledger_id' => $ledger->id,
+                    'pattern' => $pattern,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }
