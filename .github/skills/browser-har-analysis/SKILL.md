@@ -218,15 +218,46 @@ public function changeCurrentFolder($folderId)
 - `$nextTick` で DOM クエリ → Alpine.js 内部の reactive 依存関係が変化 → dirty フラグが立つ可能性
 - **対策**: observer の生存期間を `init()` / `destroy()` で明示的に管理し、`setupObserver()` に変更検知（DOM 構造が変わった場合のみ再設定）を入れる
 
+### Blade Component Render Spike Pattern
+
+`column_html_show_ms` で `auto_number` や `text` タイプに散発スパイクがある場合、正規表現マッチ後の **Blade コンポーネントレンダリング**を疑う。
+
+**診断フロー**:
+1. `analyze_perf_log.py` でスパイクの render_kind と ledger_id/col_id を特定
+2. DB で該当カラムの実データ（テキスト長、マッチ数）を確認
+3. `AutoLinkService::convert()` 内で `Blade::render()` をループ呼び出ししていないか確認
+4. ベンチマークスクリプトでマッチ数別の処理時間を計測
+
+**対策例**:
+```php
+// Before: マッチごとに Blade::render() → 線形増加
+$iconHtml = Blade::render("<x-mary-icon ... />");
+
+// After: リクエスト内キャッシュで定数コスト化
+private static array $iconHtmlCache = [];
+private function getCachedIconHtml(string $iconName): string
+{
+    if (! isset(self::$iconHtmlCache[$iconName])) {
+        self::$iconHtmlCache[$iconName] = Blade::render("<x-mary-icon ... />");
+    }
+    return self::$iconHtmlCache[$iconName];
+}
+```
+
+→ 100マッチで 130ms → 13ms（90%削減）
+
+**証跡**: [docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md](../../../docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md)
+
 ## Evidence
 
 - [`docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md`](../../../docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md)
 - [`docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-194-lazy-effect-measurement.md`](../../../docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-194-lazy-effect-measurement.md)
 - [`docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-localhost4-har-perf-analysis.md`](../../../docs/work/ui-ux/ledger-list-redesign/2026-05-04_issue-202-localhost4-har-perf-analysis.md)
+- [`docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md`](../../../docs/work/performance/2026-05-05_issue-205-autolink-spike-retrospective.md)
 
 ## Freshness
 
 - status: confirmed
 - last_confirmed_at: 2026-05-05
 - recheck_after: 2026-08-05
-- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, `analyze_perf_log.py` being updated, `#[Lazy]` lifecycle changes, or Alpine.js / Livewire dirty-check behavior changes
+- recheck_trigger: HAR schema changes, Livewire network payload format changes, livewire URL hash pattern changes, `har_lazy_analysis.py` being updated, `analyze_perf_log.py` being updated, `#[Lazy]` lifecycle changes, Alpine.js / Livewire dirty-check behavior changes, or new Blade component render spikes in `column_html_show_ms`
