@@ -1,8 +1,7 @@
 @php
-    use Filament\Support\Enums\MaxWidth;
 @endphp
 
-<div class="filament-tree-infolist flex">
+<div class="filament-tree-infolist flex flex-wrap gap-3">
     @foreach ($getComponents() as $infolistComponent)
         {{ $infolistComponent }}
     @endforeach

@@ -33,13 +33,14 @@ class ListFoldersTree extends TreePage
     {
         return [
             Actions\CreateAction::make()
-                ->url(FolderResource::getUrl('create'))
+                ->url(FolderResource::getUrl('create', FolderResource::tenantContextParameters()))
                 ->icon('heroicon-o-plus'),
+            FolderResource::tenantSwitchAction('tree'),
             Actions\Action::make('list_view')
                 ->label(__('ledger.views.list'))
                 ->icon('heroicon-o-list-bullet')
                 ->color('info')
-                ->url(FolderResource::getUrl('index')),
+                ->url(FolderResource::getUrl('index', FolderResource::tenantContextParameters())),
         ];
     }
 
@@ -48,7 +49,7 @@ class ListFoldersTree extends TreePage
      */
     public static function getModel(): string|QueryBuilder
     {
-        return Folder::class;
+        return FolderResource::tenantScopedQuery();
     }
 
     /**
@@ -102,15 +103,13 @@ class ListFoldersTree extends TreePage
     public static function getInfolistColumns(): array
     {
         return [
-            TextEntry::make('title')
-                ->label(__('ledger.folder.title')),
             TextEntry::make('creator.name')
-                ->label(__('ledger.creator.name')),
+                ->label(__('ledger.field.creator')),
             TextEntry::make('modifier.name')
                 ->label(__('ledger.modifier.name')),
-            // フォルダに直接紐づくロールをバッジで表示する例
-            TextEntry::make('roles.name')
+            TextEntry::make('roles')
                 ->label(__('ledger.settings.roles'))
+                ->getStateUsing(fn (Folder $record): string => $record->roles->pluck('name')->join('、') ?: __('ledger.none'))
                 ->badge(),
         ];
     }
@@ -123,7 +122,10 @@ class ListFoldersTree extends TreePage
         return [
             // 詳細な編集は、既存の編集ページに遷移させます
             Actions\EditAction::make()
-                ->url(fn (Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
+                ->url(fn (Folder $record): string => FolderResource::getUrl(
+                    'edit',
+                    ['record' => $record, ...FolderResource::tenantContextParameters()]
+                )),
             Actions\DeleteAction::make(),
             // TrashedFilterがないため、これらのアクションは期待通りに機能しない可能性があります
             Actions\ForceDeleteAction::make(),

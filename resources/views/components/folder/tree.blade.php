@@ -162,7 +162,7 @@
                 {{--
                     Sprint 3: x-show + CSS height アニメーション
                 --}}
-                <div class="tree-collapse" x-show="open"
+                <div class="tree-collapse" x-show="open" x-cloak
                     style="overflow: hidden;"
                     x-transition:enter="transition-all duration-200 ease-out"
                     x-transition:enter-start="opacity-0 max-h-0"

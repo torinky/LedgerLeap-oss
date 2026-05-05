@@ -1,18 +1,13 @@
-@php
-    use Filament\Support\Facades\FilamentAsset;
-    use Studio15\FilamentTree\FilamentTreeServiceProvider;
-@endphp
-
 <x-filament-panels::page>
-    <div x-data="{}"
-         x-load-css="[@js(FilamentAsset::getStyleHref('filament-tree', package: FilamentTreeServiceProvider::$name))]"
-         x-load-js="[@js(FilamentAsset::getScriptSrc('sortable', package: FilamentTreeServiceProvider::$name)), @js(FilamentAsset::getScriptSrc('filament-tree', package: FilamentTreeServiceProvider::$name))]">
+    @vite(['resources/js/filament-tree.js'])
+
+    <div x-data="{}">
 
         <livewire:filament-tree::header :component="static::class"/>
 
         <div id="studio15-tree" class="bg-white dark:bg-white/5 rounded-xl shadow-sm ring-1 ring-gray-950/5">
             <nav class="text-base lg:text-sm pe-4 pt-4">
-                <ul class="studio15-tree" data-id>
+                <ul class="studio15-tree list-none m-0 ps-0" data-id>
                     @forelse($tree as $row)
                         <livewire:filament-tree::row
                                 :component="static::class"

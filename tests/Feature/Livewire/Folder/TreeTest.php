@@ -259,6 +259,15 @@ class TreeTest extends TestCase
         $component->assertSee('Deep L5');
     }
 
+    #[Test]
+    public function it_hides_collapsed_subtrees_until_alpine_initializes()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(Tree::class)
+            ->assertSeeHtml('x-cloak');
+    }
+
     /**
      * Sprint 3: アコーディオン展開状態テスト
      *

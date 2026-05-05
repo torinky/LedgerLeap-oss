@@ -79,6 +79,15 @@ class FolderResourceTest extends TestCase
     }
 
     #[Test]
+    public function create_page_defaults_tenant_to_current_context(): void
+    {
+        Livewire::test(CreateFolder::class)
+            ->assertFormSet([
+                'tenant_id' => $this->tenant->id,
+            ]);
+    }
+
+    #[Test]
     public function create_page_can_save_confidentiality_settings(): void
     {
         $org = Organization::factory()->create();
@@ -141,6 +150,51 @@ class FolderResourceTest extends TestCase
             ->searchTable('UniqueSearchableFolder')
             ->assertCanSeeTableRecords([$target])
             ->assertCanNotSeeTableRecords([$other]);
+    }
+
+    #[Test]
+    public function list_and_tree_pages_show_only_current_tenant_folders_by_default(): void
+    {
+        session()->forget('filament_from_tenant_id');
+
+        $currentTenantFolder = Folder::factory()->create([
+            'title' => 'Current Tenant Folder',
+            'creator_id' => $this->adminUser->id,
+            'modifier_id' => $this->adminUser->id,
+        ]);
+
+        $otherTenant = Tenant::create();
+        $otherTenant->domains()->create(['domain' => 'folder-other.localhost']);
+
+        tenancy()->initialize($otherTenant);
+        $otherTenantFolder = Folder::create([
+            'title' => 'Other Tenant Folder',
+            'creator_id' => $this->adminUser->id,
+            'modifier_id' => $this->adminUser->id,
+        ]);
+
+        tenancy()->initialize($this->tenant);
+
+        Livewire::test(ListFolders::class)
+            ->assertCanSeeTableRecords([$currentTenantFolder])
+            ->assertCanNotSeeTableRecords([$otherTenantFolder]);
+
+        $this->get(FolderResource::getUrl('tree'))
+            ->assertSuccessful()
+            ->assertSee($currentTenantFolder->title)
+            ->assertDontSee($otherTenantFolder->title);
+    }
+
+    #[Test]
+    public function tenant_context_parameters_keep_current_tenant_in_urls(): void
+    {
+        $params = FolderResource::tenantContextParameters();
+
+        $this->assertSame(['tenant' => $this->tenant->id], $params);
+        $this->assertStringContainsString(
+            'tenant='.urlencode((string) $this->tenant->id),
+            FolderResource::getUrl('tree', $params)
+        );
     }
 
     // ================================================================
@@ -216,5 +270,16 @@ class FolderResourceTest extends TestCase
 
         $this->assertContains('confidentiality_level', $fieldNames);
         $this->assertContains('confidentiality_scopes', $fieldNames);
+    }
+
+    #[Test]
+    public function tree_page_infolist_contains_role_display(): void
+    {
+        $columnNames = collect(ListFoldersTree::getInfolistColumns())
+            ->map(fn ($component) => $component->getName())
+            ->all();
+
+        $this->assertContains('roles', $columnNames);
+        $this->assertSame('なし', __('ledger.none'));
     }
 }

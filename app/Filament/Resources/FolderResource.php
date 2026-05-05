@@ -8,6 +8,7 @@ use App\Models\Folder;
 use App\Models\Tenant;
 use App\Services\ConfidentialityLevelService;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Actions\Action;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
@@ -30,9 +31,10 @@ use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Route;
+use Kalnoy\Nestedset\QueryBuilder;
 use Stancl\Tenancy\Facades\Tenancy;
 
- // 追加
+// 追加
 
 class FolderResource extends Resource
 {
@@ -49,7 +51,7 @@ class FolderResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('ledger.folders');
+        return __('ledger.folder.title');
     }
 
     public static function getPluralLabel(): string
@@ -83,20 +85,14 @@ class FolderResource extends Resource
                             ->maxLength(255),
                         Select::make('tenant_id')
                             ->label(__('ledger.tenant'))
-                            ->options(
-                                Tenancy::central(function () {
-                                    return Tenant::all()->mapWithKeys(function ($tenant) {
-                                        return [$tenant->id => $tenant->name ?: $tenant->id];
-                                    });
-                                })
-                            )
+                            ->options(static::tenantOptions())
                             ->live()
                             ->afterStateUpdated(function (callable $set) {
                                 $set('parent_id', null); // Clear parent folder selection when tenant changes
                             })
                             ->required() // tenant_idを必須にする
                             ->disabledOn('edit') // 編集時は無効化
-                            ->default(fn () => session('filament_from_tenant_id')),
+                            ->default(fn () => static::resolveTenantId()),
                         Forms\Components\Hidden::make('creator_id')
                             ->default(fn () => auth()->id())
                             ->disabledOn('edit'), // 作成時のみ記録
@@ -210,6 +206,72 @@ class FolderResource extends Resource
             ->all();
     }
 
+    public static function tenantOptions(): array
+    {
+        return Tenancy::central(function () {
+            return Tenant::all()->mapWithKeys(function ($tenant) {
+                return [$tenant->id => $tenant->name ?: $tenant->id];
+            })->all();
+        });
+    }
+
+    public static function resolveTenantId(): ?string
+    {
+        $tenantId = request()->query('tenant');
+
+        if (filled($tenantId)) {
+            return (string) $tenantId;
+        }
+
+        $tenantId = session('filament_from_tenant_id');
+
+        if (filled($tenantId)) {
+            return (string) $tenantId;
+        }
+
+        return tenant()?->id
+            ? (string) tenant()->id
+            : null;
+    }
+
+    public static function tenantContextParameters(): array
+    {
+        return filled($tenantId = static::resolveTenantId())
+            ? ['tenant' => $tenantId]
+            : [];
+    }
+
+    public static function tenantScopedQuery(): QueryBuilder
+    {
+        /** @var QueryBuilder $query */
+        $query = Folder::query()->with('roles');
+
+        if ($tenantId = static::resolveTenantId()) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query;
+    }
+
+    public static function tenantSwitchAction(string $page): Action
+    {
+        return Action::make('switchTenant')
+            ->label(__('ledger.tenant'))
+            ->icon('heroicon-o-building-office-2')
+            ->form([
+                Select::make('tenant_id')
+                    ->label(__('ledger.tenant'))
+                    ->options(static::tenantOptions())
+                    ->default(static::resolveTenantId())
+                    ->required()
+                    ->searchable()
+                    ->preload(),
+            ])
+            ->action(function (array $data) use ($page) {
+                return redirect()->to(static::getUrl($page, ['tenant' => $data['tenant_id']]));
+            });
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -292,16 +354,11 @@ class FolderResource extends Resource
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()
+        $query = static::tenantScopedQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])
             ->with(['children', 'roles', 'ancestors.roles']);
-
-        // URLクエリから 'tenant' パラメータを取得
-        if ($tenantId = request()->query('tenant')) {
-            $query->where('tenant_id', $tenantId);
-        }
 
         return $query;
     }
