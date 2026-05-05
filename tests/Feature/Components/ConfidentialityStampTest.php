@@ -64,10 +64,11 @@ class ConfidentialityStampTest extends TestCase
             ]
         );
 
-        $view->assertSee(
-            route('ledgerDefine.edit', ['tenant' => $tenantId, 'ledgerDefineId' => $ledgerDefine->id]),
-            false
-        );
+        $rendered = (string) $view;
+        $expectedUrl = route('ledgerDefine.edit', ['tenant' => $tenantId, 'ledgerDefineId' => $ledgerDefine->id]);
+
+        // URL が HTML 内に含まれているか確認（@json() で JSON エンコードされた文字列として含まれる）
+        $this->assertStringContainsString(json_encode($expectedUrl), $rendered, 'Expected URL not found in rendered HTML');
     }
 
     #[Test]
@@ -96,10 +97,11 @@ class ConfidentialityStampTest extends TestCase
             ]
         );
 
-        $view->assertSee(
-            route('folder.edit', ['tenant' => $tenantId, 'folder' => $folder->id]),
-            false
-        );
+        $rendered = (string) $view;
+        $expectedUrl = route('folder.edit', ['tenant' => $tenantId, 'folder' => $folder->id]);
+
+        // URL が HTML 内に含まれているか確認（@json() で JSON エンコードされた文字列として含まれる）
+        $this->assertStringContainsString(json_encode($expectedUrl), $rendered, 'Expected URL not found in rendered HTML');
     }
 
     #[Test]

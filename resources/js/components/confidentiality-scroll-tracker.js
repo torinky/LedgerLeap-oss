@@ -43,10 +43,13 @@ export default () => ({
                 this.lastSectionCount = sectionCount;
 
                 if (sectionCount === 1) {
-                    const id = sections[0].getAttribute('data-ledger-define-section');
-                    Livewire.dispatch('confidentialitySectionChanged', {
-                        ledgerDefineId: parseInt(id, 10),
-                    });
+                    const section = sections[0];
+                    const json = section.getAttribute('data-confidentiality-json');
+                    if (json) {
+                        window.dispatchEvent(new CustomEvent('confidentiality-updated', {
+                            detail: JSON.parse(json),
+                        }));
+                    }
                     return;
                 }
 
@@ -67,9 +70,17 @@ export default () => ({
                         }
 
                         if (bestId !== null) {
-                            Livewire.dispatch('confidentialitySectionChanged', {
-                                ledgerDefineId: parseInt(bestId, 10),
-                            });
+                            const bestSection = Array.from(sections).find(
+                                (s) => s.getAttribute('data-ledger-define-section') === bestId
+                            );
+                            if (bestSection) {
+                                const json = bestSection.getAttribute('data-confidentiality-json');
+                                if (json) {
+                                    window.dispatchEvent(new CustomEvent('confidentiality-updated', {
+                                        detail: JSON.parse(json),
+                                    }));
+                                }
+                            }
                         }
                     },
                     {
@@ -79,6 +90,20 @@ export default () => ({
                 );
 
                 sections.forEach((section) => this.observer.observe(section));
+
+                // Immediate initial selection in case observer doesn't fire synchronously
+                if (sectionCount > 0 && Object.keys(this.lastRatio).length === 0) {
+                    const firstVisible = Array.from(sections).find((s) => {
+                        const rect = s.getBoundingClientRect();
+                        return rect.top >= 0 && rect.bottom <= window.innerHeight;
+                    }) || sections[0];
+                    const json = firstVisible.getAttribute('data-confidentiality-json');
+                    if (json) {
+                        window.dispatchEvent(new CustomEvent('confidentiality-updated', {
+                            detail: JSON.parse(json),
+                        }));
+                    }
+                }
             } catch (e) {
                 console.error('[confidentialityScrollTracker] error:', e);
             }

@@ -4,7 +4,7 @@
     'editUrl' => null,
     'tenantId' => null,
     'label' => null,
-    'sourceType' => null,   // 'folder' | 'ledger_define' | null
+    'sourceType' => null,
     'sourceName' => null,
     'sourceId' => null,
     'sourcePath' => null,
@@ -23,7 +23,6 @@ $displayLabel = $label ?? ($level ? ($levelLabels[$level] ?? $level) : '');
 
 $scopeText = collect($scopes)->map(fn ($s) => is_array($s) ? ($s['name'] ?? $s) : $s)->implode(', ');
 
-// ツールチップ内容構築（1行で簡潔に）
 $tooltipParts = [];
 
 if ($sourcePath) {
@@ -49,46 +48,66 @@ if ($scopeText) {
 
 $tooltipText = implode(' | ', $tooltipParts);
 
-// 編集リンクURL構築（仕様書 §6 準拠）
 $resolvedEditUrl = $editUrl;
 $resolvedTenantId = $tenantId ?? request()->route()?->originalParameters()['tenant'] ?? tenant('id');
 
 if (! $resolvedEditUrl && $sourceType && $sourceId) {
-    try {
-        $resolvedEditUrl = match ($sourceType) {
-            'ledger_define' => route('ledgerDefine.edit', ['tenant' => $resolvedTenantId, 'ledgerDefineId' => $sourceId]),
-            'folder' => route('folder.edit', ['tenant' => $resolvedTenantId, 'folder' => $sourceId]),
-            default => null,
-        };
-    } catch (\Throwable $e) {
-        $resolvedEditUrl = null;
-    }
+    $resolvedEditUrl = match ($sourceType) {
+        'ledger_define' => route('ledgerDefine.edit', ['tenant' => $resolvedTenantId, 'ledgerDefineId' => $sourceId]),
+        'folder' => route('folder.edit', ['tenant' => $resolvedTenantId, 'folder' => $sourceId]),
+        default => null,
+    };
 }
 @endphp
 
-@if($level || $label)
-    {{-- z-[45]: navbar dropdown z-[30] より上、validation badge / sticky announcement z-[50] より下。
-         <a> タグ自体を fixed 配置し、DaisyUI tooltip（::before 擬似要素）を直接持たせる。
-         これにより pointer-events-none の副作用（子要素へのイベント伝播失敗）を回避。 --}}
-    @if($resolvedEditUrl)
-        <a href="{{ $resolvedEditUrl }}"
+@php
+$jsonFlags = JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE;
+@endphp
+
+<div wire:ignore
+     x-data='{
+         label: @json($displayLabel, $jsonFlags),
+         scopeText: @json($scopeText, $jsonFlags),
+         editUrl: @json($resolvedEditUrl),
+         tooltipText: @json($tooltipText, $jsonFlags),
+         visible: @json(($level || $label) ? true : false),
+         update(data) {
+             this.label = data.label;
+             this.scopeText = data.scopeText;
+             this.editUrl = data.editUrl;
+             this.tooltipText = data.tooltipText;
+             this.visible = true;
+         },
+         clear() {
+             this.visible = false;
+         }
+     }'
+     @confidentiality-updated.window="update($event.detail)"
+     @confidentiality-cleared.window="clear()">
+
+    <div x-show="visible" x-cloak>
+        <a x-show="editUrl"
+           :href="editUrl"
            class="fixed top-16 right-4 z-[55] block tooltip tooltip-left whitespace-pre-line"
-           data-tip="{{ $tooltipText }}">
-    @else
-        <div class="fixed top-16 right-4 z-[45] tooltip tooltip-left whitespace-pre-line"
-             data-tip="{{ $tooltipText }}">
-    @endif
-        {{-- スタンプ本体: パディング抑えめ・文字大きめ --}}
-        <div class="inline-flex items-center px-3 py-1 text-2xl font-black tracking-wider text-red-600 bg-transparent border-[3px] border-red-600 shadow-lg backdrop-blur-sm transform rotate-2 hover:rotate-0 transition-transform duration-200 cursor-pointer whitespace-nowrap">
-            {{ $displayLabel }}
-            @if($scopeText)
-                <span class="mx-1 text-xl">・</span>
-                <span class="text-lg font-bold">{{ $scopeText }}</span>
-            @endif
-        </div>
-    @if($resolvedEditUrl)
+           :data-tip="tooltipText">
+            <div class="inline-flex items-center px-3 py-1 text-2xl font-black tracking-wider text-red-600 bg-transparent border-[3px] border-red-600 shadow-lg backdrop-blur-sm transform rotate-2 hover:rotate-0 transition-transform duration-200 cursor-pointer whitespace-nowrap">
+                <span x-text="label"></span>
+                <span x-show="scopeText" class="contents">
+                    <span class="mx-1 text-xl">・</span>
+                    <span class="text-lg font-bold" x-text="scopeText"></span>
+                </span>
+            </div>
         </a>
-    @else
+        <div x-show="!editUrl"
+             class="fixed top-16 right-4 z-[45] tooltip tooltip-left whitespace-pre-line"
+             :data-tip="tooltipText">
+            <div class="inline-flex items-center px-3 py-1 text-2xl font-black tracking-wider text-red-600 bg-transparent border-[3px] border-red-600 shadow-lg backdrop-blur-sm transform rotate-2 hover:rotate-0 transition-transform duration-200 cursor-pointer whitespace-nowrap">
+                <span x-text="label"></span>
+                <span x-show="scopeText" class="contents">
+                    <span class="mx-1 text-xl">・</span>
+                    <span class="text-lg font-bold" x-text="scopeText"></span>
+                </span>
+            </div>
         </div>
-    @endif
-@endif
+    </div>
+</div>

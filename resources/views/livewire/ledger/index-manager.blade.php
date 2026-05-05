@@ -27,19 +27,17 @@
         @vite(['resources/sass/ledgerIndex.scss'])
     @endpush
 
-    @if($confidentiality && $confidentiality['level'] !== 'public')
-        <x-ledger.confidentiality-stamp
-            :level="$confidentiality['level']"
-            :label="$confidentiality['label']"
-            :scopes="$confidentiality['scope_labels']"
-            :tenant-id="$this->resolveTenantId($currentTenantId)"
-            :source-type="$canEditConfidentiality ? ($confidentiality['source']['type'] ?? null) : null"
-            :source-name="$confidentiality['source']['name'] ?? null"
-            :source-id="$canEditConfidentiality ? ($confidentiality['source']['id'] ?? null) : null"
-            :source-path="$confidentiality['source_path'] ?? null"
-            :inherited="$confidentiality['inherited']"
-        />
-    @endif
+    <x-ledger.confidentiality-stamp
+        :level="$confidentiality['level'] ?? null"
+        :label="$confidentiality['label'] ?? null"
+        :scopes="$confidentiality['scope_labels'] ?? []"
+        :tenant-id="$this->resolveTenantId($currentTenantId)"
+        :source-type="$canEditConfidentiality ? ($confidentiality['source']['type'] ?? null) : null"
+        :source-name="$confidentiality['source']['name'] ?? null"
+        :source-id="$canEditConfidentiality ? ($confidentiality['source']['id'] ?? null) : null"
+        :source-path="$confidentiality['source_path'] ?? null"
+        :inherited="$confidentiality['inherited'] ?? false"
+    />
 
     {{--
         台帳リスト初期化中オーバーレイ

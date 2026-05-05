@@ -86,8 +86,6 @@ class IndexManager extends BaseLivewireComponent
 
     public $highlights = [];
 
-    public ?int $activeLedgerDefineId = null;
-
     // フォルダーアセット関連
     #[Computed]
     public function currentFolder()
@@ -489,12 +487,6 @@ class IndexManager extends BaseLivewireComponent
         $this->dispatch('openActivityModalRequested', resourceType: $resourceType, resourceId: $resourceId, title: $title);
     }
 
-    #[On('confidentialitySectionChanged')]
-    public function updateActiveConfidentiality(int $ledgerDefineId): void
-    {
-        $this->activeLedgerDefineId = $ledgerDefineId;
-    }
-
     /**
      * 子コンポーネント (RecordsTable 等) からフィルタが更新された際の通知
      */
@@ -543,20 +535,11 @@ class IndexManager extends BaseLivewireComponent
             'filterStatus' => $this->filterStatus,
         ]);
 
-        $confidentiality = null;
-        $canEditConfidentiality = false;
-
-        if ($this->activeLedgerDefineId) {
-            $ledgerDefine = LedgerDefine::find($this->activeLedgerDefineId);
-            if ($ledgerDefine) {
-                $confidentiality = ConfidentialityLevelService::getEffectiveLevel($ledgerDefine);
-                $canEditConfidentiality = auth()->user()->can('update', $ledgerDefine);
-            }
-        }
-
-        if (! $confidentiality && $this->currentFolder) {
-            $confidentiality = ConfidentialityLevelService::getEffectiveLevel($this->currentFolder);
-            $canEditConfidentiality = auth()->user()->can('update', $this->currentFolder);
+        $folderConfidentiality = null;
+        $canEditFolderConfidentiality = false;
+        if ($this->currentFolder) {
+            $folderConfidentiality = ConfidentialityLevelService::getEffectiveLevel($this->currentFolder);
+            $canEditFolderConfidentiality = auth()->user()->can('update', $this->currentFolder);
         }
 
         return view('livewire.ledger.index-manager', [
@@ -573,8 +556,8 @@ class IndexManager extends BaseLivewireComponent
             'ledgerDefineRecords' => $this->ledgerDefineRecords,
             'currentFolder' => $this->currentFolder,
             'currentUserPermissionForFolder' => $this->currentUserPermissionForFolder,
-            'confidentiality' => $confidentiality,
-            'canEditConfidentiality' => $canEditConfidentiality,
+            'confidentiality' => $folderConfidentiality,
+            'canEditConfidentiality' => $canEditFolderConfidentiality,
         ])->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }
 }
