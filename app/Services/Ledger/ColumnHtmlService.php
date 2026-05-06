@@ -374,6 +374,7 @@ class ColumnHtmlService
         }
 
         $startedAt = microtime(true);
+        $debugAttachmentHtmlLogs = config('ledgerleap.performance.attachment_html_debug_logs', false);
 
         $prepareStartedAt = microtime(true);
         $files = $this->prepareFilesData($highlight);
@@ -397,17 +398,19 @@ class ColumnHtmlService
             'file_count' => count($files),
         ]);
 
-        Log::info('[AttachmentHtml] getFileHtml', [
-            'source' => $this->source,
-            'ledger_id' => $this->record?->id,
-            'column_id' => $this->getColumnDefineProperty('id'),
-            'mode' => $mode,
-            'file_count' => count($files),
-            'attachment_count' => $this->attachments->count(),
-            'prepare_files_ms' => round($prepareFilesDurationMs, 2),
-            'blade_render_ms' => round($bladeRenderDurationMs, 2),
-            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
-        ]);
+        if ($debugAttachmentHtmlLogs) {
+            Log::info('[AttachmentHtml] getFileHtml', [
+                'source' => $this->source,
+                'ledger_id' => $this->record?->id,
+                'column_id' => $this->getColumnDefineProperty('id'),
+                'mode' => $mode,
+                'file_count' => count($files),
+                'attachment_count' => $this->attachments->count(),
+                'prepare_files_ms' => round($prepareFilesDurationMs, 2),
+                'blade_render_ms' => round($bladeRenderDurationMs, 2),
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+            ]);
+        }
 
         return $html;
     }
@@ -421,6 +424,7 @@ class ColumnHtmlService
     private function prepareFilesData(?string $highlight = null): array
     {
         $startedAt = microtime(true);
+        $debugAttachmentHtmlLogs = config('ledgerleap.performance.attachment_html_debug_logs', false);
         $files = [];
         $filenameMap = [];
         $lookupDurationMs = 0.0;
@@ -583,29 +587,31 @@ class ColumnHtmlService
             $fileBuildDurationMs += (microtime(true) - $fileStartedAt) * 1000;
         }
 
-        Log::info('[AttachmentHtml] prepareFilesData', [
-            'source' => $this->source,
-            'ledger_id' => $this->record?->id,
-            'column_id' => $this->getColumnDefineProperty('id'),
-            'file_count' => count($files),
-            'attachment_count' => $this->attachments->count(),
-            'missing_attachment_count' => $missingAttachmentCount,
-            'lookup_ms' => round($lookupDurationMs, 2),
-            'route_build_ms' => round($routeBuildDurationMs, 2),
-            'download_bundle_ms' => round($downloadBundleDurationMs, 2),
-            'scalar_field_ms' => round($scalarFieldDurationMs, 2),
-            'hit_flag_ms' => round($hitFlagDurationMs, 2),
-            'filename_resolve_ms' => round($filenameResolveDurationMs, 2),
-            'filename_map_build_ms' => round($filenameMapBuildDurationMs, 2),
-            'filename_original_ms' => round($filenameOriginalDurationMs, 2),
-            'filename_attached_lookup_ms' => round($filenameAttachedLookupDurationMs, 2),
-            'filename_basename_ms' => round($filenameBasenameDurationMs, 2),
-            'array_assembly_ms' => round($arrayAssemblyDurationMs, 2),
-            'payload_build_ms' => round($payloadBuildDurationMs, 2),
-            'file_build_ms' => round($fileBuildDurationMs, 2),
-            'fallback_build_ms' => round($fallbackBuildDurationMs, 2),
-            'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
-        ]);
+        if ($debugAttachmentHtmlLogs) {
+            Log::info('[AttachmentHtml] prepareFilesData', [
+                'source' => $this->source,
+                'ledger_id' => $this->record?->id,
+                'column_id' => $this->getColumnDefineProperty('id'),
+                'file_count' => count($files),
+                'attachment_count' => $this->attachments->count(),
+                'missing_attachment_count' => $missingAttachmentCount,
+                'lookup_ms' => round($lookupDurationMs, 2),
+                'route_build_ms' => round($routeBuildDurationMs, 2),
+                'download_bundle_ms' => round($downloadBundleDurationMs, 2),
+                'scalar_field_ms' => round($scalarFieldDurationMs, 2),
+                'hit_flag_ms' => round($hitFlagDurationMs, 2),
+                'filename_resolve_ms' => round($filenameResolveDurationMs, 2),
+                'filename_map_build_ms' => round($filenameMapBuildDurationMs, 2),
+                'filename_original_ms' => round($filenameOriginalDurationMs, 2),
+                'filename_attached_lookup_ms' => round($filenameAttachedLookupDurationMs, 2),
+                'filename_basename_ms' => round($filenameBasenameDurationMs, 2),
+                'array_assembly_ms' => round($arrayAssemblyDurationMs, 2),
+                'payload_build_ms' => round($payloadBuildDurationMs, 2),
+                'file_build_ms' => round($fileBuildDurationMs, 2),
+                'fallback_build_ms' => round($fallbackBuildDurationMs, 2),
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+            ]);
+        }
 
         return $files;
     }

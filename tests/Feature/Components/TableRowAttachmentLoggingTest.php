@@ -25,6 +25,10 @@ class TableRowAttachmentLoggingTest extends TestCase
 
     public function testTableRowLogsAttachmentHtmlMetricsForAttachmentColumns(): void
     {
+        config([
+            'ledgerleap.performance.enabled' => true,
+            'ledgerleap.performance.attachment_html_debug_logs' => true,
+        ]);
         Log::spy();
 
         $service = $this->makeColumnHtmlService();
@@ -98,6 +102,10 @@ class TableRowAttachmentLoggingTest extends TestCase
 
     public function testTableRowLogsFilenameAttachedLookupMetricsWhenOriginalFilenameIsMissing(): void
     {
+        config([
+            'ledgerleap.performance.enabled' => true,
+            'ledgerleap.performance.attachment_html_debug_logs' => true,
+        ]);
         Log::spy();
 
         $service = $this->makeColumnHtmlService();

@@ -164,6 +164,12 @@ public function setAttachmentContents(array $contents): static
 - **downloadUrlフィールド**: 旧実装との互換性のため、`primary_download.url`を保持
 - **RPA対応**: `direct-download-link`クラスを維持し、自動化ツールとの互換性を確保
 
+### 5.4. ログ方針
+- `column_html_show_ms` / `column_html_prepare_files_ms` / `column_html_blade_render_ms` / `textarea_cache_hit` は、`LogPerformance` による標準監視メトリクスとして残す
+- `AttachmentHtml` の詳細ログ（`[AttachmentHtml] getFileHtml` / `[AttachmentHtml] prepareFilesData`）は、通常運用では無効
+- 調査時のみ `ATTACHMENT_HTML_DEBUG_LOGS=1` を設定して一時的に有効化する
+- こうすることで、日常監視は軽量な性能メトリクスに寄せつつ、必要時のみ詳細ログを復元できる
+
 ## 6. 関連ドキュメント
 
 - **[添付ファイル機能](../../function/Attachment.md)** - ユーザー向け機能説明

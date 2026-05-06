@@ -146,6 +146,13 @@ return [
         'log_destination' => env('PERFORMANCE_LOG_DESTINATION', 'both'),
 
         /*
+        | AttachmentHtml の詳細ログ出力
+        |
+        | 既定では false。調査時のみ true にして [AttachmentHtml] ログを復活させる。
+        */
+        'attachment_html_debug_logs' => env('ATTACHMENT_HTML_DEBUG_LOGS', false),
+
+        /*
         |--------------------------------------------------------------------------
         | 常時モニタ / 調査用メトリクス
         |--------------------------------------------------------------------------

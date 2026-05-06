@@ -86,6 +86,7 @@
 - 常時モニタがしきい値を超えたら、まず `ledger_records_query_prep_ms` と `ledger_records_query_paginate_ms` を確認する
 - 一覧の描画が遅いが SQL か UI か切り分けられない場合は `ledger_records_query_ms` と `view_prepare_ms` を比較する
 - 件数が少なくても遅い場合は `grouping_ms` / `score_stats_ms` のどこが支配的かを見る
+- `ColumnHtmlService` の詳細な `[AttachmentHtml] ...` ログは、`ATTACHMENT_HTML_DEBUG_LOGS=1` の調査時のみ使う。日常監視では使わず、`column_html_show_ms` / `column_html_prepare_files_ms` / `column_html_blade_render_ms` / `textarea_cache_hit` を主に見る
 
 ---
 
