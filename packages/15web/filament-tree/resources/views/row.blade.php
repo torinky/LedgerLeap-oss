@@ -5,7 +5,7 @@
     }
 @endphp
 
-<li class="tree-node-{{ $row->depth }}" data-id="{{ $row->getKey() }}" data-depth="{{ $row->depth }}" style="padding-left: {{ (1 + $row->depth) * 1.5 }}rem;">
+<li class="tree-node-{{ $row->depth }}" data-id="{{ $row->getKey() }}" data-depth="{{ $row->depth }}" style="padding-left: 1.5rem;">
     <div class="flex flex-row items-center rounded-xl shadow-sm ring-1 dark:ring-gray-950/5 ring-gray-950/5 p-3 gap-4">
         <div class="tree-row-draggable flex flex-row items-center grow gap-4">
             <div class="tree-row-handler flex flex-row items-center ps-2">
