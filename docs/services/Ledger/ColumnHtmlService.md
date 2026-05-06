@@ -170,6 +170,11 @@ public function setAttachmentContents(array $contents): static
 - 調査時のみ `ATTACHMENT_HTML_DEBUG_LOGS=1` を設定して一時的に有効化する
 - こうすることで、日常監視は軽量な性能メトリクスに寄せつつ、必要時のみ詳細ログを復元できる
 
+### 5.5. キャッシュ方針
+- キャッシュは `textarea` の専用経路と `getCachedColumnHtml()` に集約する
+- `mount()` 前の早期キャッシュは採用しない
+- 理由: 早期分岐は `updated_at` / `rawHtml` を含む後段のキャッシュキーと乖離しやすく、更新時の整合性と監視の一貫性を損ねるため
+
 ## 6. 関連ドキュメント
 
 - **[添付ファイル機能](../../function/Attachment.md)** - ユーザー向け機能説明

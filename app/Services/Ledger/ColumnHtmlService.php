@@ -109,7 +109,6 @@ class ColumnHtmlService
             $columnDefineData = new ColumnDefine($columnDefineData);
         }
 
-
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
         $this->record = $record;
         $this->tenantId = $tenantId ?? $record?->define?->tenant_id ?? null;
