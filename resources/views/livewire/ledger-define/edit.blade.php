@@ -133,9 +133,9 @@
                         class="btn-outline btn-neutral h-12"
                         link="{{ route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $ledgerDefineRecord->id]) }}" />
                 @endif
-                <label for="delete-modal" class="btn btn-outline btn-error font-medium h-12">
-                    <i class="fa-solid fa-trash mr-1"></i>{{ __('ledger.define.remove') }}
-                </label>
+                <x-mary-button label="{{ __('ledger.define.remove') }}" icon="o-trash"
+                               class="btn-outline btn-error font-medium h-12"
+                               onclick="document.getElementById('delete-modal').showModal()" />
             </x-slot:left>
             <x-slot:right>
                 <x-mary-button label="{{ __('ledger.save') }}" icon="o-check"

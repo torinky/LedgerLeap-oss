@@ -187,6 +187,7 @@ return [
         'list_description' => '説明（リスト表示時）',
         'not_allow_create' => '台帳の枠組みの作成権限がありません',
         'not_allow_edit' => '台帳の枠組みの編集権限がありません',
+        'no_permission_to_delete' => '削除する権限がありません',
         'opened_count' => '検索対象の台帳数',
         'preview' => 'プレビュー',
         'remove' => '台帳を削除する',

@@ -1,103 +1,108 @@
-<x-app-layout title="{{__('ledger.define.edit_title')}}" class="bg-warning/30">
+<x-app-layout title="{{ __('ledger.define.edit_title') }}" class="bg-warning/30">
     @push('scripts')
         @vite(['resources/js/ledgerDefineEdit.js'])
     @endpush
     @push('stylesheets')
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
-    <x-slot name="header" class="sticky top-0 z-50 ">
-        <div class="ttl_3d5 warn md:flex md:items-center space-x-4 bg-warning/40 rounded">
-            <h2 class="font-black text-xl text-warning-content/60 md:text-2xl flex items-center">
-        <span class="relative inline-flex items-center justify-center w-10 h-10 mr-2">
-            <i class="fa-solid fa-book text-3xl"></i>
-            <i class="fa-solid fa-pencil text-xl text-warning-content/90 absolute -top-1 -right-1 drop-shadow-md"></i>
-        </span>
-                <span> {{ __('ledger.define.edit_title') }}</span>
-            </h2>
-            <div class="text-warning-content/50 text-sm"><i
-                        class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
-        </div>
+
+    <x-slot name="header">
+        <x-mary-header :title="__('ledger.define.edit_title')" subtitle="{{$ledgerDefineRecord->title}}"
+                       size="text-xl" separator progress-indicator
+                       icon="o-pencil"
+        >
+        </x-mary-header>
+
+{{--
+        <x-mary-card shadow class="!bg-warning/30 border border-warning/20 !p-4">
+            <x-slot:title>
+                <div class="flex flex-wrap items-center gap-3">
+                    <span class="relative inline-flex items-center justify-center w-8 h-8">
+                        <i class="fa-solid fa-book text-2xl text-warning-content/80"></i>
+                        <i class="fa-solid fa-pencil text-base text-warning-content/90 absolute -top-1 -right-1 drop-shadow-sm"></i>
+                    </span>
+                    <div>
+                        <div class="font-bold text-lg md:text-xl text-warning-content/80">
+                            {{ __('ledger.define.edit_title') }}
+                        </div>
+                        <div class="text-warning-content/50 text-sm flex items-center gap-1.5">
+                            <i class="fas fa-book-open"></i>
+                            <span>{{ $ledgerDefineRecord->title }}</span>
+                        </div>
+                    </div>
+                </div>
+            </x-slot:title>
+        </x-mary-card>
+--}}
     </x-slot>
 
-    <div class="mx-auto px-4 py-6 max-w-400">
-        @if($ledgerDefineRecord)
+    <div class="mx-auto px-4 py-0 max-w-400">
+        @if ($ledgerDefineRecord)
             <div class="grid grid-cols-1 gap-6 items-start mb-20">
 
                 {{-- 上段: 基本設定 (常に表示) --}}
-                <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden">
-                    <h2 class="card-title font-black bg-primary/5 text-primary px-6 py-4 border-b border-primary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
-                        <x-mary-icon name="o-cog-6-tooth" />
-                        {{__('ledger.define.basic_setting')}}
-                    </h2>
-                    <div class="card-body p-6 md:p-8">
-                        <livewire:ledger-define.edit/>
-                    </div>
-                </div>
+                <x-mary-card separator shadow class="border border-base-300 overflow-hidden" body-class="p-6 md:p-8">
+                    <x-slot:title>
+                        <div class="flex items-center gap-2 text-neutral">
+                            <x-mary-icon name="o-cog-6-tooth" />
+                            {{ __('ledger.define.basic_setting') }}
+                        </div>
+                    </x-slot:title>
+                    <livewire:ledger-define.edit />
+                </x-mary-card>
 
-                @if($ledgerDefineRecord->column_define)
+                @if ($ledgerDefineRecord->column_define)
                     <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
                         {{-- 下段左: 項目設定 --}}
-                        <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden h-fit">
-                            <h2 class="card-title font-black bg-accent/5 text-accent px-6 py-4 border-b border-accent/50 text-base flex items-center gap-3 uppercase tracking-tighter">
-                                <x-mary-icon name="o-queue-list" class="w-5 h-5"/>
-                                {{__('ledger.column.group_title')}}
-                            </h2>
-                            <div class="card-body p-4 md:p-6">
-                                <livewire:ledger-define.modify-column/>
-                            </div>
-                        </div>
+                        <x-mary-card separator shadow class="border border-base-300 overflow-hidden h-fit" body-class="p-4 md:p-6">
+                            <x-slot:title>
+                                <div class="flex items-center gap-2 text-neutral">
+                                    <x-mary-icon name="o-queue-list" />
+                                    {{ __('ledger.column.group_title') }}
+                                </div>
+                            </x-slot:title>
+                            <livewire:ledger-define.modify-column />
+                        </x-mary-card>
 
                         {{-- 下段右: プレビュー (追従) --}}
-                        <div class="card bg-base-100 border border-base-300 shadow-xl overflow-hidden lg:sticky lg:top-24 h-fit">
-                            <h2 class="card-title font-black bg-secondary/5 text-secondary px-6 py-4 border-b border-secondary/50 text-base flex items-center gap-3 uppercase tracking-tighter">
-                                <x-mary-icon name="o-magnifying-glass" class="w-5 h-5"/>
-                                {{__('ledger.define.preview')}}
-                            </h2>
-                            <div class="card-body p-4 md:p-6">
-                                <livewire:ledger-define.preview/>
-                            </div>
-                        </div>
+                        <x-mary-card separator shadow class="border border-base-300 overflow-hidden lg:sticky lg:top-24 h-fit" body-class="p-4 md:p-6">
+                            <x-slot:title>
+                                <div class="flex items-center gap-2 text-neutral">
+                                    <x-mary-icon name="o-magnifying-glass" />
+                                    {{ __('ledger.define.preview') }}
+                                </div>
+                            </x-slot:title>
+                            <livewire:ledger-define.preview />
+                        </x-mary-card>
                     </div>
                 @endif
 
             </div>
 
-
-
-            <div x-data>
-                <template x-teleport="body">
-                    <div>
-                        <input type="checkbox" id="delete-modal" class="modal-toggle"/>
-                        <div class="modal z-9999!" role="dialog">
-                            <div class="modal-box bg-error/70 text-error-content">
-                                <h3 class="font-bold text-lg"><i class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}
-                                </h3>
-                                <p class="py-4">{{__('ledger.define.remove_message')}}
-                                    <br/>{{__('ledger.remove_records_message')}}
-                                </p>
-                                @can('delete_ledger_defines')
-                                    <div class="modal-action">
-                                        <div class="btnContainer">
-                                            <form method="POST"
-                                                  action="{{ route('ledgerDefine.delete', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}">
-                                                @csrf
-                                                @method('DELETE')
-                                                <button type="submit" class="btn btn-error"
-                                                        name="deleteLedgerDefine"><i
-                                                            class="fas fa-trash mr-2"></i>{{__('ledger.define.remove')}}</button>
-                                            </form>
-                                        </div>
-                                        <label for="delete-modal" class="btn btn-outline ml-5">{{__('actions.cancel')}}</label>
-                                    </div>
-                                @else
-                                    <!-- 権限がない場合の表示 -->
-                                    <span class="text-error">削除する権限がありません</span>
-                                @endcan
-                            </div>
-                        </div>
-                    </div>
-                </template>
-            </div>
+            <x-mary-modal id="delete-modal" title="{{ __('ledger.define.remove') }}" separator
+                          box-class="bg-error text-error-content">
+                <p class="text-sm leading-relaxed">
+                    {{ __('ledger.define.remove_message') }}
+                    <br />
+                    {{ __('ledger.remove_records_message') }}
+                </p>
+                <x-slot:actions>
+                    @can('delete_ledger_defines')
+                        <form method="POST"
+                              action="{{ route('ledgerDefine.delete', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}"
+                              class="contents">
+                            @csrf
+                            @method('DELETE')
+                            <x-mary-button type="submit" label="{{ __('ledger.define.remove') }}" icon="o-trash"
+                                           class="btn-error" />
+                        </form>
+                        <x-mary-button label="{{ __('actions.cancel') }}" class="btn-outline"
+                                       onclick="document.getElementById('delete-modal').close()" />
+                    @else
+                        <span class="text-error text-sm">{{ __('ledger.define.no_permission_to_delete') }}</span>
+                    @endcan
+                </x-slot:actions>
+            </x-mary-modal>
         @endif
     </div>
 </x-app-layout>
