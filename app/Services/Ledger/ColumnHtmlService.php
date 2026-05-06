@@ -109,30 +109,6 @@ class ColumnHtmlService
             $columnDefineData = new ColumnDefine($columnDefineData);
         }
 
-        // 早期キャッシュヒット: mount() 前に判定してコストを回避
-        if (! $asCreate && ! $highlight && $record && is_object($columnDefineData)) {
-            $type = $columnDefineData->type ?? null;
-            if (in_array($type, ['textarea', 'auto_number', 'text', 'url', 'number'])) {
-                $currentTenantId = $tenantId ?? $record?->define?->tenant_id ?? tenant()?->id ?? 'global';
-                $colId = $columnDefineData->id;
-                $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}";
-                $cached = Cache::memo()->get($cacheKey);
-                if ($cached !== null) {
-                    $html = $cached;
-                    if ($type === 'textarea') {
-                        $html = '<div class="prose dark:prose-invert max-w-none">' . $html . '</div>';
-                    }
-                    $this->logPerformance('column_html_show_ms', (microtime(true) - $startedAt) * 1000, [
-                        'render_kind' => $type,
-                        'has_highlight' => false,
-                        'as_create' => false,
-                        'cache_hit' => true,
-                    ]);
-
-                    return new HtmlString($html);
-                }
-            }
-        }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
         $this->record = $record;
@@ -187,7 +163,8 @@ class ColumnHtmlService
                 $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
                 $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
             } else {
-                $cacheKey = "column_html:textarea:{$currentTenantId}:{$record->id}:{$colId}";
+                $updatedAtTs = $record->updated_at?->timestamp ?? 0;
+                $cacheKey = "column_html:textarea:{$currentTenantId}:{$record->id}:{$colId}:{$updatedAtTs}";
                 $ttl = config('ledgerleap.cache.column_html_ttl', 86400);
 
                 $cached = Cache::memo()->get($cacheKey);
@@ -647,7 +624,8 @@ class ColumnHtmlService
         // 同一レコード・同一カラムでも diff の current/old で rawHtml が異なるため、
         // rawHtml のハッシュを含めてキャッシュを分離する。
         $rawHtmlHash = md5($rawHtml);
-        $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}:{$rawHtmlHash}";
+        $updatedAtTs = $record->updated_at?->timestamp ?? 0;
+        $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}:{$updatedAtTs}:{$rawHtmlHash}";
         $ttl = config('ledgerleap.cache.column_html_ttl', 3600);
 
         $cached = Cache::memo()->get($cacheKey);
