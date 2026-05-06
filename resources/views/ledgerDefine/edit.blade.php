@@ -6,37 +6,42 @@
         @vite(['resources/sass/ledgerDefineEdit.scss'])
     @endpush
 
-    <x-slot name="header">
-        <x-mary-header :title="__('ledger.define.edit_title')" subtitle="{{$ledgerDefineRecord->title}}"
-                       size="text-xl" separator progress-indicator
-                       icon="o-pencil"
-        >
-        </x-mary-header>
-
-{{--
-        <x-mary-card shadow class="!bg-warning/30 border border-warning/20 !p-4">
+    <div class="container max-w-full px-0 md:px-4 mt-4">
+        {{-- Unified header card --}}
+        <x-mary-card shadow class="bg-base-100/30 border border-base-300 mb-6">
             <x-slot:title>
-                <div class="flex flex-wrap items-center gap-3">
-                    <span class="relative inline-flex items-center justify-center w-8 h-8">
-                        <i class="fa-solid fa-book text-2xl text-warning-content/80"></i>
-                        <i class="fa-solid fa-pencil text-base text-warning-content/90 absolute -top-1 -right-1 drop-shadow-sm"></i>
-                    </span>
-                    <div>
-                        <div class="font-bold text-lg md:text-xl text-warning-content/80">
-                            {{ __('ledger.define.edit_title') }}
+                <div class="flex flex-col w-full">
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="shrink-0 hidden md:block">
+                            <x-mary-icon name="o-pencil-square" class="text-info w-15" />
                         </div>
-                        <div class="text-warning-content/50 text-sm flex items-center gap-1.5">
-                            <i class="fas fa-book-open"></i>
-                            <span>{{ $ledgerDefineRecord->title }}</span>
+                        <div class="flex flex-col min-w-0 w-full">
+                            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full mb-3">
+                                <div class="min-w-0">
+                                    <x-ledger.livewire-breadcrumbs
+                                        :thisLedgerDefine="$ledgerDefineRecord"
+                                        :breadcrumbs="$breadcrumbs"
+                                        :isLivewire="false" />
+                                    <h2 class="flex text-xl md:text-2xl font-black tracking-tighter text-base-content truncate mt-2 space-x-4">
+                                        <span class="text-base-content/50">{{ __('ledger.define.edit_title') }}</span>
+                                        <span class="divider divider-horizontal"></span>
+                                        <span>{{ $ledgerDefineRecord->title }}</span>
+                                    </h2>
+                                </div>
+
+                                {{-- Metadata area: version --}}
+                                <div class="flex flex-wrap items-center gap-3 text-sm md:text-base shrink-0 bg-base-200/60 p-1.5 rounded-lg border border-base-300">
+                                    <div class="flex items-center gap-1.5 text-base-content/40">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.version') }}:</span>
+                                        <span class="text-sm md:text-base">{{ $ledgerDefineRecord->version }}</span>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </div>
                 </div>
             </x-slot:title>
         </x-mary-card>
---}}
-    </x-slot>
-
-    <div class="mx-auto px-4 py-0 max-w-400">
         @if ($ledgerDefineRecord)
             <div class="grid grid-cols-1 gap-6 items-start mb-20">
 

@@ -184,8 +184,8 @@
             <x-slot:title>
                 <div class="flex flex-col w-full">
                     <div class="flex items-center gap-3 w-full">
-                        <div class="flex-shrink-0 hidden md:block">
-                            <i class="fas fa-list text-info/60 text-xl"></i>
+                        <div class="shrink-0 hidden md:block">
+                            <i class="fas fa-list text-info w-15"></i>
                         </div>
                         <div class="flex flex-col min-w-0 w-full">
                             <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full mb-3">
@@ -214,9 +214,14 @@
                                     </div>
                                 </div>
                             </div>
+{{--
                             <h2 class="text-xl md:text-2xl font-black tracking-tighter text-base-content flex items-center gap-2 truncate">
                                 <i class="fas fa-book-open text-base-content/30 text-xl md:hidden"></i>
                                 <span class="truncate">{{ $ledgerDefineRecord->title }}</span>
+                            </h2>
+--}}
+                            <h2 class="flex text-xl md:text-2xl font-black tracking-tighter text-base-content truncate  space-x-4">
+                                <span class="text-base-content/50"> {{ __('ledger.details') }} </span><span class="divider divider-horizontal"></span><span>{{ $ledgerDefineRecord->title }}</span>
                             </h2>
                         </div>
                     </div>
@@ -319,7 +324,7 @@
                         </div>
                     </x-element.loading-overlay>
 
-                    <x-mary-card title="{{ __('ledger.details') }}" shadow separator icon="o-document-text" class="bg-base-100 mb-6">
+                    <x-mary-card shadow separator icon="o-document-text" class="bg-base-100 mb-6">
                         <x-slot:menu>
                             @php
                                 $displayLevelOptions = [

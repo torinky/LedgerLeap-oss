@@ -41,10 +41,21 @@ class CreateController extends Controller
             $ledgerDefine
         );
 
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerDefine && $ledgerDefine->folder_id) {
+            $folder = \App\Models\Folder::with('ancestors')->find($ledgerDefine->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+
         // 新規台帳作成用のビューをレンダリング
         return View::make('ledger.create', [
             'ledgerDefineRecord' => $ledgerDefine,
             'prefillParams' => $prefillParams,
+            'breadcrumbs' => $breadcrumbs,
         ]);
     }
 

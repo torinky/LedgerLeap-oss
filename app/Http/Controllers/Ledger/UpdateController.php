@@ -21,9 +21,20 @@ class UpdateController extends Controller
             abort(403);
         }
 
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerRecord->define && $ledgerRecord->define->folder_id) {
+            $folder = \App\Models\Folder::with('ancestors')->find($ledgerRecord->define->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+
         return View::make('ledger.edit', [
             'ledgerDefineRecord' => $ledgerRecord->define,
             'ledger' => $ledgerRecord,
+            'breadcrumbs' => $breadcrumbs,
         ]);
 
     }

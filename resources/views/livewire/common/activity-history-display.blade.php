@@ -12,12 +12,7 @@
 
             <x-element.loading-overlay tier="2" target="{{ $activityTargets }}" />
 
-            <x-mary-header
-                :title="__('ledger.activity.title')"
-                icon="o-clock"
-                size="text-xl"
-                separator
-            >
+            <x-mary-header>
                 <x-slot:actions>
                     <div class="flex flex-wrap items-center justify-end gap-2">
                         <span class="badge badge-outline badge-lg shrink-0">

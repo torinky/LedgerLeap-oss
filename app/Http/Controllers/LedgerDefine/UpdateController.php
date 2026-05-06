@@ -24,7 +24,16 @@ class UpdateController extends Controller
         $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
         $folderRecords = $rootFolder->merge($folderRecords);
 
-        return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords'));
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerDefineRecord && $ledgerDefineRecord->folder_id) {
+            $folder = Folder::with('ancestors')->find($ledgerDefineRecord->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+        return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords', 'breadcrumbs'));
 
     }
 

@@ -1,48 +1,43 @@
-<x-app-layout title="{{__('ledger.define.create_title')}}" class="bg-warning/50">
-    <x-slot name="header" class="sticky top-0 z-10 ">
-        <div class="ttl_3d5 warn md:flex md:items-center space-x-4 bg-warning/40 rounded">
-            <h2 class="font-black text-xl text-warning-content/70 md:text-2xl flex items-center">
-                <span class="relative inline-flex items-center justify-center w-10 h-10 mr-2">
-                    <i class="fa-solid fa-book text-3xl"></i>
-                    <i class="fa-solid fa-plus-circle text-xl text-warning-content/90 absolute -top-1 -right-1 drop-shadow-md"></i>
-                </span>
-            {{ __('ledger.define.create_title') }}
-        </div>
-    </x-slot>
-
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 space-y-5">
-        <!-- 2段組みのコンテンツ -->
-        {{--        <div class="flex flex-wrap items-center justify-center w-full space-y-5 mt-3">--}}
-
-        <div class="card w-full bg-base-300 shadow-xl mx-5">
-            <div class="card-body p-3">
-                <h2 class="card-title">{{__('ledger.define.basic_setting')}}</h2>
-                <livewire:ledger-define.create/>
-                </div>
-            </div>
-        {{--
-                    <div class="card w-full bg-base-300 shadow-xl mx-5">
-                        <div class="card-body p-3">
-                            <h2 class="card-title">{{__('ledger.column.group_title')}}</h2>
-                            <livewire:ledger-define.modify-column/>
+<x-app-layout title="{{ __('ledger.define.create_title') }}" class="bg-warning/30">
+    <div class="container max-w-full px-0 md:px-4 mt-4">
+        {{-- Unified header card matching the detail page pattern --}}
+        <x-mary-card shadow class="bg-base-100/30 border border-base-300 mb-6">
+            <x-slot:title>
+                <div class="flex flex-col w-full">
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="shrink-0 hidden md:block">
+                            <x-mary-icon name="o-document-plus" class="text-warning w-15" />
+                        </div>
+                        <div class="flex flex-col min-w-0 w-full">
+                            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full mb-3">
+                                <div class="min-w-0">
+                                    @if(!empty($breadcrumbs))
+                                        <x-ledger.livewire-breadcrumbs
+                                            :breadcrumbs="$breadcrumbs"
+                                            :isLivewire="false" />
+                                    @endif
+                                    <h2 class="flex text-xl md:text-2xl font-black tracking-tighter text-base-content truncate mt-2 space-x-4">
+                                        <span class="text-base-content/50">{{ __('ledger.define.create_title') }}</span>
+                                    </h2>
+                                </div>
+                            </div>
                         </div>
                     </div>
-        --}}
-
-
-        {{--                </form>--}}
-        {{--        </div>--}}
-    </div>
-    <div
-        class="mx-auto md:w-full lg:w-2/3 inset-x-0 fixed bottom-3 z-[100]">
-        <div class="card shadow-lg bg-base-300 opacity-70 hover:opacity-100 transition-opacity ">
-            <div class="card-body">
-                <div class="card-actions justify-center items-center">
-                    <x-ledger.close-window-button/>
                 </div>
-            </div>
+            </x-slot:title>
+        </x-mary-card>
+
+        <div class="grid grid-cols-1 gap-6 items-start mb-20">
+            <x-mary-card separator shadow class="border border-base-300 overflow-hidden" body-class="p-6 md:p-8">
+                <x-slot:title>
+                    <div class="flex items-center gap-2 text-neutral">
+                        <x-mary-icon name="o-cog-6-tooth" />
+                        {{ __('ledger.define.basic_setting') }}
+                    </div>
+                </x-slot:title>
+                <livewire:ledger-define.create />
+            </x-mary-card>
         </div>
     </div>
-
 
 </x-app-layout>

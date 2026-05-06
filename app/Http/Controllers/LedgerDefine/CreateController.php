@@ -15,8 +15,17 @@ class CreateController extends Controller
         if (auth()->user()->cannot('create_ledger_defines', LedgerDefine::class)) {
             abort(403, __('ledger.define.not_allow_create'));
         }
-
-        return View::make('ledgerDefine.create');
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($request->folderId()) {
+//        dd($request->folderId());
+            $folder = \App\Models\Folder::with('ancestors')->find($request->folderId());
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+        return View::make('ledgerDefine.create', compact('breadcrumbs'));
 
     }
 }
