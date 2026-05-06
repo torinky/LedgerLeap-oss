@@ -401,6 +401,7 @@ return [
     'update' => 'アップデート',
     'update_message' => '更新する',
     'updated_at' => '更新日時',
+    'last_updated_at' => '最終更新日時',
     'user' => 'ユーザー',
     'user_action_suffix' => ' が ',
     'user_object_suffix' => ' を ',

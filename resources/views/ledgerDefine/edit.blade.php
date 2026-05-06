@@ -31,9 +31,19 @@
 
                                 {{-- Metadata area: version --}}
                                 <div class="flex flex-wrap items-center gap-3 text-sm md:text-base shrink-0 bg-base-200/60 p-1.5 rounded-lg border border-base-300">
-                                    <div class="flex items-center gap-1.5 text-base-content/40">
-                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.version') }}:</span>
-                                        <span class="text-sm md:text-base">{{ $ledgerDefineRecord->version }}</span>
+                                    <div class="flex items-center gap-1.5 px-2 py-0.5 rounded bg-primary/10 border border-primary/20">
+                                        <span class="text-primary font-bold uppercase tracking-tighter text-sm md:text-base">{{ __('ledger.version') }}</span>
+                                        <span class="font-bold text-primary text-base md:text-lg">{{ $ledgerDefineRecord->version }}</span>
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-base-content/30">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.modified_by') }}:</span>
+                                        <x-mary-icon name="o-user" class="size-5 text-base-content/40" />
+                                        <x-ledger.user-card-popover :user="$ledgerDefineRecord->modifier" />
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-base-content/40 border-l border-base-300 pl-3">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.last_updated_at') }}:</span>
+                                        <x-mary-icon name="o-calendar" class="size-5" />
+                                        <span class="text-sm md:text-base">{{ $ledgerDefineRecord->updated_at->format('Y-m-d H:i') }}</span>
                                     </div>
                                 </div>
                             </div>

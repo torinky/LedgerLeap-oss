@@ -43,10 +43,21 @@ class DuplicateController extends Controller
         // 複製元のcontentからprefillパラメータを構成
         $prefillParams = $this->buildPrefillParamsFromLedger($sourceLedger, $ledgerDefine);
 
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerDefine->folder_id) {
+            $folder = \App\Models\Folder::with('ancestors')->find($ledgerDefine->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+
         // 既存のCreateController::create()と同じビューを返す
         return View::make('ledger.create', [
             'ledgerDefineRecord' => $ledgerDefine,
             'prefillParams' => $prefillParams,
+            'breadcrumbs' => $breadcrumbs,
             'sourceLedgerId' => $sourceLedgerId, // 監査ログ用（オプション）
         ]);
     }

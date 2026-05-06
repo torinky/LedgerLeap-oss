@@ -324,7 +324,7 @@
                         </div>
                     </x-element.loading-overlay>
 
-                    <x-mary-card shadow separator icon="o-document-text" class="bg-base-100 mb-6">
+                    <x-mary-card title=" " shadow separator icon="o-document-text" class="bg-base-100 mb-6">
                         <x-slot:menu>
                             @php
                                 $displayLevelOptions = [

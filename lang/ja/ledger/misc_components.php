@@ -335,7 +335,8 @@ return [
         ],
     ],
     'modifier' => [
-        'name' => '最終変更者',
+        'name' => '変更者',
+        'last' => '最終変更者',
     ],
     'named' => [
         'add' => ':nameを追加',

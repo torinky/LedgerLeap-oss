@@ -54,6 +54,16 @@
                                         <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.version') }}:</span>
                                         <span class="text-sm md:text-base">{{ $ledger->version+1 }}</span>
                                     </div>
+                                    <div class="flex items-center gap-1.5 text-base-content/30">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.modifier.last') }}:</span>
+                                        <x-mary-icon name="o-user" class="size-5 text-base-content/40" />
+                                        <x-ledger.user-card-popover :user="$ledger->modifier" />
+                                    </div>
+                                    <div class="flex items-center gap-1.5 text-base-content/40 border-l border-base-300 pl-3">
+                                        <span class="text-xs md:text-sm font-medium text-base-content/50">{{ __('ledger.last_updated_at') }}:</span>
+                                        <x-mary-icon name="o-calendar" class="size-5" />
+                                        <span class="text-sm md:text-base">{{ $ledger->updated_at->format('Y-m-d H:i') }}</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
