@@ -63,6 +63,7 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - When a form or page shell pattern repeats, record the pattern in `docs/work/ui-ux/*` before promoting it into a reusable skill.
 - For a reusable title block pattern, use the `title-block` skill.
 - For reusable form layout and field grouping patterns, use the `form-layout` skill.
+- For Mary UI Card / Modal / Header usage patterns, use the `mary-ui-component-patterns` skill.
 - For persistent ledger footers and bottom action surfaces, prefer `x-ledger.sticky-action-bar` over custom fixed cards or ad hoc bottom bars, and follow `sticky-action-bar-footer-pattern` for slot responsibilities and badge-first summaries.
 - Use the shared footer shell consistently: `left` for escape / navigation / secondary actions, `right` for primary or workflow actions, and `footer` for short status or count summaries.
 - Keep footer summaries badge-first and compact; place the longer explanation in a tooltip or nearby helper text when needed.
