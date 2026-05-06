@@ -107,8 +107,8 @@
                         </span>
                         <div class="min-w-0">
                             <div class="text-sm font-semibold text-base-content">{{ __('ledger.search_options') }}</div>
-                            <div x-show="!open" class="text-xs text-base-content/60 whitespace-nowrap overflow-hidden text-ellipsis">{{ __('ledger.show_more') }}</div>
-                            <div x-show="open" x-cloak class="text-xs text-base-content/60">{{ __('ledger.show_less') }}</div>
+                            <div :class="open ? 'hidden' : 'block'" class="text-xs text-base-content/60 whitespace-nowrap overflow-hidden text-ellipsis">{{ __('ledger.show_more') }}</div>
+                            <div :class="open ? 'block' : 'hidden'" class="text-xs text-base-content/60">{{ __('ledger.show_less') }}</div>
                         </div>
                     </div>
                     <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/60">
@@ -162,12 +162,12 @@
                                           class="badge-info badge-sm hidden sm:inline-flex shadow-xs"/>
                         </div>
                         @endif
-                        <span x-show="!open" class="inline-flex items-center gap-1 shrink-0">
+                        <span :class="open ? 'hidden' : 'inline-flex'" class="items-center gap-1 shrink-0">
                             <span class="tooltip tooltip-bottom" data-tip="{{ __('ledger.show_more') }}">
                                 <x-mary-icon name="o-chevron-down" />
                             </span>
                         </span>
-                        <span x-show="open" x-cloak class="inline-flex items-center gap-1 shrink-0">
+                        <span :class="open ? 'inline-flex' : 'hidden'" class="items-center gap-1 shrink-0">
                             <span class="tooltip tooltip-bottom" data-tip="{{ __('ledger.show_less') }}">
                                 <x-mary-icon name="o-chevron-up" />
                             </span>
