@@ -34,6 +34,8 @@ Is this a sticky search header or top toolbar for a list page?
 - Treat the search input as the main action. It may be label-free when the placeholder is explicit and the input is visually large enough.
 - Keep `sort_by` and `per_page` grouped together until the layout is truly narrow; do not let one drop to a new line while the other still looks like part of the same control set.
 - Put low-frequency filters into one collapse section instead of spreading them across the top of the card.
+- In the collapsed summary strip, keep active state visible with short iconized badges for sort direction, display level, semantic search, synonym, technical-term, and workflow / approval status.
+- When a workflow status filter exists, show the active status in the summary strip even if the collapse body is closed; the user should not need to reopen the panel to know the current state.
 - Treat `displayLevel` as a secondary density control: keep it in the search options collapse when the page is list-oriented, and only elevate it when density itself is the primary task.
 - Keep result counts and pagination with the results area when the page can show multiple ledgers or cards; do not crowd the search header with navigation that belongs to reading the list.
 - Use a short, distinctive header band if the card needs personality, but do not let the header become a multi-line hero that competes with the results list.
@@ -53,6 +55,7 @@ Is this a sticky search header or top toolbar for a list page?
 
 ## Evidence
 
+- `docs/work/ui-ux/2026-05-06_search-panel-badge-summary-retrospective.md`
 - `docs/work/ui-ux/ledger-list-redesign/2026-04-11_ledger-search-header-responsive-scroll-note.md`
 - `docs/work/ui-ux/2026-04-11_ledger-index-manager-ui-plan.md`
 - `resources/views/components/ledger/search.blade.php`
@@ -63,7 +66,7 @@ Is this a sticky search header or top toolbar for a list page?
 ## Freshness
 
 - status: confirmed
-- last_confirmed_at: 2026-04-11
-- recheck_after: 2026-07-11
-- recheck_trigger: search header breakpoint ladder changes, sticky header overlap changes, or the results list starts feeling too hidden during scroll
+- last_confirmed_at: 2026-05-06
+- recheck_after: 2026-08-04
+- recheck_trigger: search header collapsed summary badges change, active workflow status stops surfacing in the compact header, or the list starts feeling too hidden during scroll
 

@@ -57,6 +57,9 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Use breadcrumbs, version labels, and compact metadata only when they add immediate value.
 - Long guidance belongs in collapsible sections, not in the first viewport.
 - Forms should group related fields, keep labels as nouns, and keep helper text short.
+- For compact search/list headers, split the surface into primary query controls and a secondary summary strip. Keep the summary strip badge-first and iconized so collapsed filters still expose active sort, display level, semantic-search, synonym, technical-term, and workflow status.
+- For compact filter rows, use a noun label plus a small semantic icon and a tooltip hint; do not rely on placeholders or hidden text for the primary meaning.
+- When the compact row contains a toggle, keep the row wrapper as a `label` so the whole row remains clickable and the text/control association stays explicit.
 - When a form or page shell pattern repeats, record the pattern in `docs/work/ui-ux/*` before promoting it into a reusable skill.
 - For a reusable title block pattern, use the `title-block` skill.
 - For reusable form layout and field grouping patterns, use the `form-layout` skill.
@@ -100,6 +103,8 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Inputs should remain readable and accessible; use labels rather than relying on placeholders.
 - Cards should be used for grouped surfaces, not as a default wrapper for every block.
 - Badges should express short state, count, or metadata.
+- If a badge is an active filter or state marker inside a collapsed header, keep the text label visible and pair it with a tooltip; reserve icon-only treatment for secondary markers.
+- For dense toggle rows inside cards or collapsible filters, prefer a `label` wrapper over a generic `div` so the touch target covers the row and the control remains accessible.
 - Chips / tags are for selectable or dismissible labels.
 - Tooltips should carry overflow details, not essential primary text.
 - If a badge or state marker is icon-only, pair it with a tooltip and sr-only text so the meaning remains accessible.

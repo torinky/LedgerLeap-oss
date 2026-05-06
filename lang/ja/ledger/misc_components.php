@@ -448,6 +448,7 @@ return [
         'importance_score' => '重要度',
         'max' => '最高',
         'min' => '最低',
+        'this_page' => 'ページ・スコア',
         'score' => 'スコア',
         'score_label' => 'スコア:',
         'score_order' => 'スコア順',

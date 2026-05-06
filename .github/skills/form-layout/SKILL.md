@@ -46,6 +46,9 @@ Is this a form or field group?
 - Use responsive grid columns only when the field relationship is obvious and stable.
 - Use section headers sparingly and only when the form truly has multiple conceptual blocks.
 - Keep required indicators compact and consistent with the badge / indicator patterns already used in the repository.
+- For compact filter rows inside a search or settings panel, use a noun label plus a small semantic icon and a tooltip hint; keep the control visible even when the surrounding panel is collapsed.
+- If a form state needs to remain visible outside the form body, surface it again in a badge-first summary strip instead of hiding the only indicator inside the control row.
+- When the compact filter row contains a toggle, keep the row wrapper as a `label` so the visible text and the toggle remain associated and the full row is clickable.
 - Keep long instructions out of the primary form body unless they are essential for completion.
 - If a form is long, split it into logical blocks instead of trying to make one giant panel do everything.
 
@@ -59,6 +62,7 @@ Is this a form or field group?
 
 ## Evidence and references
 
+- Repo evidence: `docs/work/ui-ux/2026-05-06_search-panel-badge-summary-retrospective.md`
 - Repo evidence: `docs/work/ui-ux/2026-04-18_design-workflow-reorganization-note.md`
 - Related skill: `translation`
 - Official references that shaped this pattern:
@@ -69,10 +73,11 @@ Is this a form or field group?
 ## Freshness
 
 - status: confirmed
-- last_confirmed_at: 2026-04-18
+- last_confirmed_at: 2026-05-06
 - recheck_after: 90d
 - recheck_trigger:
   - a repeated field-group pattern appears in more than one feature
+  - a collapsed search/filter surface needs active-state badges outside the form body
   - form validation or label guidance changes upstream
   - Mary UI or daisyUI form components change in a way that affects layout
 

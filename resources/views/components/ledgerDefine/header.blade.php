@@ -63,12 +63,12 @@
                                  icon="o-arrow-trending-up"
                                  class="badge-ghost badge-sm font-medium opacity-70" />
 
-                    <div class="text-[10px] text-base-content/40 font-medium px-1">
+                    <div class="text-sm text-base-content/40 font-medium px-1">
                         ({{ $displayStats['count'] }}{{ __('ledger.records') }})
                     </div>
 
                     @if($overallStats && $pageStats && $pageStats['count'] !== $overallStats['count'])
-                        <div class="text-[10px] text-base-content/30 font-medium px-1">
+                        <div class="text-sm text-base-content/30 font-medium px-1">
                             {{ __('ledger.scoring.this_page') }}: {{ $pageStats['avg_score'] }} / {{ $pageStats['count'] }}{{ __('ledger.records') }}
                         </div>
                     @endif
@@ -132,12 +132,12 @@
                     <div class="prose prose-xs max-w-none text-base-content/70 leading-relaxed custom-scrollbar">
                         @php
                             $descriptionHtml = app(App\Services\AutoLinkService::class)->convert(
-                                app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''), 
-                                null, 
+                                app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefine->list_description ?? ''),
+                                null,
                                 $ledgerDefine
                             );
                         @endphp
-                        <x-expandable-content 
+                        <x-expandable-content
                             :content="$descriptionHtml"
                             max-height="4.5rem"
                         />

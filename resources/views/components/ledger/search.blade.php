@@ -55,7 +55,10 @@
                     <label class="form-control rounded-xl border border-base-300/70 bg-base-200/50 px-3 py-2">
                         @php $hasDefaultSortOption = !empty($defaultSortColumns) && $orderBy !== 'default'; @endphp
                         <div class="label px-0 pb-1">
-                            <span class="label-text text-sm font-medium text-base-content">{{ __('ledger.sort_by') }}</span>
+                            <span class="label-text inline-flex items-center gap-2 text-sm font-medium text-base-content">
+                                <x-mary-icon name="o-arrows-up-down" class="text-base-content/70" />
+                                <span>{{ __('ledger.sort_by') }}</span>
+                            </span>
                         </div>
                         <select wire:model.live="orderBy" class="select select-primary select-sm w-full">
                             <?php
@@ -79,7 +82,10 @@
 
                     <label class="form-control rounded-xl border border-base-300/70 bg-base-200/50 px-3 py-2">
                         <div class="label px-0 pb-1">
-                            <span class="label-text text-sm font-medium text-base-content">{{ __('ledger.per_page') }}</span>
+                            <span class="label-text inline-flex items-center gap-2 text-sm font-medium text-base-content">
+                                <x-mary-icon name="o-queue-list" class="text-base-content/70" />
+                                <span>{{ __('ledger.per_page') }}</span>
+                            </span>
                         </div>
                         <select wire:model.live="perPage" class="select select-primary select-sm w-full">
                             <option>10</option>
@@ -105,20 +111,7 @@
                             <div x-show="open" x-cloak class="text-xs text-base-content/60">{{ __('ledger.show_less') }}</div>
                         </div>
                     </div>
-                    <div class="flex items-center gap-2 text-xs text-base-content/60 overflow-hidden">
-                        @if (!empty($hasWorkflowEnabled) && !empty($filterStatus))
-                            @php
-                                $statusEnum = \App\Enums\WorkflowStatus::tryFrom($filterStatus);
-                            @endphp
-                            @if ($statusEnum)
-                                <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.workflow.status.label') }}">
-                                    <x-mary-badge :value="$statusEnum->label()"
-                                                  :icon="$statusEnum->heroicon()"
-                                                  class="{{ $statusEnum->colorClass() }} badge-sm hidden sm:inline-flex shadow-xs border-none"/>
-                                </div>
-                            @endif
-                        @endif
-
+                    <div class="flex flex-wrap items-center gap-2 text-xs text-base-content/60">
                         @php
                             $activeSortLabel = match($orderBy) {
                                 'default' => $orderByLabel ?: __('ledger.default_sort_order'),
@@ -128,28 +121,56 @@
                                 'semantic_score' => __('ledger.semantic_score_sort'),
                                 default => $orderByLabel ?: $orderBy
                             };
+                            $statusEnum = !empty($filterStatus) ? \App\Enums\WorkflowStatus::tryFrom($filterStatus) : null;
+                            $workflowStatusLabel = $statusEnum?->label();
                         @endphp
-                        <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.sort_by') }}">
                             <x-mary-badge :value="$activeSortLabel . ': ' . ($orderAsc ? __('ledger.ascending') : __('ledger.descending'))"
                                           :icon="$orderAsc ? 'o-bars-arrow-up' : 'o-bars-arrow-down'"
                                           class="badge-ghost badge-sm hidden sm:inline-flex whitespace-nowrap shadow-xs"/>
-                        </div>
 
-                        <x-mary-badge :value="__('ledger.form.display_level') . ': ' . $currentDisplayLevelLabel"
-                                      class="badge-info badge-sm hidden sm:inline-flex whitespace-nowrap shadow-xs"/>
-                        @if ($useTechnicalTerm)
-                            <x-mary-badge :value="__('ledger.search_technical_term')"
-                                          class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
-                        @endif
-                        @if ($useSynonym)
-                            <x-mary-badge :value="__('ledger.search_synonym')"
-                                          class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
+                        <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.form.display_level') }}">
+                            <x-mary-badge :value="__('ledger.form.display_level') . ': ' . $currentDisplayLevelLabel"
+                                          icon="o-view-columns"
+                                          class="badge-info badge-sm hidden sm:inline-flex whitespace-nowrap shadow-xs"/>
+                        </div>
+                        <?php if ($useSemanticSearch) : ?>
+                            <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.semantic_search_requires_query') }}">
+                                <x-mary-badge :value="__('ledger.semantic_search')"
+                                              icon="o-sparkles"
+                                              class="badge-secondary badge-sm hidden sm:inline-flex shadow-xs"/>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($useTechnicalTerm) : ?>
+                            <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.search_technical_term_hint') }}">
+                                <x-mary-badge :value="__('ledger.search_technical_term')"
+                                              icon="o-book-open"
+                                              class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
+                            </div>
+                        <?php endif; ?>
+                        <?php if ($useSynonym) : ?>
+                            <div class="tooltip tooltip-bottom" data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym_hint') }}">
+                                <x-mary-badge :value="__('ledger.search_synonym')"
+                                              icon="o-chat-bubble-left-right"
+                                              class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
+                            </div>
+                        <?php endif; ?>
+
+                        @if (!empty($workflowStatusLabel))
+                        <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.workflow.status.label') }}">
+                            <x-mary-badge :value="$workflowStatusLabel"
+                                          :icon="$statusEnum?->heroicon() ?? 'o-funnel'"
+                                          class="badge-info badge-sm hidden sm:inline-flex shadow-xs"/>
+                        </div>
                         @endif
                         <span x-show="!open" class="inline-flex items-center gap-1 shrink-0">
-                            <x-mary-icon name="o-chevron-down" class="h-4 w-4"/>
+                            <span class="tooltip tooltip-bottom" data-tip="{{ __('ledger.show_more') }}">
+                                <x-mary-icon name="o-chevron-down" />
+                            </span>
                         </span>
                         <span x-show="open" x-cloak class="inline-flex items-center gap-1 shrink-0">
-                            <x-mary-icon name="o-chevron-up" class="h-4 w-4"/>
+                            <span class="tooltip tooltip-bottom" data-tip="{{ __('ledger.show_less') }}">
+                                <x-mary-icon name="o-chevron-up" />
+                            </span>
                         </span>
                     </div>
                 </div>
@@ -164,35 +185,47 @@
                             ];
                         @endphp
                         <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                            <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
-                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_technical_term') }}</span>
+                            <label class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 sm:flex-row sm:items-center sm:justify-between">
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-base-content whitespace-nowrap">
+                                    <x-mary-icon name="o-book-open" class="text-base-content/70" />
+                                    <span>{{ __('ledger.search_technical_term') }}</span>
+                                </span>
                                 <div class="tooltip w-full sm:w-auto"
                                      data-tip="{{ __('ledger.search_technical_term_hint') }}">
                                     <x-mary-toggle wire:model.live="useTechnicalTerm" class="toggle-primary toggle-sm"
                                                    right/>
                                 </div>
-                            </div>
+                            </label>
 
-                            <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 ">
-                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.search_synonym') }}</span>
+                            <label class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 ">
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-base-content whitespace-nowrap">
+                                    <x-mary-icon name="o-chat-bubble-left-right" class="text-base-content/70" />
+                                    <span>{{ __('ledger.search_synonym') }}</span>
+                                </span>
                                 <div class="tooltip w-full sm:w-auto"
                                      data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym_hint') }}">
                                     <x-mary-toggle wire:model.live="useSynonym" class="toggle-primary toggle-sm"
                                                    :disabled="$useSemanticSearch" right/>
                                 </div>
-                            </div>
+                            </label>
 
-                            <div class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-1 lg:col-start-3">
-                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.semantic_search') }}</span>
+                            <label class="flex  gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-1 lg:col-start-3">
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-base-content whitespace-nowrap">
+                                    <x-mary-icon name="o-sparkles" class="text-base-content/70" />
+                                    <span>{{ __('ledger.semantic_search') }}</span>
+                                </span>
                                 <div class="tooltip w-full sm:w-auto"
                                      data-tip="{{ __('ledger.semantic_search_requires_query') }}">
                                     <x-mary-toggle wire:model.live="useSemanticSearch" class="toggle-secondary toggle-sm"
                                                    right/>
                                 </div>
-                            </div>
+                            </label>
 
                             <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-span-2">
-                                <span class="text-sm font-medium text-base-content">{{ __('ledger.form.display_level') }}</span>
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-base-content">
+                                    <x-mary-icon name="o-view-columns" class="text-base-content/70" />
+                                    <span>{{ __('ledger.form.display_level') }}</span>
+                                </span>
                                 <div x-data="{ level: {{ (int) $displayLevel }} }" x-init="$watch('level', value => $wire.updateDisplayLevel(value))">
                                     <x-mary-group x-model="level" :options="$displayLevelOptions"
                                         class="[&_label]:btn-ghost [&_label]:btn-xs [&_input:checked+label]:!btn-primary"
@@ -200,16 +233,22 @@
                                 </div>
                             </div>
 
-                            <div class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
-                                <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.sort_direction') }}</span>
+                            <label class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between">
+                                <span class="inline-flex items-center gap-2 text-sm font-medium text-base-content whitespace-nowrap">
+                                    <x-mary-icon name="o-bars-arrow-up" class="text-base-content/70" />
+                                    <span>{{ __('ledger.sort_direction') }}</span>
+                                </span>
                                 <div class="tooltip w-full sm:w-auto">
                                     <x-mary-toggle wire:model.live="orderAsc" class="toggle-primary toggle-sm" right/>
                                 </div>
-                            </div>
+                            </label>
 
                             {{-- @if (!empty($hasWorkflowEnabled)) --}}
                                 <label class="flex gap-1 rounded-xl border border-base-300/70 bg-base-100/80 px-3 py-1 flex-row items-center justify-between col-start-1 md:col-start-2 lg:col-start-1 xl:col-start-4">
-                                    <span class="text-sm font-medium text-base-content whitespace-nowrap">{{ __('ledger.workflow.status.label') }}</span>
+                                    <span class="inline-flex items-center gap-2 text-sm font-medium text-base-content whitespace-nowrap">
+                                        <x-mary-icon name="o-funnel" class="text-base-content/70" />
+                                        <span>{{ __('ledger.workflow.status.label') }}</span>
+                                    </span>
                                     <select wire:model.live="filterStatus"
                                             class="select select-primary select-xs w-full sm:w-44">
                                         <option value="">{{ __('ledger.all') }}</option>
