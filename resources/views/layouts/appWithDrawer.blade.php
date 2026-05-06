@@ -51,7 +51,7 @@
     </div>
 
     @php($adminAnnouncements = app(\App\Services\AdminAnnouncementService::class)->notificationCenterAnnouncements())
-    @if (! empty($adminAnnouncements) && ! request()->routeIs('notifications.index', 'ledger.index', 'ledgersByFolderId', 'ledgersByDefineId'))
+    @if (! empty($adminAnnouncements) && ! request()->routeIs('notifications.index', 'ledger.index', 'ledgersByFolderId', 'ledgersByDefineId', 'ledgerDefine.index', 'ledgerDefinesByFolderId'))
         <x-admin.announcement-stack :announcements="$adminAnnouncements" />
     @endif
 
