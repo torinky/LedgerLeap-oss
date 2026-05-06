@@ -119,6 +119,24 @@ class EditTest extends TestCase
     }
 
     #[Test]
+    public function store_increments_version(): void
+    {
+        $initialVersion = $this->ledgerDefine->version;
+
+        $edit = new Edit;
+        $edit->ledgerDefineRecord = $this->ledgerDefine;
+        $edit->title = 'Updated Title for Version Test';
+        $edit->parentFolderId = $this->folder->id;
+        $edit->workflow_enabled = false;
+        $edit->confidentialityLevel = 'public';
+        $edit->confidentialityScopes = [];
+        $edit->store();
+
+        $this->ledgerDefine->refresh();
+        $this->assertEquals($initialVersion + 1, $this->ledgerDefine->version);
+    }
+
+    #[Test]
     public function store_updates_workflow_enabled(): void
     {
         $edit = new Edit;

@@ -53,6 +53,15 @@ class LedgerDefine extends Model
         'confidentiality_scopes',
     ];
 
+    protected static function booted(): void
+    {
+        static::updating(function (LedgerDefine $ledgerDefine) {
+            if ($ledgerDefine->isDirty()) {
+                $ledgerDefine->version += 1;
+            }
+        });
+    }
+
     public function ledgers()
     {
         return $this->hasMany(Ledger::class, 'ledger_define_id');
