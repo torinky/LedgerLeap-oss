@@ -644,7 +644,10 @@ class ColumnHtmlService
 
         $currentTenantId = $this->tenantId ?? tenant()?->id ?? $record?->define?->tenant_id ?? 'global';
         $colId = $this->getColumnDefineProperty('id');
-        $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}";
+        // 同一レコード・同一カラムでも diff の current/old で rawHtml が異なるため、
+        // rawHtml のハッシュを含めてキャッシュを分離する。
+        $rawHtmlHash = md5($rawHtml);
+        $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}:{$rawHtmlHash}";
         $ttl = config('ledgerleap.cache.column_html_ttl', 3600);
 
         $cached = Cache::memo()->get($cacheKey);
