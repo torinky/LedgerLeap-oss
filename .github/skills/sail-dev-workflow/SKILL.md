@@ -25,7 +25,14 @@ Test failures with "table not found" or stale tenant data?
 │       docs/work/testing/2026-03-21_test-coverage-db-recovery-and-tenancy-guidelines.md
 │       and keep `mysql_testing` / `db:wipe` / `migrate` / `tenants:migrate` aligned.
 │
-Tests fail immediately with `mysql_testing -> mysql` name resolution on host PHP?
+Runtime storage subtree not writable? (for example `storage/framework/testing/disks/...`)
+│  FIX: verify the real repo root first (`pwd` / `git rev-parse --show-toplevel`)
+│       then `namei -l <target>` to find the exact root-owned segment
+│       then `chown -R <run-user>:<run-group> <exact-path> && chmod -R u+rwX,go-rwx <exact-path>`
+│       validate with a write probe (`touch` / `rm`) on the same path
+│  DO NOT widen permissions on `public/` or the whole repo as a first step.
+│
+Tests fail immediately with "mysql_testing -> mysql" name resolution on host PHP?
 │  CAUSE: LedgerLeap test DB host resolution assumes Docker networking.
 │  FIX: run tests via `./vendor/bin/sail test` / `./vendor/bin/sail pest`
 │       or use a Docker-based PhpStorm interpreter.
@@ -72,6 +79,12 @@ cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git status
 # Reset test DB
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && bin/reset-test-db.sh"
 
+# Fix a root-owned runtime storage subtree in WSL / Sail
+namei -l /path/to/storage/framework/testing/disks/public/tenants
+sudo chown -R $USER:$USER /path/to/storage/framework/testing/disks/public/tenants
+sudo chmod -R u+rwX,go-rwx /path/to/storage/framework/testing/disks/public/tenants
+touch /path/to/storage/framework/testing/disks/public/tenants/.permission-check && rm /path/to/storage/framework/testing/disks/public/tenants/.permission-check
+
 # Lint
 ./vendor/bin/sail pint
 ```
@@ -96,4 +109,4 @@ bash .github/skills/sail-dev-workflow/scripts/check-env.sh
 
 See [references/container-troubleshooting.md](references/container-troubleshooting.md) for VLM/embedding diagnostics.
 See [references/multitenant-cache-pitfalls.md](references/multitenant-cache-pitfalls.md) for cache key isolation patterns.
-
+See [docs/work/environment/2026-05-08_storage_permission_fix_retrospective.md](../../../docs/work/environment/2026-05-08_storage_permission_fix_retrospective.md) for the exact-path storage permission fix pattern.

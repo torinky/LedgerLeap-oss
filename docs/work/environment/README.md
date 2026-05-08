@@ -6,6 +6,13 @@
 
 ## 📚 ドキュメント一覧
 
+### Storage Permission Fix Retrospective（2026年5月8日）
+
+- **[権限修正の振り返り](./2026-05-08_storage_permission_fix_retrospective.md)** - runtime storage subtree の exact-path 修正と検証メモ。
+  - `storage/framework/testing/disks/public/tenants` の root 所有を `namei -l` で特定
+  - exact-path の `chown` / `chmod` で最小修正
+  - `touch` / `rm` の write probe で確認
+
 ### Docker Compose構成リファクタリング（2025年11月2日）
 
 - **[リファクタリング計画](./2025-11-02_docker-compose-refactoring-plan.md)** - 設計・計画ドキュメント

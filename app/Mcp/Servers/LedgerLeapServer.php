@@ -22,6 +22,7 @@ use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetTagsTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
+use App\Mcp\Tools\ReadMcpResourceTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Mcp\Tools\UpdateLedgerTool;
 use Laravel\Mcp\Server;
@@ -85,6 +86,7 @@ class LedgerLeapServer extends Server
         GetLedgerStatsTool::class,
         GetUserActivityStatsTool::class,
         GetFolderStatsTool::class,
+        ReadMcpResourceTool::class,
     ];
 
     /**

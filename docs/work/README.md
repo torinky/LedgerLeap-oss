@@ -49,6 +49,7 @@
 ### 運用改善メモ
 
 - **[完了後の振り返りハンドオフ方針](./2026-04-04_retrospective-handoff-policy.md)**: issue / sprint / feature / investigation / documentation など、すべての作業完了後に学びを抽出し、進め方の改善と個別手法の改善を 2 層で整理する運用メモ。
+- **[Storage Permission Fix Retrospective](./environment/2026-05-08_storage_permission_fix_retrospective.md)**: `storage/framework/testing/disks/public/tenants` の root 所有を exact-path で直し、`namei -l` と write probe で確認したときの学び。runtime storage subtree の権限修正を `public/` 全体へ広げない判断基準も含む。
 - **[File Inspector 検索条件の再オープン維持メモ](./ui-ux/2026-04-27_file-inspector-search-reopen-retrospective.md)**: 詳細画面 full mode の `attachment-card` で検索語の引き回しを見落とした事例。Livewire / server / frontend JS の値の受け渡しは一般論として扱い、類似改修前に実装例の調査を先に行う。
 
 ---
