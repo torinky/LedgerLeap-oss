@@ -46,6 +46,12 @@ class Export extends BaseLivewireComponent
         $this->keywords = is_array($keywords) ? $keywords : json_decode($keywords ?? '[]', true);
         $this->filter = is_array($filter) ? $filter : json_decode($filter ?? '[]', true);
 
+        // Livewire の /livewire/update リクエストでは route に {tenant} がないため、
+        // 初回 mount 時に tenantId を明示的に保存しておく（.github/instructions/livewire.instructions.md Pattern B）
+        if (is_null($this->tenantId)) {
+            $this->tenantId = request()->route()?->originalParameters()['tenant'] ?? null;
+        }
+
         $cacheService = app(ExportCacheService::class);
         $this->exportFilename = $cacheService->buildFilename(
             $this->ledgerDefineId,
@@ -114,8 +120,15 @@ class Export extends BaseLivewireComponent
 
     public function getDownloadUrlProperty(): string
     {
+        // /livewire/update では tenant() が null のため、$this->tenantId を優先し、
+        // 万が一 null の場合は LedgerDefine からフォールバックする（Pattern A）
+        $tenantId = $this->resolveTenantId();
+        if (is_null($tenantId)) {
+            $tenantId = LedgerDefine::find($this->ledgerDefineId)?->tenant_id;
+        }
+
         return route('ledger.export.download', [
-            'tenant' => $this->resolveTenantId(),
+            'tenant' => $tenantId,
             'ledgerDefineId' => $this->ledgerDefineId,
             'filename' => $this->exportFilename,
         ]);
