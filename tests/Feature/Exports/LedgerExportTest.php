@@ -9,6 +9,7 @@ use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use App\Services\Ledger\ExportCacheService;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -237,24 +238,29 @@ class LedgerExportTest extends TestCase
             'content' => [0 => 'exported value'],
         ]);
 
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+
         $job = new ExportJob(
             ledgerDefineId: $this->ledgerDefine->id,
             keywords: [],
             filter: [],
             columnDefines: $this->ledgerDefine->column_define,
-            filename: 'ledger-export.csv',
+            filename: $filename,
         );
 
         $job->handle();
 
-        Storage::disk('public')->assertExists('ledger-export.csv');
-        $this->assertStringContainsString('exported value', Storage::disk('public')->get('ledger-export.csv'));
+        Storage::disk('public')->assertExists($filename);
+        $this->assertStringContainsString('exported value', Storage::disk('public')->get($filename));
     }
 
     public function test_download_export_via_controller_returns_file_for_authorized_user(): void
     {
         Storage::fake('public');
-        Storage::disk('public')->put('ledger-export.csv', "dummy\n");
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "dummy\n");
 
         Gate::before(fn ($user, $ability) => true);
 
@@ -264,16 +270,18 @@ class LedgerExportTest extends TestCase
             ->get(route('ledger.export.download', [
                 'tenant' => $this->getTenant()->id,
                 'ledgerDefineId' => $this->ledgerDefine->id,
-                'filename' => 'ledger-export.csv',
+                'filename' => $filename,
             ]))
             ->assertOk()
-            ->assertHeader('content-disposition', 'attachment; filename="ledger-export.csv"');
+            ->assertHeader('content-disposition', 'attachment; filename="'.$filename.'"');
     }
 
     public function test_download_export_via_controller_returns_403_for_unauthorized_user(): void
     {
         Storage::fake('public');
-        Storage::disk('public')->put('ledger-export.csv', "dummy\n");
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "dummy\n");
 
         Gate::define('ledgerView', fn () => false);
 
@@ -283,7 +291,7 @@ class LedgerExportTest extends TestCase
             ->get(route('ledger.export.download', [
                 'tenant' => $this->getTenant()->id,
                 'ledgerDefineId' => $this->ledgerDefine->id,
-                'filename' => 'ledger-export.csv',
+                'filename' => $filename,
             ]))
             ->assertForbidden();
     }
@@ -346,5 +354,101 @@ class LedgerExportTest extends TestCase
             ->assertSeeHtml('wire:key="ledger_export_download-')
             ->assertDontSeeHtml('wire:key="ledger_export_request-')
             ->assertDontSeeHtml('disabled="disabled"');
+    }
+
+    public function test_export_skips_batch_when_cached_file_exists(): void
+    {
+        Storage::fake('public');
+        Bus::fake();
+
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "cached\n");
+
+        Livewire::test(
+            LedgerExportComponent::class,
+            [$this->ledgerDefine->id, [], [], $this->ledgerDefine->title]
+        )
+            ->call('export')
+            ->assertSet('exportFinished', true)
+            ->assertSet('exporting', false);
+
+        Bus::assertNothingDispatched();
+    }
+
+    public function test_export_dispatches_batch_when_cached_file_missing(): void
+    {
+        Storage::fake('public');
+
+        Livewire::test(
+            LedgerExportComponent::class,
+            [$this->ledgerDefine->id, [], [], $this->ledgerDefine->title]
+        )
+            ->call('export')
+            ->assertSet('exporting', true)
+            ->assertSet('exportFinished', false);
+    }
+
+    public function test_export_filename_changes_with_search_conditions(): void
+    {
+        $cacheService = app(ExportCacheService::class);
+
+        $filenameEmpty = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        $filenameWithKeyword = $cacheService->buildFilename($this->ledgerDefine->id, ['test'], []);
+        $filenameWithFilter = $cacheService->buildFilename($this->ledgerDefine->id, [], ['status' => 'active']);
+
+        $this->assertNotEquals($filenameEmpty, $filenameWithKeyword);
+        $this->assertNotEquals($filenameEmpty, $filenameWithFilter);
+        $this->assertNotEquals($filenameWithKeyword, $filenameWithFilter);
+    }
+
+    public function test_ledger_observer_clears_export_cache_on_create(): void
+    {
+        Storage::fake('public');
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "cached\n");
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+        ]);
+
+        Storage::disk('public')->assertMissing($filename);
+    }
+
+    public function test_ledger_observer_clears_export_cache_on_update(): void
+    {
+        Storage::fake('public');
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => [0 => 'old'],
+        ]);
+
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "cached\n");
+
+        $ledger->update(['content' => [0 => 'new']]);
+
+        Storage::disk('public')->assertMissing($filename);
+    }
+
+    public function test_ledger_define_observer_clears_export_cache_on_column_define_change(): void
+    {
+        Storage::fake('public');
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "cached\n");
+
+        $this->ledgerDefine->update(['column_define' => $this->ledgerDefine->column_define]);
+
+        // column_define が実際に変更されていない場合はクリアされない
+        Storage::disk('public')->assertExists($filename);
+
+        // column_define を実際に変更
+        $newColumn = new ColumnDefine(99, '新規項目', 'text', 1, [], false, false, null, '', [], 1);
+        $this->ledgerDefine->update(['column_define' => [$newColumn]]);
+
+        Storage::disk('public')->assertMissing($filename);
     }
 }

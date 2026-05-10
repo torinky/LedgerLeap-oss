@@ -65,8 +65,7 @@ class ExportJob implements ShouldQueue
         array $filter,
         object $columnDefines,
         string $filename
-    )
-    {
+    ) {
         $this->ledgerDefineId = $ledgerDefineId;
         $this->keywords = $keywords;
         $this->filter = $filter;

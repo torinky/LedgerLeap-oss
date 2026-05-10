@@ -4,6 +4,7 @@ namespace App\Observers;
 
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Ledger;
+use App\Services\Ledger\ExportCacheService;
 use Illuminate\Support\Facades\DB;
 
 class LedgerObserver
@@ -21,6 +22,8 @@ class LedgerObserver
      */
     public function created(Ledger $ledger): void
     {
+        app(ExportCacheService::class)->clearByLedgerDefineId($ledger->ledger_define_id);
+
         if (config('rag.enabled', false)) {
             $this->dispatchRagJob($ledger);
         }
@@ -31,6 +34,10 @@ class LedgerObserver
      */
     public function updated(Ledger $ledger): void
     {
+        if ($ledger->wasChanged(['content', 'content_attached'])) {
+            app(ExportCacheService::class)->clearByLedgerDefineId($ledger->ledger_define_id);
+        }
+
         if (config('rag.enabled', false)) {
             if ($ledger->wasChanged(['content', 'content_attached'])) {
                 $this->dispatchRagJob($ledger);
@@ -55,6 +62,8 @@ class LedgerObserver
      */
     public function deleted(Ledger $ledger): void
     {
+        app(ExportCacheService::class)->clearByLedgerDefineId($ledger->ledger_define_id);
+
         if (config('rag.enabled', false)) {
             DB::table('ledger_chunks')->where('ledger_id', $ledger->id)->delete();
         }

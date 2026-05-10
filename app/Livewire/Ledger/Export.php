@@ -6,6 +6,7 @@ use App\Jobs\Ledger\ExportJob;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
+use App\Services\Ledger\ExportCacheService;
 use Illuminate\Support\Facades\Bus;
 use Mary\Traits\Toast;
 
@@ -42,14 +43,15 @@ class Export extends BaseLivewireComponent
     public function mount($ledgerDefineId, $keywords, $filter, $ledgerDefineTitle = null)
     {
         $this->ledgerDefineId = $ledgerDefineId;
-        $this->keywords = $keywords;
-        $this->filter = $filter;
+        $this->keywords = is_array($keywords) ? $keywords : json_decode($keywords ?? '[]', true);
+        $this->filter = is_array($filter) ? $filter : json_decode($filter ?? '[]', true);
 
-        if ($ledgerDefineTitle) {
-            $this->exportFilename = $ledgerDefineTitle.'.csv';
-        } else {
-            $this->exportFilename = LedgerDefine::find($this->ledgerDefineId)->title.'.csv';
-        }
+        $cacheService = app(ExportCacheService::class);
+        $this->exportFilename = $cacheService->buildFilename(
+            $this->ledgerDefineId,
+            $this->keywords,
+            $this->filter
+        );
     }
 
     /**
@@ -69,6 +71,22 @@ class Export extends BaseLivewireComponent
         }
         if (! empty($filter)) {
             $this->filter = $filter;
+        }
+
+        $cacheService = app(ExportCacheService::class);
+        $this->exportFilename = $cacheService->buildFilename(
+            $this->ledgerDefineId,
+            $this->keywords,
+            $this->filter
+        );
+
+        // 既に同じ条件のCSVが存在すれば、バッチ生成をスキップして即ダウンロード可能にする
+        if ($cacheService->exists($this->exportFilename)) {
+            $this->exporting = false;
+            $this->exportFinished = true;
+            $this->success(__('ledger.export_ready'));
+
+            return;
         }
 
         $columnDefines = LedgerDefine::findOrFail($this->ledgerDefineId)->column_define

@@ -2,7 +2,9 @@
 
 namespace App\Observers;
 
+use App\Jobs\Ledger\RegenerateLedgerSortValuesJob;
 use App\Models\LedgerDefine;
+use App\Services\Ledger\ExportCacheService;
 use Illuminate\Support\Facades\Cache;
 
 class LedgerDefineObserver
@@ -14,6 +16,7 @@ class LedgerDefineObserver
     {
         // column_define が変更された場合
         if ($ledgerDefine->wasChanged('column_define')) {
+            app(ExportCacheService::class)->clearByLedgerDefineId($ledgerDefine->id);
             Cache::tags(['auto_links'])->flush();
 
             // sort_indexの変更を検知
@@ -25,7 +28,7 @@ class LedgerDefineObserver
 
             if ($oldSortMap !== $newSortMap) {
                 // sort_indexが変更された場合のみ再生成
-                \App\Jobs\Ledger\RegenerateLedgerSortValuesJob::dispatch($ledgerDefine->id)
+                RegenerateLedgerSortValuesJob::dispatch($ledgerDefine->id)
                     ->delay(now()->addSeconds(5)); // 連続変更対策
             }
         }
@@ -36,6 +39,7 @@ class LedgerDefineObserver
      */
     public function deleted(LedgerDefine $ledgerDefine): void
     {
+        app(ExportCacheService::class)->clearByLedgerDefineId($ledgerDefine->id);
         Cache::tags(['auto_links'])->flush();
     }
 }
