@@ -414,4 +414,5 @@ return [
     'your_effective_roles_title' => 'あなたの有効なロール',
     'action_bar_open' => 'アクションを開く',
     'action_bar_close' => 'アクションを閉じる',
+    'export_csv_download' => 'CSVをダウンロード',
 ];

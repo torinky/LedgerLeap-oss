@@ -58,6 +58,11 @@ class Export extends BaseLivewireComponent
             $this->keywords,
             $this->filter
         );
+
+        // 既に同じ条件のCSVが存在すれば、初回レンダリング時からダウンロードボタンを表示
+        if ($cacheService->exists($this->exportFilename)) {
+            $this->exportFinished = true;
+        }
     }
 
     /**

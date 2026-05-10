@@ -41,7 +41,7 @@
             no-wire-navigate
             download="{{ $exportFilename }}"
             icon="o-arrow-down-on-square"
-            :label="__('actions.download')"
+            :label="__('ledger.export_csv_download')"
             class="btn-secondary btn-sm"
             wire:key="ledger_export_download-{{ $ledgerDefineId }}"
         />

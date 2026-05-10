@@ -356,6 +356,23 @@ class LedgerExportTest extends TestCase
             ->assertDontSeeHtml('disabled="disabled"');
     }
 
+    public function test_render_shows_download_button_when_cached_file_exists_at_mount(): void
+    {
+        Storage::fake('public');
+        $cacheService = app(ExportCacheService::class);
+        $filename = $cacheService->buildFilename($this->ledgerDefine->id, [], []);
+        Storage::disk('public')->put($filename, "cached\n");
+
+        Livewire::test(
+            LedgerExportComponent::class,
+            [$this->ledgerDefine->id, [], [], $this->ledgerDefine->title]
+        )
+            ->assertSet('exportFinished', true)
+            ->assertSet('exporting', false)
+            ->assertSeeHtml('wire:key="ledger_export_download-')
+            ->assertDontSeeHtml('wire:key="ledger_export_request-');
+    }
+
     public function test_export_skips_batch_when_cached_file_exists(): void
     {
         Storage::fake('public');
