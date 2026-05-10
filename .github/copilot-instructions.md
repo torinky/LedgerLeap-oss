@@ -27,7 +27,7 @@
 - `/git-commit`, `/github-issue-workflow`, `/ci-failure-investigation`, `/rag-vector-search`, `/bug-investigation`, `/bug-execution`, `/skill-maintenance`
 ## Auto Context
 - Path rules: `.github/instructions/livewire.instructions.md`, `.github/instructions/php-laravel.instructions.md`, `.github/instructions/tests.instructions.md`, `.github/instructions/ai-assets.instructions.md`, `.github/instructions/design.instructions.md`
-- Reusable deep knowledge: `.github/skills/*/SKILL.md`
+- Reusable deep knowledge: `.github/skills/*/SKILL.md` (keep each ≤ 120 lines; detail goes to `references/*.md`)
 - Agent-wide routing/meta: `AGENTS.md`
 ## Workflow
 - `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → **Identify and run affected tests** (`./vendor/bin/sail test <path>`) → `/git-commit` → `/skill-maintenance`

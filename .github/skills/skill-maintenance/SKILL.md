@@ -50,37 +50,9 @@ A new learning was proven?
 - Every durable learning must point to traceable evidence: link the repo proof in `docs/work/*` or the official source in `references/*.md` before treating it as reusable guidance.
 - Record freshness metadata for doc-sensitive claims: `status`, `last_confirmed_at`, `recheck_after`, and a concrete `recheck_trigger`.
 
-## Recent guardrail evidence
+## Recent Guardrail Evidence
 
-- [docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md](../../../docs/work/ui-ux/2026-04-27_issue-176-retrospective-skill-brushup.md)
-- `status`: confirmed
-- `last_confirmed_at`: 2026-04-27
-- `recheck_after`: 90d
-- `recheck_trigger`: another issue-number drift, a repeated hover flicker in a static tree or accordion, or a new user override that supersedes the active branch
-
-- [docs/work/ui-ux/navigation/2026-04-29_my-portal-notification-pending-layout-retrospective.md](../../../docs/work/ui-ux/navigation/2026-04-29_my-portal-notification-pending-layout-retrospective.md)
-- `status`: confirmed
-- `last_confirmed_at`: 2026-04-29
-- `recheck_after`: 90d
-- `recheck_trigger`: a user asks to rebalance stat cards, a masonry flow is broken by wrapper changes, or the same notification / pending-task pair is restyled again
-
-- [docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_banner_validation_status_retrospective.md](../../../docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_banner_validation_status_retrospective.md)
-- `status`: confirmed
-- `last_confirmed_at`: 2026-04-29
-- `recheck_after`: 90d
-- `recheck_trigger`: banner validation rules or display-status semantics change again, or the retrospective→skill→commit flow stalls and needs a fresh runbook refresh
-
-- [docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_retrospective.md](../../../docs/work/ui-ux/admin-announcement-banner/2026-04-29_admin_announcement_edit_permission_retrospective.md)
-- `status`: confirmed
-- `last_confirmed_at`: 2026-04-29
-- `recheck_after`: 90d
-- `recheck_trigger`: admin announcement permission scopes change again, issue-number drift reappears, or the retrospective structure needs another refresh
-
-- [docs/work/core-features/confidentiality-classification/2026-05-03_retrospective_issue191.md](../../../docs/work/core-features/confidentiality-classification/2026-05-03_retrospective_issue191.md)
-- `status`: confirmed
-- `last_confirmed_at`: 2026-05-03
-- `recheck_after`: 90d
-- `recheck_trigger`: a clickable tenant-aware Blade component fails to navigate again, a Livewire UI test only checks rendering and not the link target, or a retrospective body forgets to capture cause / fix / tests / commit in one place
+See [references/recent-guardrails.md](references/recent-guardrails.md) for the full list of confirmed retrospectives with freshness metadata.
 
 ## Retrospective Gate
 

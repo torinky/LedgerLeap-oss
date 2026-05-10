@@ -18,6 +18,7 @@
 - Use skills for recurring diagnosis, decision trees, and reusable capabilities.
 - Keep `copilot-instructions.md` short, repo-wide, and stable.
 - Put agent-wide discovery or maintenance rules here, not in feature skills.
+- **Skill size limit**: `SKILL.md` must stay ≤ 120 lines. Extract long examples, deep procedures, and historical evidence into `references/*.md`. See `docs/runbooks/skill-maintenance-playbook.md` for the splitting procedure.
 - Before any file or terminal work in a mixed WSL / Mac setup, verify the current directory and Git root with commands such as `pwd` and `git rev-parse --show-toplevel`; do not assume `/home`, `/Users`, or the workspace path.
 - Keep one source of truth per rule; link instead of duplicating.
 - Keep step-by-step human/AI operating sequences in `docs/runbooks/*`, not duplicated across prompts and skills.
