@@ -48,6 +48,51 @@ $url = route('file.download-ocr-pdf', [
 - Do not duplicate `tenant()?->id ?? $model->tenant_id` inline in Blade; call the shared resolver from `InitializesTenantContext`.
 - Keep `render()` / `mount()` responsible for state setup; keep URL generation on the resolver path so `/livewire/update` requests still work when the route tenant parameter is missing.
 
+## Pattern D — Tenant-safe shared Blade component links
+
+When a shared Blade component (for example `x-ledger.confidentiality-stamp`) generates `route()` URLs inside a tenant-scoped page, do **not** rely only on `tenant()` inside the component.
+
+```php
+{{-- Parent view: pass tenantId explicitly --}}
+<x-ledger.confidentiality-stamp
+    :tenant-id="$tenantId ?? tenant('id')"
+    :source-id="$ledgerDefine->id"
+    source-type="ledger_define"
+/>
+```
+
+```php
+{{-- Component: use the passed tenantId for route generation --}}
+@props(['tenantId' => null, 'sourceId' => null, 'sourceType' => null])
+
+@if ($sourceId && $sourceType)
+    @php
+        $url = match ($sourceType) {
+            'ledger_define' => route('ledgerDefine.edit', ['tenant' => $tenantId, 'ledgerDefineId' => $sourceId]),
+            'folder' => route('folder.edit', ['tenant' => $tenantId, 'folder' => $sourceId]),
+            default => null,
+        };
+    @endphp
+@endif
+```
+
+**Why this matters:**
+- `/livewire/update` requests do not carry the `{tenant}` route parameter, so `tenant()` can return `null` during Livewire re-renders.
+- If the component uses `tenant()` internally, the generated URL may lose the tenant segment and fail on click.
+- Passing `tenantId` from the parent (which already resolved it via Pattern A or C) keeps the link stable across all request phases.
+
+**Avoid `wire:ignore` on clickable links:**
+- If the link `href` must update after a Livewire state change (e.g. the user switches tabs), `wire:ignore` will block the DOM diff and the old URL remains.
+- Only use `wire:ignore` on decorative or static elements inside the component, never on the anchor tag itself.
+
+### Evidence
+
+- `docs/work/core-features/confidentiality-classification/2026-05-03_retrospective_issue191.md`
+- `status`: confirmed
+- `last_confirmed_at`: 2026-05-03
+- `recheck_after`: 2026-08-03
+- `recheck_trigger`: a clickable tenant-aware Blade component fails to navigate again, a Livewire UI test only checks rendering and not the link target, or `wire:ignore` is added to an anchor inside a shared component
+
 ### Evidence
 
 - `docs/work/testing/2026-04-02_livewire-tenant-resolver-sharing.md`
