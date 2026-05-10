@@ -95,8 +95,11 @@ class ProcessAttachedFile implements ShouldQueue
             Log::info('File already processed or moved, skipping initial move in ProcessAttachedFile for file: '.$this->attachedFile->id);
         }
 
-        // 2. status を INITIAL_PROCESSING に更新
-        $this->attachedFile->update(['status' => AttachedFileStatus::INITIAL_PROCESSING->value]);
+        // 2. status を INITIAL_PROCESSING に更新（最終化済みの場合は上書きしない）
+        $this->attachedFile->refresh();
+        if (! $this->attachedFile->processing_finalized_at) {
+            $this->attachedFile->update(['status' => AttachedFileStatus::INITIAL_PROCESSING->value]);
+        }
 
         // ★ トランザクションとペシミスティックロックで競合状態を防ぐ
         DB::transaction(function () {

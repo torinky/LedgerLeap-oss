@@ -66,8 +66,23 @@ class ProcessVlmExtraction implements ShouldQueue
             'attempt' => $this->attempts(),
         ]);
 
-        // ステータス更新
-        $this->attachedFile->update(['status' => AttachedFileStatus::VLM_PROCESSING]);
+        // ステータス更新（最終化済みの場合は上書きしない）
+        $guardStatusUpdate = function () {
+            $this->attachedFile->refresh();
+            if ($this->attachedFile->processing_finalized_at) {
+                Log::info('[VLM] File already finalized, skipping status update', [
+                    'file_id' => $this->attachedFile->id,
+                ]);
+
+                return false;
+            }
+
+            return true;
+        };
+
+        if ($guardStatusUpdate()) {
+            $this->attachedFile->update(['status' => AttachedFileStatus::VLM_PROCESSING]);
+        }
 
         try {
             $startTime = microtime(true);
@@ -115,12 +130,13 @@ class ProcessVlmExtraction implements ShouldQueue
                 'attempt' => $this->attempts(),
             ]);
 
-            // ★ Phase5: 最終試行失敗時に失敗タイムスタンプを設定
+            // ★ Phase5: 最終試行失敗時に失敗タイムスタンプを設定（最終化済みの場合はステータス上書きしない）
             if ($this->attempts() >= $this->tries) {
-                $this->attachedFile->update([
-                    'status' => AttachedFileStatus::VLM_FAILED,
-                    'vlm_failed_at' => now(), // ★ Phase5: 失敗時のタイムスタンプ
-                ]);
+                $updateData = ['vlm_failed_at' => now()];
+                if ($guardStatusUpdate()) {
+                    $updateData['status'] = AttachedFileStatus::VLM_FAILED;
+                }
+                $this->attachedFile->update($updateData);
             }
 
             throw $e; // リトライ処理のため再スロー
@@ -138,11 +154,12 @@ class ProcessVlmExtraction implements ShouldQueue
         ]);
 
         if ($this->attachedFile) {
-            // ★ Phase5: 失敗時のタイムスタンプも設定
-            $this->attachedFile->update([
-                'status' => AttachedFileStatus::VLM_FAILED,
-                'vlm_failed_at' => now(),
-            ]);
+            $this->attachedFile->refresh();
+            $updateData = ['vlm_failed_at' => now()];
+            if (! $this->attachedFile->processing_finalized_at) {
+                $updateData['status'] = AttachedFileStatus::VLM_FAILED;
+            }
+            $this->attachedFile->update($updateData);
         }
     }
 }
