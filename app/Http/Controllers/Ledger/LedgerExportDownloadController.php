@@ -85,11 +85,10 @@ class LedgerExportDownloadController extends Controller
 
         $pathFolders = $folder->ancestors->push($folder);
 
-        $titles = $pathFolders->map(function ($f) {
-            // ルートフォルダはUIのパンくずと同じく「トップ」と表示
-            return $f->parent_id === null
-                ? __('ledger.breadcrumb_top')
-                : $f->title;
+        $titles = $pathFolders->reject(function ($f) {
+            return $f->parent_id === null;
+        })->map(function ($f) {
+            return $f->title;
         });
 
         return $titles->implode(' › ');
