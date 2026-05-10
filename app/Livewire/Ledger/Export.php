@@ -7,7 +7,6 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Bus;
-use Illuminate\Support\Facades\Storage;
 use Mary\Traits\Toast;
 
 /**
@@ -31,7 +30,6 @@ class Export extends BaseLivewireComponent
     public $filter = [];
 
     public ?int $ledgerDefineId = null;
-
 
     /**
      * コンポーネントをマウントするメソッド
@@ -61,7 +59,7 @@ class Export extends BaseLivewireComponent
      * 渡された値が空の場合は mount 時に保存した値にフォールバックする。
      *
      * @param  array  $keywords  検索キーワード（Alpine.js 側の最新値）
-     * @param  array  $filter    フィルター条件（Alpine.js 側の最新値）
+     * @param  array  $filter  フィルター条件（Alpine.js 側の最新値）
      */
     public function export(array $keywords = [], array $filter = [])
     {
@@ -98,14 +96,11 @@ class Export extends BaseLivewireComponent
 
     public function getDownloadUrlProperty(): string
     {
-        return Storage::disk('public')->url($this->exportFilename);
-    }
-
-    public function downloadExport()
-    {
-        $headers = ['Content-Disposition' => 'attachment; filename="'.$this->exportFilename.'"'];
-
-        return Storage::disk('public')->download($this->exportFilename, $this->exportFilename, $headers);
+        return route('ledger.export.download', [
+            'tenant' => $this->resolveTenantId(),
+            'ledgerDefineId' => $this->ledgerDefineId,
+            'filename' => $this->exportFilename,
+        ]);
     }
 
     public function updateExportProgress()

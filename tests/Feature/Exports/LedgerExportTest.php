@@ -8,12 +8,13 @@ use App\Livewire\Ledger\Export as LedgerExportComponent;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\User;
 use Illuminate\Support\Facades\Bus;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use Maatwebsite\Excel\Facades\Excel;
 use PHPUnit\Framework\Attributes\CoversClass;
-use Symfony\Component\HttpFoundation\StreamedResponse;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -250,17 +251,58 @@ class LedgerExportTest extends TestCase
         $this->assertStringContainsString('exported value', Storage::disk('public')->get('ledger-export.csv'));
     }
 
-    public function test_download_export_uses_public_disk(): void
+    public function test_download_export_via_controller_returns_file_for_authorized_user(): void
     {
         Storage::fake('public');
         Storage::disk('public')->put('ledger-export.csv', "dummy\n");
 
-        $component = new LedgerExportComponent;
-        $component->exportFilename = 'ledger-export.csv';
+        Gate::before(fn ($user, $ability) => true);
 
-        $response = $component->downloadExport();
+        $user = User::factory()->create();
 
-        $this->assertInstanceOf(StreamedResponse::class, $response);
+        $this->actingAs($user)
+            ->get(route('ledger.export.download', [
+                'tenant' => $this->getTenant()->id,
+                'ledgerDefineId' => $this->ledgerDefine->id,
+                'filename' => 'ledger-export.csv',
+            ]))
+            ->assertOk()
+            ->assertHeader('content-disposition', 'attachment; filename="ledger-export.csv"');
+    }
+
+    public function test_download_export_via_controller_returns_403_for_unauthorized_user(): void
+    {
+        Storage::fake('public');
+        Storage::disk('public')->put('ledger-export.csv', "dummy\n");
+
+        Gate::define('ledgerView', fn () => false);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('ledger.export.download', [
+                'tenant' => $this->getTenant()->id,
+                'ledgerDefineId' => $this->ledgerDefine->id,
+                'filename' => 'ledger-export.csv',
+            ]))
+            ->assertForbidden();
+    }
+
+    public function test_download_export_via_controller_returns_404_when_file_missing(): void
+    {
+        Storage::fake('public');
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $user = User::factory()->create();
+
+        $this->actingAs($user)
+            ->get(route('ledger.export.download', [
+                'tenant' => $this->getTenant()->id,
+                'ledgerDefineId' => $this->ledgerDefine->id,
+                'filename' => 'missing.csv',
+            ]))
+            ->assertNotFound();
     }
 
     public function test_update_export_progress_marks_export_finished_without_toast(): void

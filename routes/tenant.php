@@ -4,6 +4,7 @@ use App\Http\Controllers\AttachedFileDownloadController;
 use App\Http\Controllers\Ledger\CreateController;
 use App\Http\Controllers\Ledger\DuplicateController;
 use App\Http\Controllers\Ledger\ImportController;
+use App\Http\Controllers\Ledger\LedgerExportDownloadController;
 use App\Http\Controllers\Ledger\ShowController as LedgerShowController;
 use App\Http\Controllers\Ledger\UpdateController;
 use App\Http\Controllers\LedgerDefine\CreateController as LedgerDefineCreateController; // 追加
@@ -125,5 +126,11 @@ Route::group([
     Route::get('/files/{attachedFile}/download-ocr-pdf', [AttachedFileDownloadController::class, 'downloadOcrPdf'])
         ->name('file.download-ocr-pdf')
         ->where('attachedFile', '[0-9]+');
+
+    // Ledger CSV Export Download Route
+    Route::get('/ledger/export/{ledgerDefineId}/download/{filename}', LedgerExportDownloadController::class)
+        ->name('ledger.export.download')
+        ->where('ledgerDefineId', '[0-9]+')
+        ->where('filename', '.*');
 
 });
