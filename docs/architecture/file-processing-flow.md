@@ -258,14 +258,15 @@ graph TD
 
 | 状態 | 説明 | 遷移元 | 遷移先 |
 |------|------|--------|--------|
-| `PENDING` | 処理待ち（初期状態） | - | TIKA_PROCESSING |
-| `TIKA_PROCESSING` | Tika処理中 | PENDING | COMPLETED, VLM_PROCESSING, OCR_PROCESSING, TIKA_FAILED |
-| `VLM_PROCESSING` | VLM処理中 | TIKA_PROCESSING | COMPLETED, VLM_FAILED |
-| `OCR_PROCESSING` | OCR処理中 | TIKA_PROCESSING, VLM_PROCESSING | COMPLETED, OCR_FAILED |
-| `COMPLETED` | 全処理完了 | 全ての状態 | - |
-| `TIKA_FAILED` | Tika処理失敗 | TIKA_PROCESSING | - |
+| `PENDING_INITIAL_PROCESSING` | 処理待ち（初期状態） | - | INITIAL_PROCESSING |
+| `INITIAL_PROCESSING` | Tika処理中 | PENDING_INITIAL_PROCESSING | COMPLETED, VLM_PROCESSING, OCR_PROCESSING, PARALLEL_PROCESSING, TIKA_FAILED |
+| `VLM_PROCESSING` | VLM処理中 | INITIAL_PROCESSING | COMPLETED, VLM_FAILED |
+| `OCR_PROCESSING` | OCR処理中 | INITIAL_PROCESSING | COMPLETED, OCR_FAILED |
+| `COMPLETED` | 全処理完了（最終状態） | 全ての状態 | - （上書き不可: VLM/OCR/ProcessAttachedFile は processing_finalized_at 設定済みの場合ステータス変更しない） |
+| `TIKA_FAILED` | Tika処理失敗 | INITIAL_PROCESSING | - |
 | `VLM_FAILED` | VLM処理失敗 | VLM_PROCESSING | COMPLETED（OCR/Tika成功時） |
 | `OCR_FAILED` | OCR処理失敗 | OCR_PROCESSING | COMPLETED（VLM/Tika成功時） |
+| `PROCESSING_FAILED` | VLM+OCR両方失敗 | - | - |
 
 ### 5.2. 状態遷移図
 
@@ -325,13 +326,23 @@ stateDiagram-v2
 
 **処理内容:**
 ```php
-1. 最適テキストソースを選択
-2. attached_files.content を更新
+1. 最適テキストソースを選択（VLM > OCR > Tika）
+2. content_attached を更新（悲観的ロック lockForUpdate）
 3. finalized_source を設定
 4. processing_finalized_at を設定
-5. status を COMPLETED に更新
+5. status を determineFinalStatus() で判定
+   - テキスト抽出成功 → COMPLETED
+   - 画像由来ファイル（original_mime_type が image/）+ OCR/Tika処理済み
+     → テキスト空でも COMPLETED（画像のテキスト抽出はオプショナル）
+   - VLM+OCR両方失敗 → PROCESSING_FAILED
+   - VLMのみ失敗 → VLM_FAILED
 6. 台帳のRAGインデックス更新ジョブをディスパッチ
 ```
+
+**注意:** `ProcessVlmExtraction`、`OcrAndOptimizeFile`、`ProcessAttachedFile` はいずれも
+`processing_finalized_at` が設定済みの場合、ステータスを上書きしない。
+タイムスタンプのみ記録する。これにより並列ジョブが finalize 後の COMPLETED を
+VLM_FAILED 等に巻き戻すことを防止する。
 
 ### 6.2. テキストソース選択ロジック
 

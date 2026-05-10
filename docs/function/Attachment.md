@@ -187,8 +187,9 @@ if ($file->ocr_processed_at) {
 | `OCR_PROCESSING` | OCR処理中 |
 | `COMPLETED` | 全処理完了、検索可能 |
 | `TIKA_FAILED` | Tika処理失敗 |
-| `VLM_FAILED` | VLM処理失敗（OCR/Tikaにフォールバック） |
-| `OCR_FAILED` | OCR処理失敗（VLM/Tikaにフォールバック） |
+| `VLM_FAILED` | VLM処理失敗。ただしOCR/Tika成功時は最終化により`COMPLETED`に遷移。最終化済みの場合はVLM_FAILEDに上書きされない |
+| `OCR_FAILED` | OCR処理失敗。ただしVLM/Tika成功時は最終化により`COMPLETED`に遷移。最終化済みの場合はOCR_FAILEDに上書きされない |
+| `PROCESSING_FAILED` | VLM+OCR両方失敗 |
 
 #### 処理完了の判定
 
@@ -197,13 +198,15 @@ if ($file->ocr_processed_at) {
 -   `processing_finalized_at`タイムスタンプが設定されている
 -   `finalized_source`（vlm/ocr/tika）が記録されている
 -   `status`が`COMPLETED`である
+-   **画像由来ファイルの特例**: `original_mime_type`が`image/`で始まるファイルは、OCR/Tika処理が完了していればテキスト抽出結果が空でも`COMPLETED`になります。画像のテキスト抽出はオプショナルであるためです。
+-   **Status Guard**: `ProcessVlmExtraction`、`OcrAndOptimizeFile`、`ProcessAttachedFile` は、`processing_finalized_at`が既に設定されている場合、`COMPLETED`ステータスを上書きしません。これにより、初期処理で先に最終化されたファイルのステータスがVLM/OCRの後続処理で巻き戻されることを防止します。
 
 #### 再処理機能
 
 処理に失敗した場合、FileInspectorドロワーのPermissionsタブから再処理を実行できます。
 
--   **VLM再処理:** VLMエンジンによる処理を再実行します。
--   **全エンジン再処理:** VLM、OCR、Tikaの全処理を最初からやり直します。
+-   **VLM再処理:** VLMエンジンによる処理を再実行します。ただしファイルが既に最終化済み（`processing_finalized_at`設定済み）の場合、VLM結果はタイムスタンプのみ更新され、ステータスは上書きされません。
+-   **全エンジン再処理:** VLM、OCR、Tikaの全処理を最初からやり直します。画像由来ファイル（`original_mime_type`が`image/`で始まるファイル）は、再処理時にサムネイルも再生成されます。
 -   **OCR PDF再ダウンロード:** OCR処理によって生成されたテキスト付きPDFをダウンロードできます。
 
 #### サムネイル生成の重複抑止
@@ -211,6 +214,8 @@ if ($file->ocr_processed_at) {
 - `thumbnail=true` のリクエストでサムネイルが未生成の場合は、`GenerateThumbnail` を1件だけキュー投入します。
 - 同じ `attachedFileId` のサムネイルがすでに処理中（`OPTIMIZING`）の場合は、追加のキュー投入を行いません。
 - 100MB級の TIFF のように生成時間が長い画像でも、同一サムネイルのキュー多発を防ぎます。
+- **画像由来ファイル**: OCR処理でPDFに変換されたファイルも、`original_mime_type`（元の画像MIME）を参照してサムネイルが生成されます。`GenerateThumbnail` ジョブは元の画像ファイル（`original_file_path`）をソースとして使用します。
+- 再処理（`retryProcessing()`）および `ProcessAttachedFile` の処理完了時にも、画像由来ファイルに対して自動的に `GenerateThumbnail` がdispatchされます。
 
 ### 3.6. ファイルの削除
 
