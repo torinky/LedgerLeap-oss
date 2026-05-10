@@ -4,6 +4,7 @@ namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Embedding\VectorizeAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use Exception;
@@ -12,8 +13,8 @@ use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
-use Illuminate\Queue\SerializesModels;
 // ★ DBファサードをインポート
+use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
@@ -170,7 +171,7 @@ class ProcessAttachedFile implements ShouldQueue
                 $this->attachedFile->tika_processed_at = now();
 
                 // ★ Phase2.6: Tika完了後、即座にベクトル化（検索可能に）
-                \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+                VectorizeAttachedFile::dispatch(
                     $this->attachedFile->id,
                     'tika'
                 );
@@ -247,9 +248,9 @@ class ProcessAttachedFile implements ShouldQueue
         Log::info('ProcessAttachedFile: attachedFile saved successfully.');
 
         // ★ サムネイル生成対象か判定し、ジョブをディスパッチ
-        $mime = $this->attachedFile->mime;
-        Log::debug('[ProcessAttachedFile] Checking MIME type for thumbnail generation: '.$mime);
-        if (str_starts_with($mime, 'image/')) {
+        $thumbnailMime = $this->attachedFile->original_mime_type ?? $this->attachedFile->mime;
+        Log::debug('[ProcessAttachedFile] Checking MIME type for thumbnail generation: '.$thumbnailMime);
+        if (str_starts_with($thumbnailMime, 'image/')) {
             GenerateThumbnail::dispatch($this->attachedFile->id);
             Log::info('[ProcessAttachedFile] Dispatched GenerateThumbnail job for AttachedFile ID: '.$this->attachedFile->id);
         }

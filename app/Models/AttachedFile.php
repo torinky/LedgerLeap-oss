@@ -3,14 +3,20 @@
 namespace App\Models;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\ActivityLogFormatter;
 use App\Jobs\Ledger\GenerateThumbnail;
+use App\Jobs\Ledger\ProcessAttachedFile;
+use Carbon\Carbon;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
+use Spatie\Activitylog\Models\Activity;
 
 class AttachedFile extends Model
 {
@@ -84,7 +90,7 @@ class AttachedFile extends Model
     /**
      * メタデータから作成日時を取得
      */
-    public function getMetadataDateAttribute(): ?\Carbon\Carbon
+    public function getMetadataDateAttribute(): ?Carbon
     {
         $meta = $this->tika_metadata;
 
@@ -97,7 +103,7 @@ class AttachedFile extends Model
         }
 
         try {
-            return \Carbon\Carbon::parse($meta[$dateKey]);
+            return Carbon::parse($meta[$dateKey]);
         } catch (\Exception $e) {
             return null;
         }
@@ -138,16 +144,16 @@ class AttachedFile extends Model
      * ファイルに関連するアクティビティログ
      * (アップロード、ダウンロード、処理ステップ等)
      */
-    public function activities(): \Illuminate\Database\Eloquent\Relations\MorphMany
+    public function activities(): MorphMany
     {
-        return $this->morphMany(\Spatie\Activitylog\Models\Activity::class, 'subject')
+        return $this->morphMany(Activity::class, 'subject')
             ->orderBy('created_at', 'desc');
     }
 
     /**
      * システム処理イベントのタイムラインを取得
      */
-    public function getSystemTimelineAttribute(): \Illuminate\Support\Collection
+    public function getSystemTimelineAttribute(): Collection
     {
         $events = collect();
 
@@ -256,7 +262,7 @@ class AttachedFile extends Model
     /**
      * ユーザー操作のタイムラインを取得
      */
-    public function getUserTimelineAttribute(): \Illuminate\Support\Collection
+    public function getUserTimelineAttribute(): Collection
     {
         return $this->activities()
             ->with(['causer' => function ($query) {
@@ -286,7 +292,7 @@ class AttachedFile extends Model
                     'type' => 'user',
                     'icon' => $icon,
                     'color' => $color,
-                    'title' => \App\Helpers\ActivityLogFormatter::getOperationDescription($activity),
+                    'title' => ActivityLogFormatter::getOperationDescription($activity),
                     'description' => null,
                     'timestamp' => $activity->created_at,
                     'user' => $activity->causer?->name ?? __('ledger.activity.subject.unknown'),
@@ -312,6 +318,7 @@ class AttachedFile extends Model
     public function retryProcessing(): void
     {
         $thumbnailFailed = ($this->status === AttachedFileStatus::THUMBNAIL_FAILED);
+        $isImageOrigin = str_starts_with($this->original_mime_type ?? $this->mime ?? '', 'image/');
 
         // ステータスとタイムスタンプをリセット
         $this->status = AttachedFileStatus::PENDING_INITIAL_PROCESSING;
@@ -322,15 +329,11 @@ class AttachedFile extends Model
         $this->vlm_failed_at = null;
         $this->processing_finalized_at = null;
         $this->finalized_source = null;
-        // 注意点として、ファイルのプレビューデータである content_attached 自体は
-        // 新しい処理結果で上書きされるか、あるいは次回利用可能になるまで現状維持とするためクリアしない
         $this->save();
 
-        // メインの処理ジョブを再ディスパッチ
-        \App\Jobs\Ledger\ProcessAttachedFile::dispatch($this);
+        ProcessAttachedFile::dispatch($this);
 
-        // サムネイル生成に失敗していた場合、サムネイル生成ジョブも再ディスパッチ
-        if ($thumbnailFailed) {
+        if ($thumbnailFailed || $isImageOrigin) {
             Bus::dispatch(new GenerateThumbnail($this->id));
         }
     }

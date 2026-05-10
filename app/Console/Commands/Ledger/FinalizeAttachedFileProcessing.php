@@ -165,33 +165,33 @@ class FinalizeAttachedFileProcessing extends Command
      */
     private function determineFinalStatus(AttachedFile $file, array $bestContent): AttachedFileStatus
     {
-        // 成功した処理がある場合はCOMPLETED
         if (! empty($bestContent['text'])) {
             return AttachedFileStatus::COMPLETED;
         }
 
-        // テキストが空の場合、失敗理由を判定
-        // VLMとOCRの両方が失敗している場合
+        $isImageOrigin = str_starts_with($file->original_mime_type ?? '', 'image/');
+
+        // 画像由来ファイル: OCR または Tika の処理が完了していれば、テキスト抽出は必須ではない
+        if ($isImageOrigin && ($file->ocr_processed_at || $file->tika_processed_at)) {
+            return AttachedFileStatus::COMPLETED;
+        }
+
         if ($file->vlm_failed_at && $file->ocr_failed_at) {
             return AttachedFileStatus::PROCESSING_FAILED;
         }
 
-        // VLMのみ失敗
         if ($file->vlm_failed_at) {
             return AttachedFileStatus::VLM_FAILED;
         }
 
-        // OCRのみ失敗
         if ($file->ocr_failed_at) {
             return AttachedFileStatus::OCR_FAILED;
         }
 
-        // Tikaも失敗している場合
         if (empty($this->extractTikaTextFromContentAttached($file))) {
             return AttachedFileStatus::TIKA_FAILED;
         }
 
-        // デフォルトはCOMPLETED（空のコンテンツでも処理は完了）
         return AttachedFileStatus::COMPLETED;
     }
 
