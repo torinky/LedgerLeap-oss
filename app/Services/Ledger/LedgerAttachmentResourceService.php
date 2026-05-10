@@ -4,7 +4,6 @@ namespace App\Services\Ledger;
 
 use App\Models\AttachedFile;
 use App\Models\Ledger;
-use Illuminate\Database\Eloquent\Model;
 
 class LedgerAttachmentResourceService
 {
@@ -424,4 +423,3 @@ class LedgerAttachmentResourceService
         return round($size, 2).' '.$units[$exp];
     }
 }
-

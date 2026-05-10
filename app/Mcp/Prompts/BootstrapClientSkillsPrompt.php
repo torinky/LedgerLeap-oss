@@ -4,8 +4,8 @@ namespace App\Mcp\Prompts;
 
 use App\Services\Ai\BootstrapManifestService;
 use App\Services\Ai\ClientSkillBootstrapService;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Attributes\Description;

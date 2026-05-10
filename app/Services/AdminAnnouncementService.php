@@ -32,7 +32,7 @@ class AdminAnnouncementService
                         $index,
                     ),
                 )
-                ->filter(fn(array $announcement): bool => $this->isAnnouncementActive($announcement))
+                ->filter(fn (array $announcement): bool => $this->isAnnouncementActive($announcement))
                 ->all();
         }
 
@@ -42,20 +42,20 @@ class AdminAnnouncementService
         if ($feed === []) {
             $current = config('ledgerleap.announcement_banner.current');
 
-            if (is_array($current) && !empty($current)) {
+            if (is_array($current) && ! empty($current)) {
                 $feed = [$current];
             }
         }
 
         return collect($feed)
-            ->filter(fn($announcement): bool => is_array($announcement))
+            ->filter(fn ($announcement): bool => is_array($announcement))
             ->map(
-                fn(array $announcement, int $index): array => $this->normalizeAnnouncement(
+                fn (array $announcement, int $index): array => $this->normalizeAnnouncement(
                     $announcement,
                     $index,
                 ),
             )
-            ->filter(fn(array $announcement): bool => $this->isAnnouncementActive($announcement))
+            ->filter(fn (array $announcement): bool => $this->isAnnouncementActive($announcement))
             ->filter(function (array $announcement): bool {
                 if (($announcement['status'] ?? 'published') === 'draft') {
                     return false;
@@ -69,7 +69,7 @@ class AdminAnnouncementService
                     return $priorityComparison;
                 }
 
-                $startsAtComparison = strcmp((string)($left['starts_at'] ?? ''), (string)($right['starts_at'] ?? ''));
+                $startsAtComparison = strcmp((string) ($left['starts_at'] ?? ''), (string) ($right['starts_at'] ?? ''));
                 if ($startsAtComparison !== 0) {
                     return $startsAtComparison;
                 }
@@ -85,15 +85,15 @@ class AdminAnnouncementService
         $now ??= CarbonImmutable::now();
 
         $startsAt = filled($announcement['starts_at'] ?? null)
-            ? CarbonImmutable::parse((string)$announcement['starts_at'])
+            ? CarbonImmutable::parse((string) $announcement['starts_at'])
             : null;
         $endsAt = filled($announcement['ends_at'] ?? null)
-            ? CarbonImmutable::parse((string)$announcement['ends_at'])
+            ? CarbonImmutable::parse((string) $announcement['ends_at'])
             : null;
 
         return ($announcement['status'] ?? 'published') === 'published'
-            && (!$startsAt || !$startsAt->greaterThan($now))
-            && (!$endsAt || !$endsAt->lessThan($now));
+            && (! $startsAt || ! $startsAt->greaterThan($now))
+            && (! $endsAt || ! $endsAt->lessThan($now));
     }
 
     protected function normalizeAnnouncement(array|AdminAnnouncement $announcement, int $sortIndex = 0): array
@@ -103,10 +103,10 @@ class AdminAnnouncementService
         }
 
         $links = collect($announcement['links'] ?? [])
-            ->filter(fn($link): bool => is_array($link))
+            ->filter(fn ($link): bool => is_array($link))
             ->map(function (array $link): ?array {
-                $label = trim((string)($link['label'] ?? ''));
-                $url = trim((string)($link['url'] ?? ''));
+                $label = trim((string) ($link['label'] ?? ''));
+                $url = trim((string) ($link['url'] ?? ''));
 
                 if ($label === '' || $url === '') {
                     return null;
@@ -121,18 +121,18 @@ class AdminAnnouncementService
             ->values()
             ->all();
 
-        $revision = (string)($announcement['revision'] ?? $this->revisionFor($announcement, $links));
+        $revision = (string) ($announcement['revision'] ?? $this->revisionFor($announcement, $links));
         $dismissStorageKey = $announcement['dismiss_storage_key']
             ?? sprintf('ledgerleap.admin_announcement_banner.dismissed:%s', $revision);
 
         return [
-            'title' => (string)($announcement['title'] ?? ''),
-            'body' => (string)($announcement['body'] ?? ''),
+            'title' => (string) ($announcement['title'] ?? ''),
+            'body' => (string) ($announcement['body'] ?? ''),
             'level' => $this->normalizeLevel($announcement['level'] ?? 'info'),
-            'sticky' => (bool)($announcement['sticky'] ?? false),
+            'sticky' => (bool) ($announcement['sticky'] ?? false),
             'scope' => $this->normalizeScope($announcement['scope'] ?? ['current_tenant']),
-            'status' => (string)($announcement['status'] ?? 'published'),
-            'priority' => (int)($announcement['priority'] ?? 0),
+            'status' => (string) ($announcement['status'] ?? 'published'),
+            'priority' => (int) ($announcement['priority'] ?? 0),
             'starts_at' => $announcement['starts_at'] ?? null,
             'ends_at' => $announcement['ends_at'] ?? null,
             'published_at' => $announcement['published_at'] ?? $announcement['starts_at'] ?? null,
@@ -146,10 +146,10 @@ class AdminAnnouncementService
     protected function normalizeModelAnnouncement(AdminAnnouncement $announcement, int $sortIndex = 0): array
     {
         $links = collect($announcement->links ?? [])
-            ->filter(fn($link): bool => is_array($link))
+            ->filter(fn ($link): bool => is_array($link))
             ->map(function (array $link): ?array {
-                $label = trim((string)($link['label'] ?? ''));
-                $url = trim((string)($link['url'] ?? ''));
+                $label = trim((string) ($link['label'] ?? ''));
+                $url = trim((string) ($link['url'] ?? ''));
 
                 if ($label === '' || $url === '') {
                     return null;
@@ -164,17 +164,17 @@ class AdminAnnouncementService
             ->values()
             ->all();
 
-        $revision = (string)($announcement->revision ?: $this->revisionForModel($announcement, $links));
+        $revision = (string) ($announcement->revision ?: $this->revisionForModel($announcement, $links));
 
         return [
             'id' => $announcement->id,
-            'title' => (string)$announcement->title,
-            'body' => (string)$announcement->body,
+            'title' => (string) $announcement->title,
+            'body' => (string) $announcement->body,
             'level' => $this->normalizeLevel($announcement->level),
-            'sticky' => (bool)$announcement->sticky,
+            'sticky' => (bool) $announcement->sticky,
             'scope' => $this->normalizeScope($announcement->scope ?? ['current_tenant']),
-            'status' => (string)$announcement->status,
-            'priority' => (int)$announcement->priority,
+            'status' => (string) $announcement->status,
+            'priority' => (int) $announcement->priority,
             'starts_at' => optional($announcement->starts_at)?->format(self::DATE_TIME_FORMAT),
             'ends_at' => optional($announcement->ends_at)?->format(self::DATE_TIME_FORMAT),
             'published_at' => optional($announcement->published_at)?->format(self::DATE_TIME_FORMAT),
@@ -193,7 +193,7 @@ class AdminAnnouncementService
     protected function revisionFor(array $announcement, array $links): string
     {
         $linkParts = collect($links)
-            ->map(fn(array $link): string => ($link['label'] ?? '') . '|' . ($link['url'] ?? ''))
+            ->map(fn (array $link): string => ($link['label'] ?? '').'|'.($link['url'] ?? ''))
             ->implode('||');
         $scopeHash = json_encode(
             $this->normalizeScope($announcement['scope'] ?? ['current_tenant']),
@@ -201,15 +201,15 @@ class AdminAnnouncementService
         );
 
         $parts = [
-            (string)($announcement['title'] ?? ''),
-            (string)($announcement['body'] ?? ''),
-            (string)($announcement['level'] ?? 'info'),
+            (string) ($announcement['title'] ?? ''),
+            (string) ($announcement['body'] ?? ''),
+            (string) ($announcement['level'] ?? 'info'),
             $scopeHash,
-            (string)((bool)($announcement['sticky'] ?? false) ? 1 : 0),
-            (string)($announcement['status'] ?? 'published'),
-            (string)($announcement['starts_at'] ?? ''),
-            (string)($announcement['ends_at'] ?? ''),
-            (string)($announcement['priority'] ?? 0),
+            (string) ((bool) ($announcement['sticky'] ?? false) ? 1 : 0),
+            (string) ($announcement['status'] ?? 'published'),
+            (string) ($announcement['starts_at'] ?? ''),
+            (string) ($announcement['ends_at'] ?? ''),
+            (string) ($announcement['priority'] ?? 0),
             $linkParts,
         ];
 
@@ -219,7 +219,7 @@ class AdminAnnouncementService
     protected function revisionForModel(AdminAnnouncement $announcement, array $links): string
     {
         $linkParts = collect($links)
-            ->map(fn(array $link): string => ($link['label'] ?? '') . '|' . ($link['url'] ?? ''))
+            ->map(fn (array $link): string => ($link['label'] ?? '').'|'.($link['url'] ?? ''))
             ->implode('||');
         $scopeHash = json_encode(
             $this->normalizeScope($announcement->scope ?? ['current_tenant']),
@@ -227,15 +227,15 @@ class AdminAnnouncementService
         );
 
         $parts = [
-            (string)$announcement->title,
-            (string)$announcement->body,
-            (string)$announcement->level,
+            (string) $announcement->title,
+            (string) $announcement->body,
+            (string) $announcement->level,
             $scopeHash,
-            (string)((bool)$announcement->sticky ? 1 : 0),
-            (string)$announcement->status,
-            (string)optional($announcement->starts_at)?->format(self::DATE_TIME_FORMAT),
-            (string)optional($announcement->ends_at)?->format(self::DATE_TIME_FORMAT),
-            (string)$announcement->priority,
+            (string) ((bool) $announcement->sticky ? 1 : 0),
+            (string) $announcement->status,
+            (string) optional($announcement->starts_at)?->format(self::DATE_TIME_FORMAT),
+            (string) optional($announcement->ends_at)?->format(self::DATE_TIME_FORMAT),
+            (string) $announcement->priority,
             $linkParts,
         ];
 
@@ -247,7 +247,7 @@ class AdminAnnouncementService
         if (is_array($scope)) {
             $normalizedScope = $scope;
         } elseif (filled($scope)) {
-            $normalizedScope = [(string)$scope];
+            $normalizedScope = [(string) $scope];
         } else {
             $normalizedScope = [];
         }

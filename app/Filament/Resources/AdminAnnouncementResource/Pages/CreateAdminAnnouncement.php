@@ -10,7 +10,7 @@ class CreateAdminAnnouncement extends CreateRecord
 {
     protected static string $resource = AdminAnnouncementResource::class;
 
-    public function getMaxContentWidth(): Width | string | null
+    public function getMaxContentWidth(): Width|string|null
     {
         return Width::Full;
     }

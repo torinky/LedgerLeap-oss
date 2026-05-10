@@ -105,4 +105,3 @@ class AttachedFileDownloadControllerTest extends TestCase
         Queue::assertPushed(GenerateThumbnail::class, 1);
     }
 }
-

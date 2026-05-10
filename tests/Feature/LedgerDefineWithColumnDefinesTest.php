@@ -3,8 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\ColumnDefine;
-use App\Models\LedgerDefine;
-use App\Models\User; // Required by LedgerDefineFactory
+use App\Models\ColumnTypes\PhoneNumberType;
+use App\Models\LedgerDefine; // Required by LedgerDefineFactory
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Collection;
 use PHPUnit\Framework\Attributes\Test;
@@ -140,11 +141,11 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
     public function test_custom_phone_number_type_extensibility()
     {
         // 1. Create a ColumnDefine instance with the new 'phone' type
-        $phoneColumn = new \App\Models\ColumnDefine(10, 'Contact Phone', 'phone', 1, [], false, false, null);
+        $phoneColumn = new ColumnDefine(10, 'Contact Phone', 'phone', 1, [], false, false, null);
 
         // 2. Verify its properties
         $this->assertEquals('phone', $phoneColumn->getType());
-        $this->assertInstanceOf(\App\Models\ColumnTypes\PhoneNumberType::class, $phoneColumn->getInputType());
+        $this->assertInstanceOf(PhoneNumberType::class, $phoneColumn->getInputType());
         $this->assertEquals(__('ledger.form.phone'), $phoneColumn->getInputType()->getLabel());
         $this->assertTrue($phoneColumn->useOptions);
         $this->assertTrue($phoneColumn->getInputType()->hasOptions()); // Double check via inputType
@@ -173,7 +174,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         }
 
         $columnDefines = [
-            new \App\Models\ColumnDefine(1, 'Text Column', 'text', 1, [], false, false, null), // Existing type
+            new ColumnDefine(1, 'Text Column', 'text', 1, [], false, false, null), // Existing type
             $phoneColumn, // Our new phone type
         ];
 
@@ -188,7 +189,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
 
         $retrievedPhoneColumn = null;
         foreach ($retrievedLedgerDefine->column_define as $col) {
-            $this->assertInstanceOf(\App\Models\ColumnDefine::class, $col);
+            $this->assertInstanceOf(ColumnDefine::class, $col);
             if ($col->getType() === 'phone') {
                 $retrievedPhoneColumn = $col;
                 break;
@@ -199,7 +200,7 @@ class LedgerDefineWithColumnDefinesTest extends TestCase
         $this->assertEquals('Contact Phone', $retrievedPhoneColumn->name);
         $this->assertEquals(10, $retrievedPhoneColumn->id); // Ensure ID is preserved
         $this->assertEquals(1, $retrievedPhoneColumn->order); // Ensure order is preserved
-        $this->assertInstanceOf(\App\Models\ColumnTypes\PhoneNumberType::class, $retrievedPhoneColumn->getInputType());
+        $this->assertInstanceOf(PhoneNumberType::class, $retrievedPhoneColumn->getInputType());
 
         // Test the conversion methods on the retrieved column as well
         $retrievedConverted = $retrievedPhoneColumn->convertColumnValue2Text('(987) 654-3210');

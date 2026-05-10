@@ -4,6 +4,7 @@ namespace App\Http\Controllers\LedgerDefine;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LedgerDefine\CreateRequest;
+use App\Models\Folder;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\View;
 
@@ -18,13 +19,14 @@ class CreateController extends Controller
         // ── パンくずリストの取得 ──────────────────────────────────────
         $breadcrumbs = [];
         if ($request->folderId()) {
-//        dd($request->folderId());
-            $folder = \App\Models\Folder::with('ancestors')->find($request->folderId());
+            //        dd($request->folderId());
+            $folder = Folder::with('ancestors')->find($request->folderId());
             if ($folder) {
                 $breadcrumbs = $folder->ancestors->all();
                 $breadcrumbs[] = $folder;
             }
         }
+
         return View::make('ledgerDefine.create', compact('breadcrumbs'));
 
     }

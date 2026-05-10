@@ -10,6 +10,7 @@ use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\Tag;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -84,7 +85,7 @@ class DemoMinimalSeeder extends Seeder
     private function createAndInitializeTenant(): void
     {
         // テナントを作成または取得
-        $this->tenant = \App\Models\Tenant::firstOrCreate(
+        $this->tenant = Tenant::firstOrCreate(
             ['id' => 'demo-tenant'],
             ['name' => 'Demo Tenant']
         );

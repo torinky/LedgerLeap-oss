@@ -2,18 +2,23 @@
 
 namespace Tests\Unit\Services;
 
+use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\NotificationType;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\NotificationService;
 use Illuminate\Notifications\DatabaseNotification;
+use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Str;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
@@ -47,7 +52,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -59,7 +64,7 @@ class NotificationServiceTest extends TestCase
         $notifications = $this->notificationService->getUnreadNotificationsForUser($user);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class, $notifications);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $notifications);
         $this->assertGreaterThan(0, $notifications->total());
     }
 
@@ -69,7 +74,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -90,7 +95,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -111,7 +116,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -119,7 +124,7 @@ class NotificationServiceTest extends TestCase
             'read_at' => null,
         ]);
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -222,11 +227,11 @@ class NotificationServiceTest extends TestCase
         $user->assignRole($role);
 
         // RoleFolderPermissionを作成してNOTIFY_ON権限を設定
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -244,7 +249,7 @@ class NotificationServiceTest extends TestCase
         $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+        $this->assertInstanceOf(Collection::class, $recipients);
     }
 
     #[Test]
@@ -253,7 +258,7 @@ class NotificationServiceTest extends TestCase
         // Arrange: 現在のテナントで通知を作成
         $user1 = User::factory()->create();
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user1->id,
@@ -262,7 +267,7 @@ class NotificationServiceTest extends TestCase
         ]);
 
         // 別のテナントを作成して切り替え
-        $newTenant = \App\Models\Tenant::factory()->create();
+        $newTenant = Tenant::factory()->create();
         tenancy()->initialize($newTenant);
         $user2 = User::factory()->create();
 
@@ -283,7 +288,7 @@ class NotificationServiceTest extends TestCase
         // 20件の通知を作成
         for ($i = 0; $i < 20; $i++) {
             DatabaseNotification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+                'id' => Str::uuid(),
                 'type' => 'App\Notifications\TestNotification',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
@@ -320,7 +325,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $folder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -427,7 +432,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $parentFolder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -467,7 +472,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $folder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -485,7 +490,7 @@ class NotificationServiceTest extends TestCase
         $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+        $this->assertInstanceOf(Collection::class, $recipients);
     }
 
     #[Test]
@@ -509,7 +514,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $folder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -527,7 +532,7 @@ class NotificationServiceTest extends TestCase
         $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+        $this->assertInstanceOf(Collection::class, $recipients);
     }
 
     #[Test]
@@ -604,7 +609,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $specialFolder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -669,7 +674,7 @@ class NotificationServiceTest extends TestCase
 
         for ($i = 0; $i < 15; $i++) {
             DatabaseNotification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+                'id' => Str::uuid(),
                 'type' => 'App\Notifications\TestNotification',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
@@ -706,7 +711,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $folder->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -733,7 +738,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -756,7 +761,7 @@ class NotificationServiceTest extends TestCase
         $notifications = [];
         for ($i = 0; $i < 5; $i++) {
             $notifications[] = DatabaseNotification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+                'id' => Str::uuid(),
                 'type' => 'App\Notifications\TestNotification',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
@@ -799,7 +804,7 @@ class NotificationServiceTest extends TestCase
                 'role_id' => $role->id,
                 'folder_id' => $folder->id,
                 'notification_type_id' => $notificationType->id,
-                'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+                'permission' => FolderPermissionType::NOTIFY_ON->value,
                 'modifier_id' => $user1->id,
             ]);
         }
@@ -818,7 +823,7 @@ class NotificationServiceTest extends TestCase
         $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+        $this->assertInstanceOf(Collection::class, $recipients);
         // 複数のロールから受信者が取得される
         $this->assertGreaterThanOrEqual(0, $recipients->count());
     }
@@ -846,7 +851,7 @@ class NotificationServiceTest extends TestCase
             'role_id' => $role->id,
             'folder_id' => $level1->id,
             'notification_type_id' => $notificationType->id,
-            'permission' => \App\Enums\FolderPermissionType::NOTIFY_ON->value,
+            'permission' => FolderPermissionType::NOTIFY_ON->value,
             'modifier_id' => $user->id,
         ]);
 
@@ -864,7 +869,7 @@ class NotificationServiceTest extends TestCase
         $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
 
         // Assert
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+        $this->assertInstanceOf(Collection::class, $recipients);
         // 祖先フォルダの権限が適用される
         $this->assertGreaterThanOrEqual(0, $recipients->count());
     }
@@ -911,7 +916,7 @@ class NotificationServiceTest extends TestCase
 
         for ($i = 0; $i < 100; $i++) {
             DatabaseNotification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+                'id' => Str::uuid(),
                 'type' => 'App\Notifications\TestNotification',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
@@ -940,7 +945,7 @@ class NotificationServiceTest extends TestCase
 
         // ロール宛の通知を作成
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => Role::class,
             'notifiable_id' => $role->id,
@@ -950,7 +955,7 @@ class NotificationServiceTest extends TestCase
 
         // ユーザー個人宛の通知も作成
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -962,7 +967,7 @@ class NotificationServiceTest extends TestCase
         $notifications = $this->notificationService->getUnreadNotificationsForUser($user);
 
         // Assert - ロール宛とユーザー宛の両方が取得される可能性がある
-        $this->assertInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class, $notifications);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $notifications);
         $this->assertGreaterThanOrEqual(1, $notifications->total());
     }
 
@@ -972,7 +977,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -994,7 +999,7 @@ class NotificationServiceTest extends TestCase
 
         // Assert - notification_userに存在する通知は除外される可能性がある
         // 実際の動作に応じてアサーションを調整
-        $this->assertInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class, $notifications);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $notifications);
         $this->assertGreaterThanOrEqual(0, $notifications->total());
     }
 
@@ -1004,7 +1009,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1039,7 +1044,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1070,7 +1075,7 @@ class NotificationServiceTest extends TestCase
 
         // 異なる時刻で通知を作成
         $old = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1080,7 +1085,7 @@ class NotificationServiceTest extends TestCase
         ]);
 
         $new = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1109,7 +1114,7 @@ class NotificationServiceTest extends TestCase
 
         // 各ロール宛の通知を作成
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => Role::class,
             'notifiable_id' => $role1->id,
@@ -1118,7 +1123,7 @@ class NotificationServiceTest extends TestCase
         ]);
 
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => Role::class,
             'notifiable_id' => $role2->id,
@@ -1130,7 +1135,7 @@ class NotificationServiceTest extends TestCase
         $notifications = $this->notificationService->getUnreadNotificationsForUser($user);
 
         // Assert - 複数のロールの通知が取得される可能性がある
-        $this->assertInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class, $notifications);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $notifications);
         $this->assertGreaterThanOrEqual(0, $notifications->total());
     }
 
@@ -1142,7 +1147,7 @@ class NotificationServiceTest extends TestCase
 
         // ユーザー個人宛の通知のみ作成
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1183,7 +1188,7 @@ class NotificationServiceTest extends TestCase
         $roles = $this->notificationService->getNotifiableRoles($activity, $notificationType);
 
         // Assert - 現在の実装ではfolderがnullなので空のコレクションが返される
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $roles);
+        $this->assertInstanceOf(Collection::class, $roles);
         $this->assertEquals(0, $roles->count());
     }
 
@@ -1193,7 +1198,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1218,7 +1223,7 @@ class NotificationServiceTest extends TestCase
 
         // ロール宛の通知を作成
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => Role::class,
             'notifiable_id' => $role->id,
@@ -1239,7 +1244,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1263,7 +1268,7 @@ class NotificationServiceTest extends TestCase
 
         // 既読の通知
         $readNotification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1281,7 +1286,7 @@ class NotificationServiceTest extends TestCase
 
         // 未読の通知
         $unreadNotification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1293,7 +1298,7 @@ class NotificationServiceTest extends TestCase
         $notifications = $this->notificationService->getUnreadNotificationsForUser($user);
 
         // Assert - 未読の通知のみが取得される可能性がある
-        $this->assertInstanceOf(\Illuminate\Pagination\LengthAwarePaginator::class, $notifications);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $notifications);
     }
 
     #[Test]
@@ -1319,7 +1324,7 @@ class NotificationServiceTest extends TestCase
         // Arrange - 既存のnotification_userレコードがある状態
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1355,7 +1360,7 @@ class NotificationServiceTest extends TestCase
         // Arrange - notification_userレコードがない状態
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1403,7 +1408,7 @@ class NotificationServiceTest extends TestCase
         $recipients = $this->notificationService->getNotifiableRecipients($activity, $notificationType);
 
         // Assert - フォルダが特定できないので空のコレクションが返される
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $recipients);
+        $this->assertInstanceOf(Collection::class, $recipients);
         $this->assertEquals(0, $recipients->count());
     }
 
@@ -1415,7 +1420,7 @@ class NotificationServiceTest extends TestCase
         $notifications = [];
         for ($i = 0; $i < 3; $i++) {
             $notifications[] = DatabaseNotification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+                'id' => Str::uuid(),
                 'type' => 'App\Notifications\TestNotification',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
@@ -1466,7 +1471,7 @@ class NotificationServiceTest extends TestCase
         // 複数の未読通知を作成
         for ($i = 0; $i < 7; $i++) {
             DatabaseNotification::create([
-                'id' => \Illuminate\Support\Str::uuid(),
+                'id' => Str::uuid(),
                 'type' => 'App\Notifications\TestNotification',
                 'notifiable_type' => User::class,
                 'notifiable_id' => $user->id,
@@ -1488,7 +1493,7 @@ class NotificationServiceTest extends TestCase
         // Arrange
         $user = User::factory()->create();
         DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1510,7 +1515,7 @@ class NotificationServiceTest extends TestCase
         // Arrange - 114-117行をカバー: updateパスでread_atを更新
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,
@@ -1549,7 +1554,7 @@ class NotificationServiceTest extends TestCase
         // Arrange - 120-126行をカバー: insertパスでread_atを設定
         $user = User::factory()->create();
         $notification = DatabaseNotification::create([
-            'id' => \Illuminate\Support\Str::uuid(),
+            'id' => Str::uuid(),
             'type' => 'App\Notifications\TestNotification',
             'notifiable_type' => User::class,
             'notifiable_id' => $user->id,

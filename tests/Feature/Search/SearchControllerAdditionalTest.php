@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\DatabaseMigrationsOnce;
 
@@ -82,7 +83,7 @@ class SearchControllerAdditionalTest extends TestCase
             $this->tenant->domains()->create(['domain' => 'localhost']);
         }
 
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     protected function tearDown(): void

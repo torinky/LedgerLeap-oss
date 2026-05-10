@@ -26,7 +26,7 @@ use Studio15\FilamentTree\Components\Form\ParentSelect;
 /**
  * Tree node component
  */
-final class Row extends Component implements HasForms, HasActions
+final class Row extends Component implements HasActions, HasForms
 {
     use InteractsWithActions;
     use InteractsWithForms;
@@ -72,7 +72,7 @@ final class Row extends Component implements HasForms, HasActions
             return false;
         }
 
-        return !(config('filament-tree.allow-delete-root') === false && $this->row->children->isNotEmpty() && $this->row->isRoot());
+        return ! (config('filament-tree.allow-delete-root') === false && $this->row->children->isNotEmpty() && $this->row->isRoot());
     }
 
     public function editAction(): EditAction
@@ -92,7 +92,7 @@ final class Row extends Component implements HasForms, HasActions
             ->record(fn (array $arguments): Model => $this->row)
             ->form($form)
             ->after(function (Model $record): void {
-                if (!config('filament-tree.show-parent-select-while-edit')) {
+                if (! config('filament-tree.show-parent-select-while-edit')) {
                     return;
                 }
 
@@ -121,7 +121,7 @@ final class Row extends Component implements HasForms, HasActions
         return DeleteAction::make()
             ->requiresConfirmation()
             ->before(function (Model $record): void {
-                if (!$this->canBeDeleted()) {
+                if (! $this->canBeDeleted()) {
                     throw new RuntimeException('Cannot delete tree node.');
                 }
             })

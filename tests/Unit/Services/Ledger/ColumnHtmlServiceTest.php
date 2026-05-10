@@ -41,8 +41,8 @@ it('column value is array', function () {
     ], true, [], '', false, null);
 
     $expectedHtml = '<div class="flex flex-wrap gap-1">'
-        . '<span class="'.ColumnHtmlService::BADGE_CLASS_NAME.'">aaa</span>'
-        . '</div>';
+        .'<span class="'.ColumnHtmlService::BADGE_CLASS_NAME.'">aaa</span>'
+        .'</div>';
     expect($result->toHtml())->toBe($expectedHtml);
 });
 
@@ -395,10 +395,10 @@ it('caches textarea html and returns cached result on second call', function () 
     $mockHtmlProcessor->shouldReceive('processTextNodes')
         ->andReturnUsing(fn ($html, $callback) => $html);
 
-    $ledger = new Ledger();
+    $ledger = new Ledger;
     $ledger->id = 1;
     $ledger->updated_at = now();
-    $ledger->define = (object)['tenant_id' => 'test-tenant'];
+    $ledger->define = (object) ['tenant_id' => 'test-tenant'];
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
 
@@ -432,15 +432,15 @@ it('does not share cache across tenants', function () {
     $mockHtmlProcessor->shouldReceive('processTextNodes')
         ->andReturnUsing(fn ($html, $callback) => $html);
 
-    $ledgerA = new Ledger();
+    $ledgerA = new Ledger;
     $ledgerA->id = 1;
     $ledgerA->updated_at = now();
-    $ledgerA->define = (object)['tenant_id' => 'tenant-a'];
+    $ledgerA->define = (object) ['tenant_id' => 'tenant-a'];
 
-    $ledgerB = new Ledger();
+    $ledgerB = new Ledger;
     $ledgerB->id = 1;
     $ledgerB->updated_at = now();
-    $ledgerB->define = (object)['tenant_id' => 'tenant-b'];
+    $ledgerB->define = (object) ['tenant_id' => 'tenant-b'];
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
 
@@ -471,10 +471,10 @@ it('bypasses cache when highlight is provided', function () {
     $mockHtmlProcessor->shouldReceive('processTextNodes')
         ->andReturnUsing(fn ($html, $callback) => $html);
 
-    $ledger = new Ledger();
+    $ledger = new Ledger;
     $ledger->id = 1;
     $ledger->updated_at = now();
-    $ledger->define = (object)['tenant_id' => 'test-tenant'];
+    $ledger->define = (object) ['tenant_id' => 'test-tenant'];
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
 
@@ -503,10 +503,10 @@ it('invalidates cache when ledger updated_at changes', function () {
     $mockHtmlProcessor->shouldReceive('processTextNodes')
         ->andReturnUsing(fn ($html, $callback) => $html);
 
-    $ledger = new Ledger();
+    $ledger = new Ledger;
     $ledger->id = 1;
     $ledger->updated_at = now();
-    $ledger->define = (object)['tenant_id' => 'test-tenant'];
+    $ledger->define = (object) ['tenant_id' => 'test-tenant'];
 
     $columnHtml = new ColumnHtmlService($mockAutoLinkService, $mockMarkdownRenderer, $mockHtmlProcessor);
 

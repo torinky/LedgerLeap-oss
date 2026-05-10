@@ -66,8 +66,7 @@ class NotificationList extends BaseLivewireComponent
         if ($query) {
             $this->workflowNotificationCount = $query->count();
             $notifications = $query->paginate(10, ['*'], pageName: 'notification_page') // 1ページあたりの件数を調整
-                ->through(function ($notification)
-                {
+                ->through(function ($notification) {
                     // 各通知データを加工
                     $notification->displayData = $this->formatNotificationData($notification);
 

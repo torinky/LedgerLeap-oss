@@ -2,19 +2,21 @@
 
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
+use App\Livewire\Ledger\RollbackConfirmModal;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\UserService;
 use Livewire\Livewire;
 
 beforeEach(function () {
     // Manually initialize tenancy
-    $this->tenant = \App\Models\Tenant::firstOrCreate(['id' => 'test-tenant']);
+    $this->tenant = Tenant::firstOrCreate(['id' => 'test-tenant']);
     $this->tenant->domains()->firstOrCreate(['domain' => 'test.localhost']);
     tenancy()->initialize($this->tenant);
 
@@ -116,7 +118,7 @@ test('[Scenario E] Field leader rolls back an erroneous update by a subordinate'
     Livewire::actingAs($this->leader);
 
     // ロールバックモーダルを立ち上げて実行
-    Livewire::test(\App\Livewire\Ledger\RollbackConfirmModal::class)
+    Livewire::test(RollbackConfirmModal::class)
         ->call('openModal', $ledger->id, $diffV1->id, 2)
         ->set('comments', 'Subordinate made a mistake, rolling back to V1.')
         ->call('nextStep')

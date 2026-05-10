@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
@@ -32,7 +33,7 @@ class LedgerHistoryListTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 10, // 意図的に進める
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
         ]);
 
         // 10件の履歴を作成
@@ -43,7 +44,7 @@ class LedgerHistoryListTest extends TestCase
                 'content' => [],
                 'column_define' => [],
                 'version' => $i,
-                'status' => \App\Enums\WorkflowStatus::DRAFT,
+                'status' => WorkflowStatus::DRAFT,
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $ledger->modifier_id,
                 'completed_inspector_role_ids' => [],
@@ -70,7 +71,7 @@ class LedgerHistoryListTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 2,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'tenant_id' => $this->getTenant()->id,
         ]);
 
@@ -81,7 +82,7 @@ class LedgerHistoryListTest extends TestCase
             'content' => [],
             'column_define' => [],
             'version' => 1,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'creator_id' => $ledger->creator_id,
             'modifier_id' => $ledger->modifier_id,
             'completed_inspector_role_ids' => [],
@@ -95,7 +96,7 @@ class LedgerHistoryListTest extends TestCase
             'content' => [],
             'column_define' => [],
             'version' => 2,
-            'status' => \App\Enums\WorkflowStatus::DRAFT->value,
+            'status' => WorkflowStatus::DRAFT->value,
             'creator_id' => $ledger->creator_id,
             'modifier_id' => $ledger->modifier_id,
             'completed_inspector_role_ids' => [],
@@ -128,7 +129,7 @@ class LedgerHistoryListTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 2,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'tenant_id' => $this->getTenant()->id,
         ]);
 
@@ -139,7 +140,7 @@ class LedgerHistoryListTest extends TestCase
             'content' => [],
             'column_define' => [],
             'version' => 1,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'creator_id' => $ledger->creator_id,
             'modifier_id' => $ledger->modifier_id,
             'completed_inspector_role_ids' => [],
@@ -153,7 +154,7 @@ class LedgerHistoryListTest extends TestCase
             'content' => [],
             'column_define' => [],
             'version' => 2,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'creator_id' => $ledger->creator_id,
             'modifier_id' => $ledger->modifier_id,
             'completed_inspector_role_ids' => [],

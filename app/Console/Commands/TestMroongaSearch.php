@@ -2,9 +2,12 @@
 
 namespace App\Console\Commands;
 
+use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Console\Command;
 
 class TestMroongaSearch extends Command
@@ -31,16 +34,16 @@ class TestMroongaSearch extends Command
         $this->info('Starting Mroonga search test...');
 
         // テナントを初期化
-        $tenant = \App\Models\Tenant::firstOrCreate(['id' => 'tinker_tenant_id'], ['id' => 'tinker_tenant_id']);
+        $tenant = Tenant::firstOrCreate(['id' => 'tinker_tenant_id'], ['id' => 'tinker_tenant_id']);
         tenancy()->initialize($tenant);
         $this->info('Tenant initialized: '.$tenant->id);
 
         // テストユーザーを作成
-        $user = \App\Models\User::factory()->create(); // tenant_id を削除
+        $user = User::factory()->create(); // tenant_id を削除
         $this->info('Test User created: '.$user->id);
 
         // Folder を作成
-        $folder = \App\Models\Folder::create([
+        $folder = Folder::create([
             'tenant_id' => $tenant->id,
             'title' => 'Test Folder',
             'creator_id' => $user->id,
@@ -49,12 +52,12 @@ class TestMroongaSearch extends Command
         $this->info('Folder created: '.$folder->id);
 
         // LedgerDefine を作成
-        $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
+        $ledgerDefine = LedgerDefine::factory()->create([
             'tenant_id' => $tenant->id,
             'folder_id' => $folder->id, // folder_id を追加
             'title' => 'Tinker Ledger',
             'column_define' => [
-                new \App\Models\ColumnDefine([
+                new ColumnDefine([
                     'id' => 1,
                     'name' => 'unique_text',
                     'label' => 'Unique Text',
@@ -67,7 +70,7 @@ class TestMroongaSearch extends Command
         $this->info('LedgerDefine created: '.$ledgerDefine->id);
 
         // Ledger を作成
-        $ledger = \App\Models\Ledger::create([
+        $ledger = Ledger::create([
             'tenant_id' => $tenant->id,
             'ledger_define_id' => $ledgerDefine->id,
             'content' => ['1' => 'unique-id-123'], // ColumnDefineのIDをキーとして使用
@@ -78,7 +81,7 @@ class TestMroongaSearch extends Command
 
         // 検索を実行
         $query = 'unique-id-123';
-        $results = \App\Models\Ledger::whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$query])->get();
+        $results = Ledger::whereRaw('match(`content`) against (? IN BOOLEAN MODE)', [$query])->get();
 
         $this->info('Search results count: '.$results->count());
         foreach ($results as $result) {

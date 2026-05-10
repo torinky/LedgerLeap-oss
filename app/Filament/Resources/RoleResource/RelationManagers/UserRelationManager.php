@@ -2,11 +2,17 @@
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
+use Filament\Actions\AttachAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class UserRelationManager extends RelationManager
@@ -62,8 +68,8 @@ class UserRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                \Filament\Actions\AttachAction::make()
-                    ->form(fn (\Filament\Actions\AttachAction $action): array => [
+                AttachAction::make()
+                    ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->multiple() // 複数ユーザーを選択可能にする
                             ->searchable(), // ユーザーを検索可能にする
@@ -71,17 +77,17 @@ class UserRelationManager extends RelationManager
                     ]),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\DetachAction::make(),
+                EditAction::make(),
+                DetachAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DetachBulkAction::make(),
+                BulkActionGroup::make([
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }
 
-    protected function getEloquentQuery(): \Illuminate\Database\Eloquent\Builder
+    protected function getEloquentQuery(): Builder
     {
         return parent::getEloquentQuery()->with('organizations.ancestors');
     }

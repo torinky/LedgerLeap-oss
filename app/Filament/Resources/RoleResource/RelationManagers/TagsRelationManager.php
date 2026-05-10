@@ -2,9 +2,16 @@
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
+use Filament\Actions\AttachAction;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -59,17 +66,17 @@ class TagsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                \Filament\Actions\CreateAction::make(),
-                \Filament\Actions\AttachAction::make(),
+                CreateAction::make(),
+                AttachAction::make(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\DetachAction::make(),
-                \Filament\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DetachAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\DetachBulkAction::make(),
-                \Filament\Actions\DeleteBulkAction::make(),
+                DetachBulkAction::make(),
+                DeleteBulkAction::make(),
             ]);
     }
 

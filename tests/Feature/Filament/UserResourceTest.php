@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Filament;
 
+use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class UserResourceTest extends TestCase
@@ -27,14 +30,14 @@ class UserResourceTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         // UserPolicy が期待するパーミッション名で作成
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'manage_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'create_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'delete_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'update_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete_users', 'guard_name' => 'web']);
 
-        $adminRole = \App\Models\Role::firstOrCreate(['name' => \App\Models\Role::SUPER_ADMIN, 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
+        $adminRole->givePermissionTo(Permission::all());
 
         $this->adminUser = User::factory()->create([
             'email' => 'admin@example.com',
@@ -80,7 +83,7 @@ class UserResourceTest extends TestCase
     {
         User::factory()->create(['ignore_ad_org_sync_until' => now()->subDays(1)]);
 
-        $expectedUrl = \App\Filament\Resources\UserResource::getUrl('index', [
+        $expectedUrl = UserResource::getUrl('index', [
             'tableFilters' => [
                 'manual_sync_status' => [
                     'status' => 'expired',

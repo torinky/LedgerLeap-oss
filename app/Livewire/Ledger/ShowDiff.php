@@ -4,11 +4,13 @@ namespace App\Livewire\Ledger;
 
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
-use App\Services\Ledger\LedgerContentProcessor;
-use Illuminate\Contracts\View\View; // 追加
+use App\Services\Ledger\LedgerContentProcessor; // 追加
+use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
+use Illuminate\Support\Collection;
 
 class ShowDiff extends BaseLivewireComponent
 {
@@ -29,7 +31,7 @@ class ShowDiff extends BaseLivewireComponent
 
     public int $ledgerDiffCount = 0; // 全 Diff 数
 
-    public ?\Illuminate\Support\Collection $allAttachments = null;
+    public ?Collection $allAttachments = null;
 
     public array $displayColumns = []; // 追加
 
@@ -80,7 +82,7 @@ class ShowDiff extends BaseLivewireComponent
         }
 
         if (! empty($fileHashedBasenames)) {
-            $this->ledgerRecord->setRelation('attachedFiles', \App\Models\AttachedFile::where('ledger_id', $this->currentDiffRecord->ledger_id)
+            $this->ledgerRecord->setRelation('attachedFiles', AttachedFile::where('ledger_id', $this->currentDiffRecord->ledger_id)
                 ->where('ledger_define_id', $this->currentDiffRecord->ledger_define_id)
                 ->whereIn('hashedbasename', $fileHashedBasenames)
                 ->get());

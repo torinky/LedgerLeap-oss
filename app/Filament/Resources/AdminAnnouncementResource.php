@@ -14,8 +14,8 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
-use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Icon;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\View;
@@ -146,11 +146,11 @@ class AdminAnnouncementResource extends Resource
                         ->description(__('ledger.admin_announcement_banner_preview_hint'))
                         ->schema([
                             View::make('filament.pages.admin-announcement-banner-preview-reset')
-                                ->viewData(fn(): array => [
+                                ->viewData(fn (): array => [
                                     'label' => __('ledger.admin_announcement_banner_preview_reset'),
                                 ]),
                             View::make('components.admin.announcement-banner-preview-scoped')
-                                ->viewData(fn(Get $get): array => [
+                                ->viewData(fn (Get $get): array => [
                                     'announcement' => self::previewAnnouncement($get),
                                 ]),
                         ])
@@ -165,7 +165,7 @@ class AdminAnnouncementResource extends Resource
             'title' => $get('title') ?? '',
             'body' => $get('body') ?? '',
             'level' => $get('level') ?? 'info',
-            'sticky' => (bool)$get('sticky'),
+            'sticky' => (bool) $get('sticky'),
             'scope' => self::normalizeScopeSelection($get('scope')),
             'published_at' => self::formatPreviewDateTime($get('starts_at')),
             'starts_at' => self::formatPreviewDateTime($get('starts_at')),
@@ -173,9 +173,9 @@ class AdminAnnouncementResource extends Resource
             'links' => array_filter([
                 filled($get('cta_label')) && filled($get('cta_url'))
                     ? [
-                    'label' => $get('cta_label'),
-                    'url' => $get('cta_url'),
-                ]
+                        'label' => $get('cta_label'),
+                        'url' => $get('cta_url'),
+                    ]
                     : null,
             ]),
             'dismiss_storage_key' => self::previewDismissStorageKey($get),
@@ -189,23 +189,23 @@ class AdminAnnouncementResource extends Resource
             $get('body') ?? '',
             $get('level') ?? '',
             json_encode(self::normalizeScopeSelection($get('scope')), JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-            (string)((bool)$get('sticky') ? 1 : 0),
+            (string) ((bool) $get('sticky') ? 1 : 0),
             $get('starts_at') ?? '',
             $get('ends_at') ?? '',
             $get('cta_label') ?? '',
             $get('cta_url') ?? '',
         ];
 
-        return 'ledgerleap.admin_announcement_banner.preview:' . sha1(implode('|', $parts));
+        return 'ledgerleap.admin_announcement_banner.preview:'.sha1(implode('|', $parts));
     }
 
     protected static function formatPreviewDateTime(?string $value): string
     {
-        if (!filled($value)) {
+        if (! filled($value)) {
             return __('ledger.none');
         }
 
-        return CarbonImmutable::parse((string)$value)->format('Y/m/d H:i');
+        return CarbonImmutable::parse((string) $value)->format('Y/m/d H:i');
     }
 
     public static function table(Table $table): Table
@@ -232,11 +232,11 @@ class AdminAnnouncementResource extends Resource
                 Tables\Columns\TextColumn::make('level')
                     ->label(__('ledger.admin_announcement_banner_level_label'))
                     ->badge()
-                    ->formatStateUsing(fn(string $state): string => __('ledger.' . $state)),
+                    ->formatStateUsing(fn (string $state): string => __('ledger.'.$state)),
                 Tables\Columns\TextColumn::make('scope')
                     ->label(__('ledger.admin_announcement_banner_publish_scope'))
                     ->badge()
-                    ->formatStateUsing(fn(mixed $state): string => self::formatScopeDisplay($state)),
+                    ->formatStateUsing(fn (mixed $state): string => self::formatScopeDisplay($state)),
                 Tables\Columns\TextColumn::make('starts_at')
                     ->label(__('ledger.admin_announcement_banner_starts_at'))
                     ->dateTime()
@@ -328,17 +328,17 @@ class AdminAnnouncementResource extends Resource
 
     public static function normalizeScopeSelection(mixed $scope): array
     {
-        if (!is_array($scope)) {
-            $scope = filled($scope) ? [(string)$scope] : [];
+        if (! is_array($scope)) {
+            $scope = filled($scope) ? [(string) $scope] : [];
         }
 
-        return array_values(array_filter($scope, static fn(mixed $value): bool => is_string($value) && $value !== ''));
+        return array_values(array_filter($scope, static fn (mixed $value): bool => is_string($value) && $value !== ''));
     }
 
     public static function scopeDisplayLabels(mixed $scope): array
     {
         return collect(self::normalizeScopeSelection($scope))
-            ->map(fn(string $value): string => self::scopeOptions()[$value] ?? $value)
+            ->map(fn (string $value): string => self::scopeOptions()[$value] ?? $value)
             ->values()
             ->all();
     }
@@ -395,9 +395,9 @@ class AdminAnnouncementResource extends Resource
         return array_values(array_filter([
             filled($data['cta_label'] ?? null) && filled($data['cta_url'] ?? null)
                 ? [
-                'label' => $data['cta_label'],
-                'url' => $data['cta_url'],
-            ]
+                    'label' => $data['cta_label'],
+                    'url' => $data['cta_url'],
+                ]
                 : null,
         ]));
     }

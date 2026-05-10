@@ -6,7 +6,6 @@ use App\Livewire\Ledger\Show;
 use App\Models\Ledger;
 use App\Models\Tenant;
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -17,6 +16,7 @@ class RelatedLedgersTabTest extends TestCase
     use RefreshDatabaseWithTenant;
 
     protected Tenant $tenant;
+
     protected User $user;
 
     protected function setUp(): void

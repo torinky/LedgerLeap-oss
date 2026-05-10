@@ -234,7 +234,7 @@ class PendingList extends BaseLivewireComponent
 
             $this->success(__('ledger.workflow.approved_message'));
             //            $this->dispatch('$refresh'); // リストを更新
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Approval failed for task ID {$taskId}: ".$e->getMessage());
             $this->error(__('messages.error.generic'));
         }
@@ -346,7 +346,7 @@ class PendingList extends BaseLivewireComponent
             $this->returnToDraftModal = false;
             $this->success(__('ledger.workflow.returned_to_draft_message'));
             $this->dispatch('$refresh'); // リスト更新
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Return to draft failed from PendingList for Diff ID {$this->selectedLedgerDiffId}: ".$e->getMessage());
             $this->error(__('messages.error.generic'));
         } finally {

@@ -21,14 +21,17 @@ use App\Observers\LedgerDiffObserver;
 use App\Observers\LedgerObserver;
 use App\Observers\RoleFolderPermissionObserver;
 use App\Observers\UserPermissionsObserver;
+use App\Services\EmbeddingService;
 use App\Services\TenantAccessService;
 use Barryvdh\LaravelIdeHelper\IdeHelperServiceProvider;
 use Illuminate\Database\Connection;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Stancl\Tenancy\Database\Models\Domain;
 use Stancl\Tenancy\Middleware\InitializeTenancyByRequestData;
+use Vaites\ApacheTika\Client;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -47,12 +50,12 @@ class AppServiceProvider extends ServiceProvider
             return new TenantAccessService;
         });
 
-        $this->app->singleton(\App\Services\EmbeddingService::class, function ($app) {
-            return new \App\Services\EmbeddingService;
+        $this->app->singleton(EmbeddingService::class, function ($app) {
+            return new EmbeddingService;
         });
 
-        $this->app->singleton(\Vaites\ApacheTika\Client::class, function ($app) {
-            return \Vaites\ApacheTika\Client::make('tika', 9998);
+        $this->app->singleton(Client::class, function ($app) {
+            return Client::make('tika', 9998);
         });
 
         $this->setCustomResolverForMySql();
@@ -70,7 +73,7 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
-        \Illuminate\Support\Facades\Log::info('AppServiceProvider booting...');
+        Log::info('AppServiceProvider booting...');
         AutoLink::observe(AutoLinkObserver::class);
         Folder::observe(FolderObserver::class);
         LedgerDiff::observe(LedgerDiffObserver::class);

@@ -10,8 +10,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\LedgerAttachmentResourceService;
 use Illuminate\Support\Facades\Auth;
-use Laravel\Sanctum\Sanctum;
 use Laravel\Mcp\Request;
+use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -53,7 +53,7 @@ class LedgerAttachmentResourceTest extends TestCase
                         'size' => 4096,
                         'source' => 'vlm',
                         'meta' => [
-                            'content' => "{\"invoice\":\"INV-001\"}",
+                            'content' => '{"invoice":"INV-001"}',
                         ],
                         'pages' => [
                             ['page_index' => 1],
@@ -175,4 +175,3 @@ class LedgerAttachmentResourceTest extends TestCase
         $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
     }
 }
-

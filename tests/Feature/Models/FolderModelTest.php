@@ -9,6 +9,7 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -237,7 +238,7 @@ class FolderModelTest extends TestCase
         Folder::fixTree();
 
         // キャッシュをクリアして再生成
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
         $nodes = Folder::whereNull('parent_id')->with('children')->get();
         $result = Folder::treeList($nodes);
 
@@ -279,7 +280,7 @@ class FolderModelTest extends TestCase
             'permission' => FolderPermissionType::WRITE,
         ]);
 
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
         $perms = $child->getAllPermissionsWithInheritance($this->role);
         $this->assertContains(FolderPermissionType::WRITE->value, $perms);
     }
@@ -292,7 +293,7 @@ class FolderModelTest extends TestCase
             'permission' => FolderPermissionType::READ,
         ]);
 
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
         $this->assertTrue(
             $this->folder->hasPermissionWithInheritance($this->role, FolderPermissionType::READ->value)
         );
@@ -300,7 +301,7 @@ class FolderModelTest extends TestCase
 
     public function test_has_permission_with_inheritance_returns_false(): void
     {
-        \Illuminate\Support\Facades\Cache::flush();
+        Cache::flush();
         $this->assertFalse(
             $this->folder->hasPermissionWithInheritance($this->role, FolderPermissionType::WRITE->value)
         );

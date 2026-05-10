@@ -11,7 +11,9 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\RagSearchService;
 use App\Services\UserService;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -295,7 +297,7 @@ class RelatedLedgersTest extends TestCase
     public function it_handles_rag_service_unavailable_gracefully(): void
     {
         // RagSearchService が例外を投げる状況をモック
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
+        $this->mock(RagSearchService::class, function ($mock) {
             $mock->shouldReceive('searchLedgers')->andThrow(new \RuntimeException('RAG service unavailable'));
         });
 
@@ -331,7 +333,7 @@ class RelatedLedgersTest extends TestCase
 
         // RagSearchService が関連レコードを返すようにモック
         // 戻り値の形式: [['ledger_id' => id, 'max_score' => float, ...], ...]
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) use ($relatedLedger) {
+        $this->mock(RagSearchService::class, function ($mock) use ($relatedLedger) {
             $mock->shouldReceive('searchLedgers')
                 ->once()
                 ->andReturn([
@@ -359,7 +361,7 @@ class RelatedLedgersTest extends TestCase
     public function it_excludes_self_from_semantic_search(): void
     {
         // RagSearchService が自身も含む結果を返すモック
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
+        $this->mock(RagSearchService::class, function ($mock) {
             $mock->shouldReceive('searchLedgers')
                 ->once()
                 ->andReturn([
@@ -581,8 +583,8 @@ class RelatedLedgersTest extends TestCase
             ->for($this->folder)
             ->create([
                 'column_define' => [
-                    new \App\Models\ColumnDefine(0, '管理番号', 'auto_number', 1),
-                    new \App\Models\ColumnDefine(1, 'タイトル', 'text', 2),
+                    new ColumnDefine(0, '管理番号', 'auto_number', 1),
+                    new ColumnDefine(1, 'タイトル', 'text', 2),
                 ],
             ]);
 
@@ -640,7 +642,7 @@ class RelatedLedgersTest extends TestCase
             ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
             ->create(['content' => [0 => 'EQ-099', 1 => 'スコアテスト', 2 => '']]);
 
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) use ($relatedLedger) {
+        $this->mock(RagSearchService::class, function ($mock) use ($relatedLedger) {
             $mock->shouldReceive('searchLedgers')->once()->andReturn([
                 ['ledger_id' => $relatedLedger->id, 'max_score' => 0.87, 'best_chunk_text' => '', 'chunk_count' => 1],
             ]);
@@ -761,7 +763,7 @@ class RelatedLedgersTest extends TestCase
             ]);
 
         // キャッシュをクリアして確実に最新パターンを取得
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $ledgerWithTextRef->id;
@@ -800,7 +802,7 @@ class RelatedLedgersTest extends TestCase
                 ],
             ]);
 
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $ledger->id;
@@ -854,7 +856,7 @@ class RelatedLedgersTest extends TestCase
                 ],
             ]);
 
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $sourceledger->id;
@@ -916,7 +918,7 @@ class RelatedLedgersTest extends TestCase
                 ],
             ]);
 
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $ledger->id;

@@ -16,9 +16,7 @@ class LedgerLeapServerTest extends TestCase
     #[Test]
     public function it_registers_the_resource_bridge_tool(): void
     {
-        $server = new class(new FakeTransporter) extends LedgerLeapServer
-        {
-        };
+        $server = new class(new FakeTransporter) extends LedgerLeapServer {};
 
         $reflection = new ReflectionClass($server);
         $property = $reflection->getProperty('tools');

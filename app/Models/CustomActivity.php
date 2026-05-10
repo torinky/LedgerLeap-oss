@@ -4,10 +4,11 @@ namespace App\Models;
 
 use App\Services\NotificationService;
 use Spatie\Activitylog\Models\Activity;
+use Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
 class CustomActivity extends Activity
 {
-    use \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
+    use BelongsToTenant;
 
     protected static function booted()
     {

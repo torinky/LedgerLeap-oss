@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -45,7 +46,7 @@ class LedgerReadUpdateApiTest extends TestCase
             $this->getTenant()->domains()->create(['domain' => 'localhost']);
         }
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         Permission::findOrCreate('view_ledgers', 'web');
         $writerRole = Role::findOrCreate('writer', 'web')->givePermissionTo(['view_ledgers']);
@@ -75,7 +76,7 @@ class LedgerReadUpdateApiTest extends TestCase
             'workflow_enabled' => false,
         ]);
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     #[Test]

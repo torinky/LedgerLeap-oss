@@ -45,7 +45,7 @@ return [
         ],
         'title' => 'アクセスと権限',
         'users_with_access' => 'アクセス可能なユーザー',
-        'users'=>'ユーザー',
+        'users' => 'ユーザー',
         'your_permissions' => 'この リソース への あなたの権限',
         'your_access_level' => 'あなたのアクセスレベル',
     ],

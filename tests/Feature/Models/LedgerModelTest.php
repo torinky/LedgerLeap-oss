@@ -3,11 +3,13 @@
 namespace Tests\Feature\Models;
 
 use App\Enums\WorkflowStatus;
+use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tag;
 use App\Models\User;
+use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -82,12 +84,12 @@ class LedgerModelTest extends TestCase
 
         $old = Ledger::factory()->create(['ledger_define_id' => $define->id]);
         // タイムスタンプ自動更新を避けて直接 DB 更新
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $old->id)
             ->update(['created_at' => '2020-01-01 00:00:00']);
 
         $recent = Ledger::factory()->create(['ledger_define_id' => $define->id]);
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $recent->id)
             ->update(['created_at' => '2024-06-01 00:00:00']);
 
@@ -103,7 +105,7 @@ class LedgerModelTest extends TestCase
     {
         $define = LedgerDefine::factory()->create();
         $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $ledger->id)
             ->update(['created_at' => '2025-01-01 00:00:00']);
 
@@ -118,7 +120,7 @@ class LedgerModelTest extends TestCase
     {
         $define = LedgerDefine::factory()->create();
         $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $ledger->id)
             ->update(['created_at' => '2024-06-15 00:00:00']);
 
@@ -138,12 +140,12 @@ class LedgerModelTest extends TestCase
         $define = LedgerDefine::factory()->create();
 
         $old = Ledger::factory()->create(['ledger_define_id' => $define->id]);
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $old->id)
             ->update(['updated_at' => '2020-01-01 00:00:00']);
 
         $recent = Ledger::factory()->create(['ledger_define_id' => $define->id]);
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $recent->id)
             ->update(['updated_at' => '2024-08-01 00:00:00']);
 
@@ -159,7 +161,7 @@ class LedgerModelTest extends TestCase
     {
         $define = LedgerDefine::factory()->create();
         $ledger = Ledger::factory()->create(['ledger_define_id' => $define->id]);
-        \Illuminate\Support\Facades\DB::table('ledgers')
+        DB::table('ledgers')
             ->where('id', $ledger->id)
             ->update(['updated_at' => '2024-09-01 00:00:00']);
 
@@ -276,7 +278,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_number_positive(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'num', 'number', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'num', 'number', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, '123.45']);
         $this->assertStringStartsWith('+', $result);
@@ -285,7 +287,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_number_negative(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'num', 'number', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'num', 'number', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, '-50']);
         $this->assertStringStartsWith('-', $result);
@@ -294,7 +296,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_number_non_numeric_returns_spaces(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'num', 'number', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'num', 'number', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, 'abc']);
         $this->assertEquals(str_repeat(' ', 32), $result);
@@ -303,7 +305,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_ymd(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'date', 'YMD', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'date', 'YMD', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, '2024-06-15']);
         $this->assertEquals('2024-06-15', $result);
@@ -312,7 +314,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_ymd_invalid_returns_zero_date(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'date', 'YMD', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'date', 'YMD', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, 'not-a-date']);
         $this->assertEquals('0000-00-00', $result);
@@ -321,7 +323,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_chk_true(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'chk', 'chk', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'chk', 'chk', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, true]);
         $this->assertEquals('1', $result);
@@ -330,7 +332,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_chk_false(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'chk', 'chk', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'chk', 'chk', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, false]);
         $this->assertEquals('0', $result);
@@ -339,7 +341,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_null_returns_empty(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'txt', 'text', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'txt', 'text', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, null]);
         $this->assertEquals('', $result);
@@ -348,7 +350,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_text(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'txt', 'text', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'txt', 'text', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, 'Hello World']);
         $this->assertEquals('Hello World', $result);
@@ -357,7 +359,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_files_array(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'f', 'files', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'f', 'files', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, ['document.pdf', 'other.pdf']]);
         $this->assertStringContainsString('document', $result);
@@ -366,7 +368,7 @@ class LedgerModelTest extends TestCase
     public function test_normalize_value_for_sort_files_empty(): void
     {
         $ledger = Ledger::factory()->make();
-        $col = new \App\Models\ColumnDefine(0, 'f', 'files', 1, [], false, false, null, '', [], 1);
+        $col = new ColumnDefine(0, 'f', 'files', 1, [], false, false, null, '', [], 1);
 
         $result = invokeMethod($ledger, 'normalizeValueForSort', [$col, []]);
         $this->assertEquals('', $result);

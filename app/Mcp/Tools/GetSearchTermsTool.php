@@ -31,8 +31,7 @@ MARKDOWN;
 
     public function __construct(
         private readonly SynonymService $synonymService,
-    ) {
-    }
+    ) {}
 
     public function handle(Request $request): Response
     {

@@ -28,5 +28,5 @@ return [
         'selection_added' => 'バージョン :version を選択しました',
         'selection_removed' => 'バージョン :version の選択を解除しました',
         'version_label' => 'バージョン :version、:date、:user',
-    ]
+    ],
 ];

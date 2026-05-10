@@ -4,9 +4,10 @@ namespace App\Filament\Pages;
 
 use App\Services\AdminAnnouncementService;
 use Filament\Actions\Action;
+use Filament\Pages\Page;
 use Illuminate\Contracts\Support\Htmlable;
 
-class AdminAnnouncementBannerIndex extends \Filament\Pages\Page
+class AdminAnnouncementBannerIndex extends Page
 {
     public static bool $shouldRegisterNavigation = false;
 

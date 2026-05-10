@@ -27,9 +27,7 @@ class LedgerAttachmentResource extends Resource implements HasUriTemplate
 
     public function __construct(
         private readonly LedgerAttachmentResourceService $attachmentResourceService,
-    )
-    {
-    }
+    ) {}
 
     public function uriTemplate(): UriTemplate
     {
@@ -43,16 +41,16 @@ class LedgerAttachmentResource extends Resource implements HasUriTemplate
             return $user;
         }
 
-        $tenantId = (string)$request->get('tenant', '');
+        $tenantId = (string) $request->get('tenant', '');
         $ledgerId = $request->get('ledger');
         $attachmentId = $request->get('attachment');
 
-        if ($tenantId === '' || !is_numeric($ledgerId) || !is_numeric($attachmentId)) {
+        if ($tenantId === '' || ! is_numeric($ledgerId) || ! is_numeric($attachmentId)) {
             return Response::error('Invalid attachment resource request. tenant, ledger, and attachment are required.');
         }
 
         $currentTenantId = tenant('id');
-        if ($currentTenantId !== null && (string)$currentTenantId !== $tenantId) {
+        if ($currentTenantId !== null && (string) $currentTenantId !== $tenantId) {
             return Response::error("Attachment resource tenant mismatch: requested {$tenantId}, current {$currentTenantId}.");
         }
 
@@ -71,30 +69,29 @@ class LedgerAttachmentResource extends Resource implements HasUriTemplate
 
         $ledger = Ledger::query()
             ->with([
-                'attachedFiles' => fn($query) => $query->orderBy('column_id')->orderBy('id'),
+                'attachedFiles' => fn ($query) => $query->orderBy('column_id')->orderBy('id'),
             ])
             ->find($ledgerId);
 
-        if (!$ledger) {
+        if (! $ledger) {
             return Response::error("Ledger [{$ledgerId}] was not found for tenant [{$tenantId}].");
         }
 
-        if ((string)$ledger->tenant_id !== $tenantId) {
+        if ((string) $ledger->tenant_id !== $tenantId) {
             return Response::error("Ledger [{$ledgerId}] does not belong to tenant [{$tenantId}].");
         }
 
         $attachment = $ledger->attachedFiles
-            ->first(fn(AttachedFile $file): bool => (string)$file->id === (string)$attachmentId);
+            ->first(fn (AttachedFile $file): bool => (string) $file->id === (string) $attachmentId);
 
-        if (!$attachment instanceof AttachedFile) {
+        if (! $attachment instanceof AttachedFile) {
             return Response::error("Attachment [{$attachmentId}] was not found on ledger [{$ledgerId}].");
         }
 
-        if ((string)$attachment->tenant_id !== $tenantId) {
+        if ((string) $attachment->tenant_id !== $tenantId) {
             return Response::error("Attachment [{$attachmentId}] does not belong to tenant [{$tenantId}].");
         }
 
         return Response::json($this->attachmentResourceService->buildAttachmentEnvelope($ledger, $attachment));
     }
 }
-

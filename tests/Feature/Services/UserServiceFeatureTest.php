@@ -8,12 +8,14 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\CoversClass;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -444,9 +446,9 @@ class UserServiceFeatureTest extends TestCase
     public function test_can_user_access_settings_returns_true_for_specific_permission(): void
     {
         // 'view_roles' は specificPermissions リストに含まれる
-        $permission = \App\Models\Permission::firstOrCreate(['name' => 'view_roles', 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'view_roles', 'guard_name' => 'web']);
         $this->user->givePermissionTo($permission);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->assertTrue($this->userService->canUserAccessSettings($this->user));
     }
@@ -454,9 +456,9 @@ class UserServiceFeatureTest extends TestCase
     public function test_can_user_access_settings_returns_true_for_keyword_permission(): void
     {
         // 'manage_something' は keywords 'manage' に前方一致
-        $permission = \App\Models\Permission::firstOrCreate(['name' => 'manage_something', 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'manage_something', 'guard_name' => 'web']);
         $this->user->givePermissionTo($permission);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->assertTrue($this->userService->canUserAccessSettings($this->user));
     }
@@ -464,9 +466,9 @@ class UserServiceFeatureTest extends TestCase
     public function test_can_user_access_settings_returns_true_for_subject_permission(): void
     {
         // 'view_users' は subjects 'users' を含む
-        $permission = \App\Models\Permission::firstOrCreate(['name' => 'view_users', 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'view_users', 'guard_name' => 'web']);
         $this->user->givePermissionTo($permission);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->assertTrue($this->userService->canUserAccessSettings($this->user));
     }
@@ -480,9 +482,9 @@ class UserServiceFeatureTest extends TestCase
     public function test_can_user_access_settings_returns_false_for_unrelated_permission(): void
     {
         // 設定画面に無関係なパーミッション
-        $permission = \App\Models\Permission::firstOrCreate(['name' => 'view_dashboard', 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'view_dashboard', 'guard_name' => 'web']);
         $this->user->givePermissionTo($permission);
-        app(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->assertFalse($this->userService->canUserAccessSettings($this->user));
     }

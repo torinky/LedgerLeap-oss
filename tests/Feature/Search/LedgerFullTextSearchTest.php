@@ -7,6 +7,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use App\Services\LedgerService;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Group;
@@ -228,8 +229,8 @@ class LedgerFullTextSearchTest extends TestCase
             'content' => [0 => 'ServiceSearch OtherWord', 1 => ''],
         ]);
 
-        /** @var \App\Services\LedgerService $service */
-        $service = app(\App\Services\LedgerService::class);
+        /** @var LedgerService $service */
+        $service = app(LedgerService::class);
         $results = $service->searchLedgers('UniqueWord888');
 
         $this->assertGreaterThanOrEqual(1, $results->count());
@@ -257,8 +258,8 @@ class LedgerFullTextSearchTest extends TestCase
             'content' => [$define->column_define[0]->id ?? 0 => 'PermTestKeyword777'],
         ]);
 
-        /** @var \App\Services\LedgerService $service */
-        $service = app(\App\Services\LedgerService::class);
+        /** @var LedgerService $service */
+        $service = app(LedgerService::class);
 
         // 権限なしユーザーには結果が返らないこと
         $result = $service->searchLedgersForApi($this->user, ['q' => 'PermTestKeyword777']);

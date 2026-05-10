@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Console;
 
+use App\Enums\AttachedFileStatus;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\User;
 use Illuminate\Support\Facades\Bus;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -39,7 +41,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -55,7 +57,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'mime' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => false,
             'optimized' => false,
             'tika_processed_at' => now()->subMinutes(2),
@@ -87,7 +89,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -113,7 +115,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'mime' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => false,
             'optimized' => false,
             'tika_processed_at' => now()->subMinutes(2),
@@ -143,7 +145,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -175,7 +177,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'original_mime_type' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => false,
             'optimized' => false,
             'tika_processed_at' => now()->subMinutes(2),
@@ -201,7 +203,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -227,7 +229,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'mime' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => false,
             'optimized' => false,
             'tika_processed_at' => now()->subMinutes(2),
@@ -255,7 +257,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -281,7 +283,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'mime' => 'application/pdf',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.pdf",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => true,
             'optimized' => false,
             'tika_processed_at' => now()->subMinutes(2),
@@ -307,7 +309,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange - File with tika_processed_at within timeout (should NOT be finalized)
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -323,7 +325,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'mime' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::PARALLEL_PROCESSING,
+            'status' => AttachedFileStatus::PARALLEL_PROCESSING,
             'contain_content' => false,
             'optimized' => false,
             'tika_processed_at' => now()->subSeconds(30), // 30s ago (within 60s timeout)
@@ -351,7 +353,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // Arrange - Create 3 files ready for finalization
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -376,7 +378,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
                 'mime' => 'image/jpeg',
                 'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test{$i}.jpg",
                 'size' => 1000,
-                'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+                'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
                 'contain_content' => false,
                 'optimized' => false,
                 'tika_processed_at' => now()->subMinutes(2),
@@ -406,7 +408,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // 画像ファイル（.jpg → .pdf）のOCR結果を正しく検出
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -433,7 +435,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'original_mime_type' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.pdf",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => false,
             'optimized' => true,
             'tika_processed_at' => now()->subMinutes(2),
@@ -460,7 +462,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // PDFファイル（.pdf → .pdf）のOCR処理（最適化のみ）
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -487,7 +489,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'original_mime_type' => 'application/pdf',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/document.pdf",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => true,
             'optimized' => true,
             'tika_processed_at' => now()->subMinutes(2),
@@ -514,7 +516,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
         // VLM失敗、OCR成功のケース
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -541,7 +543,7 @@ class FinalizeAttachedFileProcessingTest extends TestCase
             'original_mime_type' => 'image/jpeg',
             'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/photo.pdf",
             'size' => 1000,
-            'status' => \App\Enums\AttachedFileStatus::READY_FOR_FINALIZATION,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
             'contain_content' => false,
             'optimized' => true,
             'tika_processed_at' => now()->subMinutes(2),

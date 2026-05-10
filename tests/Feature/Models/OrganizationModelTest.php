@@ -3,6 +3,7 @@
 namespace Tests\Feature\Models;
 
 use App\Models\Organization;
+use App\Models\Permission;
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -154,7 +155,7 @@ class OrganizationModelTest extends TestCase
 
     public function test_get_direct_permissions_returns_assigned_permissions(): void
     {
-        $permission = \App\Models\Permission::firstOrCreate(['name' => 'test-perm-'.uniqid(), 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'test-perm-'.uniqid(), 'guard_name' => 'web']);
         $this->org->givePermissionTo($permission);
 
         $direct = $this->org->getDirectPermissions();
@@ -164,7 +165,7 @@ class OrganizationModelTest extends TestCase
     public function test_get_inherited_permissions_returns_ancestor_permissions(): void
     {
         $parent = Organization::create(['name' => 'Parent Perm Org '.uniqid()]);
-        $permission = \App\Models\Permission::firstOrCreate(['name' => 'inherited-perm-'.uniqid(), 'guard_name' => 'web']);
+        $permission = Permission::firstOrCreate(['name' => 'inherited-perm-'.uniqid(), 'guard_name' => 'web']);
         $parent->givePermissionTo($permission);
 
         $this->org->appendToNode($parent)->save();
@@ -177,8 +178,8 @@ class OrganizationModelTest extends TestCase
     public function test_get_all_permissions_merges_direct_and_inherited(): void
     {
         $parent = Organization::create(['name' => 'Parent All Perm '.uniqid()]);
-        $parentPerm = \App\Models\Permission::firstOrCreate(['name' => 'parent-perm-'.uniqid(), 'guard_name' => 'web']);
-        $directPerm = \App\Models\Permission::firstOrCreate(['name' => 'direct-perm-'.uniqid(), 'guard_name' => 'web']);
+        $parentPerm = Permission::firstOrCreate(['name' => 'parent-perm-'.uniqid(), 'guard_name' => 'web']);
+        $directPerm = Permission::firstOrCreate(['name' => 'direct-perm-'.uniqid(), 'guard_name' => 'web']);
 
         $parent->givePermissionTo($parentPerm);
         $this->org->givePermissionTo($directPerm);
@@ -193,7 +194,7 @@ class OrganizationModelTest extends TestCase
     public function test_get_all_permissions_deduplicates(): void
     {
         $parent = Organization::create(['name' => 'Parent Dup Perm '.uniqid()]);
-        $perm = \App\Models\Permission::firstOrCreate(['name' => 'dup-perm-'.uniqid(), 'guard_name' => 'web']);
+        $perm = Permission::firstOrCreate(['name' => 'dup-perm-'.uniqid(), 'guard_name' => 'web']);
 
         $parent->givePermissionTo($perm);
         $this->org->givePermissionTo($perm);
@@ -210,7 +211,7 @@ class OrganizationModelTest extends TestCase
 
     public function test_has_permission_with_inheritance_true_for_direct(): void
     {
-        $perm = \App\Models\Permission::firstOrCreate(['name' => 'direct-check-'.uniqid(), 'guard_name' => 'web']);
+        $perm = Permission::firstOrCreate(['name' => 'direct-check-'.uniqid(), 'guard_name' => 'web']);
         $this->org->givePermissionTo($perm);
 
         $this->assertTrue($this->org->hasPermissionWithInheritance($perm->name));
@@ -219,7 +220,7 @@ class OrganizationModelTest extends TestCase
     public function test_has_permission_with_inheritance_true_for_inherited(): void
     {
         $parent = Organization::create(['name' => 'Parent Inherit Check '.uniqid()]);
-        $perm = \App\Models\Permission::firstOrCreate(['name' => 'inherit-check-'.uniqid(), 'guard_name' => 'web']);
+        $perm = Permission::firstOrCreate(['name' => 'inherit-check-'.uniqid(), 'guard_name' => 'web']);
         $parent->givePermissionTo($perm);
 
         $this->org->appendToNode($parent)->save();
@@ -231,7 +232,7 @@ class OrganizationModelTest extends TestCase
     public function test_has_permission_with_inheritance_false_when_none(): void
     {
         // 存在するが付与していないパーミッション → false
-        $perm = \App\Models\Permission::firstOrCreate(['name' => 'not-assigned-perm-'.uniqid(), 'guard_name' => 'web']);
+        $perm = Permission::firstOrCreate(['name' => 'not-assigned-perm-'.uniqid(), 'guard_name' => 'web']);
         $this->assertFalse($this->org->hasPermissionWithInheritance($perm->name));
     }
 
@@ -241,7 +242,7 @@ class OrganizationModelTest extends TestCase
 
     public function test_get_all_unique_permissions_returns_unique(): void
     {
-        $perm = \App\Models\Permission::firstOrCreate(['name' => 'unique-perm-'.uniqid(), 'guard_name' => 'web']);
+        $perm = Permission::firstOrCreate(['name' => 'unique-perm-'.uniqid(), 'guard_name' => 'web']);
         $this->org->givePermissionTo($perm);
 
         $result = $this->org->getAllUniquePermissions();

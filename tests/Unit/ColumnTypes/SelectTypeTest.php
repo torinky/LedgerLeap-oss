@@ -3,6 +3,7 @@
 namespace Tests\Unit\ColumnTypes;
 
 use App\Models\ColumnTypes\SelectType;
+use Illuminate\Validation\Rules\In;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -86,7 +87,7 @@ class SelectTypeTest extends TestCase
         $this->assertContains('string', $rules);
         // Rule::in() オブジェクトが含まれること
         $hasInRule = collect($rules)->contains(
-            fn ($r) => $r instanceof \Illuminate\Validation\Rules\In
+            fn ($r) => $r instanceof In
         );
         $this->assertTrue($hasInRule, 'Rule::in() should be in validation rules');
     }

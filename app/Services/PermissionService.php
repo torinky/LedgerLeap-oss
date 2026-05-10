@@ -36,7 +36,7 @@ class PermissionService
      * 指定されたリソースに対するアクセス可能なロールとその権限タイプを取得する
      * (変更なし)
      *
-    * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool, source_folder_id: int|null, source_folder_title: string|null, source_folder_path: string|null, source_folder_path_items: array<int, array{id: int, title: string}>|null}>
+     * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool, source_folder_id: int|null, source_folder_title: string|null, source_folder_path: string|null, source_folder_path_items: array<int, array{id: int, title: string}>|null}>
      */
     public function getAccessRolesWithPermissions(int $resourceId, string $resourceType): Collection
     {
@@ -427,49 +427,49 @@ class PermissionService
         ];
     }
 
-        private function findPermissionSourceFolder(Folder $targetFolder, Role $role): ?Folder
-        {
-            $folderChain = collect([$targetFolder])->merge($targetFolder->ancestors ?? []);
+    private function findPermissionSourceFolder(Folder $targetFolder, Role $role): ?Folder
+    {
+        $folderChain = collect([$targetFolder])->merge($targetFolder->ancestors ?? []);
 
-            foreach ($folderChain as $candidateFolder) {
-                $directPermissions = collect($candidateFolder->getDirectPermissions($role));
+        foreach ($folderChain as $candidateFolder) {
+            $directPermissions = collect($candidateFolder->getDirectPermissions($role));
 
-                $hasAccessPermission = $directPermissions->contains(function (string $permissionValue): bool {
-                    $permissionType = FolderPermissionType::tryFrom($permissionValue);
+            $hasAccessPermission = $directPermissions->contains(function (string $permissionValue): bool {
+                $permissionType = FolderPermissionType::tryFrom($permissionValue);
 
-                    return $permissionType?->isAccessType() ?? false;
-                });
+                return $permissionType?->isAccessType() ?? false;
+            });
 
-                if ($hasAccessPermission) {
-                    return $candidateFolder;
-                }
+            if ($hasAccessPermission) {
+                return $candidateFolder;
             }
-
-            return null;
         }
 
-        private function folderPathFromSourceFolder(Folder $sourceFolder): string
-        {
-            $sourceFolder->loadMissing('ancestors');
+        return null;
+    }
 
-            return '/'.$sourceFolder->ancestors->pluck('title')->push($sourceFolder->title)->implode('/');
-        }
+    private function folderPathFromSourceFolder(Folder $sourceFolder): string
+    {
+        $sourceFolder->loadMissing('ancestors');
 
-        /**
-         * 要求元フォルダを階層リンクに変換する
-         *
-         * @return array<int, array{id: int, title: string}>
-         */
-        private function sourceFolderPathItemsFromSourceFolder(Folder $sourceFolder): array
-        {
-            $sourceFolder->loadMissing('ancestors');
+        return '/'.$sourceFolder->ancestors->pluck('title')->push($sourceFolder->title)->implode('/');
+    }
 
-            return $sourceFolder->ancestors
-                ->map(fn (Folder $folder) => ['id' => $folder->id, 'title' => $folder->title])
-                ->push(['id' => $sourceFolder->id, 'title' => $sourceFolder->title])
-                ->values()
-                ->all();
-        }
+    /**
+     * 要求元フォルダを階層リンクに変換する
+     *
+     * @return array<int, array{id: int, title: string}>
+     */
+    private function sourceFolderPathItemsFromSourceFolder(Folder $sourceFolder): array
+    {
+        $sourceFolder->loadMissing('ancestors');
+
+        return $sourceFolder->ancestors
+            ->map(fn (Folder $folder) => ['id' => $folder->id, 'title' => $folder->title])
+            ->push(['id' => $sourceFolder->id, 'title' => $sourceFolder->title])
+            ->values()
+            ->all();
+    }
 
     /**
      * ログインユーザーが指定されたリソースに対して持つ最も強い権限を取得する

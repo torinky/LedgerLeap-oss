@@ -4,6 +4,7 @@ namespace App\Http\Requests\Api\V1;
 
 use App\Services\Ai\BootstrapManifestService;
 use App\Services\Ai\ClientSkillBootstrapService;
+use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -23,7 +24,7 @@ class ResolveBootstrapManifestRequest extends FormRequest
     }
 
     /**
-     * @return array<string, \Illuminate\Contracts\Validation\ValidationRule|array<mixed>|string>
+     * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {

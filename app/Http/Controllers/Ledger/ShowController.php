@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ledger;
 
 use App\Http\Controllers\Controller;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Services\LedgerService;
 use Illuminate\Http\Request;
@@ -26,9 +27,9 @@ class ShowController extends Controller
         $ledgerDefineRecord = null;
         if (! empty($ledger)) {
             $ledgerDefineRecord = $ledger->define;
-            
+
             if ($ledgerDefineRecord && $ledgerDefineRecord->folder_id) {
-                $folder = \App\Models\Folder::with('ancestors')->find($ledgerDefineRecord->folder_id);
+                $folder = Folder::with('ancestors')->find($ledgerDefineRecord->folder_id);
                 if ($folder) {
                     $breadcrumbs = $folder->ancestors->all();
                     $breadcrumbs[] = $folder;

@@ -4,6 +4,7 @@ namespace Tests\Feature\Services\Scoring;
 
 use App\Models\Ledger;
 use App\Services\Scoring\ActivityScoreService;
+use Carbon\Carbon;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Activitylog\Models\Activity;
@@ -45,7 +46,7 @@ class ActivityScoreServiceTest extends TestCase
     }
 
     /** Activity レコードを直接作成するヘルパー */
-    private function createActivity(Ledger $ledger, string $description, \Carbon\Carbon $createdAt): void
+    private function createActivity(Ledger $ledger, string $description, Carbon $createdAt): void
     {
         Activity::create([
             'log_name' => 'default',

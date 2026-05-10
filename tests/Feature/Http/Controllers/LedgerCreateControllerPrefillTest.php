@@ -2,14 +2,17 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LedgerCreateControllerPrefillTest extends TestCase
@@ -46,7 +49,7 @@ class LedgerCreateControllerPrefillTest extends TestCase
         $this->actingAs($this->user);
 
         // Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // フォルダと台帳定義を作成
         $this->folder = Folder::create([
@@ -57,10 +60,10 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]);
 
         // フォルダへの書き込み権限を付与
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
 

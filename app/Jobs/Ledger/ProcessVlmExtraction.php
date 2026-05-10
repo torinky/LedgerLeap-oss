@@ -3,6 +3,7 @@
 namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
+use App\Jobs\Embedding\VectorizeAttachedFile;
 use App\Models\AttachedFile;
 use App\Services\VlmClientService;
 use Illuminate\Bus\Queueable;
@@ -101,7 +102,7 @@ class ProcessVlmExtraction implements ShouldQueue
             ]);
 
             // ★ Phase2.6: VLM完了後、即座にベクトル化（最高品質で上書き）
-            \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+            VectorizeAttachedFile::dispatch(
                 $this->attachedFile->id,
                 'vlm'
             );

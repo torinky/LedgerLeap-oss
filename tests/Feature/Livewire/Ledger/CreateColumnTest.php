@@ -2,18 +2,25 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Organization;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
-use Tests\Traits\RefreshDatabaseWithTenant; // ColumnDefine をインポート
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+ // ColumnDefine をインポート
 
 class CreateColumnTest extends TestCase
 {
@@ -46,7 +53,7 @@ class CreateColumnTest extends TestCase
         $this->actingAs($this->user);
 
         // ★ Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     // ★ tearDownメソッドを追加
@@ -58,10 +65,10 @@ class CreateColumnTest extends TestCase
 
     protected function assignFolderPermission(Folder $folder): void
     {
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => Role::findByName('test-creator-role', 'web')->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }
@@ -107,7 +114,7 @@ class CreateColumnTest extends TestCase
         ]);
 
         // contentの内容も検証
-        $ledger = \App\Models\Ledger::where('ledger_define_id', $this->ledgerDefine->id)->first();
+        $ledger = Ledger::where('ledger_define_id', $this->ledgerDefine->id)->first();
         $this->assertNotNull($ledger);
         // normalizeByColumnDefine は 0..maxId で欠番を埋めるため、実際の保存時は元のカラムIDがそのまま
         // 反映される（このテストではカラムID=1）。したがって content[1] に値が入る。
@@ -496,7 +503,7 @@ class CreateColumnTest extends TestCase
     public function it_initializes_user_name_column_with_organization(): void
     {
         // ユーザーに組織を設定 (primaryOrganizationリレーションを使用)
-        $organization = \App\Models\Organization::factory()->create([
+        $organization = Organization::factory()->create([
             'tenant_id' => $this->tenant->id,
         ]);
 

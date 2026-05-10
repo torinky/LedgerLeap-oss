@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Ledger;
 
+use App\Jobs\Ledger\RegenerateLedgerSortValuesJob;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -95,7 +96,7 @@ class DefaultSortPersistenceTest extends TestCase
         // LedgerDefineObserver は delay(5秒) 付きで RegenerateLedgerSortValuesJob を dispatch する。
         // Queue::fake() 環境では BusFake::dispatchSync() もジョブを実際には実行しない。
         // そのためジョブを直接インスタンス化して handle() を呼び出す。
-        (new \App\Jobs\Ledger\RegenerateLedgerSortValuesJob($this->ledgerDefine->id))->handle();
+        (new RegenerateLedgerSortValuesJob($this->ledgerDefine->id))->handle();
 
         // 期待される値: 日付(sort_index=1)→ID(sort_index=2) の順で 2025-02-01|EXP-0001
         $ledger->refresh();

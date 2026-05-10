@@ -19,7 +19,7 @@ use Studio15\FilamentTree\Components\Form\ParentSelect;
 /**
  * Header component
  */
-final class Header extends Component implements HasForms, HasActions
+final class Header extends Component implements HasActions, HasForms
 {
     use InteractsWithActions;
     use InteractsWithForms;

@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\Api\V1\BootstrapManifestController;
+use App\Http\Controllers\Api\V1\LedgerController;
 use App\Http\Controllers\Api\V1\LedgerDefineController;
 use App\Http\Controllers\Api\V1\SearchController;
+use App\Http\Controllers\Ledger\ExportController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Stancl\Tenancy\Middleware\InitializeTenancyByDomain;
@@ -25,7 +27,7 @@ Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get(
         '/ledger/{ledgerDefineId}/download-excel-csv',
-        [App\Http\Controllers\Ledger\ExportController::class, 'downloadExcelCSV']
+        [ExportController::class, 'downloadExcelCSV']
     )->name('ledger.downloadExcelCSV');
 
     // Ledger Search API (GET for simple queries, POST for complex/Japanese queries)
@@ -44,17 +46,17 @@ Route::middleware('auth:sanctum')->group(function () {
         ->name('api.v1.ai.bootstrap-manifest.resolve');
 
     // Ledger Create API
-    Route::post('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'store'])
+    Route::post('/v1/ledgers', [LedgerController::class, 'store'])
         ->name('api.v1.ledgers.store');
 
     // Ledger Index API
-    Route::get('/v1/ledgers', [\App\Http\Controllers\Api\V1\LedgerController::class, 'index'])
+    Route::get('/v1/ledgers', [LedgerController::class, 'index'])
         ->name('api.v1.ledgers.index');
 
     // Ledger Detail / Update API
-    Route::get('/v1/ledgers/{ledger}', [\App\Http\Controllers\Api\V1\LedgerController::class, 'show'])
+    Route::get('/v1/ledgers/{ledger}', [LedgerController::class, 'show'])
         ->name('api.v1.ledgers.show');
-    Route::patch('/v1/ledgers/{ledger}', [\App\Http\Controllers\Api\V1\LedgerController::class, 'update'])
+    Route::patch('/v1/ledgers/{ledger}', [LedgerController::class, 'update'])
         ->name('api.v1.ledgers.update');
 });
 

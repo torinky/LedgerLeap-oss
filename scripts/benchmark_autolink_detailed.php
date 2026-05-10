@@ -3,7 +3,7 @@
 require __DIR__.'/../vendor/autoload.php';
 
 $app = require_once __DIR__.'/../bootstrap/app.php';
-$kernel = $app->make(Illuminate\Contracts\Console\Kernel::class);
+$kernel = $app->make(Kernel::class);
 $kernel->bootstrap();
 
 use App\Services\AutoLinkService;
@@ -15,30 +15,30 @@ echo "=== マッチ数に対する処理時間の増加 ===\n\n";
 $matchCounts = [1, 5, 10, 20, 50, 100, 200];
 
 foreach ($matchCounts as $count) {
-    $numbers = array_map(fn($i) => "DAILY-".str_pad($i, 4, '0', STR_PAD_LEFT), range(1, $count));
+    $numbers = array_map(fn ($i) => 'DAILY-'.str_pad($i, 4, '0', STR_PAD_LEFT), range(1, $count));
     $text = implode(' ', $numbers);
-    
+
     $times = [];
     $iterations = 50;
-    
+
     // ウォームアップ
     $autoLinkService->convert($text);
-    
+
     for ($i = 0; $i < $iterations; $i++) {
         $start = microtime(true);
         $result = $autoLinkService->convert($text);
         $end = microtime(true);
         $times[] = ($end - $start) * 1000;
     }
-    
+
     sort($times);
-    $median = $times[(int)($iterations / 2)];
+    $median = $times[(int) ($iterations / 2)];
     $mean = array_sum($times) / count($times);
     $max = max($times);
-    
+
     // マッチ数をカウント
     $matchCount = substr_count($result, '<a href=');
-    
+
     echo sprintf(
         "matches=%3d  text_len=%5d  med=%7.2fms  mean=%7.2fms  max=%7.2fms  actual_links=%3d\n",
         $count,
@@ -52,6 +52,7 @@ foreach ($matchCounts as $count) {
 
 echo "\n=== Blade::render() コスト計測 ===\n\n";
 
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\Blade;
 
 $iconName = 'o-link';

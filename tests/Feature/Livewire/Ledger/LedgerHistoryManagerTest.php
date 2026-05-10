@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\AttachedFile;
 use App\Models\Folder;
@@ -9,6 +10,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -212,13 +214,13 @@ class LedgerHistoryManagerTest extends TestCase
         config(['ledgerleap.performance.enabled' => true]);
         config(['ledgerleap.performance.log_destination' => 'log']);
 
-        \Illuminate\Support\Facades\Log::spy();
+        Log::spy();
 
         $component = Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
             ->set('perPage', 1);
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('info')
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_mount'
                     && isset($context['duration_ms'])
@@ -228,7 +230,7 @@ class LedgerHistoryManagerTest extends TestCase
         // Toggle selection logic check
         $component->call('toggleSelection', $this->diff2->id);
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('info')
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_toggle_selection'
                     && isset($context['duration_ms']);
@@ -237,7 +239,7 @@ class LedgerHistoryManagerTest extends TestCase
         // Load more logic check
         $component->call('loadMore');
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('info')
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_load_more'
                     && isset($context['duration_ms']);
@@ -324,7 +326,7 @@ class LedgerHistoryManagerTest extends TestCase
         // 既存の diff3 にコメントとステータスを設定
         $this->diff3->update([
             'comments' => 'Redundant test',
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
         ]);
 
         // 冗長なエントリを作成（同じバージョン、ステータス、更新者、コメント）
@@ -333,7 +335,7 @@ class LedgerHistoryManagerTest extends TestCase
             'ledger_id' => $this->ledger->id,
             'ledger_define_id' => $this->ledgerDefine->id,
             'version' => 3,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'content' => [['0' => 'Value 3.1']], // 内容が違っていても、リスト上のメタデータが同じならフィルタリングされる
             'column_define' => $this->ledgerDefine->column_define,
             'completed_inspector_role_ids' => [],
@@ -353,7 +355,7 @@ class LedgerHistoryManagerTest extends TestCase
                 // また、より新しい redundantDiff が残っているはず。
                 return $history->count() === 3
                     && $history->contains('id', $redundantDiff->id)
-                    && !$history->contains('id', $this->diff3->id);
+                    && ! $history->contains('id', $this->diff3->id);
             });
     }
 }

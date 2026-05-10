@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Livewire\Traits\HandlesPrefillLinks;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Carbon\Carbon;
@@ -14,6 +16,7 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -52,7 +55,7 @@ class PrefillParametersTest extends TestCase
         $this->actingAs($this->user);
 
         // Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // フォルダと台帳定義を作成
         $this->folder = Folder::create([
@@ -62,10 +65,10 @@ class PrefillParametersTest extends TestCase
             'modifier_id' => $this->user->id,
         ]);
 
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => Role::findByName('test-creator-role', 'web')->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
 

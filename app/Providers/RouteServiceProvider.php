@@ -7,6 +7,7 @@ use Illuminate\Foundation\Support\Providers\RouteServiceProvider as ServiceProvi
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Route;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 
 class RouteServiceProvider extends ServiceProvider
 {
@@ -46,7 +47,7 @@ class RouteServiceProvider extends ServiceProvider
             // Tenant routes
             Route::middleware([
                 'web',
-                \Stancl\Tenancy\Middleware\InitializeTenancyByPath::class,
+                InitializeTenancyByPath::class,
             ])->group(base_path('routes/tenant.php'));
         });
     }

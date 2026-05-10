@@ -1,6 +1,9 @@
 <?php
 
-\Tests\TestCase::abortIfTestsShouldNotRunInCurrentRuntime();
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Tests\TestCase;
+
+TestCase::abortIfTestsShouldNotRunInCurrentRuntime();
 
 /*
 |--------------------------------------------------------------------------
@@ -13,8 +16,8 @@
 |
 */
 
-pest()->extend(Tests\TestCase::class)
-    ->use(Illuminate\Foundation\Testing\RefreshDatabase::class)
+pest()->extend(TestCase::class)
+    ->use(RefreshDatabase::class)
     ->in('Feature', 'Feature/Livewire');
 
 /*
@@ -52,4 +55,3 @@ function tenant_route_url(string $name, array $parameters = []): string
 {
     return route($name, array_merge(['tenant' => tenant('id')], $parameters));
 }
-

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\Notifications;
 
 use App\Livewire\Notifications\NotificationList;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -11,7 +12,6 @@ use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
-use App\Models\Tenant;
 
 /**
  * Livewire\Notifications\NotificationList テスト

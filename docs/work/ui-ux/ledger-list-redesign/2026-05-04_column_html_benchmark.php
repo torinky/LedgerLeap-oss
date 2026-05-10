@@ -3,10 +3,10 @@
 require 'vendor/autoload.php';
 
 $app = require 'bootstrap/app.php';
-$app->make(Illuminate\Contracts\Console\Kernel::class)->bootstrap();
+$app->make(Kernel::class)->bootstrap();
 
 config(['ledgerleap.performance.log_destination' => 'none']);
-Illuminate\Support\Facades\Queue::fake();
+Queue::fake();
 
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
@@ -16,7 +16,9 @@ use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\ColumnHtmlService;
+use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\App;
+use Illuminate\Support\Facades\Queue;
 
 $tenant = Tenant::query()->firstOrCreate(['id' => 'bench-tenant'], ['id' => 'bench-tenant']);
 tenancy()->initialize($tenant);
@@ -125,7 +127,7 @@ $columnDefine = new ColumnDefine([
     'group' => null,
 ]);
 
-$prepareFilesData = \Closure::bind(
+$prepareFilesData = Closure::bind(
     fn (?string $highlight = null) => $this->prepareFilesData($highlight),
     $service,
     ColumnHtmlService::class,

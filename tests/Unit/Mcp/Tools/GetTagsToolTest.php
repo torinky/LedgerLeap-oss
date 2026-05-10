@@ -34,7 +34,7 @@ class GetTagsToolTest extends TestCase
     }
 
     #[Test]
-    public function testItReturnsTagsMatchingPartialFragmentWithinReadableFolders(): void
+    public function test_it_returns_tags_matching_partial_fragment_within_readable_folders(): void
     {
         $creator = User::factory()->create();
 
@@ -112,7 +112,7 @@ class GetTagsToolTest extends TestCase
     }
 
     #[Test]
-    public function testItReturnsEmptyWhenNoTagsMatch(): void
+    public function test_it_returns_empty_when_no_tags_match(): void
     {
         $creator = User::factory()->create();
         $folder = Folder::factory()->create([
@@ -154,4 +154,3 @@ class GetTagsToolTest extends TestCase
         $this->assertSame([], $data['tags']);
     }
 }
-

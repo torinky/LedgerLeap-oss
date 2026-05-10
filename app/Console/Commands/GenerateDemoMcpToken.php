@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands;
 
+use App\Models\User;
 use Illuminate\Console\Command;
 
 class GenerateDemoMcpToken extends Command
@@ -25,7 +26,7 @@ class GenerateDemoMcpToken extends Command
      */
     public function handle()
     {
-        $demoUser = \App\Models\User::where('email', 'demo@example.com')->first();
+        $demoUser = User::where('email', 'demo@example.com')->first();
 
         if (! $demoUser) {
             $this->error('Demo user (demo@example.com) not found!');

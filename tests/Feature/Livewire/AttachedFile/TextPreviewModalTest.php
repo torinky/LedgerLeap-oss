@@ -6,6 +6,7 @@ use App\Livewire\AttachedFile\TextPreviewModal;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -15,7 +16,7 @@ class TextPreviewModalTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
-    protected \App\Models\Tenant $tenant;
+    protected Tenant $tenant;
 
     protected function setUp(): void
     {
@@ -23,7 +24,7 @@ class TextPreviewModalTest extends TestCase
 
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
+        $this->tenant = Tenant::create(['id' => 'test-'.uniqid()]);
     }
 
     #[Test]

@@ -3,6 +3,7 @@
 namespace App\Exceptions;
 
 use Illuminate\Foundation\Exceptions\Handler as ExceptionHandler;
+use Stancl\Tenancy\Exceptions\RouteIsMissingTenantParameterException;
 use Throwable;
 
 class Handler extends ExceptionHandler
@@ -27,7 +28,7 @@ class Handler extends ExceptionHandler
             //
         });
 
-        $this->renderable(function (\Stancl\Tenancy\Exceptions\RouteIsMissingTenantParameterException $e, $request) {
+        $this->renderable(function (RouteIsMissingTenantParameterException $e, $request) {
             // HTMLレスポンスを期待するリクエストの場合のみリダイレクト
             if (! $request->expectsJson()) {
                 return redirect()->route('login')

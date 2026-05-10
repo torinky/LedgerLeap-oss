@@ -2,10 +2,14 @@
 
 namespace App\Http\Requests\Auth;
 
+use App\Ldap\User;
+use App\Models\Organization;
+use App\Services\AdSyncService;
 use Illuminate\Auth\Events\Lockout;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
@@ -51,12 +55,12 @@ class LoginRequest extends FormRequest
         if (! is_array($baseDns)) {
             $baseDns = [$baseDns];
         }
-        \Illuminate\Support\Facades\Log::info('LoginRequest: Base DNs: '.json_encode($baseDns));
+        Log::info('LoginRequest: Base DNs: '.json_encode($baseDns));
 
         foreach ($baseDns as $dn) {
             try {
                 // Find the user in AD
-                $userModel = config('ldap.auth.user_model', \App\Ldap\User::class);
+                $userModel = config('ldap.auth.user_model', User::class);
                 $query = $userModel::query();
                 if ($dn) {
                     $query->in($dn);
@@ -64,10 +68,10 @@ class LoginRequest extends FormRequest
                 $ldapUser = $query->where('mail', $email)->first();
 
                 if ($ldapUser) {
-                    \Illuminate\Support\Facades\Log::info("LDAP User found: {$email} in DN: {$dn}");
+                    Log::info("LDAP User found: {$email} in DN: {$dn}");
                     // Verify password
                     $isValid = auth()->guard('ldap')->getProvider()->validateCredentials($ldapUser, ['password' => $password]);
-                    \Illuminate\Support\Facades\Log::info("LDAP Password Validation Result for {$email}: ".($isValid ? 'True' : 'False'));
+                    Log::info("LDAP Password Validation Result for {$email}: ".($isValid ? 'True' : 'False'));
 
                     if ($isValid) {
                         // Authentication Successful
@@ -90,7 +94,7 @@ class LoginRequest extends FormRequest
                                     'objectguid' => $guid,
                                     'name' => $name,
                                     'email' => $email,
-                                    'password' => bcrypt(\Illuminate\Support\Str::random(32)),
+                                    'password' => bcrypt(Str::random(32)),
                                 ]);
                             }
                         }
@@ -132,10 +136,10 @@ class LoginRequest extends FormRequest
                                     }
 
                                     $val = $ldapUser->getFirstAttribute($firstAttr);
-                                    \Illuminate\Support\Facades\Log::info("LoginRequest: central pre-lookup using attr={$firstAttr}, val=".($val ?? 'null'));
+                                    Log::info("LoginRequest: central pre-lookup using attr={$firstAttr}, val=".($val ?? 'null'));
                                     if ($val) {
-                                        $organization = \App\Models\Organization::where('org_id', $val)->orWhere('name', $val)->first();
-                                        \Illuminate\Support\Facades\Log::info('LoginRequest central lookup found='.($organization ? 'yes' : 'no'));
+                                        $organization = Organization::where('org_id', $val)->orWhere('name', $val)->first();
+                                        Log::info('LoginRequest central lookup found='.($organization ? 'yes' : 'no'));
                                     }
                                 } finally {
                                     try {
@@ -149,12 +153,12 @@ class LoginRequest extends FormRequest
 
                             // Fallback to AD sync service resolver if still null
                             if (! $organization) {
-                                /** @var \App\Services\AdSyncService $adSyncService */
-                                $adSyncService = app(\App\Services\AdSyncService::class);
+                                /** @var AdSyncService $adSyncService */
+                                $adSyncService = app(AdSyncService::class);
                                 $organization = $adSyncService->findMatchingOrganization($ldapUser);
                             }
 
-                            \Illuminate\Support\Facades\Log::info('Organization Resolution Result: '.($organization ? "Found ({$organization->id})" : 'Not Found'));
+                            Log::info('Organization Resolution Result: '.($organization ? "Found ({$organization->id})" : 'Not Found'));
 
                             // d. Update organization or Reject
                             if ($organization) {
@@ -190,7 +194,7 @@ class LoginRequest extends FormRequest
                                         if (! $attrValue) {
                                             continue;
                                         }
-                                        $centralOrg = \App\Models\Organization::where('org_id', $attrValue)->orWhere('name', $attrValue)->first();
+                                        $centralOrg = Organization::where('org_id', $attrValue)->orWhere('name', $attrValue)->first();
                                         if ($centralOrg) {
                                             break;
                                         }
@@ -253,7 +257,7 @@ class LoginRequest extends FormRequest
                                 }
                                 $val = $ldapUser->getFirstAttribute($firstAttr);
                                 if ($val) {
-                                    $centralOrg = \App\Models\Organization::where('org_id', $val)->orWhere('name', $val)->first();
+                                    $centralOrg = Organization::where('org_id', $val)->orWhere('name', $val)->first();
                                     if ($centralOrg) {
                                         $user->setPrimaryOrganization($centralOrg);
                                     }
@@ -270,7 +274,7 @@ class LoginRequest extends FormRequest
                         // f. Log in
                         // Log in using the 'web' guard (standard Laravel session) with the synced local user.
                         // Auth::guard('ldap')->login() would log in to the LDAP guard, but we want the app session.
-                        \Illuminate\Support\Facades\Auth::guard('web')->login($user, $this->boolean('remember'));
+                        Auth::guard('web')->login($user, $this->boolean('remember'));
                         RateLimiter::clear($this->throttleKey());
 
                         return;
@@ -278,7 +282,7 @@ class LoginRequest extends FormRequest
                 }
             } catch (\Exception $e) {
                 // Log LDAP errors but continue to next DN or fallback
-                \Illuminate\Support\Facades\Log::error("LDAP Login Error for DN {$dn}: ".$e->getMessage());
+                Log::error("LDAP Login Error for DN {$dn}: ".$e->getMessage());
 
                 continue;
             }

@@ -13,9 +13,9 @@ use Kalnoy\Nestedset\NestedSet;
 final readonly class MoveItem
 {
     /**
-     * @param non-negative-int|null $parent
-     * @param non-negative-int $from
-     * @param non-negative-int $to
+     * @param  non-negative-int|null  $parent
+     * @param  non-negative-int  $from
+     * @param  non-negative-int  $to
      */
     public function __invoke(Model $node, ?int $parent, int $from, int $to): void
     {

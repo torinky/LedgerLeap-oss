@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FolderPermissionType;
 use App\Models\Folder;
+use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Spatie\Permission\Models\Role;
@@ -65,7 +67,7 @@ class SetupTenantCommandTest extends TestCase
             $this->assertDatabaseHas('role_folder_permissions', [
                 'role_id' => $superAdminRole->id,
                 'folder_id' => $rootFolder->id,
-                'permission' => \App\Enums\FolderPermissionType::ADMIN->value,
+                'permission' => FolderPermissionType::ADMIN->value,
             ]);
         });
     }
@@ -125,10 +127,10 @@ class SetupTenantCommandTest extends TestCase
         // テナントのコンテキストでDBを検証
         tenancy()->find($tenantId)->run(function () {
             // 1. フォルダ構造の検証
-            $totalFolders = \App\Models\Folder::count();
+            $totalFolders = Folder::count();
             $this->assertEquals(12, $totalFolders, 'FolderSeeder should create exactly 12 folders.');
 
-            $rootFolder = \App\Models\Folder::whereIsRoot()->first();
+            $rootFolder = Folder::whereIsRoot()->first();
             $this->assertNotNull($rootFolder, 'A root folder should exist.');
             $this->assertEquals('/', $rootFolder->title, 'The root folder title should be "/".');
 
@@ -136,14 +138,14 @@ class SetupTenantCommandTest extends TestCase
             $this->assertCount(4, $rootFolder->children, 'Root folder should have 4 direct children.');
 
             // 特定の親子関係を確認
-            $sub1 = \App\Models\Folder::where('title', 'Subfolder 1')->first();
+            $sub1 = Folder::where('title', 'Subfolder 1')->first();
             $this->assertTrue($sub1->isDescendantOf($rootFolder), 'Subfolder 1 should be a descendant of the root.');
 
             // 2. LedgerDefine の検証
-            $ledgerDefines = \App\Models\LedgerDefine::all();
+            $ledgerDefines = LedgerDefine::all();
             $this->assertCount(50, $ledgerDefines, '50 LedgerDefines should be created.');
 
-            $folderIds = \App\Models\Folder::pluck('id');
+            $folderIds = Folder::pluck('id');
 
             foreach ($ledgerDefines as $define) {
                 $this->assertNotNull($define->folder_id, 'LedgerDefine folder_id should not be null.');

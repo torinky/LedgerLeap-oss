@@ -23,7 +23,7 @@ class TableRowAttachmentLoggingTest extends TestCase
 {
     protected bool $tenancy = true;
 
-    public function testTableRowLogsAttachmentHtmlMetricsForAttachmentColumns(): void
+    public function test_table_row_logs_attachment_html_metrics_for_attachment_columns(): void
     {
         config([
             'ledgerleap.performance.enabled' => true,
@@ -55,7 +55,7 @@ class TableRowAttachmentLoggingTest extends TestCase
             originalFilename: 'invoice.pdf',
         );
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->forceFill(['id' => 1]);
         $ledger->setRelation('define', (object) ['tenant_id' => 'demo-tenant']);
 
@@ -100,7 +100,7 @@ class TableRowAttachmentLoggingTest extends TestCase
         })->atLeast()->once();
     }
 
-    public function testTableRowLogsFilenameAttachedLookupMetricsWhenOriginalFilenameIsMissing(): void
+    public function test_table_row_logs_filename_attached_lookup_metrics_when_original_filename_is_missing(): void
     {
         config([
             'ledgerleap.performance.enabled' => true,
@@ -132,7 +132,7 @@ class TableRowAttachmentLoggingTest extends TestCase
             originalFilename: null,
         );
 
-        $ledger = new Ledger();
+        $ledger = new Ledger;
         $ledger->forceFill(['id' => 2]);
         $ledger->setRelation('define', (object) ['tenant_id' => 'demo-tenant']);
 
@@ -192,14 +192,23 @@ class TableRowAttachmentLoggingTest extends TestCase
         return new class($id, $columnId, $hashedbasename, $filename, $originalFilename)
         {
             public int $id;
+
             public int $column_id;
+
             public string $original_mime_type = 'application/pdf';
+
             public bool $optimized = true;
+
             public int $size = 2048;
+
             public mixed $created_at;
+
             public string $hashedbasename;
+
             public string $filename;
+
             public string $status = 'completed';
+
             public int $originalFilenameAccessCount = 0;
 
             public function __construct(
@@ -238,7 +247,7 @@ class TableRowAttachmentLoggingTest extends TestCase
                     return '';
                 }
 
-                trigger_error(sprintf('Undefined property: %s::$%s', static::class, $name), E_USER_NOTICE);
+                trigger_error(sprintf('Undefined property: %s::$%s', self::class, $name), E_USER_NOTICE);
 
                 return null;
             }
@@ -255,7 +264,7 @@ class TableRowAttachmentLoggingTest extends TestCase
         };
     }
 
-    public function testTableRowFallsBackToScalarContentForAttachmentNames(): void
+    public function test_table_row_falls_back_to_scalar_content_for_attachment_names(): void
     {
         $folder = Folder::factory()->create();
 

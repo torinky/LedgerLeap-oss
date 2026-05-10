@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Imports\LedgerImport;
 use App\Livewire\Ledger\Import;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
@@ -119,6 +120,6 @@ class ImportTest extends TestCase
             ->set('ledgerDefine', $this->ledgerDefine);
 
         // デフォルトの importMode が MODE_UPDATE であること
-        $this->assertEquals(\App\Imports\LedgerImport::MODE_UPDATE, $component->get('importMode'));
+        $this->assertEquals(LedgerImport::MODE_UPDATE, $component->get('importMode'));
     }
 }

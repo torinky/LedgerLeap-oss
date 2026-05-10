@@ -9,8 +9,7 @@ class LedgerDefineBackgroundImageUrlHelper
         int $columnId,
         ?string $tenantId = null,
         bool $thumbnail = false,
-    ): string
-    {
+    ): string {
         $tenantId = $tenantId ?? (string) (tenant()?->id ?? '');
 
         if (! $tenantId) {
@@ -35,5 +34,3 @@ class LedgerDefineBackgroundImageUrlHelper
         return self::downloadUrl($ledgerDefineId, $columnId, $tenantId, true);
     }
 }
-
-

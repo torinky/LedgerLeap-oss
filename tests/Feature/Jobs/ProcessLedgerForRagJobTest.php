@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Jobs;
 
+use App\Enums\AttachedFileStatus;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
@@ -95,7 +96,7 @@ class ProcessLedgerForRagJobTest extends TestCase
             'mime' => 'application/pdf',
             'path' => 'path/to/file',
             'size' => 1024,
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED,
+            'status' => AttachedFileStatus::COMPLETED,
             'contain_content' => true,
             'optimized' => true,
             'creator_id' => $ledger->creator_id,
@@ -156,7 +157,7 @@ class ProcessLedgerForRagJobTest extends TestCase
             'mime' => 'application/pdf',
             'path' => 'path/to/file',
             'size' => 1024,
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED,
+            'status' => AttachedFileStatus::COMPLETED,
             'contain_content' => true,
             'optimized' => true,
             'creator_id' => $ledger->creator_id,
@@ -250,7 +251,7 @@ class ProcessLedgerForRagJobTest extends TestCase
             'mime' => 'application/pdf',
             'path' => 'path/to/file',
             'size' => 1024,
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED,
+            'status' => AttachedFileStatus::COMPLETED,
             'contain_content' => true,
             'optimized' => true,
             'creator_id' => $ledger->creator_id,

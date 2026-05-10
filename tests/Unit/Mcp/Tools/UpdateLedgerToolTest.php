@@ -8,6 +8,7 @@ use App\Mcp\Tools\UpdateLedgerTool;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\LedgerService;
 use Illuminate\Validation\ValidationException;
@@ -27,7 +28,7 @@ class UpdateLedgerToolTest extends TestCase
 
     private UpdateLedgerTool $tool;
 
-    private \App\Models\User $user;
+    private User $user;
 
     private Folder $folder;
 
@@ -52,7 +53,7 @@ class UpdateLedgerToolTest extends TestCase
         $this->ledgerService = Mockery::mock(LedgerService::class);
         $this->tool = new UpdateLedgerTool($this->ledgerService);
 
-        $this->user = \App\Models\User::factory()->create();
+        $this->user = User::factory()->create();
         $token = $this->user->createToken('test-token', ['mcp:*']);
         putenv('MCP_AUTH_TOKEN='.$token->plainTextToken);
 
@@ -457,7 +458,7 @@ class UpdateLedgerToolTest extends TestCase
     {
         $this->folderRepository->expects('getAccessibleFolderIds')
             ->withArgs(
-                fn ($user, $permission) => $user instanceof \App\Models\User
+                fn ($user, $permission) => $user instanceof User
                     && $permission === FolderPermissionType::WRITE
             )
             ->andReturn($folderIds);
@@ -480,7 +481,7 @@ class UpdateLedgerToolTest extends TestCase
     {
         $this->ledgerService->expects('updateLedgerForApi')
             ->withArgs(
-                fn ($user, $candidate, $candidatePayload) => $user instanceof \App\Models\User
+                fn ($user, $candidate, $candidatePayload) => $user instanceof User
                     && $candidate instanceof Ledger
                     && $candidate->getKey() === $ledger->getKey()
                     && $candidatePayload === $payload

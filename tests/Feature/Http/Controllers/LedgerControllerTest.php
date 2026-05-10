@@ -212,4 +212,3 @@ class LedgerControllerTest extends TestCase
             ->assertForbidden();
     }
 }
-

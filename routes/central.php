@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ProfileController;
+use App\Models\Ledger;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -27,7 +28,7 @@ Route::middleware('auth')->group(function () {
 require __DIR__.'/auth.php';
 
 if (app()->environment('testing')) {
-    Route::get('/test/ledger-diff-viewer/{ledger}', function (\App\Models\Ledger $ledger) {
+    Route::get('/test/ledger-diff-viewer/{ledger}', function (Ledger $ledger) {
         return view('testing.ledger-diff-viewer-test', ['ledger' => $ledger]);
     })->name('testing.ledger-diff-viewer');
 }

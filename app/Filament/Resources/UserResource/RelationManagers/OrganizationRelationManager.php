@@ -3,9 +3,14 @@
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
 use App\Models\User;
+use Filament\Actions\AttachAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
@@ -84,9 +89,9 @@ class OrganizationRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                \Filament\Actions\AttachAction::make()
+                AttachAction::make()
                     ->preloadRecordSelect()
-                    ->form(fn (\Filament\Actions\AttachAction $action): array => [
+                    ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_primary')
                             ->label(__('ledger.organizations.primary'))
@@ -103,7 +108,7 @@ class OrganizationRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make()
+                EditAction::make()
                     // afterコールバック内の排他制御ロジックは引き続き必要
                     ->after(function (Model $record, array $data) {
                         if ($data['is_primary']) {
@@ -112,11 +117,11 @@ class OrganizationRelationManager extends RelationManager
                                 ->update(['is_primary' => false]);
                         }
                     }),
-                \Filament\Actions\DetachAction::make(),
+                DetachAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DetachBulkAction::make(),
+                BulkActionGroup::make([
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }

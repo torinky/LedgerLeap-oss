@@ -5,6 +5,8 @@ namespace App\Console\Commands;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\Tenant;
+use App\Services\Scoring\ActivityScoreService;
+use App\Services\Scoring\CompositeScoreCalculator;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Log;
 
@@ -31,8 +33,8 @@ class ResetScores extends Command
      * Execute the console command.
      */
     public function handle(
-        \App\Services\Scoring\ActivityScoreService $activityScoreService,
-        \App\Services\Scoring\CompositeScoreCalculator $compositeScoreCalculator
+        ActivityScoreService $activityScoreService,
+        CompositeScoreCalculator $compositeScoreCalculator
     ): int {
         $tenantId = $this->option('tenant');
         $folderId = $this->option('folder');

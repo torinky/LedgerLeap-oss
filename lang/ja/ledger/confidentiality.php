@@ -4,10 +4,10 @@ return [
     'confidentiality' => [
         'level' => [
             'label' => '秘密区分',
-        'public' => '全体開示',
-        'internal' => '社内限定',
-        'confidential' => '社外秘',
-        'secret' => '極秘',
+            'public' => '全体開示',
+            'internal' => '社内限定',
+            'confidential' => '社外秘',
+            'secret' => '極秘',
         ],
         'scope' => [
             'label' => '公開範囲',

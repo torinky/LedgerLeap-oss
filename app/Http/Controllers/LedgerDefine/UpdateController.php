@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\View;
 
 class UpdateController extends Controller
 {
-    public function edit(request $request): \Illuminate\Contracts\View\View
+    public function edit(Request $request): \Illuminate\Contracts\View\View
     {
         $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int) $request->route('ledgerDefineId');
@@ -33,6 +33,7 @@ class UpdateController extends Controller
                 $breadcrumbs[] = $folder;
             }
         }
+
         return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords', 'breadcrumbs'));
 
     }
@@ -50,7 +51,7 @@ class UpdateController extends Controller
 
     }
 
-    public function delete(request $request)
+    public function delete(Request $request)
     {
         $ledgerDefineId = (int) $request->route('ledgerDefineId');
 

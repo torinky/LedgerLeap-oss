@@ -5,6 +5,7 @@ namespace Tests\Unit;
 use App\Models\Organization;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class SetPrimaryOrganizationTest extends TestCase
@@ -58,19 +59,19 @@ class SetPrimaryOrganizationTest extends TestCase
         $orgB = Organization::create(['org_id' => 'B2', 'name' => 'Org B2']);
 
         // create corrupt pivot: both marked primary
-        \Illuminate\Support\Facades\DB::table('user_organizations')->insert([
+        DB::table('user_organizations')->insert([
             ['user_id' => $user->id, 'organization_id' => $orgA->id, 'is_primary' => true, 'created_at' => now(), 'updated_at' => now()],
             ['user_id' => $user->id, 'organization_id' => $orgB->id, 'is_primary' => true, 'created_at' => now(), 'updated_at' => now()],
         ]);
 
         // Ensure corruption exists
-        $this->assertEquals(2, \Illuminate\Support\Facades\DB::table('user_organizations')->where('user_id', $user->id)->where('is_primary', true)->count());
+        $this->assertEquals(2, DB::table('user_organizations')->where('user_id', $user->id)->where('is_primary', true)->count());
 
         // set primary to B -> should fix corruption
         $user->setPrimaryOrganization($orgB);
         $user->refresh();
 
         $this->assertEquals($orgB->id, $user->primaryOrganization()->id);
-        $this->assertEquals(1, \Illuminate\Support\Facades\DB::table('user_organizations')->where('user_id', $user->id)->where('is_primary', true)->count());
+        $this->assertEquals(1, DB::table('user_organizations')->where('user_id', $user->id)->where('is_primary', true)->count());
     }
 }

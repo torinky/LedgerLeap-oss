@@ -18,7 +18,7 @@ use Throwable;
 /**
  * Footer component
  */
-final class Footer extends Component implements HasForms, HasActions
+final class Footer extends Component implements HasActions, HasForms
 {
     use InteractsWithActions;
     use InteractsWithForms;

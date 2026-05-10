@@ -47,7 +47,7 @@ class EditAdminAnnouncement extends EditRecord
                 ->label(__('ledger.admin_announcement_banner_save_draft_action'))
                 ->icon('heroicon-o-pencil-square')
                 ->color('gray')
-                ->action(fn() => $this->save()),
+                ->action(fn () => $this->save()),
             Actions\Action::make('publishAnnouncement')
                 ->label(__('ledger.admin_announcement_banner_publish_action'))
                 ->icon('heroicon-o-megaphone')

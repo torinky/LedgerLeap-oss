@@ -15,6 +15,7 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -60,7 +61,7 @@ class CreateColumnWorkflowTest extends TestCase
         $creatorRole->givePermissionTo('create_ledgers');
         $this->user->assignRole($creatorRole);
         $this->inspector->assignRole($inspectorRole);
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->columnDefine = [
             ['id' => 1, 'name' => 'テキスト', 'type' => 'text', 'order' => 1, 'required' => false],

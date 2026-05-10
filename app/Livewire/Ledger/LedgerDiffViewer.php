@@ -4,10 +4,12 @@ namespace App\Livewire\Ledger;
 
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
+use Illuminate\Support\Collection;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive;
 
@@ -29,7 +31,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
     #[Reactive]
     public bool $canView = false;
 
-    public ?\Illuminate\Support\Collection $allAttachments = null;
+    public ?Collection $allAttachments = null;
 
     #[Reactive]
     public ?string $highlight = null;
@@ -62,7 +64,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
         ?int $baseDiffId = null,
         bool $useFallback = true,
         bool $showInduction = true,
-        ?\Illuminate\Support\Collection $allAttachments = null
+        ?Collection $allAttachments = null
     ): void {
         $this->ledgerRecord = $ledgerRecord;
         $this->allAttachments = $allAttachments;
@@ -169,7 +171,7 @@ class LedgerDiffViewer extends BaseLivewireComponent
         $resolvedAttachments = $this->allAttachments ? clone $this->allAttachments : collect()->keyBy('hashedbasename');
 
         // キーイングされていない可能性があるため、強制的に再キーイング
-        if (! $resolvedAttachments->isEmpty() && (! $resolvedAttachments->first() instanceof \App\Models\AttachedFile
+        if (! $resolvedAttachments->isEmpty() && (! $resolvedAttachments->first() instanceof AttachedFile
             || ! is_string($resolvedAttachments->keys()->first()))) {
             $resolvedAttachments = $resolvedAttachments->keyBy('hashedbasename');
         }

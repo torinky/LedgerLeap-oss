@@ -13,8 +13,8 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
-use Illuminate\Support\Str;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -292,7 +292,7 @@ class ActivityLogFormatter
                     (($isOldValueJsonString && $oldJsonError === JSON_ERROR_NONE) || ! $isOldValueJsonString)
                 ) {
                     if ($decodedNew !== $decodedOld) {
-                            $changes->push('<strong>'.e($attributeLabel).':</strong> <span class="'.self::TEXT_COLOR_INFO.'">'.__('ledger.activity.changes.content_changed').'</span>');
+                        $changes->push('<strong>'.e($attributeLabel).':</strong> <span class="'.self::TEXT_COLOR_INFO.'">'.__('ledger.activity.changes.content_changed').'</span>');
                     }
                 } elseif ((is_string($newValue) || is_null($newValue) || is_bool($newValue)) && (is_string($oldValue) || is_null($oldValue) || is_bool($oldValue)) && (string) $newValue !== (string) $oldValue) {
                     $displayOld = is_array($oldValue) || is_object($oldValue) ? __('ledger.activity.changes.complex_data') : e((string) $oldValue);

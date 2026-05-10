@@ -118,9 +118,9 @@ class RecordsGroupingService
     private function buildCacheKey(Collection $recordsCollection, bool $isSearchActive, ?string $tenantId): string
     {
         $recordIds = $recordsCollection->pluck('id')->implode(',');
-        $recordSignature = md5($recordIds . ':' . $recordsCollection->count());
+        $recordSignature = md5($recordIds.':'.$recordsCollection->count());
         $tenant = $tenantId ?? (tenant()?->id ?? 'central');
 
-        return "records_grouping:{$tenant}:{$recordSignature}:" . ($isSearchActive ? 'search' : 'default');
+        return "records_grouping:{$tenant}:{$recordSignature}:".($isSearchActive ? 'search' : 'default');
     }
 }

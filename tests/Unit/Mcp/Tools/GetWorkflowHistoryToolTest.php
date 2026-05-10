@@ -9,6 +9,8 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use App\Repositories\WritableFolderRepository;
+use Laravel\Mcp\Request;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -24,21 +26,21 @@ class GetWorkflowHistoryToolTest extends TestCase
 
     private LedgerDefine $ledgerDefine;
 
-    private \App\Repositories\WritableFolderRepository $folderRepository;
+    private WritableFolderRepository $folderRepository;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->folderRepository = \Mockery::mock(\App\Repositories\WritableFolderRepository::class);
+        $this->folderRepository = \Mockery::mock(WritableFolderRepository::class);
         $this->folderRepository->allows('clearAllCache')->andReturn(null);
         $this->folderRepository->allows('refreshAllCache')->andReturn(null);
         $this->folderRepository->allows('getReadableFolderIds')
             ->andReturnUsing(fn () => isset($this->folder) ? [$this->folder->id] : []);
         $this->folderRepository->allows('getAccessibleFolderIds')
             ->andReturnUsing(fn () => isset($this->folder) ? [$this->folder->id] : []);
-        $this->app->instance(\App\Repositories\WritableFolderRepository::class, $this->folderRepository);
+        $this->app->instance(WritableFolderRepository::class, $this->folderRepository);
 
         $this->tool = new GetWorkflowHistoryTool;
 
@@ -76,7 +78,7 @@ class GetWorkflowHistoryToolTest extends TestCase
         putenv('MCP_AUTH_TOKEN=');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => 1,
             ])
         );
@@ -87,7 +89,7 @@ class GetWorkflowHistoryToolTest extends TestCase
     public function test_rejects_missing_ledger_id(): void
     {
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([])
+            new Request([])
         );
 
         $this->assertTrue($response->isError());
@@ -98,7 +100,7 @@ class GetWorkflowHistoryToolTest extends TestCase
     public function test_returns_error_for_non_existent_ledger(): void
     {
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => 99999,
             ])
         );
@@ -136,7 +138,7 @@ class GetWorkflowHistoryToolTest extends TestCase
         ]);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'format' => 'raw',
             ])
@@ -171,7 +173,7 @@ class GetWorkflowHistoryToolTest extends TestCase
         ]);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'format' => 'summary',
             ])
@@ -210,7 +212,7 @@ class GetWorkflowHistoryToolTest extends TestCase
         ]);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
             ])
         );
@@ -256,7 +258,7 @@ class GetWorkflowHistoryToolTest extends TestCase
         }
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'limit' => 3,
             ])
@@ -309,7 +311,7 @@ class GetWorkflowHistoryToolTest extends TestCase
             'created_at' => now(),
         ]);
 
-        $response = $this->tool->handle(new \Laravel\Mcp\Request([
+        $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
             'compare_latest_vs_previous' => true,
             'format' => 'raw',
@@ -381,7 +383,7 @@ class GetWorkflowHistoryToolTest extends TestCase
             'created_at' => now()->subDay(),
         ]);
 
-        $response = $this->tool->handle(new \Laravel\Mcp\Request([
+        $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
             'base_diff_id' => $diff3->id,
             'target_diff_id' => $diff1->id,
@@ -415,7 +417,7 @@ class GetWorkflowHistoryToolTest extends TestCase
             'status' => WorkflowStatus::DRAFT,
         ]);
 
-        $response = $this->tool->handle(new \Laravel\Mcp\Request([
+        $response = $this->tool->handle(new Request([
             'ledger_id' => $ledger->id,
             'target_diff_id' => 999,
         ]));

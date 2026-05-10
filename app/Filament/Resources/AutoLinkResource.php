@@ -7,17 +7,21 @@ use App\Models\AutoLink;
 use App\Models\Tenant;
 use App\Rules\ValidAutoLinkPattern;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ReplicateAction;
 use Filament\Forms\Components\Placeholder;
-use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Schema;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
 use Filament\Schemas\Components\Utilities\Set;
-use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -26,6 +30,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class AutoLinkResource extends Resource
 {
@@ -107,7 +112,7 @@ class AutoLinkResource extends Resource
                                     relationship: 'folders',
                                     titleAttribute: 'display_name',
                                     parentAttribute: 'parent_id',
-                                    modifyQueryUsing: fn (Builder $query) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query) {
+                                    modifyQueryUsing: fn (Builder $query) => Tenancy::central(function () use ($query) {
                                         return $query->with('tenant');
                                     })
                                 )
@@ -300,8 +305,8 @@ class AutoLinkResource extends Resource
                     ->searchable(),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\ReplicateAction::make()
+                EditAction::make(),
+                ReplicateAction::make()
                     ->beforeReplicaSaved(function (AutoLink $replica) {
                         $originalLabel = $replica->label;
                         $copyCount = 1;
@@ -310,11 +315,11 @@ class AutoLinkResource extends Resource
                         }
                         $replica->label = $originalLabel.' ('.$copyCount.')';
                     }),
-                \Filament\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

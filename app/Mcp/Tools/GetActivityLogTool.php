@@ -10,6 +10,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\HtmlString;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -152,7 +153,7 @@ MARKDOWN;
     private function formatActivityForResponse(CustomActivity $activity): array
     {
         $changes = ActivityLogFormatter::formatChanges($activity);
-        $changesHtml = $changes instanceof \Illuminate\Support\HtmlString ? $changes->toHtml() : (string) $changes;
+        $changesHtml = $changes instanceof HtmlString ? $changes->toHtml() : (string) $changes;
         $changesText = strip_tags($changesHtml);
 
         // getSubjectDetailLinkはroute()を呼び出すためエラーが発生する可能性がある

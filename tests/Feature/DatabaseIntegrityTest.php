@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Enums\WorkflowStatus;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -50,7 +51,7 @@ class DatabaseIntegrityTest extends TestCase
             try {
                 $attributes = [];
                 if ($modelClass === Ledger::class) {
-                    $attributes = ['version' => 1, 'status' => \App\Enums\WorkflowStatus::DRAFT];
+                    $attributes = ['version' => 1, 'status' => WorkflowStatus::DRAFT];
                 }
 
                 $model = $modelClass::factory()->create($attributes);
@@ -77,7 +78,7 @@ class DatabaseIntegrityTest extends TestCase
 
         $ledger = Ledger::factory()->create([
             'version' => 1,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
         ]);
         $this->assertEquals($tenantId, $ledger->tenant_id);
 
@@ -87,7 +88,7 @@ class DatabaseIntegrityTest extends TestCase
             'content' => $ledger->content,
             'column_define' => $ledger->define->column_define,
             'version' => $ledger->version,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'creator_id' => $ledger->creator_id,
             'modifier_id' => $ledger->modifier_id,
             'completed_inspector_role_ids' => [],

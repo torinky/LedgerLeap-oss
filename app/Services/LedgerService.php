@@ -8,8 +8,9 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Tag;
-use App\Services\Ledger\SearchContext;
+use App\Models\User;
 use App\Repositories\WritableFolderRepository;
+use App\Services\Ledger\SearchContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
@@ -125,7 +126,7 @@ class LedgerService
         ]);
     }
 
-    public function updateLedgerForApi(\App\Models\User $user, Ledger $ledger, array $data): Ledger
+    public function updateLedgerForApi(User $user, Ledger $ledger, array $data): Ledger
     {
         $ledger = $this->getLedgerForApi($ledger);
 
@@ -216,7 +217,7 @@ class LedgerService
         return Ledger::search($keyword)->get()->sortByDesc('created_at')->values();
     }
 
-    public function searchLedgersForApi(\App\Models\User $user, array $params)
+    public function searchLedgersForApi(User $user, array $params)
     {
         \Log::info('[MCP Search Debug] === Start searchLedgersForApi ===');
         \Log::info('[MCP Search Debug] User ID: '.$user->id);
@@ -256,7 +257,7 @@ class LedgerService
             \Log::info('[MCP Search Debug] Semantic search triggered. Delegating to RagSearchService.');
 
             // RagSearchServiceを呼び出し、結果をAPI形式に整形して返す
-            $ragResults = app(\App\Services\RagSearchService::class)->searchForApi(
+            $ragResults = app(RagSearchService::class)->searchForApi(
                 $user,
                 [
                     'query' => $params['q'],
@@ -343,7 +344,7 @@ class LedgerService
             ->allowedFilters([
                 // 完全一致フィルタ
                 AllowedFilter::exact('creator_id'),
-                AllowedFilter::callback('ledger_define_id', function ($query, $value) use ($ledgerDefineIds) {
+                AllowedFilter::callback('ledger_define_id', function ($query, $value) {
                     $ids = $this->normalizeIdList($value);
 
                     if (empty($ids)) {
@@ -365,7 +366,7 @@ class LedgerService
                     if (! empty($tagNames)) {
                         $query->whereHas(
                             'define.tags',
-                            function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
+                            function (Builder $q) use ($tagNames) {
                                 $q->whereIn('name', $tagNames);
                             },
                             '=',
@@ -391,7 +392,7 @@ class LedgerService
                     }
 
                     $query->whereHas('define.folder', function (
-                        \Illuminate\Database\Eloquent\Builder $folderQuery
+                        Builder $folderQuery
                     ) use ($folderIds) {
                         $folderQuery->whereIn('id', $folderIds);
                     });
@@ -414,14 +415,14 @@ class LedgerService
                 AllowedFilter::callback('exclude_q', function ($query, $value) {
                     \Log::info('[MCP Search Debug] Applying exclude_q filter: '.$value);
                     // 除外キーワードを含まない結果のみを返すように修正
-                    $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($value) {
+                    $query->where(function (Builder $q) use ($value) {
                         $q->whereRaw('not match(`content`) against (? IN BOOLEAN MODE)', [$value])
                             ->whereRaw('not match(`content_attached`) against (? IN BOOLEAN MODE)', [$value]);
                     });
                 }),
             ])
             ->allowedSorts(['composite_score', 'activity_score', 'created_at', 'updated_at', 'id', 'semantic_score'])
-            ->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($readableFolderIds) {
+            ->whereHas('define.folder', function (Builder $q) use ($readableFolderIds) {
                 $q->whereIn('id', $readableFolderIds);
             });
 
@@ -517,7 +518,6 @@ class LedgerService
     }
 
     /**
-     * @param  mixed  $value
      * @return array<int, int>
      */
     private function normalizeIdList(mixed $value): array
@@ -701,7 +701,7 @@ class LedgerService
             ->all();
     }
 
-    private function buildMetaData(\Illuminate\Database\Eloquent\Collection $ledgers): array
+    private function buildMetaData(Collection $ledgers): array
     {
         $ledgerDefines = $ledgers->pluck('define')->filter()->unique('id');
         $creators = $ledgers->pluck('creator')->filter()->unique('id');

@@ -5,10 +5,13 @@ namespace Tests\Feature\Livewire\LedgerDefine;
 use App\Livewire\LedgerDefine\ModifyColumn;
 use App\Livewire\LedgerDefine\Preview;
 use App\Models\ColumnDefine;
+use App\Models\ColumnTypes\DateType;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -268,7 +271,7 @@ class ModifyColumnTest extends TestCase
         $this->assertEquals('1d', $column->options['default_offset'] ?? null);
 
         $inputType = $column->getInputType();
-        $this->assertInstanceOf(\App\Models\ColumnTypes\DateType::class, $inputType);
+        $this->assertInstanceOf(DateType::class, $inputType);
         $this->assertEquals('1d', $inputType->default_offset);
     }
 
@@ -329,9 +332,9 @@ class ModifyColumnTest extends TestCase
     #[Test]
     public function it_sets_is_dirty_when_background_file_is_uploaded()
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
 
-        $file = \Illuminate\Http\UploadedFile::fake()->image('background.png');
+        $file = UploadedFile::fake()->image('background.png');
 
         Livewire::test(ModifyColumn::class, [
             'ledgerDefineId' => $this->ledgerDefine->id,
@@ -344,9 +347,9 @@ class ModifyColumnTest extends TestCase
     #[Test]
     public function it_stores_uploaded_background_file_on_bulk_save()
     {
-        \Illuminate\Support\Facades\Storage::fake('public');
+        Storage::fake('public');
 
-        $file = \Illuminate\Http\UploadedFile::fake()->image('background.png');
+        $file = UploadedFile::fake()->image('background.png');
 
         Livewire::test(ModifyColumn::class, [
             'ledgerDefineId' => $this->ledgerDefine->id,
@@ -361,8 +364,7 @@ class ModifyColumnTest extends TestCase
 
         $this->assertIsArray($savedFileProperty);
         $this->assertEquals('background.png', $savedFileProperty['name']);
-        
-        \Illuminate\Support\Facades\Storage::disk('public')->assertExists($savedFileProperty['path']);
+
+        Storage::disk('public')->assertExists($savedFileProperty['path']);
     }
 }
-

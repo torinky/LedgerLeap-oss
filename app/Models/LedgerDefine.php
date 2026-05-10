@@ -3,6 +3,8 @@
 namespace App\Models;
 
 use App\Casts\AsColumnDefinesArrayJson;
+use App\Models\ColumnTypes\DateType;
+use App\Rules\RequiredCheckbox;
 use App\Rules\UniqueAutoNumber;
 use App\Rules\UniqueColumnValue;
 use App\Traits\HasModelRoles;
@@ -12,11 +14,12 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Routing\Route;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Validation\Rule;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 
 /**
- * @property Collection<int, \App\Models\ColumnDefine> $column_define
+ * @property Collection<int, ColumnDefine> $column_define
  *
  * @method static find(Route|object|string|null $route)
  * @method maxColumnId()
@@ -104,10 +107,10 @@ class LedgerDefine extends Model
 
             // 2. 共通のルールをマージ
             if ($column->type === 'chk') {
-                $rules[] = \Illuminate\Validation\Rule::array();
+                $rules[] = Rule::array();
                 // 必須項目の場合、少なくとも1つ選択されていることを検証
                 if ($column->required) {
-                    $rules[] = new \App\Rules\RequiredCheckbox;
+                    $rules[] = new RequiredCheckbox;
                 }
             } else {
                 // その他の型
@@ -237,7 +240,7 @@ class LedgerDefine extends Model
             $inputType = $column->getInputType();
 
             // 1. 自動入力ロジック (default_offset と overwrite_existing に統合)
-            if ($inputType instanceof \App\Models\ColumnTypes\DateType) {
+            if ($inputType instanceof DateType) {
                 $offset = $inputType->default_offset;
                 $overwrite = $inputType->overwrite_existing;
 

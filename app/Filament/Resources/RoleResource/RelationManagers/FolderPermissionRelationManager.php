@@ -8,16 +8,16 @@ use App\Enums\FolderPermissionType;
 use App\Filament\Traits\HasFolderSelection;
 use App\Models\RoleFolderPermission;
 use Exception;
-use Filament\Forms\Components\CheckboxList;
-use Filament\Forms\Components\Select;
-use Filament\Schemas\Schema;
-use Filament\Notifications\Notification;
-use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Actions\Action;
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+use Filament\Forms\Components\CheckboxList;
+use Filament\Forms\Components\Select;
+use Filament\Notifications\Notification;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Grouping\Group;
@@ -28,6 +28,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Livewire\Component;
 
 // ★ クラス名を変更
 class FolderPermissionRelationManager extends RelationManager
@@ -78,7 +79,7 @@ class FolderPermissionRelationManager extends RelationManager
                     ->label(__('permission.access_permissions'))
                     ->options(FolderPermissionType::asAccessSelectArray()) // アクセス権限のみ
                     ->live()
-                    ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, $state) {
+                    ->afterStateUpdated(function (Component $livewire, CheckboxList $component, $state) {
                         $newState = $this->applyPermissionHierarchy($state ?? []);
                         $component->state($newState);
                     })
@@ -166,7 +167,7 @@ class FolderPermissionRelationManager extends RelationManager
                             ->label(__('permission.access_permissions'))
                             ->options(FolderPermissionType::asAccessSelectArray())
                             ->live()
-                            ->afterStateUpdated(function (\Livewire\Component $livewire, CheckboxList $component, $state) {
+                            ->afterStateUpdated(function (Component $livewire, CheckboxList $component, $state) {
                                 $newState = $this->applyPermissionHierarchy($state ?? []);
                                 $component->state($newState);
                             })

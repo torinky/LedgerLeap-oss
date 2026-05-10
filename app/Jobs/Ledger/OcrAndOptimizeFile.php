@@ -4,6 +4,7 @@ namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Embedding\VectorizeAttachedFile;
 use App\Models\AttachedFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,8 +13,8 @@ use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 // use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 class OcrAndOptimizeFile implements ShouldQueue
@@ -153,7 +154,7 @@ class OcrAndOptimizeFile implements ShouldQueue
             ]);
 
             // ★ Phase2.6: OCR完了後、即座にベクトル化（Tikaより高品質で上書き）
-            \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+            VectorizeAttachedFile::dispatch(
                 $this->attachedFile->id,
                 'ocr'
             );

@@ -9,6 +9,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Laravel\Mcp\Request;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -63,7 +64,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
         putenv('MCP_AUTH_TOKEN=');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => 1,
             ]),
             $this->workflowService
@@ -75,7 +76,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
     public function test_rejects_missing_ledger_id(): void
     {
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([]),
+            new Request([]),
             $this->workflowService
         );
 
@@ -87,7 +88,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
     public function test_returns_error_for_non_existent_ledger(): void
     {
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => 99999,
             ]),
             $this->workflowService
@@ -121,7 +122,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
             ->andReturn($ledger);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'comments' => 'テスト引き継ぎ',
             ]),
@@ -159,7 +160,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
             ->andReturn($ledger);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'comments' => '承認タスク引き継ぎ',
             ]),
@@ -190,7 +191,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
             ->andThrow(new \Exception('引き継ぎできません'));
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
             ]),
             $mockWorkflowService
@@ -218,7 +219,7 @@ class ClaimWorkflowTaskToolTest extends TestCase
             ->andReturn($ledger);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'comments' => 'フィールド確認テスト',
             ]),

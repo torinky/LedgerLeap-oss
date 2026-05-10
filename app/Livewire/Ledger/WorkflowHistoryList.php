@@ -26,7 +26,7 @@ class WorkflowHistoryList extends BaseLivewireComponent
             ->get();
 
         // 連続する重複エントリをフィルタリング（バージョン、ステータス、操作者、コメントが同じ場合）
-        $filtered = new Collection();
+        $filtered = new Collection;
         $previous = null;
 
         // 逆順（古い順）に処理して、連続する重複の「最新」を残すようにする
@@ -35,6 +35,7 @@ class WorkflowHistoryList extends BaseLivewireComponent
             if ($previous === null) {
                 $filtered->push($current);
                 $previous = $current;
+
                 continue;
             }
 
@@ -43,7 +44,7 @@ class WorkflowHistoryList extends BaseLivewireComponent
                            $current->modifier_id === $previous->modifier_id &&
                            $current->comments === $previous->comments;
 
-            if (!$isDuplicate) {
+            if (! $isDuplicate) {
                 $filtered->push($current);
                 $previous = $current;
             }

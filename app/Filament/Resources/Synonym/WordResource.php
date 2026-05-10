@@ -5,9 +5,12 @@ namespace App\Filament\Resources\Synonym;
 use App\Filament\Resources\Synonym\WordResource\Pages;
 use App\Filament\Resources\Synonym\WordResource\RelationManagers;
 use App\Models\Synonym\Word;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Table;
@@ -58,11 +61,11 @@ class WordResource extends Resource
             ])
 
             ->actions([
-                \Filament\Actions\EditAction::make(),
+                EditAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

@@ -5,6 +5,7 @@ namespace App\Rules;
 use App\Traits\MroongaSearchableColumn;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Translation\PotentiallyTranslatedString;
 
 class UniqueAutoNumber implements ValidationRule
 {
@@ -31,7 +32,7 @@ class UniqueAutoNumber implements ValidationRule
      * 編集時は自身のレコードを除外します。
      * Mroongaの全文検索で候補を高速に絞り込み、その後PHPで厳密に比較します。
      *
-     * @param  \Closure(string): \Illuminate\Translation\PotentiallyTranslatedString  $fail
+     * @param  Closure(string): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {

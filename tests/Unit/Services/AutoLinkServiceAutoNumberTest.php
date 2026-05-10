@@ -3,6 +3,7 @@
 namespace Tests\Unit\Services;
 
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Services\AutoLinkService;
@@ -162,7 +163,7 @@ class AutoLinkServiceAutoNumberTest extends TestCase
             ],
         ]);
 
-        $ledger = \App\Models\Ledger::factory()->create([
+        $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'content' => ['TEST-001'],
         ]);
@@ -197,7 +198,7 @@ class AutoLinkServiceAutoNumberTest extends TestCase
             ],
         ]);
 
-        $ledger = \App\Models\Ledger::factory()->create([
+        $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'content' => ['DOC-0001'],
         ]);
@@ -235,7 +236,7 @@ class AutoLinkServiceAutoNumberTest extends TestCase
             ],
         ]);
 
-        $ledger = \App\Models\Ledger::factory()->create([
+        $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'content' => ['NUM-01'],
         ]);

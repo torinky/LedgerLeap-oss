@@ -4,11 +4,11 @@ namespace App\Filament\Resources\RoleResource\RelationManagers;
 
 // 追加
 use CodeWithDennis\FilamentSelectTree\SelectTree; // 追加
-use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
-use Filament\Resources\RelationManagers\RelationManager;
-use Filament\Actions\Action; // 変更
+use Filament\Actions\Action;
 use Filament\Actions\DetachAction;
+use Filament\Forms\Components\TextInput;
+use Filament\Resources\RelationManagers\RelationManager; // 変更
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;

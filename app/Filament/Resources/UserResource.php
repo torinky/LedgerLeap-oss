@@ -7,15 +7,25 @@ use App\Filament\Resources\UserResource\RelationManagers;
 use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Role;
 use App\Models\User;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
+use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
-use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
@@ -154,7 +164,7 @@ class UserResource extends Resource
                     ->label(__('ledger.ignore_ad_org_sync_until'))
                     ->date()
                     ->sortable()
-                    ->color(fn ($state) => $state && \Illuminate\Support\Carbon::parse($state)->isPast() ? 'danger' : 'success')
+                    ->color(fn ($state) => $state && Carbon::parse($state)->isPast() ? 'danger' : 'success')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('manual_sync_reason')
                     ->label(__('ledger.manual_sync_reason'))
@@ -216,20 +226,20 @@ class UserResource extends Resource
                     }),
             ])
             ->actions([
-                \Filament\Actions\EditAction::make(),
-                \Filament\Actions\DeleteAction::make(),
-                \Filament\Actions\ForceDeleteAction::make(),
-                \Filament\Actions\RestoreAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
-                    \Filament\Actions\ForceDeleteBulkAction::make(),
-                    \Filament\Actions\RestoreBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
 
                 // Bulk action: extend manual AD sync protection
-                \Filament\Actions\BulkAction::make('extendManualSync')
+                BulkAction::make('extendManualSync')
                     ->label(__('Extend Manual Sync'))
                     ->form([
                         Forms\Components\Textarea::make('manual_sync_reason')

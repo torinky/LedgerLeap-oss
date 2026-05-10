@@ -24,11 +24,11 @@ final class Move extends Component
     public string $component;
 
     /**
-     * @param positive-int $id
-     * @param numeric-string|null $ancestor
-     * @param numeric-string|null $parent
-     * @param non-negative-int $from
-     * @param non-negative-int $to
+     * @param  positive-int  $id
+     * @param  numeric-string|null  $ancestor
+     * @param  numeric-string|null  $parent
+     * @param  non-negative-int  $from
+     * @param  non-negative-int  $to
      */
     #[On('filament-tree-moved')]
     public function moveTreeItem(int $id, ?string $ancestor, ?string $parent, int $from, int $to): void

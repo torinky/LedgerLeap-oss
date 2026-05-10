@@ -2,9 +2,12 @@
 
 namespace App\Services\Ledger;
 
+use App\Enums\AttachedFileStatus;
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
 use App\Exceptions\Workflow\WorkflowConditionException;
+use App\Jobs\Ledger\ProcessAttachedFile;
+use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use App\Models\User;
@@ -152,7 +155,7 @@ class RollbackService
                     $columnReconstructed = [];
                     foreach (array_keys($filesData) as $hashedBasename) {
                         // データベースの AttachedFile レコードから最新のメタデータを取得
-                        $attachedFile = \App\Models\AttachedFile::where('ledger_id', $ledger->id)
+                        $attachedFile = AttachedFile::where('ledger_id', $ledger->id)
                             ->where('hashedbasename', $hashedBasename)
                             ->first();
 
@@ -173,12 +176,12 @@ class RollbackService
                                 // トランザクション内での実行だが、ジョブ投入(非同期)なので問題ないはず
                                 // ただし、モデル更新はここで行う
                                 $attachedFile->update([
-                                    'status' => \App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING,
+                                    'status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING,
                                     'tika_processed_at' => null,
                                     'processing_finalized_at' => null,
                                 ]);
 
-                                \App\Jobs\Ledger\ProcessAttachedFile::dispatch($attachedFile);
+                                ProcessAttachedFile::dispatch($attachedFile);
                             }
 
                             // Tika/OCR等の解析情報も含めた完全な構造を再構築

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ColumnDefine;
 use App\Models\ColumnTypes\AutoNumberType;
 use App\Models\Ledger;
 
@@ -14,7 +15,7 @@ class NumberingService
      * @param  int  $ledgerDefineId  台帳定義ID
      * @return string 次の採番番号
      */
-    public function getNextNumber(\App\Models\ColumnDefine $columnDefine, int $ledgerDefineId): string
+    public function getNextNumber(ColumnDefine $columnDefine, int $ledgerDefineId): string
     {
         $columnType = $columnDefine->getInputType(); // AutoNumberType オブジェクトを取得
         $columnId = $columnDefine->id; // ColumnDefine から id を取得

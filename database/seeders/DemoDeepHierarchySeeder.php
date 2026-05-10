@@ -9,6 +9,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -84,7 +85,7 @@ class DemoDeepHierarchySeeder extends Seeder
 
     private function initializeTenant(): void
     {
-        $tenant = \App\Models\Tenant::firstOrCreate(
+        $tenant = Tenant::firstOrCreate(
             ['id' => 'demo-tenant'],
             ['name' => 'Demo Tenant']
         );

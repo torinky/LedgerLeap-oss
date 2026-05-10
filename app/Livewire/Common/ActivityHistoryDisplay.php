@@ -9,6 +9,8 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
@@ -101,7 +103,7 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
      * アクティビティログを取得するクエリを構築
      * (★☆★ このメソッドを全面的に修正 ★☆★)
      *
-     * @return \Illuminate\Database\Eloquent\Builder
+     * @return Builder
      */
     public function getActivitiesQuery()
     {
@@ -224,7 +226,7 @@ class ActivityHistoryDisplay extends BaseLivewireComponent
     /**
      * コンポーネントのレンダリング
      *
-     * @return \Illuminate\Contracts\View\View
+     * @return View
      */
     public function render()
     {

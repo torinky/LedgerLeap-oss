@@ -6,8 +6,8 @@ use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
-use App\Services\LedgerService;
 use App\Services\Ledger\LedgerAttachmentResourceService;
+use App\Services\LedgerService;
 use Carbon\Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
@@ -76,8 +76,7 @@ MARKDOWN;
     public function __construct(
         LedgerService $ledgerService,
         ?LedgerAttachmentResourceService $attachmentResourceService = null,
-    )
-    {
+    ) {
         $this->ledgerService = $ledgerService;
         $this->attachmentResourceService = $attachmentResourceService ?? app(LedgerAttachmentResourceService::class);
     }

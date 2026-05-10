@@ -157,7 +157,7 @@ class RagSearchService
     /**
      * Search ledgers for API responses (with full model data)
      *
-     * @param  \App\Models\User  $user  User for permission filtering
+     * @param  User  $user  User for permission filtering
      * @param  array  $params  Search parameters (query, limit, filters)
      * @return array Array of ledger models with metadata
      */

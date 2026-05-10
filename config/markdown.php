@@ -1,5 +1,16 @@
 <?php
 
+use League\CommonMark\Extension\Attributes\AttributesExtension;
+use League\CommonMark\Extension\Autolink\AutolinkExtension;
+use League\CommonMark\Extension\DescriptionList\DescriptionListExtension;
+use League\CommonMark\Extension\ExternalLink\ExternalLinkExtension;
+use League\CommonMark\Extension\Footnote\FootnoteExtension;
+use League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension;
+use League\CommonMark\Extension\Strikethrough\StrikethroughExtension;
+use League\CommonMark\Extension\Table\TableExtension;
+use League\CommonMark\Extension\TaskList\TaskListExtension;
+use Spatie\LaravelMarkdown\MarkdownRenderer;
+
 return [
     'code_highlighting' => [
         /*
@@ -63,7 +74,7 @@ return [
      *
      * More info: https://spatie.be/docs/laravel-markdown/v1/advanced-usage/customizing-the-rendering-process
      */
-    'renderer_class' => Spatie\LaravelMarkdown\MarkdownRenderer::class,
+    'renderer_class' => MarkdownRenderer::class,
 
     /*
      * These extensions should be added to the markdown environment. A valid
@@ -72,15 +83,15 @@ return [
      * More info: https://commonmark.thephpleague.com/2.4/extensions/overview/
      */
     'extensions' => [
-        League\CommonMark\Extension\Table\TableExtension::class,
-        League\CommonMark\Extension\Strikethrough\StrikethroughExtension::class,
-        League\CommonMark\Extension\TaskList\TaskListExtension::class,
-        League\CommonMark\Extension\Autolink\AutolinkExtension::class,
-        League\CommonMark\Extension\ExternalLink\ExternalLinkExtension::class,
-        League\CommonMark\Extension\HeadingPermalink\HeadingPermalinkExtension::class,
-        League\CommonMark\Extension\Footnote\FootnoteExtension::class,
-        League\CommonMark\Extension\Attributes\AttributesExtension::class,
-        League\CommonMark\Extension\DescriptionList\DescriptionListExtension::class,
+        TableExtension::class,
+        StrikethroughExtension::class,
+        TaskListExtension::class,
+        AutolinkExtension::class,
+        ExternalLinkExtension::class,
+        HeadingPermalinkExtension::class,
+        FootnoteExtension::class,
+        AttributesExtension::class,
+        DescriptionListExtension::class,
     ],
 
     /*

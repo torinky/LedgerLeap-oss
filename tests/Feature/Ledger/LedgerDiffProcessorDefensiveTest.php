@@ -47,10 +47,10 @@ class LedgerDiffProcessorDefensiveTest extends TestCase
             'ledger_define_id' => $ledgerDefine->id,
             'content' => ['Value 1'],
         ]);
-        
+
         // キャストを介さずに直接DBを更新して不正なデータ状態を作る
         \DB::table('ledger_diffs')->where('id', $diff->id)->update([
-            'column_define' => '"\"\""'
+            'column_define' => '"\"\""',
         ]);
 
         // 修正前はこの呼び出しで "Call to a member function toArray() on string" エラーが発生するはず

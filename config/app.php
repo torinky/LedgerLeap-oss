@@ -1,7 +1,22 @@
 <?php
 
+use App\Facades\JpDatetime;
+use App\Facades\Ledger\ColumnHtml;
+use App\Providers\AppServiceProvider;
+use App\Providers\AuthServiceProvider;
+use App\Providers\ColumnHtmlServiceProvider;
+use App\Providers\EventServiceProvider;
+use App\Providers\ExtendValidatorServiceProvider;
+use App\Providers\Filament\AdminPanelProvider;
+use App\Providers\JpDatetimeServiceProvider;
+use App\Providers\RouteServiceProvider;
 use Illuminate\Support\Facades\Facade;
 use Illuminate\Support\ServiceProvider;
+use Intervention\Image\ImageServiceProvider;
+use Maatwebsite\Excel\ExcelServiceProvider;
+use Maatwebsite\Excel\Facades\Excel;
+use Spatie\Permission\PermissionServiceProvider;
+use Studio15\FilamentTree\FilamentTreeServiceProvider;
 
 return [
 
@@ -164,23 +179,23 @@ return [
         /*
          * Application Service Providers...
          */
-        App\Providers\AppServiceProvider::class,
-        App\Providers\AuthServiceProvider::class,
+        AppServiceProvider::class,
+        AuthServiceProvider::class,
         // App\Providers\BroadcastServiceProvider::class,
-        App\Providers\EventServiceProvider::class,
-        App\Providers\Filament\AdminPanelProvider::class,
-        App\Providers\RouteServiceProvider::class,
+        EventServiceProvider::class,
+        AdminPanelProvider::class,
+        RouteServiceProvider::class,
 
-        App\Providers\ColumnHtmlServiceProvider::class,
-        App\Providers\JpDatetimeServiceProvider::class,
-        Intervention\Image\ImageServiceProvider::class,
+        ColumnHtmlServiceProvider::class,
+        JpDatetimeServiceProvider::class,
+        ImageServiceProvider::class,
 
-        App\Providers\ExtendValidatorServiceProvider::class,
+        ExtendValidatorServiceProvider::class,
 
-        Maatwebsite\Excel\ExcelServiceProvider::class,
-        Spatie\Permission\PermissionServiceProvider::class,
+        ExcelServiceProvider::class,
+        PermissionServiceProvider::class,
 
-        Studio15\FilamentTree\FilamentTreeServiceProvider::class,
+        FilamentTreeServiceProvider::class,
 
     ])->toArray(),
 
@@ -197,9 +212,9 @@ return [
 
     'aliases' => Facade::defaultAliases()->merge([
         // 'Example' => App\Facades\Example::class,
-        'ColumnHtml' => \App\Facades\Ledger\ColumnHtml::class,
-        'JpDatetime' => \App\Facades\JpDatetime::class,
-        'Excel' => Maatwebsite\Excel\Facades\Excel::class,
+        'ColumnHtml' => ColumnHtml::class,
+        'JpDatetime' => JpDatetime::class,
+        'Excel' => Excel::class,
     ])->toArray(),
 
 ];

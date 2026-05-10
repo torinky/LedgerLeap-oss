@@ -12,24 +12,24 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 // ★ 使用するモデル
 use Exception;
-use Filament\Forms\Components\CheckboxList;
-// ★ Toggle を使う方がシンプル
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
-use Filament\Schemas\Schema;
-use Filament\Notifications\Notification;
-// ★ カスタムアクション用に Action を使う
-// use Filament\Actions\AttachAction; // ★ AttachAction は使わない
-use Filament\Resources\RelationManagers\RelationManager;
-// use Filament\Actions\CreateAction;
-
-// ★ CreateAction を使う
 use Filament\Actions\Action;
-// ★ 標準の DeleteAction を使う
+// ★ Toggle を使う方がシンプル
 use Filament\Actions\BulkActionGroup;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\DeleteBulkAction;
 use Filament\Actions\EditAction;
+// ★ カスタムアクション用に Action を使う
+// use Filament\Actions\AttachAction; // ★ AttachAction は使わない
+use Filament\Forms\Components\CheckboxList;
+// use Filament\Actions\CreateAction;
+
+// ★ CreateAction を使う
+use Filament\Forms\Components\Select;
+// ★ 標準の DeleteAction を使う
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\Filter;

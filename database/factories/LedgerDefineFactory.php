@@ -3,7 +3,9 @@
 namespace Database\Factories;
 
 use App\Models\ColumnDefine;
+use App\Models\ColumnTypes\InputTypeFactory;
 use App\Models\Folder;
+use App\Models\Tenant;
 use App\Models\User;
 use Exception;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -49,7 +51,7 @@ class LedgerDefineFactory extends Factory
             'folder_id' => Folder::count() > 0 ? Folder::all()->random()->id : Folder::factory()->create()->id,
             'creator_id' => User::factory(),
             'modifier_id' => User::factory(),
-            'tenant_id' => tenant()->id ?? \App\Models\Tenant::factory()->create()->id,
+            'tenant_id' => tenant()->id ?? Tenant::factory()->create()->id,
         ];
     }
 
@@ -83,7 +85,7 @@ class LedgerDefineFactory extends Factory
             );
 
             // Correctly get type identifiers once before the loop
-            $typeIdentifiers = \App\Models\ColumnTypes\InputTypeFactory::getTypeIdentifiers();
+            $typeIdentifiers = InputTypeFactory::getTypeIdentifiers();
 
             for ($i = 2; $i < $columnDefineLoop; $i++) {
                 $tempColumnDefine = new ColumnDefine(

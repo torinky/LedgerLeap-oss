@@ -2,6 +2,9 @@
 
 namespace App\Livewire\Traits;
 
+use App\Services\PerformanceLogBuffer;
+use Illuminate\Support\Facades\Log;
+
 trait LogPerformance
 {
     /**
@@ -41,12 +44,12 @@ trait LogPerformance
 
         // Laravel標準ログへの記録
         if (in_array($logDestination, ['log', 'both'])) {
-            \Illuminate\Support\Facades\Log::info("[Performance] {$metric}", $logData);
+            Log::info("[Performance] {$metric}", $logData);
         }
 
         // JSON統計ファイルへの記録（バッファリングして一括書き込み）
         if (in_array($logDestination, ['json', 'both'])) {
-            \App\Services\PerformanceLogBuffer::push(array_merge($logData, ['timestamp' => now()->toISOString()]));
+            PerformanceLogBuffer::push(array_merge($logData, ['timestamp' => now()->toISOString()]));
         }
 
         $this->warnIfPerformanceThresholdExceeded($metric, $duration, $logData);
@@ -106,14 +109,15 @@ trait LogPerformance
         ]);
 
         if (is_string($channel) && $channel !== '' && config("logging.channels.{$channel}")) {
-            \Illuminate\Support\Facades\Log::channel($channel)->warning(
+            Log::channel($channel)->warning(
                 "[Performance] {$metric} threshold exceeded",
                 $warningData
             );
+
             return;
         }
 
-        \Illuminate\Support\Facades\Log::warning("[Performance] {$metric} threshold exceeded", $warningData);
+        Log::warning("[Performance] {$metric} threshold exceeded", $warningData);
     }
 
     /**

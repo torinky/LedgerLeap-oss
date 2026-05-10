@@ -3,6 +3,7 @@
 namespace Tests\Feature\Jobs;
 
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Embedding\VectorizeAttachedFile;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Jobs\Ledger\OcrAndOptimizeFile;
 use App\Jobs\Ledger\ProcessAttachedFile;
@@ -15,6 +16,8 @@ use Illuminate\Support\Facades\Config;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Vaites\ApacheTika\Client;
+use Vaites\ApacheTika\Metadata\MetadataInterface;
 
 class ProcessAttachedFileTest extends TestCase
 {
@@ -43,17 +46,17 @@ class ProcessAttachedFileTest extends TestCase
         Storage::disk('public')->put($path, 'dummy_content');
 
         // Tikaクライアントをモック
-        $tikaClientMock = $this->mock(\Vaites\ApacheTika\Client::class, function ($mock) {
+        $tikaClientMock = $this->mock(Client::class, function ($mock) {
             $mock->shouldReceive('getText')->andReturn('Sample text');
 
-            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class, \IteratorAggregate::class);
+            $metadataMock = \Mockery::mock(MetadataInterface::class, \IteratorAggregate::class);
             $metadataMock->shouldReceive('get')->with('mime')->andReturn('image/jpeg');
             $metadataMock->shouldReceive('getIterator')->andReturn(new \ArrayIterator(['mime' => 'image/jpeg']));
 
             $mock->shouldReceive('getMetadata')->andReturn($metadataMock);
             $mock->shouldReceive('setTimeout');
         });
-        $this->app->instance(\Vaites\ApacheTika\Client::class, $tikaClientMock);
+        $this->app->instance(Client::class, $tikaClientMock);
 
         // Act
         $job = new ProcessAttachedFile($attachedFile);
@@ -117,7 +120,7 @@ class ProcessAttachedFileTest extends TestCase
         // Assert - Phase2.6: VectorizeAttachedFileがディスパッチされる
         Bus::assertNotDispatched(ProcessVlmExtraction::class);
         Bus::assertNotDispatched(OcrAndOptimizeFile::class);
-        Bus::assertDispatched(\App\Jobs\Embedding\VectorizeAttachedFile::class, function ($job) use ($attachedFile) {
+        Bus::assertDispatched(VectorizeAttachedFile::class, function ($job) use ($attachedFile) {
             return $job->attachedFileId === $attachedFile->id && $job->source === 'tika';
         });
 
@@ -172,16 +175,16 @@ class ProcessAttachedFileTest extends TestCase
 
     private function mockTikaClient(string $mime, string $text): void
     {
-        $tikaClientMock = $this->mock(\Vaites\ApacheTika\Client::class, function ($mock) use ($mime, $text) {
+        $tikaClientMock = $this->mock(Client::class, function ($mock) use ($mime, $text) {
             $mock->shouldReceive('getText')->andReturn($text);
 
-            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class, \IteratorAggregate::class);
+            $metadataMock = \Mockery::mock(MetadataInterface::class, \IteratorAggregate::class);
             $metadataMock->shouldReceive('get')->with('mime')->andReturn($mime);
             $metadataMock->shouldReceive('getIterator')->andReturn(new \ArrayIterator(['mime' => $mime]));
 
             $mock->shouldReceive('getMetadata')->andReturn($metadataMock);
             $mock->shouldReceive('setTimeout');
         });
-        $this->app->instance(\Vaites\ApacheTika\Client::class, $tikaClientMock);
+        $this->app->instance(Client::class, $tikaClientMock);
     }
 }

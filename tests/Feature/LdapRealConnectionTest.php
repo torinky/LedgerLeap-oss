@@ -2,8 +2,11 @@
 
 namespace Tests\Feature;
 
+use LdapRecord\Auth\BindException;
+use LdapRecord\ConnectionException;
 use LdapRecord\Container;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
+use LdapRecord\Testing\LdapFake;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -67,7 +70,7 @@ class LdapRealConnectionTest extends TestCase
         // エミュレータが誤ってセットアップされていないことを確認
         try {
             $connection = Container::getConnection('default');
-            if ($connection instanceof \LdapRecord\Testing\LdapFake) {
+            if ($connection instanceof LdapFake) {
                 DirectoryEmulator::tearDown();
             }
         } catch (\Exception $e) {
@@ -86,9 +89,9 @@ class LdapRealConnectionTest extends TestCase
             $connection->connect();
 
             $this->assertTrue($connection->isConnected(), 'Failed to connect to the LDAP server.');
-        } catch (\LdapRecord\Auth\BindException $e) {
+        } catch (BindException $e) {
             $this->fail('Failed to bind to LDAP server. Error: '.$e->getMessage());
-        } catch (\LdapRecord\ConnectionException $e) {
+        } catch (ConnectionException $e) {
             $this->fail('Could not connect to LDAP host. Error: '.$e->getMessage());
         }
     }

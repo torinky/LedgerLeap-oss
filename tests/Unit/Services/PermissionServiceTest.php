@@ -9,8 +9,11 @@ use App\Models\LedgerDefine;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\PermissionService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -59,7 +62,7 @@ class PermissionServiceTest extends TestCase
             'Folder'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertGreaterThan(0, $result->count());
 
         $roleWithPerm = $result->firstWhere('role.id', $role->id);
@@ -120,7 +123,7 @@ class PermissionServiceTest extends TestCase
             'LedgerDefine'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
     }
 
     #[Test]
@@ -151,7 +154,7 @@ class PermissionServiceTest extends TestCase
             'Ledger'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
     }
 
     #[Test]
@@ -162,7 +165,7 @@ class PermissionServiceTest extends TestCase
             'InvalidType'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertCount(0, $result);
     }
 
@@ -196,7 +199,7 @@ class PermissionServiceTest extends TestCase
             'Folder'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
     }
 
     #[Test]
@@ -209,7 +212,7 @@ class PermissionServiceTest extends TestCase
             'Folder'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertCount(0, $result);
     }
 
@@ -235,7 +238,7 @@ class PermissionServiceTest extends TestCase
             'Folder'
         );
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
     }
 
     #[Test]
@@ -264,7 +267,7 @@ class PermissionServiceTest extends TestCase
             'John'
         );
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
     }
 
     #[Test]
@@ -302,7 +305,7 @@ class PermissionServiceTest extends TestCase
             $role1->id
         );
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
     }
 
     #[Test]
@@ -331,7 +334,7 @@ class PermissionServiceTest extends TestCase
             FolderPermissionType::WRITE->value
         );
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
     }
 
     #[Test]
@@ -342,7 +345,7 @@ class PermissionServiceTest extends TestCase
             'Folder'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertCount(0, $result);
     }
 
@@ -354,7 +357,7 @@ class PermissionServiceTest extends TestCase
             'LedgerDefine'
         );
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertCount(0, $result);
     }
 
@@ -366,7 +369,7 @@ class PermissionServiceTest extends TestCase
         $folder1Id = $folder1->id;
 
         // 別のテナントを作成して切り替え
-        $newTenant = \App\Models\Tenant::factory()->create();
+        $newTenant = Tenant::factory()->create();
         tenancy()->initialize($newTenant);
 
         // Act & Assert: 別テナントのフォルダは見えない
@@ -395,7 +398,7 @@ class PermissionServiceTest extends TestCase
             'Folder'
         );
 
-        $this->assertInstanceOf(\Illuminate\Contracts\Pagination\LengthAwarePaginator::class, $result);
+        $this->assertInstanceOf(LengthAwarePaginator::class, $result);
         // getAccessUsersが正常に動作し、ページネーションが返されることを確認
         $this->assertGreaterThanOrEqual(0, $result->total());
         // pageName が permission_user_page であること（他コンポーネントとの衝突回避）

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\Show;
@@ -104,7 +105,7 @@ class ShowAdditionalTest extends TestCase
         $this->actingAs($this->user);
 
         $file = AttachedFile::factory()->for($this->ledger)->create([
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED,
+            'status' => AttachedFileStatus::COMPLETED,
         ]);
 
         $component = Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
@@ -282,7 +283,6 @@ class ShowAdditionalTest extends TestCase
         $component->assertSet('displayLevel', 1);
         $component->assertDispatched('displayLevelUpdated', displayLevel: 1);
     }
-
 
     // ===================================================================
     // updatedShowChanges

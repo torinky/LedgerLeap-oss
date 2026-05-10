@@ -91,4 +91,3 @@ final class RefreshDatabaseWithTenantCiDetectionTest extends TestCase
         }
     }
 }
-

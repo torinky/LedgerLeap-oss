@@ -89,4 +89,3 @@ class GetFoldersToolTest extends TestCase
         $this->assertSame([], $data['folders']);
     }
 }
-

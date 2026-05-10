@@ -2,15 +2,18 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\LedgerService;
 use App\Services\SynonymService;
 use Laravel\Mcp\Request;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -49,12 +52,12 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         // Grant permission to the user for the created folder
-        $role = \Spatie\Permission\Models\Role::create(['name' => 'Tester']);
+        $role = Role::create(['name' => 'Tester']);
         $this->user->assignRole($role);
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
@@ -89,18 +92,18 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
     }
 
     #[Test]
-    public function testSynonymExpansionSearchesInvoiceContent()
+    public function test_synonym_expansion_searches_invoice_content()
     {
         // Arrange
         $folder = Folder::factory()->create(['title' => 'Finance Folder']);
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
-        $role = \Spatie\Permission\Models\Role::create(['name' => 'Finance Reader']);
+        $role = Role::create(['name' => 'Finance Reader']);
         $this->user->assignRole($role);
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
@@ -172,12 +175,12 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
         ]);
 
         // 権限を持つユーザーを作成
-        $role = \Spatie\Permission\Models\Role::create(['name' => 'Reader']);
+        $role = Role::create(['name' => 'Reader']);
         $this->user->assignRole($role);
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $readableFolder->id,
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);

@@ -98,4 +98,3 @@ class GetSearchTermsToolTest extends TestCase
         $this->assertSame('インボイス', $data['suggested_query']);
     }
 }
-

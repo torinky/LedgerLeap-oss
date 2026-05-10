@@ -12,17 +12,18 @@ use Filament\Forms\Components\Toggle;
 use Filament\Forms\Concerns\InteractsWithForms;
 use Filament\Forms\Contracts\HasForms;
 use Filament\Notifications\Notification;
+use Filament\Pages\Page;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Icon;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\View;
+use Filament\Schemas\Schema;
 use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
-use Filament\Schemas\Components\Icon;
-use Filament\Schemas\Components\Grid;
-use Filament\Schemas\Components\Section;
-use Filament\Schemas\Components\View;
-use Filament\Schemas\Components\Utilities\Get;
-use Filament\Schemas\Schema;
 
-class AdminAnnouncementBannerSettings extends \Filament\Pages\Page implements HasForms
+class AdminAnnouncementBannerSettings extends Page implements HasForms
 {
     use InteractsWithForms;
 
@@ -208,7 +209,7 @@ class AdminAnnouncementBannerSettings extends \Filament\Pages\Page implements Ha
             (string) $this->previewResetNonce,
         ];
 
-        return 'ledgerleap.admin_announcement_banner.preview:' . sha1(implode('|', $parts));
+        return 'ledgerleap.admin_announcement_banner.preview:'.sha1(implode('|', $parts));
     }
 
     public function levelOptions(): array

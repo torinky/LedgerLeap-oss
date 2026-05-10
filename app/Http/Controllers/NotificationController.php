@@ -17,8 +17,7 @@ class NotificationController extends Controller
         Request $request,
         NotificationService $notificationService,
         AdminAnnouncementService $adminAnnouncementService
-    ): View
-    {
+    ): View {
         $user = Auth::user();
         $adminAnnouncements = $adminAnnouncementService->notificationCenterAnnouncements();
         $initialNotificationCount = ($user ? $notificationService->getUnreadNotificationCountForUser($user) : 0)

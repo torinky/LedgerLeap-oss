@@ -2,6 +2,7 @@
 
 namespace Tests\Traits;
 
+use App\Models\Tenant;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -87,7 +88,7 @@ trait DatabaseMigrationsOnce
                     $this->artisan('migrate', ['--force' => true]);
                     $this->app[Kernel::class]->setArtisan(null);
                     // テナント再作成後に tenants:migrate も実行
-                    $newTenant = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+                    $newTenant = Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
                     $this->artisan('tenants:migrate', [
                         '--tenants' => [$newTenant->id],
                         '--force' => true,
@@ -97,15 +98,15 @@ trait DatabaseMigrationsOnce
                 } else {
                     $candidates = ['ci-test-tenant'];
                     foreach ($candidates as $id) {
-                        $existing = \App\Models\Tenant::find($id);
+                        $existing = Tenant::find($id);
                         if ($existing) {
                             static::$sharedTenantForMigrationsOnce = $existing;
                             break;
                         }
                     }
                     if (! static::$sharedTenantForMigrationsOnce) {
-                        static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::first()
-                            ?? \App\Models\Tenant::factory()->create();
+                        static::$sharedTenantForMigrationsOnce = Tenant::first()
+                            ?? Tenant::factory()->create();
                     }
                 }
             } else {
@@ -114,7 +115,7 @@ trait DatabaseMigrationsOnce
                 $this->app[Kernel::class]->setArtisan(null);
 
                 if (! static::$sharedTenantForMigrationsOnce) {
-                    static::$sharedTenantForMigrationsOnce = \App\Models\Tenant::factory()->create();
+                    static::$sharedTenantForMigrationsOnce = Tenant::factory()->create();
                 }
                 $this->artisan('tenants:migrate', [
                     '--tenants' => [static::$sharedTenantForMigrationsOnce->id],

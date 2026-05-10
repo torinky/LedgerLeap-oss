@@ -8,6 +8,7 @@ use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\RollbackService;
 use App\Services\UserService;
@@ -15,7 +16,7 @@ use Spatie\Activitylog\Models\Activity;
 
 beforeEach(function () {
     // Manually initialize tenancy
-    $this->tenant = \App\Models\Tenant::firstOrCreate(['id' => 'test-tenant']);
+    $this->tenant = Tenant::firstOrCreate(['id' => 'test-tenant']);
     $this->tenant->domains()->firstOrCreate(['domain' => 'test.localhost']);
     tenancy()->initialize($this->tenant);
 

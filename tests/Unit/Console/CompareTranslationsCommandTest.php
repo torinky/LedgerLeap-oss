@@ -4,6 +4,7 @@ namespace Tests\Unit\Console;
 
 use App\Console\Commands\CompareTranslations;
 use Illuminate\Foundation\Testing\WithFaker;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\File;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -29,11 +30,11 @@ class CompareTranslationsCommandTest extends TestCase
         $this->originalLangPath = $this->app->langPath();
 
         // テスト用の一時ディレクトリを作成
-        $this->tempLangPath = storage_path('framework/testing/lang-' . uniqid('', true));
-        File::makeDirectory($this->tempLangPath . '/ja', 0755, true);
+        $this->tempLangPath = storage_path('framework/testing/lang-'.uniqid('', true));
+        File::makeDirectory($this->tempLangPath.'/ja', 0755, true);
 
         // テスト用の ledger.php を作成
-        $this->originalLedgerPath = $this->tempLangPath . '/ja/ledger.php';
+        $this->originalLedgerPath = $this->tempLangPath.'/ja/ledger.php';
         File::put($this->originalLedgerPath, <<<'PHP'
 <?php
 return [
@@ -49,7 +50,7 @@ PHP
         );
 
         // テスト用の ja.json を作成（既存の非ledgerキーを含む）
-        $this->originalJsonPath = $this->tempLangPath . '/ja.json';
+        $this->originalJsonPath = $this->tempLangPath.'/ja.json';
         File::put($this->originalJsonPath, json_encode([
             'laravel-lang.key' => 'Laravelの翻訳',    // 外部ライブラリのキー（保持されるべき）
             'password' => 'パスワード',                 // 外部ライブラリのキー（保持されるべき）
@@ -129,7 +130,7 @@ PHP
         $ledgerPhpArray = require lang_path('ja/ledger.php');
 
         // Arr::dotでフラット化したとき、ネストされたキーがドット区切りになることを確認
-        $flatArray = \Illuminate\Support\Arr::dot($ledgerPhpArray);
+        $flatArray = Arr::dot($ledgerPhpArray);
 
         // 少なくとも1つのKeyが存在することを確認
         $this->assertNotEmpty($flatArray, 'Ledger PHP array should not be empty after being flattened.');
@@ -148,7 +149,7 @@ PHP
     {
         $jsonArray = json_decode(File::get(lang_path('ja.json')), true);
 
-        $nonLedgerKeys = array_filter(array_keys($jsonArray), fn($k) => !str_starts_with($k, 'ledger.'));
+        $nonLedgerKeys = array_filter(array_keys($jsonArray), fn ($k) => ! str_starts_with($k, 'ledger.'));
 
         $this->assertNotEmpty(
             $nonLedgerKeys,
@@ -164,12 +165,12 @@ PHP
     {
         $ledgerPhpArray = require lang_path('ja/ledger.php');
         $flatPhpKeys = array_map(
-            fn($k) => "ledger.{$k}",
-            array_keys(\Illuminate\Support\Arr::dot($ledgerPhpArray))
+            fn ($k) => "ledger.{$k}",
+            array_keys(Arr::dot($ledgerPhpArray))
         );
 
         $jsonArray = json_decode(File::get(lang_path('ja.json')), true);
-        $jsonLedgerKeys = array_values(array_filter(array_keys($jsonArray), fn($k) => str_starts_with($k, 'ledger.')));
+        $jsonLedgerKeys = array_values(array_filter(array_keys($jsonArray), fn ($k) => str_starts_with($k, 'ledger.')));
 
         sort($flatPhpKeys);
         sort($jsonLedgerKeys);

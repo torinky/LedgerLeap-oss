@@ -12,6 +12,7 @@ use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -48,7 +49,7 @@ class LedgerControllerTest extends TestCase
             $this->getTenant()->domains()->create(['domain' => 'localhost']);
         }
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // 権限とロールを定義
         Permission::findOrCreate('view_ledgers', 'web');
@@ -74,7 +75,7 @@ class LedgerControllerTest extends TestCase
         // 台帳定義を作成
         $this->ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $this->writeFolder->id]);
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     #[Test]

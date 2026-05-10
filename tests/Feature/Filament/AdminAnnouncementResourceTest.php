@@ -126,13 +126,13 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function resourceListPageRendersSuccessfully(): void
+    public function resource_list_page_renders_successfully(): void
     {
         $this->get(AdminAnnouncementResource::getUrl('index'))->assertSuccessful();
     }
 
     #[Test]
-    public function createOnlyRoleCanAccessCreateEntryPointAndCannotEditOrDelete(): void
+    public function create_only_role_can_access_create_entry_point_and_cannot_edit_or_delete(): void
     {
         $announcement = $this->makePermissionCheckAnnouncement();
         $this->loginAsRoleWithAnnouncementPermissions('Announcement Creator', ['create_admin_announcements']);
@@ -154,7 +154,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function updateOnlyRoleCanAccessEditEntryPointAndCannotCreateOrDelete(): void
+    public function update_only_role_can_access_edit_entry_point_and_cannot_create_or_delete(): void
     {
         $announcement = $this->makePermissionCheckAnnouncement();
         $this->loginAsRoleWithAnnouncementPermissions('Announcement Editor', ['update_admin_announcements']);
@@ -176,7 +176,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function deleteOnlyRoleCanSeeDeleteActionsAndBulkDeleteButNotCreateOrEdit(): void
+    public function delete_only_role_can_see_delete_actions_and_bulk_delete_but_not_create_or_edit(): void
     {
         $announcement = $this->makePermissionCheckAnnouncement();
         $this->loginAsRoleWithAnnouncementPermissions('Announcement Deleter', ['delete_admin_announcements']);
@@ -197,7 +197,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function listPageShowsExistingAnnouncements(): void
+    public function list_page_shows_existing_announcements(): void
     {
         $published = AdminAnnouncement::query()->forceCreate([
             'title' => '公開中のお知らせ',
@@ -240,7 +240,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function listPageShowsDisplayStatusLabels(): void
+    public function list_page_shows_display_status_labels(): void
     {
         AdminAnnouncement::query()->forceCreate([
             'title' => '公開中のお知らせ',
@@ -285,7 +285,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function listPageShowsStatusIndicatorsAndCanReplicateAnnouncements(): void
+    public function list_page_shows_status_indicators_and_can_replicate_announcements(): void
     {
         $published = AdminAnnouncement::query()->forceCreate([
             'title' => '複製元のお知らせ',
@@ -327,7 +327,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function createPageValidatesRequiredFields(): void
+    public function create_page_validates_required_fields(): void
     {
         Livewire::test(CreateAdminAnnouncement::class)
             ->fillForm([
@@ -350,7 +350,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function createPageValidatesEndsAtIsAfterStartsAt(): void
+    public function create_page_validates_ends_at_is_after_starts_at(): void
     {
         Livewire::test(CreateAdminAnnouncement::class)
             ->fillForm([
@@ -370,7 +370,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function createPageCanPersistDraftToList(): void
+    public function create_page_can_persist_draft_to_list(): void
     {
         Livewire::test(CreateAdminAnnouncement::class)
             ->fillForm([
@@ -400,7 +400,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function editPagePrefillsExistingValues(): void
+    public function edit_page_prefills_existing_values(): void
     {
         $announcement = AdminAnnouncement::query()->forceCreate([
             'title' => '編集対象',
@@ -432,7 +432,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function editPageRendersPreviewSection(): void
+    public function edit_page_renders_preview_section(): void
     {
         $announcement = AdminAnnouncement::query()->forceCreate([
             'title' => 'プレビュー確認',
@@ -458,7 +458,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function editPageCanSaveUpdates(): void
+    public function edit_page_can_save_updates(): void
     {
         $announcement = AdminAnnouncement::query()->forceCreate([
             'title' => '元タイトル',
@@ -495,7 +495,7 @@ class AdminAnnouncementResourceTest extends TestCase
     }
 
     #[Test]
-    public function dashboardLinksWidgetIncludesAnnouncementBannerLink(): void
+    public function dashboard_links_widget_includes_announcement_banner_link(): void
     {
         session()->put('filament_from_tenant_id', $this->tenant->id);
 

@@ -2,15 +2,18 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -37,7 +40,7 @@ class CreateColumnValidationTest extends TestCase
         $this->user->assignRole($role);
         $this->actingAs($this->user);
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     protected function tearDown(): void
@@ -47,10 +50,10 @@ class CreateColumnValidationTest extends TestCase
 
     protected function assignFolderPermission(Folder $folder): void
     {
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => Role::findByName('test-creator-role', 'web')->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }

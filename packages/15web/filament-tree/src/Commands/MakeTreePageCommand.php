@@ -14,11 +14,10 @@ use Illuminate\Filesystem\Filesystem;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Str;
 use InvalidArgumentException;
+use Symfony\Component\Console\Attribute\AsCommand;
 
 use function Laravel\Prompts\select;
 use function Laravel\Prompts\text;
-
-use Symfony\Component\Console\Attribute\AsCommand;
 
 #[AsCommand(name: 'make:filament-tree-page', description: 'Create a new Admin Eloquent tree page class')]
 final class MakeTreePageCommand extends Command
@@ -64,7 +63,7 @@ final class MakeTreePageCommand extends Command
             ->replace('//', '/')
             ->append('.php');
 
-        if (!$this->option('force') && $this->checkForCollision([$path])) {
+        if (! $this->option('force') && $this->checkForCollision([$path])) {
             return self::INVALID;
         }
 
@@ -129,7 +128,7 @@ final class MakeTreePageCommand extends Command
     ): void {
         $stubPath = base_path('stubs/TreePage.stub');
 
-        if (!$this->fileExists($stubPath)) {
+        if (! $this->fileExists($stubPath)) {
             $stubPath = $this->getDefaultStubPath().'/TreePage.stub';
         }
 
@@ -200,7 +199,7 @@ final class MakeTreePageCommand extends Command
 
         $modelClass = $this->parseModel($modelName);
 
-        if (!class_exists($modelClass)) {
+        if (! class_exists($modelClass)) {
             $this->warn("Model '{$modelClass}' not found");
 
             return $placeholder;

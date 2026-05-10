@@ -4,8 +4,11 @@ namespace Tests\Feature\Livewire;
 
 use App\Enums\FolderPermissionType;
 use App\Livewire\TenantSwitcher;
+use App\Models\Folder;
+use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
@@ -33,17 +36,17 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function component_is_visible_to_authenticated_users(): void
     {
-        $tenant = \App\Models\Tenant::create(['id' => 'test-tenant']);
-        $user = \App\Models\User::factory()->create();
-        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $tenant = Tenant::create(['id' => 'test-tenant']);
+        $user = User::factory()->create();
+        $role = Role::factory()->create(['name' => 'test-role']);
         $user->assignRole($role);
 
         $tenant->run(function () use ($role, $user) {
-            $parentFolder = \App\Models\Folder::factory()->create(['title' => 'Parent Folder', 'parent_id' => null]);
-            \App\Models\RoleFolderPermission::create([
+            $parentFolder = Folder::factory()->create(['title' => 'Parent Folder', 'parent_id' => null]);
+            RoleFolderPermission::create([
                 'role_id' => $role->id,
                 'folder_id' => $parentFolder->id,
-                'permission' => \App\Enums\FolderPermissionType::READ->value,
+                'permission' => FolderPermissionType::READ->value,
                 'modifier_id' => $user->id,
             ]);
         });
@@ -59,30 +62,30 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function it_shows_all_tenants_and_distinguishes_membership(): void
     {
-        $user = \App\Models\User::factory()->create();
-        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user = User::factory()->create();
+        $role = Role::factory()->create(['name' => 'test-role']);
         $user->assignRole($role);
 
-        $tenantA = \App\Models\Tenant::create(['id' => 'tenant-a']);
-        $tenantB = \App\Models\Tenant::create(['id' => 'tenant-b']);
-        $tenantC = \App\Models\Tenant::create(['id' => 'tenant-c']);
+        $tenantA = Tenant::create(['id' => 'tenant-a']);
+        $tenantB = Tenant::create(['id' => 'tenant-b']);
+        $tenantC = Tenant::create(['id' => 'tenant-c']);
 
         // tenantAとtenantBにアクセス権を付与
         $tenantA->run(function () use ($role, $user) {
-            $folderA = \App\Models\Folder::factory()->create(['title' => 'Folder A', 'parent_id' => null]);
-            \App\Models\RoleFolderPermission::create([
+            $folderA = Folder::factory()->create(['title' => 'Folder A', 'parent_id' => null]);
+            RoleFolderPermission::create([
                 'role_id' => $role->id,
                 'folder_id' => $folderA->id,
-                'permission' => \App\Enums\FolderPermissionType::READ->value,
+                'permission' => FolderPermissionType::READ->value,
                 'modifier_id' => $user->id,
             ]);
         });
         $tenantB->run(function () use ($role, $user) {
-            $folderB = \App\Models\Folder::factory()->create(['title' => 'Folder B', 'parent_id' => null]);
-            \App\Models\RoleFolderPermission::create([
+            $folderB = Folder::factory()->create(['title' => 'Folder B', 'parent_id' => null]);
+            RoleFolderPermission::create([
                 'role_id' => $role->id,
                 'folder_id' => $folderB->id,
-                'permission' => \App\Enums\FolderPermissionType::READ->value,
+                'permission' => FolderPermissionType::READ->value,
                 'modifier_id' => $user->id,
             ]);
         });
@@ -101,15 +104,15 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function it_shows_folder_hierarchy_for_member_tenants(): void
     {
-        $user = \App\Models\User::factory()->create();
-        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user = User::factory()->create();
+        $role = Role::factory()->create(['name' => 'test-role']);
         $user->assignRole($role);
 
-        $tenant = \App\Models\Tenant::create(['id' => 'member-tenant']);
+        $tenant = Tenant::create(['id' => 'member-tenant']);
 
         $tenant->run(function () use ($role, $user) {
-            $parentFolder = \App\Models\Folder::factory()->create(['title' => 'Parent Folder', 'parent_id' => null]);
-            $childFolder = \App\Models\Folder::factory()->create(['title' => 'Child Folder', 'parent_id' => $parentFolder->id]);
+            $parentFolder = Folder::factory()->create(['title' => 'Parent Folder', 'parent_id' => null]);
+            $childFolder = Folder::factory()->create(['title' => 'Child Folder', 'parent_id' => $parentFolder->id]);
 
             RoleFolderPermission::create([
                 'role_id' => $role->id,
@@ -130,16 +133,16 @@ class TenantSwitcherTest extends TestCase
     #[Test]
     public function links_are_generated_correctly(): void
     {
-        $user = \App\Models\User::factory()->create();
-        $role = \App\Models\Role::factory()->create(['name' => 'test-role']);
+        $user = User::factory()->create();
+        $role = Role::factory()->create(['name' => 'test-role']);
         $user->assignRole($role);
 
-        $tenant = \App\Models\Tenant::create(['id' => 'link-tenant']);
+        $tenant = Tenant::create(['id' => 'link-tenant']);
 
         $folder = null; // Initialize $folder outside the closure
         $tenant->run(function () use ($role, $user, &$folder) {
-            $folder = \App\Models\Folder::factory()->create(['title' => 'Test Folder', 'parent_id' => null]);
-            \App\Models\RoleFolderPermission::create([
+            $folder = Folder::factory()->create(['title' => 'Test Folder', 'parent_id' => null]);
+            RoleFolderPermission::create([
                 'role_id' => $role->id,
                 'folder_id' => $folder->id,
                 'permission' => FolderPermissionType::READ->value,

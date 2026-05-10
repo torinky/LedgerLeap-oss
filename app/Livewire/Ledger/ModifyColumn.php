@@ -53,7 +53,7 @@ class ModifyColumn extends CreateColumn
             // 既に別のテナントで初期化されている場合(管理者が別テナントのデータを編集する場合など)は
             // ここで明示的にコンテキストを切り替える必要がある。
             if ($ledgerRecord && $ledgerRecord->tenant_id !== tenancy()->tenant?->id) {
-                \Illuminate\Support\Facades\Log::info('ModifyColumn: Switching tenant', [
+                Log::info('ModifyColumn: Switching tenant', [
                     'from' => tenancy()->tenant?->id,
                     'to' => $ledgerRecord->tenant_id,
                 ]);
@@ -458,7 +458,7 @@ class ModifyColumn extends CreateColumn
 
                     $fileSize = $currentAttachedFile?->size;
                     if (($fileSize === null || $fileSize <= 0) && ! empty($storagePath)) {
-                        $publicDisk = \Illuminate\Support\Facades\Storage::disk('public');
+                        $publicDisk = Storage::disk('public');
                         if ($publicDisk->exists($storagePath)) {
                             $fileSize = $publicDisk->size($storagePath);
                         }

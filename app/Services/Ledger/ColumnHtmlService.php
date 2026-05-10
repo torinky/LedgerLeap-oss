@@ -62,8 +62,6 @@ class ColumnHtmlService
      */
     private array $attachmentContents;
 
-
-
     public function __construct(
         AutoLinkService $autoLinkService,
         MarkdownRenderer $markdownRenderer,

@@ -26,7 +26,7 @@ class SynonymServiceSearchTermsTest extends TestCase
     }
 
     #[Test]
-    public function getSearchTermsFromWordReturnsTechnicalTerms(): void
+    public function get_search_terms_from_word_returns_technical_terms(): void
     {
         TechnicalTermGroup::create([
             'synonyms' => ['請求', 'インボイス'],
@@ -46,4 +46,3 @@ class SynonymServiceSearchTermsTest extends TestCase
         $this->assertNotContains(['term' => '請求書', 'kind' => 'synonym'], $terms);
     }
 }
-

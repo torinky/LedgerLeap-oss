@@ -454,24 +454,24 @@ class FileInspectorTest extends TestCase
         config(['mock.attachment.enabled' => false]);
 
         $file = AttachedFile::factory()->create([
-            'id'                => 3,
-            'ledger_id'         => $this->ledger->id,
-            'ledger_define_id'  => $this->ledger->ledger_define_id,
-            'filename'          => 'low_id_real_download.pdf',
-            'mime'              => 'application/pdf',
-            'original_mime_type'=> 'application/pdf',
-            'path'              => 'attachments/low_id_real_download.pdf',
-            'size'              => 4096,
-            'status'            => AttachedFileStatus::COMPLETED->value,
-            'tenant_id'         => $this->tenant->id,
+            'id' => 3,
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'low_id_real_download.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => 'attachments/low_id_real_download.pdf',
+            'size' => 4096,
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
         ]);
 
         Gate::before(fn ($user, $ability) => true);
 
         $expectedDownloadUrl = route('file.download', [
-            'tenant'       => $this->tenant->id,
+            'tenant' => $this->tenant->id,
             'attachedFile' => $file->id,
-            'original'     => true,
+            'original' => true,
         ]);
 
         $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
@@ -479,9 +479,9 @@ class FileInspectorTest extends TestCase
             ->assertSet('open', true);
 
         // quick-actions にリアルなルートURLが出力されること
-        $component->assertSeeHtml('href="' . $expectedDownloadUrl . '"');
+        $component->assertSeeHtml('href="'.$expectedDownloadUrl.'"');
         // モック用アンカー（#download-original-3）が出力されないこと
-        $component->assertDontSeeHtml('href="#download-original-' . $file->id . '"');
+        $component->assertDontSeeHtml('href="#download-original-'.$file->id.'"');
     }
 
     #[Test]
@@ -499,11 +499,11 @@ class FileInspectorTest extends TestCase
         // モックファイルは #download-original-10001 のアンカーになること
         $component->assertSeeHtml('href="#download-original-10001"');
         // リアルなルートURLが download href に使われていないこと
-        $component->assertDontSeeHtml('href="' . route('file.download', [
-            'tenant'       => $this->tenant->id,
+        $component->assertDontSeeHtml('href="'.route('file.download', [
+            'tenant' => $this->tenant->id,
             'attachedFile' => 10001,
-            'original'     => true,
-        ]) . '"');
+            'original' => true,
+        ]).'"');
     }
 
     #[Test]

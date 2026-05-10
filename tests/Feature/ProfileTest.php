@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\URL;
 
@@ -7,7 +8,7 @@ use Illuminate\Support\Facades\URL;
 // beforeEachフックで共通のセットアップを行う。
 beforeEach(function () {
     // テナントを作成し、初期化する
-    $tenant = \App\Models\Tenant::factory()->create();
+    $tenant = Tenant::factory()->create();
     tenancy()->initialize($tenant);
 
     // テナントルートのURLを正しく生成するために、URLジェネレータに

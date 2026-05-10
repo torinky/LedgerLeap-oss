@@ -9,6 +9,7 @@ use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Carbon\Carbon;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
@@ -284,7 +285,7 @@ MARKDOWN;
         $deadline = $this->getDeadlineFromContent($ledger);
         if ($deadline) {
             try {
-                $deadlineDate = \Carbon\Carbon::parse($deadline);
+                $deadlineDate = Carbon::parse($deadline);
                 $daysUntilDeadline = now()->diffInDays($deadlineDate, false);
 
                 if ($daysUntilDeadline < 0) {

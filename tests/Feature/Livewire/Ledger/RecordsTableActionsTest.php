@@ -11,7 +11,9 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Contracts\View\View;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\Reactive;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
@@ -219,7 +221,7 @@ class RecordsTableActionsTest extends TestCase
     {
         $reflection = new \ReflectionClass(RecordsTableRow::class);
         $property = $reflection->getProperty('highlightKeyword');
-        $attributes = $property->getAttributes(\Livewire\Attributes\Reactive::class);
+        $attributes = $property->getAttributes(Reactive::class);
 
         $this->assertCount(1, $attributes, 'highlightKeyword must have #[Reactive] attribute');
     }
@@ -278,7 +280,7 @@ class RecordsTableActionsTest extends TestCase
 
         $placeholder = $component->placeholder();
 
-        $this->assertInstanceOf(\Illuminate\Contracts\View\View::class, $placeholder);
+        $this->assertInstanceOf(View::class, $placeholder);
         $html = $placeholder->render();
         $this->assertStringContainsString('loading loading-spinner', $html);
         $this->assertStringContainsString(__('ledger.loading'), $html);

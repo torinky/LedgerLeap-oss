@@ -158,10 +158,11 @@ class ActivityLogFormatterTest extends TestCase
     #[Test]
     public function it_translates_attached_file_subject_display_in_fallback_path()
     {
-        $activity = new Activity();
+        $activity = new Activity;
         $activity->subject_type = AttachedFile::class;
         $activity->subject_id = 18;
-        $activity->setRelation('subject', new class () {
+        $activity->setRelation('subject', new class
+        {
             public int $id = 18;
         });
 

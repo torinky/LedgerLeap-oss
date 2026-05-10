@@ -1,5 +1,8 @@
 <?php
 
+use App\Ldap\OrganizationalUnit;
+use App\Models\User;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -11,7 +14,7 @@ return [
     */
 
     'auth' => [
-        'user_model' => App\Models\User::class,
+        'user_model' => User::class,
 
         'bind_attribute' => 'uid', // OpenLDAP では uid を使用
         'query_attribute' => 'uid',
@@ -37,7 +40,7 @@ return [
 
     'models' => [
         App\Ldap\User::class,
-        App\Ldap\OrganizationalUnit::class,
+        OrganizationalUnit::class,
     ],
 
     /*

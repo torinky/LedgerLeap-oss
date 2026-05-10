@@ -3,6 +3,7 @@
 namespace Tests\Unit\Livewire\Traits;
 
 use App\Livewire\Traits\LogPerformance;
+use App\Services\PerformanceLogBuffer;
 use Illuminate\Support\Facades\Log;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -12,7 +13,7 @@ class LogPerformanceTest extends TestCase
     protected function tearDown(): void
     {
         parent::tearDown();
-        \App\Services\PerformanceLogBuffer::clear();
+        PerformanceLogBuffer::clear();
         \Mockery::close();
     }
 
@@ -37,7 +38,7 @@ class LogPerformanceTest extends TestCase
     }
 
     #[Test]
-    public function testMarksAlwaysOnMetricsAndWarnsWhenThresholdIsExceeded(): void
+    public function test_marks_always_on_metrics_and_warns_when_threshold_is_exceeded(): void
     {
         config([
             'ledgerleap.performance.enabled' => true,
@@ -87,7 +88,7 @@ class LogPerformanceTest extends TestCase
     }
 
     #[Test]
-    public function testSkipsThresholdWarningWhenDurationIsWithinBounds(): void
+    public function test_skips_threshold_warning_when_duration_is_within_bounds(): void
     {
         config([
             'ledgerleap.performance.enabled' => true,
@@ -110,7 +111,7 @@ class LogPerformanceTest extends TestCase
     }
 
     #[Test]
-    public function testTreatsAnEmptyJsonStatsFileAsAnEmptyCollection(): void
+    public function test_treats_an_empty_json_stats_file_as_an_empty_collection(): void
     {
         config([
             'ledgerleap.performance.enabled' => true,
@@ -121,7 +122,7 @@ class LogPerformanceTest extends TestCase
         $statsFile = storage_path('logs/performance_stats.json');
         $existingContents = file_exists($statsFile) ? file_get_contents($statsFile) : null;
         file_put_contents($statsFile, '');
-        \App\Services\PerformanceLogBuffer::clear();
+        PerformanceLogBuffer::clear();
 
         Log::shouldReceive('info')->once();
         Log::shouldNotReceive('channel');
@@ -132,7 +133,7 @@ class LogPerformanceTest extends TestCase
             $stub->record('ledger_records_query_paginate_ms', 10);
 
             // テスト環境では middleware の terminate() が自動実行されないため手動フラッシュ
-            \App\Services\PerformanceLogBuffer::flush();
+            PerformanceLogBuffer::flush();
 
             $stats = json_decode(file_get_contents($statsFile), true);
             $this->assertIsArray($stats);
@@ -147,4 +148,3 @@ class LogPerformanceTest extends TestCase
         }
     }
 }
-

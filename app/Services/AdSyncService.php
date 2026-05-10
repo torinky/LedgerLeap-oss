@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
+use LdapRecord\Models\Model;
 
 class AdSyncService
 {
@@ -100,7 +101,7 @@ class AdSyncService
      * LDAPユーザーの属性に基づいて、既存の組織を検索します。
      * 組織の作成や更新は行いません。
      */
-    public function findMatchingOrganization(\LdapRecord\Models\Model $ldapUser): ?Organization
+    public function findMatchingOrganization(Model $ldapUser): ?Organization
     {
         $this->hierarchyAttributes = config('ldap_sync.hierarchy_attributes', []);
         $parentOrg = null;
@@ -121,8 +122,8 @@ class AdSyncService
             $codeValue = $ldapUser->getFirstAttribute($codeAttributeName);
             $nameValue = $ldapUser->getFirstAttribute($nameAttributeName);
 
-            \Illuminate\Support\Facades\Log::info("findMatchingOrganization: Attr: {$codeAttributeName}, Value: {$codeValue}");
-            \Illuminate\Support\Facades\Log::info('Existing Orgs: '.\App\Models\Organization::all()->pluck('org_id', 'name'));
+            Log::info("findMatchingOrganization: Attr: {$codeAttributeName}, Value: {$codeValue}");
+            Log::info('Existing Orgs: '.Organization::all()->pluck('org_id', 'name'));
 
             if (empty($nameValue)) {
                 break;

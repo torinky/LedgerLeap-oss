@@ -4,11 +4,14 @@ namespace App\Filament\Resources\Synonym;
 
 use App\Filament\Resources\Synonym\TechnicalTermGroupResource\Pages;
 use App\Models\Synonym\TechnicalTermGroup;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Repeater;
-use Filament\Schemas\Components\Section;
 use Filament\Forms\Components\TextInput;
-use Filament\Schemas\Schema;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -56,11 +59,11 @@ class TechnicalTermGroupResource extends Resource
             ->searchable() // 検索機能を有効化する場合（オプション）
             ->filters([])
             ->actions([
-                \Filament\Actions\EditAction::make(),
+                EditAction::make(),
             ])
             ->bulkActions([
-                \Filament\Actions\BulkActionGroup::make([
-                    \Filament\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

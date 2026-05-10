@@ -3,6 +3,7 @@
 namespace App\Console\Commands\Ledger;
 
 use App\Models\Ledger;
+use App\Models\Tenant;
 use Illuminate\Console\Command;
 
 class RepairJsonColumns extends Command
@@ -32,9 +33,9 @@ class RepairJsonColumns extends Command
         $dryRun = $this->option('dry-run');
 
         if ($tenantId) {
-            $tenants = [\App\Models\Tenant::find($tenantId)];
+            $tenants = [Tenant::find($tenantId)];
         } else {
-            $tenants = \App\Models\Tenant::all();
+            $tenants = Tenant::all();
         }
 
         foreach ($tenants as $tenant) {

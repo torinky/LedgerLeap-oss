@@ -7,6 +7,7 @@ use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Services\Ledger\RelatedLedgerService;
 use App\Services\LedgerService;
+use App\Services\SynonymService;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -14,7 +15,7 @@ use Tests\TestCase;
 class McpToolNameConventionTest extends TestCase
 {
     #[Test]
-    public function searchLedgersToolUsesTheDefaultKebabCasePublicName(): void
+    public function search_ledgers_tool_uses_the_default_kebab_case_public_name(): void
     {
         $tool = new SearchLedgersTool(Mockery::mock(LedgerService::class));
 
@@ -22,7 +23,7 @@ class McpToolNameConventionTest extends TestCase
     }
 
     #[Test]
-    public function getRelatedLedgersToolUsesTheDefaultKebabCasePublicName(): void
+    public function get_related_ledgers_tool_uses_the_default_kebab_case_public_name(): void
     {
         $tool = new GetRelatedLedgersTool(Mockery::mock(RelatedLedgerService::class));
 
@@ -30,9 +31,9 @@ class McpToolNameConventionTest extends TestCase
     }
 
     #[Test]
-    public function getSearchTermsToolUsesTheDefaultKebabCasePublicName(): void
+    public function get_search_terms_tool_uses_the_default_kebab_case_public_name(): void
     {
-        $tool = new GetSearchTermsTool(Mockery::mock(\App\Services\SynonymService::class));
+        $tool = new GetSearchTermsTool(Mockery::mock(SynonymService::class));
 
         $this->assertSame('get-search-terms-tool', $tool->toArray()['name']);
     }

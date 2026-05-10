@@ -5,6 +5,7 @@ namespace App\Livewire\Ledger;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Database\Eloquent\Collection;
@@ -56,7 +57,7 @@ class Show extends BaseLivewireComponent
 
     public ?LedgerDiff $comparisonTargetDiffModel = null;
 
-    /** @var array<int, \App\Models\Folder> */
+    /** @var array<int, Folder> */
     public array $breadcrumbs = [];
 
     public function isComparingWithPrevious(): bool
@@ -136,7 +137,7 @@ class Show extends BaseLivewireComponent
         // ── パンくずリストの取得 ──────────────────────────────────────
         $this->breadcrumbs = [];
         if ($this->ledgerRecord->define && $this->ledgerRecord->define->folder_id) {
-            $folder = \App\Models\Folder::with('ancestors')->find($this->ledgerRecord->define->folder_id);
+            $folder = Folder::with('ancestors')->find($this->ledgerRecord->define->folder_id);
             if ($folder) {
                 $this->breadcrumbs = $folder->ancestors->all();
                 $this->breadcrumbs[] = $folder;

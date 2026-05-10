@@ -4,7 +4,6 @@ namespace Tests\Unit\Services\Ledger;
 
 use App\Services\Ledger\RecordsGroupingService;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;

@@ -13,8 +13,8 @@ use App\Mcp\Tools\GetLedgerDefinesTool;
 use App\Mcp\Tools\GetLedgerDetailTool;
 use App\Mcp\Tools\GetLedgerStatsTool;
 use App\Mcp\Tools\GetPendingApprovalsTool;
-use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetRelatedLedgersTool;
+use App\Mcp\Tools\GetSearchTermsTool;
 use App\Mcp\Tools\GetUserActivityStatsTool;
 use App\Mcp\Tools\GetWorkflowHistoryTool;
 use App\Mcp\Tools\SearchLedgersTool;
@@ -25,9 +25,11 @@ use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use App\Services\Ai\BootstrapManifestService;
 use App\Services\Ai\CapabilityManifestRepository;
+use App\Services\AnalyticsService;
 use App\Services\Ledger\RelatedLedgerService;
 use App\Services\LedgerService;
 use App\Services\SynonymService;
+use App\Services\WorkflowService;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\Sanctum;
 use Mockery;
@@ -281,9 +283,9 @@ class McpToolsAuthenticationTest extends TestCase
             new GetWorkflowHistoryTool,
             new ClaimWorkflowTaskTool,
             new GetActivityLogTool,
-            new GetLedgerStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
-            new GetUserActivityStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
-            new GetFolderStatsTool(Mockery::mock(\App\Services\AnalyticsService::class)),
+            new GetLedgerStatsTool(Mockery::mock(AnalyticsService::class)),
+            new GetUserActivityStatsTool(Mockery::mock(AnalyticsService::class)),
+            new GetFolderStatsTool(Mockery::mock(AnalyticsService::class)),
             new UpdateLedgerTool(Mockery::mock(LedgerService::class)),
         ];
 
@@ -295,11 +297,11 @@ class McpToolsAuthenticationTest extends TestCase
             } elseif ($tool instanceof GetLedgerDefinesTool) {
                 $response = $tool->handle($request, Mockery::mock(WritableFolderRepository::class));
             } elseif ($tool instanceof GetPendingApprovalsTool) {
-                $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
+                $response = $tool->handle($request, Mockery::mock(WorkflowService::class));
             } elseif ($tool instanceof ExecuteApprovalTool) {
-                $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
+                $response = $tool->handle($request, Mockery::mock(WorkflowService::class));
             } elseif ($tool instanceof ClaimWorkflowTaskTool) {
-                $response = $tool->handle($request, Mockery::mock(\App\Services\WorkflowService::class));
+                $response = $tool->handle($request, Mockery::mock(WorkflowService::class));
             } else {
                 $response = $tool->handle($request);
             }

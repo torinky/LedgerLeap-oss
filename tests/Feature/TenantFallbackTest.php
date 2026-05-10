@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use PHPUnit\Framework\Attributes\Test;
+use Stancl\Tenancy\Middleware\InitializeTenancyByPath;
 use Tests\TestCase;
 
 class TenantFallbackTest extends TestCase
@@ -16,7 +17,7 @@ class TenantFallbackTest extends TestCase
     public function it_redirects_to_login_when_route_is_missing_tenant_parameter(): void
     {
         // このテストのためだけに、意図的に不正なテナントルートを定義する
-        Route::middleware(['web', \Stancl\Tenancy\Middleware\InitializeTenancyByPath::class])
+        Route::middleware(['web', InitializeTenancyByPath::class])
             ->get('/{dummy_param}/test-fallback', function () {
                 return 'You should not see this.';
             });

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Livewire\Common;
 
-use App\Livewire\Common\ActivityHistoryDisplay;
 use App\Helpers\ActivityLogFormatter;
+use App\Livewire\Common\ActivityHistoryDisplay;
 use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;

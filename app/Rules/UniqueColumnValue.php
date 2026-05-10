@@ -2,10 +2,12 @@
 
 namespace App\Rules;
 
+use App\Models\Ledger;
 use App\Traits\MroongaSearchableColumn;
 use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Translation\PotentiallyTranslatedString;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\Rules\Unique;
 
 class UniqueColumnValue implements ValidationRule
@@ -46,7 +48,7 @@ class UniqueColumnValue implements ValidationRule
      * 2. 絞り込まれた候補レコードに対し、PHP側でcontentカラムの値を厳密に比較します。
      *    JSONデコードされた値と入力値を `===` で比較し、型まで含めた完全一致を検証します。
      *
-     * @param  \Closure(string): PotentiallyTranslatedString  $fail
+     * @param  Closure(string): PotentiallyTranslatedString  $fail
      */
     public function validate(string $attribute, mixed $value, Closure $fail): void
     {
@@ -89,7 +91,7 @@ class UniqueColumnValue implements ValidationRule
      */
     public function toLaravelUniqueRule(): Unique
     {
-        $rule = \Illuminate\Validation\Rule::unique('ledgers', "content->{$this->columnId}")->where('tenant_id', tenant('id'))
+        $rule = Rule::unique('ledgers', "content->{$this->columnId}")->where('tenant_id', tenant('id'))
             ->where('ledger_define_id', $this->ledgerDefineId);
 
         if (! is_null($this->ignoreLedgerId)) {
@@ -97,7 +99,7 @@ class UniqueColumnValue implements ValidationRule
         }
 
         // ソフトデリートを考慮している場合は null 条件を追加
-        if (in_array('Illuminate\\Database\\Eloquent\\SoftDeletes', class_uses_recursive(\App\Models\Ledger::class), true)) {
+        if (in_array('Illuminate\\Database\\Eloquent\\SoftDeletes', class_uses_recursive(Ledger::class), true)) {
             $rule = $rule->whereNull('deleted_at');
         }
 

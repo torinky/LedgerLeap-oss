@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Ledger;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LedgerDefine\CreateRequest;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -44,7 +45,7 @@ class CreateController extends Controller
         // ── パンくずリストの取得 ──────────────────────────────────────
         $breadcrumbs = [];
         if ($ledgerDefine && $ledgerDefine->folder_id) {
-            $folder = \App\Models\Folder::with('ancestors')->find($ledgerDefine->folder_id);
+            $folder = Folder::with('ancestors')->find($ledgerDefine->folder_id);
             if ($folder) {
                 $breadcrumbs = $folder->ancestors->all();
                 $breadcrumbs[] = $folder;

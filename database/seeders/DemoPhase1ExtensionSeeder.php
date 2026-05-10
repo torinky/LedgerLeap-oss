@@ -12,9 +12,11 @@ use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\Tag;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 
 /**
  * Demo Phase 1 Extension Seeder
@@ -87,7 +89,7 @@ class DemoPhase1ExtensionSeeder extends Seeder
 
     private function initializeTenant(): void
     {
-        $this->tenant = \App\Models\Tenant::where('id', 'demo-tenant')->first();
+        $this->tenant = Tenant::where('id', 'demo-tenant')->first();
 
         if (! $this->tenant) {
             $this->command->error('   ✗ Tenant "demo-tenant" not found. Please run DemoMinimalSeeder first.');
@@ -108,7 +110,7 @@ class DemoPhase1ExtensionSeeder extends Seeder
 
         foreach ($orgData as $data) {
             // org_idを生成（UUIDまたはuniqid）
-            $data['org_id'] = (string) \Illuminate\Support\Str::uuid();
+            $data['org_id'] = (string) Str::uuid();
 
             $org = Organization::firstOrCreate(
                 ['name' => $data['name']],

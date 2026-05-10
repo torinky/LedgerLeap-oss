@@ -9,6 +9,8 @@ use App\Models\LedgerDefine;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
+use Maatwebsite\Excel\Events\AfterImport;
+use Maatwebsite\Excel\Events\BeforeImport;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -221,8 +223,8 @@ class LedgerImportTest extends TestCase
         $import = new LedgerImport($this->ledgerDefine);
         $events = $import->registerEvents();
 
-        $this->assertArrayHasKey(\Maatwebsite\Excel\Events\BeforeImport::class, $events);
-        $this->assertArrayHasKey(\Maatwebsite\Excel\Events\AfterImport::class, $events);
+        $this->assertArrayHasKey(BeforeImport::class, $events);
+        $this->assertArrayHasKey(AfterImport::class, $events);
     }
 
     // ================================================================

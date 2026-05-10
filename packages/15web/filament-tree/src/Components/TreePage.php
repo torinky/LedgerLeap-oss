@@ -63,13 +63,13 @@ abstract class TreePage extends Page
 
         $concerns = class_uses($modelClass);
 
-        if (!\in_array(NodeTrait::class, $concerns, true)) {
+        if (! \in_array(NodeTrait::class, $concerns, true)) {
             throw new InvalidModel(
                 \sprintf('Model should use %s', NodeTrait::class),
             );
         }
 
-        if (!\in_array(InteractsWithTree::class, $concerns, true)) {
+        if (! \in_array(InteractsWithTree::class, $concerns, true)) {
             throw new InvalidModel(
                 \sprintf('Model should use %s', InteractsWithTree::class),
             );

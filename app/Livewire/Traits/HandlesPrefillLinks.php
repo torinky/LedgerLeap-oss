@@ -2,8 +2,12 @@
 
 namespace App\Livewire\Traits;
 
+use App\Models\ColumnTypes\UserNameType;
 use App\Services\QrCodeDownloadFileNameService;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
+use Livewire\Attributes\On;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 use Throwable;
 
 trait HandlesPrefillLinks
@@ -37,7 +41,7 @@ trait HandlesPrefillLinks
     /**
      * 事前入力リンクを生成
      */
-    #[\Livewire\Attributes\On('open-prefill-modal')]
+    #[On('open-prefill-modal')]
     public function generatePrefillLink(): void
     {
         $params = [];
@@ -236,9 +240,9 @@ trait HandlesPrefillLinks
     {
         return match ($column->type) {
             'user_name' => method_exists($column, 'getInputType')
-                    && $column->getInputType() instanceof \App\Models\ColumnTypes\UserNameType
+                    && $column->getInputType() instanceof UserNameType
                 ? $column->getInputType()->generateValue(
-                    \Illuminate\Support\Facades\Auth::user()
+                    Auth::user()
                 )
                 : '',
             'YMD' => now()->format('Y-m-d'),
@@ -281,7 +285,7 @@ trait HandlesPrefillLinks
         }
 
         try {
-            return \SimpleSoftwareIO\QrCode\Facades\QrCode::size(200)
+            return QrCode::size(200)
                 ->margin(1)
                 ->generate($this->generatedPrefillURL);
         } catch (Throwable $e) {

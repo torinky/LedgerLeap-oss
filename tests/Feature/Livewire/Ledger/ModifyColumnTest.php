@@ -3,11 +3,16 @@
 namespace Tests\Feature\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
+use App\Enums\FolderPermissionType;
+use App\Helpers\AttachedFilePathHelper;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -15,6 +20,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -42,9 +48,9 @@ class ModifyColumnTest extends TestCase
         $this->actingAs($this->user);
 
         // 権限設定
-        $role = \App\Models\Role::firstOrCreate(['name' => 'test-editor-role', 'guard_name' => 'web']);
-        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']));
-        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update_ledgers', 'guard_name' => 'web']));
+        $role = Role::firstOrCreate(['name' => 'test-editor-role', 'guard_name' => 'web']);
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']));
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => 'update_ledgers', 'guard_name' => 'web']));
         $this->user->assignRole($role);
 
         // ファイルカラムを持つ台帳定義を作成
@@ -68,22 +74,22 @@ class ModifyColumnTest extends TestCase
 
         // フォルダ権限設定
         if ($this->ledgerDefine->folder) {
-            \App\Models\RoleFolderPermission::create([
+            RoleFolderPermission::create([
                 'role_id' => $role->id,
                 'folder_id' => $this->ledgerDefine->folder_id,
-                'permission' => \App\Enums\FolderPermissionType::WRITE,
+                'permission' => FolderPermissionType::WRITE,
                 'modifier_id' => $this->user->id,
             ]);
         }
     }
 
-    protected function assignFolderPermission(\App\Models\Folder $folder): void
+    protected function assignFolderPermission(Folder $folder): void
     {
-        $role = \App\Models\Role::findByName('test-editor-role', 'web');
-        \App\Models\RoleFolderPermission::create([
+        $role = Role::findByName('test-editor-role', 'web');
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }
@@ -101,7 +107,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
         $expectedSize = Storage::disk('public')->size($path);
 
@@ -176,7 +182,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーPDFファイルを作成
         $dummyFile = UploadedFile::fake()->create($originalFilename, 100, 'application/pdf');
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 添付ファイル情報を持つLedgerレコードを作成
@@ -260,7 +266,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($multiColumnDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($multiColumnDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 複数のカラムに対応するcontentを持つLedgerレコードを作成
@@ -341,7 +347,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($sparseColumnDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($sparseColumnDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 疎なcontentを持つLedgerレコードを作成
@@ -571,7 +577,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミー画像ファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 添付ファイル情報を持つLedgerレコードを作成
@@ -694,7 +700,7 @@ class ModifyColumnTest extends TestCase
         $contentArray = [];
         foreach ($documentTypes as $index => $docType) {
             $dummyFile = UploadedFile::fake()->create($docType['basename'], 100, $docType['mime']);
-            $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']);
+            $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']);
             Storage::disk('public')->put($path, $dummyFile->get());
 
             $contentArray[$docType['basename']] = $docType['basename'];
@@ -716,7 +722,7 @@ class ModifyColumnTest extends TestCase
                 'hashedbasename' => $docType['basename'],
                 'filename' => $docType['basename'],
                 'column_id' => 0,
-                'path' => \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']),
+                'path' => AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']),
                 'mime' => $docType['mime'],
                 'tenant_id' => $this->tenant->id,
             ]);

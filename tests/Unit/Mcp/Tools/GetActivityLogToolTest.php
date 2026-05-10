@@ -8,6 +8,8 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use Carbon\Carbon;
+use Laravel\Mcp\Request;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -45,7 +47,7 @@ class GetActivityLogToolTest extends TestCase
         putenv('MCP_AUTH_TOKEN=');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([])
+            new Request([])
         );
 
         $this->assertTrue($response->isError());
@@ -56,7 +58,7 @@ class GetActivityLogToolTest extends TestCase
         // 既存のアクティビティログ（ユーザー作成等）は存在する可能性があるが、
         // 存在しないledger_idでフィルタすれば空になる
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'format' => 'summary',
                 'ledger_id' => 999999, // 存在しないID
             ])
@@ -80,7 +82,7 @@ class GetActivityLogToolTest extends TestCase
             ->log('test_action');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'format' => 'raw',
                 'limit' => 10,
             ])
@@ -123,7 +125,7 @@ class GetActivityLogToolTest extends TestCase
             ->log('ledger_created');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
             ])
         );
@@ -154,7 +156,7 @@ class GetActivityLogToolTest extends TestCase
             ->log('user2_action');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'user_id' => $this->user->id,
             ])
         );
@@ -179,7 +181,7 @@ class GetActivityLogToolTest extends TestCase
         }
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'limit' => 3,
             ])
         );
@@ -199,7 +201,7 @@ class GetActivityLogToolTest extends TestCase
             ->log('test_action');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'limit' => 1,  // 最新の1件だけ取得
             ])
         );
@@ -223,7 +225,7 @@ class GetActivityLogToolTest extends TestCase
     public function test_uses_translation_keys_for_display_fields(): void
     {
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'format' => 'summary',
                 'ledger_id' => 999999, // 存在しないIDでフィルタして空にする
             ])
@@ -262,7 +264,7 @@ class GetActivityLogToolTest extends TestCase
             ->log('test_updated');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'event_type' => 'created',
             ])
         );
@@ -295,7 +297,7 @@ class GetActivityLogToolTest extends TestCase
             ->log('today_action');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'start_date' => now()->startOfDay()->toDateString(),
                 'end_date' => now()->endOfDay()->toDateString(),
             ])
@@ -307,7 +309,7 @@ class GetActivityLogToolTest extends TestCase
         // 今日のアクティビティのみ取得されることを確認
         $this->assertGreaterThan(0, count($content['activities']));
         foreach ($content['activities'] as $activity) {
-            $activityDate = \Carbon\Carbon::parse($activity['created_at'])->toDateString();
+            $activityDate = Carbon::parse($activity['created_at'])->toDateString();
             $this->assertEquals(now()->toDateString(), $activityDate);
         }
     }
