@@ -273,7 +273,7 @@ class LedgerExportTest extends TestCase
                 'filename' => $filename,
             ]))
             ->assertOk()
-            ->assertHeader('content-disposition', 'attachment; filename="'.$filename.'"');
+            ->assertHeader('content-disposition', 'attachment; filename='.$this->ledgerDefine->title.'.csv');
     }
 
     public function test_download_export_via_controller_returns_403_for_unauthorized_user(): void

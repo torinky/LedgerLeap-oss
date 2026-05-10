@@ -40,12 +40,13 @@ class LedgerExportDownloadController extends Controller
             abort(404, 'File Not Found');
         }
 
-        $headers = ['Content-Disposition' => 'attachment; filename="'.$filename.'"'];
+        $downloadName = $ledgerDefine->title.'.csv';
 
         Log::info('[LedgerExportDownloadController] Downloading file.', [
-            'filename' => $filename,
+            'storage_filename' => $filename,
+            'download_name' => $downloadName,
         ]);
 
-        return Storage::disk('public')->download($filename, $filename, $headers);
+        return Storage::disk('public')->download($filename, $downloadName);
     }
 }
