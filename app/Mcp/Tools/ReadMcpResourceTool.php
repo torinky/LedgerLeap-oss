@@ -19,6 +19,7 @@ class ReadMcpResourceTool extends Tool
         Resolve a LedgerLeap MCP resource URI into a normalized envelope.
 
         Use this tool when a client cannot call standard `resources/read` directly.
+        The caller must still use an authenticated MCP session (for example by setting `MCP_AUTH_TOKEN` on the client side or by sending a bearer token supported by the transport).
 
         Supported resource URIs:
         - `ledgerleap://bootstrap/{client}`
@@ -33,6 +34,11 @@ class ReadMcpResourceTool extends Tool
         - `available_formats`
         - `payloads`
         - `access_guide`
+
+        Attachment envelopes expose `delivery_options` so callers can choose the main method that fits their runtime:
+        - `delivery_options.inline_base64` for LLM / image tools that want inline bytes
+        - `delivery_options.download_url` for clients that prefer to fetch and save the file themselves (for example with `wget` / `curl`)
+        When using `delivery_options.download_url`, keep the same authenticated context and pass the MCP token with the request if your client uses HTTP directly.
 
         Binary blob payloads stay opt-in through `include_blob=true`.
         For attachment envelopes, this can inline `payloads.visual.base64` and suppress `signed_url` so image-capable agents do not need internal HTTP access.

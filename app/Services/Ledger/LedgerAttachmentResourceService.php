@@ -82,6 +82,15 @@ class LedgerAttachmentResourceService
     public function buildAttachmentAccessGuide(Ledger $ledger, AttachedFile $attachedFile, ?string $resourceUri = null): array
     {
         $resourceUri ??= $this->buildResourceUri($ledger, $attachedFile);
+        $mimeType = $this->resolveAttachmentMimeType($this->resolveFileInfo($ledger, $attachedFile), $attachedFile);
+        $routeContext = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
+        $downloadUrl = $routeContext['tenant_id'] !== null && $routeContext['attachment_id'] !== null
+            ? route('file.download', [
+                'tenant' => $routeContext['tenant_id'],
+                'attachedFile' => $routeContext['attachment_id'],
+                'original' => true,
+            ])
+            : null;
 
         return [
             'resource_type' => 'mcp_resource',
@@ -90,22 +99,42 @@ class LedgerAttachmentResourceService
             'instructions' => [
                 'ledgerleap://... は HTTP URL ではなく MCP resource URI です。',
                 'MCP クライアントでは `resources/read` に `resource_uri` をそのまま渡して読み込んでください。例: `resources/read(uri="ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}")`。',
-                'HTTP で取得したい場合は `routes.download` を使ってください。例: `GET {download_url}`。',
+                'MCP トークンはクライアント側で認証済みセッションとして渡してください。HTTP 直接取得のときは `Authorization: Bearer <MCP_TOKEN>` と `Accept: application/json` を付けると、未認証時は HTTP エラーになります。',
+                '実行環境に合わせて主方法を選べます。画像・LLM へ直渡ししたい場合は `delivery_options.inline_base64`、相手先端末でローカル保存したい場合は `delivery_options.download_url` を選んでください。',
+                'base64 で受け取りたい場合は `ReadMcpResourceTool` で `include_blob=true` を指定してください。',
+                'HTTP で取得したい場合は `routes.download` / `delivery_options.download_url` を使ってください。例: `curl -H "Authorization: Bearer <MCP_TOKEN>" -H "Accept: application/json" -L -o output.bin "{download_url}"`。',
                 'HTTP の `routes.download` は認証済みセッション前提です。未認証の場合はログイン HTML にリダイレクトされることがあります。',
             ],
             'fallback_routes' => [
-                'download' => route('file.download', [
-                    'tenant' => $ledger->tenant_id,
-                    'attachedFile' => $attachedFile->id,
-                    'original' => true,
-                ]),
+                'download' => $downloadUrl,
                 'inspector' => route('ledger.show', [
                     'tenant' => $ledger->tenant_id,
                     'ledgerId' => $ledger->id,
                     'file' => $attachedFile->id,
                 ]),
             ],
-            'note' => 'resource_uri は Continue.dev などの MCP クライアント向け、fallback_routes は人間向けの HTTP 導線です。',
+            'delivery_options' => [
+                'inline_base64' => [
+                    'available' => $this->isVisualMimeType($mimeType),
+                    'payload_path' => 'payloads.visual.base64',
+                    'recommended_for' => 'LLM や画像解析ツールへ直接渡したい場合',
+                    'how_to_use' => 'ReadMcpResourceTool で include_blob=true を指定して受け取る',
+                ],
+                'download_url' => [
+                    'available' => $downloadUrl !== null,
+                    'payload_path' => 'routes.download.url',
+                    'url' => $downloadUrl,
+                    'recommended_for' => '相手先端末で wget / curl によりローカル保存したい場合',
+                    'how_to_use' => '相手先端末のコンソールで wget / curl を実行して保存する',
+                    'auth_hint' => 'MCP トークンを渡した認証済みリクエストで取得する',
+                    'request_headers' => [
+                        'Authorization' => 'Bearer <MCP_TOKEN>',
+                        'Accept' => 'application/json',
+                    ],
+                    'browser_behavior' => 'ブラウザからは通常の login redirect を維持する。MCP では Accept: application/json を付けて HTTP エラー応答にする。',
+                ],
+            ],
+            'note' => 'resource_uri は Continue.dev などの MCP クライアント向け、delivery_options は実行環境に応じて主方法を選ぶための案内です。',
         ];
     }
 

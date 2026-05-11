@@ -155,8 +155,10 @@ class McpResourceBridgeService
             $envelope['access_guide']['instructions'] = [
                 $this->mcpResourceUriNote(),
                 'MCP クライアントが `resources/read` に対応していない場合は `ReadMcpResourceTool` に `resource_uri` を渡してください。',
+                'MCP トークンはクライアント側で認証済みセッションとして渡してください。HTTP 直接取得のときは `Authorization: Bearer <MCP_TOKEN>` と `Accept: application/json` を付けると、未認証時は HTTP エラーになります。',
+                '実行環境に合わせて主方法を選べます。画像・LLM へ直渡ししたい場合は `include_blob=true` で `payloads.visual.base64` を使い、相手先端末でローカル保存したい場合は `delivery_options.download_url` を使ってください。',
                 '対応クライアントでは `resources/read(uri="ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}")` をそのまま使えます。',
-                'HTTP で取得したい場合は `routes.download` を使ってください。',
+                'HTTP で取得したい場合は `routes.download` / `delivery_options.download_url` を使ってください。例: `curl -H "Authorization: Bearer <MCP_TOKEN>" -H "Accept: application/json" -L -o output.bin "{download_url}"`。',
             ];
 
             return $this->finalizeEnvelope($envelope, $options);

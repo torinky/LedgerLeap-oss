@@ -128,6 +128,14 @@ class ReadMcpResourceToolTest extends TestCase
         $this->assertTrue($payload['payloads']['structured']['available']);
         $this->assertSame([['page_index' => 1]], $payload['payloads']['structured']['pages']);
         $this->assertSame('ReadMcpResourceTool', $payload['access_guide']['read_via']);
+        $this->assertFalse($payload['access_guide']['delivery_options']['inline_base64']['available']);
+        $this->assertTrue($payload['access_guide']['delivery_options']['download_url']['available']);
+        $this->assertSame('routes.download.url', $payload['access_guide']['delivery_options']['download_url']['payload_path']);
+        $this->assertStringContainsString('MCP トークン', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('Authorization: Bearer <MCP_TOKEN>', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertSame('Bearer <MCP_TOKEN>', $payload['access_guide']['delivery_options']['download_url']['request_headers']['Authorization']);
+        $this->assertSame('application/json', $payload['access_guide']['delivery_options']['download_url']['request_headers']['Accept']);
+        $this->assertStringContainsString('login redirect', $payload['access_guide']['delivery_options']['download_url']['browser_behavior']);
     }
 
     #[Test]
@@ -173,6 +181,14 @@ class ReadMcpResourceToolTest extends TestCase
         $this->assertTrue($payload['payloads']['visual']['available']);
         $this->assertNull($payload['payloads']['visual']['base64']);
         $this->assertNotNull($payload['payloads']['visual']['signed_url']);
+        $this->assertTrue($payload['access_guide']['delivery_options']['inline_base64']['available']);
+        $this->assertTrue($payload['access_guide']['delivery_options']['download_url']['available']);
+        $this->assertSame('payloads.visual.base64', $payload['access_guide']['delivery_options']['inline_base64']['payload_path']);
+        $this->assertSame('routes.download.url', $payload['access_guide']['delivery_options']['download_url']['payload_path']);
+        $this->assertStringContainsString('include_blob=true', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('curl', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('Accept: application/json', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('Authorization: Bearer <MCP_TOKEN>', implode(' ', $payload['access_guide']['instructions']));
     }
 
     #[Test]
