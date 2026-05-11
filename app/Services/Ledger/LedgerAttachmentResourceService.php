@@ -11,7 +11,11 @@ class LedgerAttachmentResourceService
 
     private const ATTACHMENT_LINE_PREVIEW_LIMIT = 10;
 
-    public function buildAttachmentEnvelope(Ledger $ledger, AttachedFile $attachedFile): array
+    public function buildAttachmentEnvelope(
+        Ledger $ledger,
+        AttachedFile $attachedFile,
+        ?string $inlineVisualBase64 = null
+    ): array
     {
         $ledger->loadMissing([
             'attachedFiles' => fn ($query) => $query->orderBy('column_id')->orderBy('id'),
@@ -45,7 +49,14 @@ class LedgerAttachmentResourceService
             'delivery_mode' => $deliveryMode,
             'available_formats' => $availableFormats,
             'routes' => $this->buildAttachmentRoutes($ledger, $attachedFile),
-            'payloads' => $this->buildAttachmentPayloads($fileInfo, $attachedFile, $ledger, $mimeType, $availableFormats),
+            'payloads' => $this->buildAttachmentPayloads(
+                $fileInfo,
+                $attachedFile,
+                $ledger,
+                $mimeType,
+                $availableFormats,
+                $inlineVisualBase64
+            ),
             'size' => $fileInfo['size'] ?? $attachedFile->size ?? 0,
             'size_formatted' => $this->formatFileSize((int) ($fileInfo['size'] ?? $attachedFile->size ?? 0)),
             'mime' => $mimeType,
@@ -186,7 +197,8 @@ class LedgerAttachmentResourceService
         AttachedFile $attachedFile,
         Ledger $ledger,
         string $mimeType,
-        array $availableFormats
+        array $availableFormats,
+        ?string $inlineVisualBase64 = null
     ): array {
         return [
             'text' => $this->buildTextPayload($fileInfo, $attachedFile),
@@ -199,7 +211,8 @@ class LedgerAttachmentResourceService
                 $ledger,
                 $attachedFile,
                 $mimeType,
-                in_array('visual', $availableFormats, true)
+                in_array('visual', $availableFormats, true),
+                $inlineVisualBase64
             ),
         ];
     }
@@ -318,7 +331,8 @@ class LedgerAttachmentResourceService
         Ledger $ledger,
         AttachedFile $attachedFile,
         string $mimeType,
-        bool $available
+        bool $available,
+        ?string $inlineBase64 = null
     ): array {
         $context = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
         $canBuildVisual = $available
@@ -328,13 +342,13 @@ class LedgerAttachmentResourceService
         return [
             'available' => $canBuildVisual,
             'mime_type' => $mimeType,
-            'signed_url' => $canBuildVisual
+            'signed_url' => $canBuildVisual && $inlineBase64 === null
                 ? route('file.download', [
                     'tenant' => $context['tenant_id'],
                     'attachedFile' => $context['attachment_id'],
                 ])
                 : null,
-            'base64' => null,
+            'base64' => $inlineBase64,
             'expires_at' => null,
             'auth_required' => true,
         ];

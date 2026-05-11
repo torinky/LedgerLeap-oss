@@ -110,7 +110,7 @@ class McpResourceBridgeService
                 'read_via' => 'ReadMcpResourceTool',
                 'uri' => 'ledgerleap://bootstrap/{client}',
                 'instructions' => [
-                    'ledgerleap://... は HTTP URL ではなく MCP resource URI です。',
+                    $this->mcpResourceUriNote(),
                     'MCP クライアントが `resources/read` に対応していない場合は `ReadMcpResourceTool` に `resource_uri` を渡してください。',
                     '対応クライアントでは `resources/read(uri="ledgerleap://bootstrap/{client}")` をそのまま使えます。',
                 ],
@@ -138,11 +138,22 @@ class McpResourceBridgeService
         if (! $isBlob) {
             $envelope = $this->attachmentResourceService->buildAttachmentEnvelope($ledger, $attachment);
 
+            if (filter_var($options['include_blob'] ?? false, FILTER_VALIDATE_BOOLEAN)
+                && ($envelope['payloads']['visual']['available'] ?? false)
+            ) {
+                $inlineVisualBase64 = base64_encode($this->attachmentBinaryResourceService->readAttachmentBytes($attachment));
+                $envelope = $this->attachmentResourceService->buildAttachmentEnvelope(
+                    $ledger,
+                    $attachment,
+                    $inlineVisualBase64
+                );
+            }
+
             $envelope['resource_type'] = 'attachment';
             $envelope['tenant'] = $tenantId;
             $envelope['access_guide']['read_via'] = 'ReadMcpResourceTool';
             $envelope['access_guide']['instructions'] = [
-                'ledgerleap://... は HTTP URL ではなく MCP resource URI です。',
+                $this->mcpResourceUriNote(),
                 'MCP クライアントが `resources/read` に対応していない場合は `ReadMcpResourceTool` に `resource_uri` を渡してください。',
                 '対応クライアントでは `resources/read(uri="ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}")` をそのまま使えます。',
                 'HTTP で取得したい場合は `routes.download` を使ってください。',
@@ -203,7 +214,7 @@ class McpResourceBridgeService
                 'read_via' => 'ReadMcpResourceTool',
                 'uri' => 'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}/blob',
                 'instructions' => [
-                    'ledgerleap://... は HTTP URL ではなく MCP resource URI です。',
+                    $this->mcpResourceUriNote(),
                     'Binary resource は既定で inline されません。`include_blob=true` を指定すると base64 blob を受け取れます。',
                     'HTTP で取得したい場合は `routes.download` を使ってください。',
                 ],
@@ -294,6 +305,11 @@ class McpResourceBridgeService
         }
 
         return $envelope;
+    }
+
+    private function mcpResourceUriNote(): string
+    {
+        return 'ledgerleap://... は HTTP URL ではなく MCP resource URI です。';
     }
 
     private function formatFileSize(int $bytes): string

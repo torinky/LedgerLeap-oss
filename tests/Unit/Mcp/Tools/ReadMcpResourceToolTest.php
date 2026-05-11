@@ -8,6 +8,7 @@ use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Mcp\Request;
 use Laravel\Sanctum\Sanctum;
 use PHPUnit\Framework\Attributes\Test;
@@ -127,6 +128,97 @@ class ReadMcpResourceToolTest extends TestCase
         $this->assertTrue($payload['payloads']['structured']['available']);
         $this->assertSame([['page_index' => 1]], $payload['payloads']['structured']['pages']);
         $this->assertSame('ReadMcpResourceTool', $payload['access_guide']['read_via']);
+    }
+
+    #[Test]
+    public function it_keeps_visual_signed_urls_when_include_blob_is_disabled(): void
+    {
+        Storage::fake('public');
+
+        $tenantId = (string) tenant('id');
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $tenantId,
+            'content_attached' => [
+                1 => [
+                    'hash-visual' => [
+                        'name' => 'receipt.jpg',
+                        'mime' => 'image/jpeg',
+                        'size' => 13,
+                    ],
+                ],
+            ],
+        ]);
+
+        $attachment = AttachedFile::factory()->image()->forLedger($ledger)->create([
+            'tenant_id' => $tenantId,
+            'filename' => 'receipt.jpg',
+            'hashedbasename' => 'hash-visual',
+            'path' => 'attachments/receipt.jpg',
+            'column_id' => 1,
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'size' => 13,
+            'status' => AttachedFileStatus::COMPLETED,
+        ]);
+
+        Storage::disk('public')->put('attachments/receipt.jpg', 'visual-bytes');
+
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => sprintf('ledgerleap://ledger/%s/%s/attachments/%s', $tenantId, $ledger->id, $attachment->id),
+        ]));
+
+        $this->assertFalse($response->isError());
+
+        $payload = json_decode($response->content()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['payloads']['visual']['available']);
+        $this->assertNull($payload['payloads']['visual']['base64']);
+        $this->assertNotNull($payload['payloads']['visual']['signed_url']);
+    }
+
+    #[Test]
+    public function it_inlines_visual_base64_when_include_blob_is_enabled(): void
+    {
+        Storage::fake('public');
+
+        $tenantId = (string) tenant('id');
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $tenantId,
+            'content_attached' => [
+                1 => [
+                    'hash-visual' => [
+                        'name' => 'receipt.jpg',
+                        'mime' => 'image/jpeg',
+                        'size' => 13,
+                    ],
+                ],
+            ],
+        ]);
+
+        $attachment = AttachedFile::factory()->image()->forLedger($ledger)->create([
+            'tenant_id' => $tenantId,
+            'filename' => 'receipt.jpg',
+            'hashedbasename' => 'hash-visual',
+            'path' => 'attachments/receipt.jpg',
+            'column_id' => 1,
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'size' => 13,
+            'status' => AttachedFileStatus::COMPLETED,
+        ]);
+
+        Storage::disk('public')->put('attachments/receipt.jpg', 'visual-bytes');
+
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => sprintf('ledgerleap://ledger/%s/%s/attachments/%s', $tenantId, $ledger->id, $attachment->id),
+            'include_blob' => true,
+        ]));
+
+        $this->assertFalse($response->isError());
+
+        $payload = json_decode($response->content()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['payloads']['visual']['available']);
+        $this->assertSame(base64_encode('visual-bytes'), $payload['payloads']['visual']['base64']);
+        $this->assertNull($payload['payloads']['visual']['signed_url']);
     }
 
     #[Test]

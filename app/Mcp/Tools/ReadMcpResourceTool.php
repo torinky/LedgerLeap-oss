@@ -35,6 +35,7 @@ class ReadMcpResourceTool extends Tool
         - `access_guide`
 
         Binary blob payloads stay opt-in through `include_blob=true`.
+        For attachment envelopes, this can inline `payloads.visual.base64` and suppress `signed_url` so image-capable agents do not need internal HTTP access.
     MARKDOWN;
 
     public function __construct(
