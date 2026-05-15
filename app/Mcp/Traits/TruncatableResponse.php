@@ -23,6 +23,10 @@ trait TruncatableResponse
             return $data;
         }
 
+        // Convert to plain arrays to avoid "Indirect modification of overloaded element"
+        // errors when iterating Eloquent models or stdClass objects by reference.
+        $data = json_decode($json, true);
+
         $truncatedAt = [];
 
         // Priority 1: Remove search_trace
