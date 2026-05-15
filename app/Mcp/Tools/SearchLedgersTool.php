@@ -9,12 +9,14 @@ use App\Models\Ledger;
 use App\Services\Ledger\LedgerAttachmentResourceService;
 use App\Services\LedgerService;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Log;
 
 class SearchLedgersTool extends Tool
 {
@@ -103,8 +105,8 @@ MARKDOWN;
                 user: $user, // 認証済みユーザーを直接渡す
                 params: $parameters,
             );
-            \Log::info('[MCP Search Debug] searchLedgersForApi result: '.json_encode($results, JSON_UNESCAPED_UNICODE));
-        } catch (\Exception $e) {
+            Log::info('[MCP Search Debug] searchLedgersForApi result: '.json_encode($results, JSON_UNESCAPED_UNICODE));
+        } catch (Exception $e) {
             return Response::error("Search failed: {$e->getMessage()}");
         }
 
@@ -127,11 +129,14 @@ MARKDOWN;
         }
 
         // summary フォーマットの場合、表示用の加工を行う
-        $includeContent = $parameters['include_content'] ?? true;
+        $includeContent = $parameters['include_content'] ?? false;
+        $includeMeta = $parameters['include_meta'] ?? false;
+        $includeAttachmentPayloads = $parameters['include_attachment_payloads'] ?? false;
+        $includeTrace = $parameters['include_trace'] ?? false;
         $contentPreviewLength = $parameters['content_preview_length'] ?? 200;
 
         $ledgers = collect($results['ledgers'])
-            ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
+            ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength, $includeAttachmentPayloads) {
                 $meta = $results['meta'];
                 $attachedFiles = $ledger instanceof Model ? ($ledger->getRelation('attachedFiles') ?? []) : [];
                 $ledgerModel = $ledger instanceof Ledger ? $ledger : null;
@@ -167,12 +172,13 @@ MARKDOWN;
                         $define['column_define'] ?? [],
                         $contentPreviewLength
                     );
+                    unset($ledger->content);
                 }
 
                 $ledger->__display_fields__ = $displayFields;
 
                 $contentAttached = $ledger->content_attached ?? [];
-                $ledger->attachments = $this->formatAttachments($contentAttached, $attachedFiles, $ledgerModel);
+                $ledger->attachments = $this->formatAttachments($contentAttached, $attachedFiles, $ledgerModel, $includeAttachmentPayloads);
                 $displayFields['attachment_count'] = count($ledger->attachments);
                 $displayFields['attachment_summary'] = $this->describeAttachmentCount(
                     $displayFields['attachment_count']
@@ -184,16 +190,24 @@ MARKDOWN;
 
         $summary = trans_choice('messages.found_ledgers', $results['total'], ['count' => $results['total']], 'ja');
 
-        return Response::json([
+        $responseData = [
             'ledgers' => $ledgers,
             'total' => $results['total'],
-            'meta' => $results['meta'], // meta情報も返す
-            'search_trace' => $results['search_trace'] ?? [],
             '__summary__' => $summary,
-        ]);
+        ];
+
+        if ($includeMeta) {
+            $responseData['meta'] = $results['meta'];
+        }
+
+        if ($includeTrace) {
+            $responseData['search_trace'] = $results['search_trace'] ?? [];
+        }
+
+        return Response::json($responseData);
     }
 
-    private function generateContentPreview(array $content, array $columnDefine, int $maxLength = 200): string
+    private function generateContentPreview(array $content, array|\Illuminate\Support\Collection $columnDefine, int $maxLength = 200): string
     {
         $preview = [];
         $totalLength = 0;
@@ -249,7 +263,8 @@ MARKDOWN;
     private function formatAttachments(
         array|object $contentAttached,
         iterable $attachedFiles = [],
-        ?Ledger $ledger = null
+        ?Ledger $ledger = null,
+        bool $includePayloads = false,
     ): array {
         $normalizedEntries = $this->normalizeAttachmentEntries($contentAttached);
         $lookup = collect($normalizedEntries)
@@ -289,6 +304,7 @@ MARKDOWN;
                 ledger: $orderedEntry['ledger'],
                 order: $index + 1,
                 total: $total,
+                includePayloads: $includePayloads,
             );
         }
 
@@ -337,7 +353,8 @@ MARKDOWN;
         ?AttachedFile $attachedFile,
         ?Ledger $ledger,
         int $order,
-        int $total
+        int $total,
+        bool $includePayloads = false,
     ): array {
         $fileInfo = $entry['file_info'];
         $resolvedName = $attachedFile?->filename
@@ -346,33 +363,20 @@ MARKDOWN;
             ?? trans('common.unknown', [], 'ja');
 
         $mimeType = $this->resolveAttachmentMimeType($fileInfo, $attachedFile);
-        $availableFormats = $this->resolveAttachmentAvailableFormats($fileInfo, $attachedFile, $mimeType);
-        $deliveryMode = $this->resolveAttachmentDeliveryMode($availableFormats);
 
         $source = $attachedFile?->finalized_source
             ?? $fileInfo['source']
             ?? $fileInfo['meta']['source']
             ?? 'unknown';
 
-        return [
+        $record = [
             'attachment_id' => $attachedFile?->id,
-            'resource_template' => $attachedFile ? 'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}' : null,
-            'resource_uri' => $attachedFile && $ledger instanceof Model
-                ? $this->attachmentResourceService->buildResourceUri($ledger, $attachedFile)
-                : null,
-            'access_guide' => $attachedFile && $ledger instanceof Model
-                ? $this->attachmentResourceService->buildAttachmentAccessGuide($ledger, $attachedFile)
-                : null,
             'filename' => $resolvedName,
             'name' => $resolvedName,
             'role' => $order === 1 ? 'primary' : 'supporting',
             'order' => $order,
             'source' => $source,
             'mime_type' => $mimeType,
-            'delivery_mode' => $deliveryMode,
-            'available_formats' => $availableFormats,
-            'routes' => $this->buildAttachmentRoutes($ledger, $attachedFile),
-            'payloads' => $this->buildAttachmentPayloads($fileInfo, $attachedFile, $ledger, $mimeType, $availableFormats),
             'size' => $fileInfo['size'] ?? 0,
             'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
             'mime' => $mimeType,
@@ -380,6 +384,25 @@ MARKDOWN;
             'hash' => $entry['hash'],
             'total_attachments' => $total,
         ];
+
+        if ($includePayloads) {
+            $availableFormats = $this->resolveAttachmentAvailableFormats($fileInfo, $attachedFile, $mimeType);
+            $deliveryMode = $this->resolveAttachmentDeliveryMode($availableFormats);
+
+            $record['resource_template'] = $attachedFile ? 'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}' : null;
+            $record['resource_uri'] = $attachedFile && $ledger instanceof Model
+                ? $this->attachmentResourceService->buildResourceUri($ledger, $attachedFile)
+                : null;
+            $record['access_guide'] = $attachedFile && $ledger instanceof Model
+                ? $this->attachmentResourceService->buildAttachmentAccessGuide($ledger, $attachedFile)
+                : null;
+            $record['delivery_mode'] = $deliveryMode;
+            $record['available_formats'] = $availableFormats;
+            $record['routes'] = $this->buildAttachmentRoutes($ledger, $attachedFile);
+            $record['payloads'] = $this->buildAttachmentPayloads($fileInfo, $attachedFile, $ledger, $mimeType, $availableFormats);
+        }
+
+        return $record;
     }
 
     private function resolveAttachmentMimeType(array $fileInfo, ?AttachedFile $attachedFile): string
@@ -718,7 +741,10 @@ MARKDOWN;
                 ->default('composite_score'),
             'order_direction' => $schema->string('The sort direction. "desc" (default) shows highest/newest first. "asc" shows lowest/oldest first. Useful with composite_score asc to find neglected items.')->enum(['asc', 'desc'])->default('desc'),
             'format' => $schema->string('The format of the response. "summary" (default) includes display-friendly fields like __display_fields__ and __summary__ with translations. "raw" returns only the normalized data without formatting (faster, use for machine processing).')->enum(['raw', 'summary'])->default('summary'),
-            'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to false for quick browsing of many ledgers (only metadata and preview shown). Default: true.')->default(true),
+            'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to true for detailed data. Default: false (only content preview shown). For local/limited-context models, always keep this false and use GetLedgerDetailTool for full content.')->default(false),
+            'include_meta' => $schema->boolean('Whether to include the meta dictionary (ledger_defines, folders, users) in the response. Default: false. Set to true when you need to resolve folder paths, user names, or ledger definition details.')->default(false),
+            'include_attachment_payloads' => $schema->boolean('Whether to include attachment payloads (text/structured/visual content, routes, resource URIs, access guides) in the response. Default: false. Set to true when you need to inspect attachment contents or generate download links.')->default(false),
+            'include_trace' => $schema->boolean('Whether to include the search_trace (synonym expansion log) in the response. Default: false. Set to true for debugging search term expansion.')->default(false),
             'content_preview_length' => $schema->integer('The maximum length of content preview when include_content is false. Default: 200 characters. Increase for longer previews, decrease for quicker overview.')->default(200),
         ];
     }

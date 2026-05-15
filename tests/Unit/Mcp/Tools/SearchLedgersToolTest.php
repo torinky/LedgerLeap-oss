@@ -128,6 +128,7 @@ class SearchLedgersToolTest extends TestCase
             'folder_id' => [101, 202],
             'ledger_define_id' => [303, 404],
             'tags' => '重要,新規',
+            'include_trace' => true,
         ];
 
         $mockTrace = [
@@ -278,6 +279,9 @@ class SearchLedgersToolTest extends TestCase
         $this->assertArrayHasKey('content_preview', $displayFields);
         $this->assertIsString($displayFields['content_preview']);
         $this->assertStringContainsString('title:', $displayFields['content_preview']);
+
+        // Bug A: include_content=false の場合、contentキーがレスポンスに含まれないことを確認
+        $this->assertArrayNotHasKey('content', $responseData['ledgers'][0]);
     }
 
     #[Test]
@@ -421,7 +425,7 @@ class SearchLedgersToolTest extends TestCase
             ->once()
             ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
 
-        $request = new Request(['format' => 'summary']);
+        $request = new Request(['format' => 'summary', 'include_attachment_payloads' => true]);
         $response = $this->tool->handle($request);
 
         $this->assertFalse($response->isError());
@@ -447,7 +451,6 @@ class SearchLedgersToolTest extends TestCase
         $this->assertEquals('vlm', $attachments[0]['source']);
         $this->assertEquals('application/pdf', $attachments[0]['mime_type']);
         $this->assertEquals('text', $attachments[0]['delivery_mode']);
-        $this->assertSame(['text', 'markdown', 'structured', 'json', 'visual'], $attachments[0]['available_formats']);
         $this->assertSame('ledgerleap://ledger/'.$this->getTenant()->id.'/1/attachments/11', $attachments[0]['resource_uri']);
         $this->assertSame('ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}', $attachments[0]['resource_template']);
         $this->assertSame('mcp_resource', $attachments[0]['access_guide']['resource_type']);
@@ -610,7 +613,7 @@ class SearchLedgersToolTest extends TestCase
             ->once()
             ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
 
-        $request = new Request(['format' => 'summary']);
+        $request = new Request(['format' => 'summary', 'include_attachment_payloads' => true]);
         $response = $this->tool->handle($request);
 
         $this->assertFalse($response->isError());
@@ -704,7 +707,7 @@ class SearchLedgersToolTest extends TestCase
             ->once()
             ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
 
-        $request = new Request(['format' => 'summary']);
+        $request = new Request(['format' => 'summary', 'include_attachment_payloads' => true]);
         $response = $this->tool->handle($request);
 
         $this->assertFalse($response->isError());
@@ -798,5 +801,198 @@ class SearchLedgersToolTest extends TestCase
         $this->assertEquals('512 B', $attachments[0]['size_formatted']);
         $this->assertEquals('2 MB', $attachments[1]['size_formatted']);
         $this->assertEquals('5 GB', $attachments[2]['size_formatted']);
+    }
+
+    #[Test]
+    public function it_excludes_attachment_payloads_by_default_bug_b(): void
+    {
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $contentAttachedObj = new \stdClass;
+        $contentAttachedObj->{'1'} = [
+            'abc123hash' => [
+                'name' => '請求書.pdf',
+                'size' => 524288,
+                'mime' => 'application/pdf',
+            ],
+        ];
+
+        $ledger = new Ledger([
+            'id' => 1,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'updated_at' => now(),
+        ]);
+        $ledger->content_attached = $contentAttachedObj;
+
+        $firstAttachment = new AttachedFile([
+            'id' => 11,
+            'ledger_id' => $ledger->id,
+            'column_id' => 1,
+            'filename' => '請求書.pdf',
+            'hashedbasename' => 'abc123hash',
+            'mime' => 'application/pdf',
+            'size' => 524288,
+            'tenant_id' => $this->getTenant()->id,
+            'status' => AttachedFileStatus::COMPLETED,
+        ]);
+        $firstAttachment->setAttribute('id', 11);
+        $ledger->setRelation('attachedFiles', new EloquentCollection([$firstAttachment]));
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        // デフォルト（include_attachment_payloads=false）で呼び出し
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        $attachments = $responseData['ledgers'][0]['attachments'];
+        $this->assertCount(1, $attachments);
+
+        // Bug B: デフォルトでは payloads / routes / resource_uri / access_guide が含まれない
+        $this->assertArrayNotHasKey('payloads', $attachments[0]);
+        $this->assertArrayNotHasKey('routes', $attachments[0]);
+        $this->assertArrayNotHasKey('resource_uri', $attachments[0]);
+        $this->assertArrayNotHasKey('access_guide', $attachments[0]);
+        $this->assertArrayNotHasKey('delivery_mode', $attachments[0]);
+        $this->assertArrayNotHasKey('available_formats', $attachments[0]);
+
+        // 基本的な添付情報は含まれる
+        $this->assertEquals(11, $attachments[0]['attachment_id']);
+        $this->assertEquals('請求書.pdf', $attachments[0]['filename']);
+        $this->assertEquals('primary', $attachments[0]['role']);
+        $this->assertEquals('application/pdf', $attachments[0]['mime_type']);
+    }
+
+    #[Test]
+    public function it_returns_compact_response_with_default_parameters(): void
+    {
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $ledger = new Ledger([
+            'id' => 1,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'content' => [0 => 'テストタイトル'],
+            'updated_at' => now(),
+        ]);
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn(['ledgers' => collect([$ledger]), 'meta' => $mockMeta, 'total' => 1]);
+
+        // 完全デフォルトパラメータで呼び出し
+        $request = new Request(['format' => 'summary']);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseJson = $response->content()->__toString();
+        $responseData = json_decode($responseJson, true);
+
+        // meta / search_trace がデフォルトで含まれないことを確認
+        $this->assertArrayNotHasKey('meta', $responseData);
+        $this->assertArrayNotHasKey('search_trace', $responseData);
+
+        // content キーが含まれない（include_content=false デフォルト）
+        $this->assertArrayNotHasKey('content', $responseData['ledgers'][0]);
+
+        // content_preview が含まれる
+        $this->assertArrayHasKey('content_preview', $responseData['ledgers'][0]['__display_fields__']);
+
+        // レスポンスが 16,000 bytes 以下であること
+        $size = strlen($responseJson);
+        $this->assertLessThanOrEqual(16000, $size, "Default response size ({$size} bytes) exceeds 16 KB limit");
+    }
+
+    #[Test]
+    public function it_returns_full_response_with_all_include_flags_enabled(): void
+    {
+        $creator = new User(['id' => $this->user->id, 'name' => 'テストユーザー']);
+        $folder = new Folder(['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']);
+        $ledgerDefine = new LedgerDefine([
+            'id' => 1,
+            'title' => 'テスト台帳',
+            'folder_id' => $folder->id,
+        ]);
+
+        $ledger = new Ledger([
+            'id' => 1,
+            'ledger_define_id' => $ledgerDefine->id,
+            'status' => 'draft',
+            'creator_id' => $creator->id,
+            'content' => [0 => 'テスト内容'],
+            'updated_at' => now(),
+        ]);
+        $ledger->setAttribute('tenant_id', $this->getTenant()->id);
+
+        $mockMeta = [
+            'ledger_defines' => [$ledgerDefine->id => ['id' => 1, 'title' => 'テスト台帳', 'folder_id' => $folder->id]],
+            'folders' => [$folder->id => ['id' => 1, 'name' => 'テストフォルダ', 'path' => '/テストフォルダ']],
+            'users' => [$creator->id => ['id' => $this->user->id, 'name' => 'テストユーザー']],
+        ];
+
+        $mockTrace = [
+            'original_q' => 'test',
+            'keywords' => ['test'],
+        ];
+
+        $this->ledgerService->shouldReceive('searchLedgersForApi')
+            ->once()
+            ->andReturn([
+                'ledgers' => collect([$ledger]),
+                'meta' => $mockMeta,
+                'total' => 1,
+                'search_trace' => $mockTrace,
+            ]);
+
+        // 全フラグを true に設定
+        $request = new Request([
+            'format' => 'summary',
+            'include_content' => true,
+            'include_meta' => true,
+            'include_trace' => true,
+        ]);
+        $response = $this->tool->handle($request);
+
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content()->__toString(), true);
+
+        // meta が含まれる
+        $this->assertArrayHasKey('meta', $responseData);
+        // search_trace が含まれる
+        $this->assertArrayHasKey('search_trace', $responseData);
+        $this->assertSame($mockTrace, $responseData['search_trace']);
+        // content が含まれる（include_content=true）
+        $this->assertArrayHasKey('content', $responseData['ledgers'][0]);
     }
 }

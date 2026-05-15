@@ -76,6 +76,7 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
 
         $request = new Request([
             'q' => 'keyword',
+            'include_content' => true,
         ]);
 
         // Act
@@ -140,6 +141,7 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
 
         $request = new Request([
             'q' => '請求',
+            'include_content' => true,
         ]);
 
         // Act
@@ -190,6 +192,7 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
 
         $request = new Request([
             'q' => 'keyword',
+            'include_content' => true,
         ]);
 
         // Act
