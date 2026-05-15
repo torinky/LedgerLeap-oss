@@ -60,6 +60,22 @@ class LedgerLeapServer extends Server
         `__display_fields__` already provides user-facing labels.
 
         Always provide context-aware, helpful responses in Japanese when interacting with Japanese users.
+
+        ## For local models (LM Studio, Ollama, small-context environments)
+
+        To avoid context overflow and crashes with limited-context models:
+
+        - **SearchLedgersTool**: Always use `include_content=false` and `include_meta=false`.
+          Request `include_attachment_payloads=false` unless attachment contents are
+          specifically needed.
+        - **Start with `mode=count`**: Verify result count before fetching records.
+          This avoids loading large result sets into context.
+        - **Fetch detail on demand**: Use `GetLedgerDetailTool` to retrieve full content
+          for only the specific record the user needs.
+        - **Use `limit=5` or smaller**: For initial searches, keep result sets small.
+          Paginate with `offset` if more results are needed.
+        - **Do NOT call `SearchLedgersTool` with `include_attachment_payloads=true`**
+          unless the user explicitly requests attachment contents or download links.
     MARKDOWN;
 
     /**

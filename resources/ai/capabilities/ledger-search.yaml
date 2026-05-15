@@ -101,6 +101,16 @@ ledgerleap_constraints:
   - 複数添付の見え方を改善する場合は、`attachments` の `attachment_id` / `filename` / `role` / `order` / `source` を優先して読む
   - ファイルを開く導線が必要な場合は `routes.download` と `routes.inspector` を併せて読む
   - mode ごとの follow-up 契約が必要な場合は `attachments[].payloads.text` / `structured` / `visual` を読む
+local_model_guidance:
+  applies_to_profiles:
+    - general-local
+  description: ローカルLLM（LM Studio / Ollama）でコンテキスト不足によるクラッシュを防ぐための slim パス指示
+  rules:
+    - "SearchLedgersTool は必ず include_content=false, include_meta=false, limit=5 で呼び出す"
+    - "最初に mode=count で件数を確認してから検索する"
+    - "レコードの詳細は GetLedgerDetailTool で個別に取得する（SearchLedgersTool で include_content=true を使わない）"
+    - "include_attachment_payloads=true は明示的に要求された場合のみ使用する"
+    - "GetLedgerDefinesTool はデフォルトの limit=20, include_options=false で使用する（全件取得しない）"
 examples:
   - user: 昨日私が作成した日報を見せて
     intent: 作成者と日付で絞った検索
