@@ -4,10 +4,13 @@ namespace App\Mcp\Tools;
 
 use App\Http\Resources\LedgerDefineResource;
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\TruncatableResponse;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Http\Request as HttpRequest;
+use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -15,6 +18,7 @@ use Laravel\Mcp\Server\Tool;
 class GetLedgerDefinesTool extends Tool
 {
     use AuthenticatedMcpTool;
+    use TruncatableResponse;
 
     /**
      * The tool's description.
@@ -33,16 +37,17 @@ class GetLedgerDefinesTool extends Tool
      */
     public function handle(Request $request, WritableFolderRepository $folderRepository): Response
     {
-        // 認証チェック
         $user = $this->authenticateOrError();
         if ($user instanceof Response) {
-            return $user; // エラーレスポンスをそのまま返す
+            return $user;
         }
 
-        // ユーザーがアクセス可能なフォルダに属する台帳定義のみを取得
         $readableFolderIds = $folderRepository->getReadableFolderIds($user);
         $q = trim((string) $request->get('q', ''));
         $folderId = $request->get('folder_id');
+        $limit = min((int) $request->get('limit', 20), 100);
+        $offset = max((int) $request->get('offset', 0), 0);
+        $includeOptions = (bool) $request->get('include_options', false);
 
         $query = LedgerDefine::query()
             ->whereHas('folder', function ($builder) use ($readableFolderIds) {
@@ -62,18 +67,47 @@ class GetLedgerDefinesTool extends Tool
             $query->where('title', 'like', '%'.$q.'%');
         }
 
-        $ledgerDefines = $query->orderBy('title')->get();
+        $totalCount = $query->count();
 
-        $resource = LedgerDefineResource::collection($ledgerDefines);
+        $ledgerDefines = $query
+            ->orderBy('title')
+            ->offset($offset)
+            ->limit($limit)
+            ->get();
 
-        return Response::text($resource->toJson(JSON_PRETTY_PRINT));
+        $data = LedgerDefineResource::collection($ledgerDefines)->toArray(new HttpRequest);
+
+        if (! $includeOptions) {
+            foreach ($data as $defKey => $def) {
+                $columns = $def['columns'] ?? null;
+                if ($columns instanceof Collection) {
+                    $data[$defKey]['columns'] = $columns->map(function ($col) {
+                        if (is_array($col)) {
+                            unset($col['options']);
+                        }
+
+                        return $col;
+                    })->all();
+                } elseif (is_array($columns)) {
+                    foreach (array_keys($columns) as $colKey) {
+                        if (isset($data[$defKey]['columns'][$colKey]['options'])) {
+                            unset($data[$defKey]['columns'][$colKey]['options']);
+                        }
+                    }
+                }
+            }
+        }
+
+        $responseData = $this->truncateIfNeeded([
+            'ledger_defines' => $data,
+            'total' => $totalCount,
+            'limit' => $limit,
+            'offset' => $offset,
+        ]);
+
+        return Response::json($responseData);
     }
 
-    /**
-     * Get the tool's input schema.
-     *
-     * @return array<string, \Illuminate\JsonSchema\JsonSchema>
-     */
     public function schema(JsonSchema $schema): array
     {
         return [
@@ -86,6 +120,12 @@ class GetLedgerDefinesTool extends Tool
             'folder_id' => $schema->integer()
                 ->description('Optional folder id to filter ledger defines')
                 ->nullable(),
+            'limit' => $schema->integer('Maximum number of ledger definitions to return. Default: 20, Max: 100.')
+                ->default(20),
+            'offset' => $schema->integer('Number of ledger definitions to skip for pagination. Default: 0.')
+                ->default(0),
+            'include_options' => $schema->boolean('Whether to include column select options in the response. Default: false (compact output). Set to true when you need to see all select choices.')
+                ->default(false),
         ];
     }
 }

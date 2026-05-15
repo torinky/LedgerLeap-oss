@@ -3,6 +3,7 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\TruncatableResponse;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
@@ -21,6 +22,7 @@ use Log;
 class SearchLedgersTool extends Tool
 {
     use AuthenticatedMcpTool;
+    use TruncatableResponse;
 
     private const ATTACHMENT_TEXT_PREVIEW_LIMIT = 500;
 
@@ -204,10 +206,12 @@ MARKDOWN;
             $responseData['search_trace'] = $results['search_trace'] ?? [];
         }
 
+        $responseData = $this->truncateIfNeeded($responseData);
+
         return Response::json($responseData);
     }
 
-    private function generateContentPreview(array $content, array|\Illuminate\Support\Collection $columnDefine, int $maxLength = 200): string
+    private function generateContentPreview(array $content, array|Collection $columnDefine, int $maxLength = 200): string
     {
         $preview = [];
         $totalLength = 0;

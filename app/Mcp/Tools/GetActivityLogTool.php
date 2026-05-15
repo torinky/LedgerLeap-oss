@@ -5,6 +5,7 @@ namespace App\Mcp\Tools;
 use App\Helpers\ActivityLogFormatter;
 use App\Mcp\Helpers\TranslationHelper;
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\TruncatableResponse;
 use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -24,6 +25,7 @@ use Laravel\Mcp\Server\Tool;
 class GetActivityLogTool extends Tool
 {
     use AuthenticatedMcpTool;
+    use TruncatableResponse;
 
     protected string $description = <<<'MARKDOWN'
         Get activity logs with filtering options and Japanese translations
@@ -72,6 +74,7 @@ MARKDOWN;
 
             // レスポンス構築
             $response = $this->buildActivityLogResponse($activities, $format);
+            $response = $this->truncateIfNeeded($response);
 
             return Response::json($response);
 

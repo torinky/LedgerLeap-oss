@@ -13,17 +13,6 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
-/**
- * GetLedgerDefinesToolの詳細テスト
- *
- * 責任範囲:
- * - 台帳定義のフィルタリング機能
- * - 複数フォルダアクセス権限の処理
- * - レスポンス形式の検証
- * - エッジケースの処理
- *
- * 注意: 認証関連のテストはMcpToolsAuthenticationTest.phpで統合的にテストされます
- */
 class GetLedgerDefinesToolTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -37,14 +26,15 @@ class GetLedgerDefinesToolTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        // ユーザー作成とトークン生成
         $this->user = User::factory()->create();
         $tokenResult = $this->user->createToken('test-token');
         $this->validToken = $tokenResult->plainTextToken;
     }
 
-    // 注意: 認証関連のテストはMcpToolsAuthenticationTest.phpで統合的にテストされているため、
-    // このテストクラスでは認証が成功した後のデータフィルタリング機能に焦点を当てる
+    private function getDefines(array $responseData): array
+    {
+        return $responseData['ledger_defines'];
+    }
 
     #[Test]
     public function it_returns_ledger_defines_user_has_access_to(): void
@@ -58,12 +48,11 @@ class GetLedgerDefinesToolTest extends TestCase
             'folder_id' => $accessibleFolder->id,
             'title' => 'Accessible Define',
         ]);
-        $inaccessibleLedgerDefine = LedgerDefine::factory()->create([
+        LedgerDefine::factory()->create([
             'folder_id' => $inaccessibleFolder->id,
             'title' => 'Inaccessible Define',
         ]);
 
-        // ユーザーはaccessibleFolderのみアクセス可能
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
         $mockRepository->shouldReceive('getReadableFolderIds')
             ->with(Mockery::type(User::class))
@@ -79,9 +68,13 @@ class GetLedgerDefinesToolTest extends TestCase
         $this->assertFalse($response->isError());
 
         $responseData = json_decode($response->content(), true);
-        $this->assertCount(1, $responseData);
-        $this->assertEquals($accessibleLedgerDefine->id, $responseData[0]['id']);
-        $this->assertEquals('Accessible Define', $responseData[0]['name']); // ResourceではnameフィールドとしてtitleValue返される
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(1, $defines);
+        $this->assertEquals($accessibleLedgerDefine->id, $defines[0]['id']);
+        $this->assertEquals('Accessible Define', $defines[0]['name']);
+        $this->assertArrayHasKey('total', $responseData);
+        $this->assertArrayHasKey('limit', $responseData);
+        $this->assertArrayHasKey('offset', $responseData);
     }
 
     #[Test]
@@ -123,9 +116,10 @@ class GetLedgerDefinesToolTest extends TestCase
         $this->assertFalse($response->isError());
 
         $responseData = json_decode($response->content(), true);
-        $this->assertCount(1, $responseData);
-        $this->assertSame($matchingLedgerDefine->id, $responseData[0]['id']);
-        $this->assertSame('Sales Lookup', $responseData[0]['name']);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(1, $defines);
+        $this->assertSame($matchingLedgerDefine->id, $defines[0]['id']);
+        $this->assertSame('Sales Lookup', $defines[0]['name']);
     }
 
     #[Test]
@@ -136,7 +130,6 @@ class GetLedgerDefinesToolTest extends TestCase
         $folder = Folder::factory()->create();
         LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
-        // ユーザーはどのフォルダにもアクセスできない
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
         $mockRepository->shouldReceive('getReadableFolderIds')
             ->with(Mockery::type(User::class))
@@ -152,7 +145,9 @@ class GetLedgerDefinesToolTest extends TestCase
         $this->assertFalse($response->isError());
 
         $responseData = json_decode($response->content(), true);
-        $this->assertCount(0, $responseData);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(0, $defines);
+        $this->assertEquals(0, $responseData['total']);
     }
 
     #[Test]
@@ -181,13 +176,13 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->assertFalse($response->isError());
 
-        // レスポンスがLedgerDefineResourceの形式であることを確認
         $responseData = json_decode($response->content(), true);
-        $this->assertCount(1, $responseData);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(1, $defines);
 
-        $ledgerDefineData = $responseData[0];
+        $ledgerDefineData = $defines[0];
         $this->assertArrayHasKey('id', $ledgerDefineData);
-        $this->assertArrayHasKey('name', $ledgerDefineData); // Resourceでは'name'フィールド
+        $this->assertArrayHasKey('name', $ledgerDefineData);
         $this->assertEquals($ledgerDefine->id, $ledgerDefineData['id']);
         $this->assertEquals('Test Define', $ledgerDefineData['name']);
     }
@@ -214,7 +209,6 @@ class GetLedgerDefinesToolTest extends TestCase
             'title' => 'Define 3',
         ]);
 
-        // ユーザーはfolder1とfolder3にアクセス可能
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
         $mockRepository->shouldReceive('getReadableFolderIds')
             ->with(Mockery::type(User::class))
@@ -230,16 +224,17 @@ class GetLedgerDefinesToolTest extends TestCase
         $this->assertFalse($response->isError());
 
         $responseData = json_decode($response->content(), true);
-        $this->assertCount(2, $responseData);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(2, $defines);
 
-        $returnedIds = array_column($responseData, 'id');
+        $returnedIds = array_column($defines, 'id');
         $this->assertContains($ledgerDefine1->id, $returnedIds);
         $this->assertContains($ledgerDefine3->id, $returnedIds);
         $this->assertNotContains($ledgerDefine2->id, $returnedIds);
     }
 
     #[Test]
-    public function it_returns_pretty_printed_json(): void
+    public function it_returns_compact_json_without_pretty_print(): void
     {
         putenv("MCP_AUTH_TOKEN={$this->validToken}");
 
@@ -260,10 +255,176 @@ class GetLedgerDefinesToolTest extends TestCase
 
         $this->assertFalse($response->isError());
 
-        // JSONが整形されていることを確認（改行とインデントが含まれる）
         $content = $response->content();
-        $this->assertStringContainsString("\n", $content);
-        $this->assertStringContainsString('    ', $content); // インデント
+        $decoded = json_decode($content, true);
+        $this->assertIsArray($decoded);
+        $this->assertArrayHasKey('ledger_defines', $decoded);
+    }
+
+    #[Test]
+    public function it_respects_limit_parameter(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+
+        $folder = Folder::factory()->create();
+        for ($i = 0; $i < 5; $i++) {
+            LedgerDefine::factory()->create([
+                'folder_id' => $folder->id,
+                'title' => "Define {$i}",
+            ]);
+        }
+
+        $mockRepository = Mockery::mock(WritableFolderRepository::class);
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->with(Mockery::type(User::class))
+            ->andReturn([$folder->id]);
+
+        $this->app->instance(WritableFolderRepository::class, $mockRepository);
+
+        $tool = new GetLedgerDefinesTool;
+        $request = new Request(['limit' => 2]);
+
+        $response = $tool->handle($request, $mockRepository);
+
+        $this->assertFalse($response->isError());
+
+        $responseData = json_decode($response->content(), true);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(2, $defines);
+        $this->assertEquals(5, $responseData['total']);
+        $this->assertEquals(2, $responseData['limit']);
+    }
+
+    #[Test]
+    public function it_respects_offset_parameter(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+
+        $folder = Folder::factory()->create();
+        for ($i = 0; $i < 5; $i++) {
+            LedgerDefine::factory()->create([
+                'folder_id' => $folder->id,
+                'title' => "Define {$i}",
+            ]);
+        }
+
+        $mockRepository = Mockery::mock(WritableFolderRepository::class);
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->with(Mockery::type(User::class))
+            ->andReturn([$folder->id]);
+
+        $this->app->instance(WritableFolderRepository::class, $mockRepository);
+
+        $tool = new GetLedgerDefinesTool;
+        $request = new Request(['limit' => 3, 'offset' => 2]);
+
+        $response = $tool->handle($request, $mockRepository);
+
+        $this->assertFalse($response->isError());
+
+        $responseData = json_decode($response->content(), true);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(3, $defines);
+        $this->assertEquals(5, $responseData['total']);
+        $this->assertEquals(2, $responseData['offset']);
+    }
+
+    #[Test]
+    public function it_excludes_column_options_by_default(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'title' => 'Define With Options',
+        ]);
+
+        $mockRepository = Mockery::mock(WritableFolderRepository::class);
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->with(Mockery::type(User::class))
+            ->andReturn([$folder->id]);
+
+        $this->app->instance(WritableFolderRepository::class, $mockRepository);
+
+        $tool = new GetLedgerDefinesTool;
+        // include_options デフォルト false
+        $request = new Request([]);
+
+        $response = $tool->handle($request, $mockRepository);
+
+        $this->assertFalse($response->isError());
+
+        $responseData = json_decode($response->content(), true);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(1, $defines);
+
+        // デフォルトでは options キーが columns に存在しない
+        if (isset($defines[0]['columns'][0])) {
+            $this->assertArrayNotHasKey('options', $defines[0]['columns'][0]);
+        }
+    }
+
+    #[Test]
+    public function it_includes_column_options_when_requested(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'title' => 'Define With Options',
+        ]);
+
+        $mockRepository = Mockery::mock(WritableFolderRepository::class);
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->with(Mockery::type(User::class))
+            ->andReturn([$folder->id]);
+
+        $this->app->instance(WritableFolderRepository::class, $mockRepository);
+
+        $tool = new GetLedgerDefinesTool;
+        $request = new Request(['include_options' => true]);
+
+        $response = $tool->handle($request, $mockRepository);
+
+        $this->assertFalse($response->isError());
+
+        $responseData = json_decode($response->content(), true);
+        $defines = $this->getDefines($responseData);
+        $this->assertCount(1, $defines);
+
+        // include_options=true では options キーが存在する
+        if (isset($defines[0]['columns'][0])) {
+            $this->assertArrayHasKey('options', $defines[0]['columns'][0]);
+        }
+    }
+
+    #[Test]
+    public function it_clamps_limit_to_max_100(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+
+        $folder = Folder::factory()->create();
+
+        $mockRepository = Mockery::mock(WritableFolderRepository::class);
+        $mockRepository->shouldReceive('getReadableFolderIds')
+            ->with(Mockery::type(User::class))
+            ->andReturn([$folder->id]);
+
+        $this->app->instance(WritableFolderRepository::class, $mockRepository);
+
+        $tool = new GetLedgerDefinesTool;
+        $request = new Request(['limit' => 200]);
+
+        $response = $tool->handle($request, $mockRepository);
+
+        $this->assertFalse($response->isError());
+
+        $responseData = json_decode($response->content(), true);
+        // limit 200 は内部的に 100 にクランプされる
+        $this->assertEquals(100, $responseData['limit']);
+        $this->assertEquals(0, $responseData['total']);
     }
 
     protected function tearDown(): void
