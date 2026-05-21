@@ -189,6 +189,12 @@ return [
         'similarity_threshold' => env('RAG_SIMILARITY_THRESHOLD', 0.2),
     ],
 
+    // Related-ledger tab tuning
+    'related_ledger' => [
+        // Lower the semantic result count so the detail page stays readable.
+        'semantic_limit' => env('RAG_RELATED_LEDGER_SEMANTIC_LIMIT', 10),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Keyword Enhancement Settings (Phase 2.5)

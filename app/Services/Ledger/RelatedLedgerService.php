@@ -228,7 +228,8 @@ class RelatedLedgerService
             $ragResults = $this->ragSearchService->searchLedgers(
                 query: $query,
                 limit: $limit,
-                filters: ['user' => $user]
+                filters: ['user' => $user],
+                embeddingType: 'passage'
             );
 
             if (empty($ragResults)) {

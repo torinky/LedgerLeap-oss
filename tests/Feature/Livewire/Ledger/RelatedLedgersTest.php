@@ -14,6 +14,7 @@ use App\Models\User;
 use App\Services\RagSearchService;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Cache;
+use Mockery;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -354,6 +355,54 @@ class RelatedLedgersTest extends TestCase
         $this->assertFalse($results->isEmpty());
         $resultIds = $results->pluck('ledger.id')->toArray();
         $this->assertContains($relatedLedger->id, $resultIds);
+        $this->assertTrue($component->ragAvailable);
+    }
+
+    #[Test]
+    public function it_uses_passage_prefix_and_related_limit_for_semantic_search(): void
+    {
+        $relatedLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-003',
+                    1 => '設備関連レコード',
+                    2 => '関連案件の意味検索確認用',
+                ],
+            ]);
+
+        $semanticLimit = config('rag.related_ledger.semantic_limit', 10);
+
+        $this->mock(RagSearchService::class, function ($mock) use ($relatedLedger, $semanticLimit) {
+            $mock->shouldReceive('searchLedgers')
+                ->once()
+                ->with(
+                    Mockery::type('string'),
+                    $semanticLimit,
+                    Mockery::on(function (array $filters) {
+                        return isset($filters['user']) && $filters['user'] instanceof User;
+                    }),
+                    'passage'
+                )
+                ->andReturn([
+                    [
+                        'ledger_id' => $relatedLedger->id,
+                        'max_score' => 0.91,
+                        'best_chunk_text' => '関連案件の意味検索確認用',
+                        'chunk_count' => 1,
+                    ],
+                ]);
+        });
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchBySemantic($this->ledger);
+
+        $this->assertFalse($results->isEmpty());
+        $this->assertSame($relatedLedger->id, $results->first()['ledger']->id);
         $this->assertTrue($component->ragAvailable);
     }
 

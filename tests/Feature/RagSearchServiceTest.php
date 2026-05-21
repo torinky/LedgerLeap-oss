@@ -394,6 +394,27 @@ class RagSearchServiceTest extends TestCase
     }
 
     #[Test]
+    public function it_calls_embedding_service_with_passage_prefix_for_related_search()
+    {
+        // Arrange
+        $embeddingServiceMock = $this->mock(EmbeddingService::class);
+        $embeddingServiceMock->shouldReceive('embed')
+            ->once()
+            ->with('related query', 'passage')
+            ->andReturn(array_fill(0, 768, 0.1));
+
+        DB::shouldReceive('select')->andReturn([]);
+
+        $this->ragSearchService = app(RagSearchService::class);
+
+        // Act
+        $this->ragSearchService->searchLedgers('related query', 20, [], 'passage');
+
+        // Assert - Mockery verifies the embedding prefix.
+        $this->assertTrue(true);
+    }
+
+    #[Test]
     public function it_builds_optimized_mroonga_query()
     {
         // Arrange

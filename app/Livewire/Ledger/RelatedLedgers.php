@@ -165,12 +165,13 @@ class RelatedLedgers extends BaseLivewireComponent
      *
      * @return Collection<int, array{ledger: Ledger, score: float}>
      */
-    public function searchBySemantic(Ledger $ledger): Collection
+    public function searchBySemantic(Ledger $ledger, ?int $limit = null): Collection
     {
         $resolved = app(RelatedLedgerService::class)->searchBySemantic(
             ledger: $ledger,
             user: auth()->user(),
             sourceLedgerId: $this->ledgerId,
+            limit: $limit ?? config('rag.related_ledger.semantic_limit', 10),
         );
 
         $this->ragAvailable = $resolved['rag_available'];
