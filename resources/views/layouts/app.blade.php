@@ -76,6 +76,7 @@
     <fooer>
         {{ $footer ?? '' }}
     </fooer>
+    @livewireScriptConfig
     @vite(['resources/js/app.js'])
     @stack('scripts')
     <script>

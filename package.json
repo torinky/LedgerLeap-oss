@@ -21,6 +21,7 @@
     "vite": "^8"
   },
   "dependencies": {
+    "@alpinejs/intersect": "^3",
     "@fortawesome/fontawesome-free": "^7",
     "@wotz/livewire-sortablejs": "^1",
     "alpinejs": "^3",

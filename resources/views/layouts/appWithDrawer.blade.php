@@ -108,6 +108,7 @@
     {{-- グローバルモーダル --}}
     @livewire('attached-file.text-preview-modal')
 
+    @livewireScriptConfig
     @vite(['resources/js/app.js'])
     <script>
 

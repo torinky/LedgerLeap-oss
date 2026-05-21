@@ -34,6 +34,8 @@ Use the answer to decide whether the item stays in `docs/work/*` or graduates in
 
 When the failure is due to a test / config mismatch, capture the expected condition, the actual runtime condition, and the smallest opt-in needed before promoting the learning.
 
+When the browser reports repeated `Can't find variable: ...` errors across many `x-data` bindings, check the Livewire / Alpine bootstrap path first: bundle identity, `@livewireScriptConfig`, plugin registration, and cached views. Treat it as a runtime mismatch before rewriting component logic.
+
 When a Blade change produces a syntax or rendering error that does not match the visible source, clear compiled views before widening the diagnosis; stale cache can make the wrong branch look guilty.
 
 Canonical sequence for a finished task: `docs/work/*` retrospective → primary `.github` destination update → neighbor sync → validation → `/skill-maintenance` → `/git-commit`. See `docs/runbooks/ai-asset-maintenance-playbook.md` for the exact steps.

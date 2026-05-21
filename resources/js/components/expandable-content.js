@@ -1,49 +1,91 @@
-export default (options) => ({
+const expandableContent = (options) => ({
     expanded: false,
     showToggle: false,
     maxHeight: options.maxHeight || '6rem',
     expandedMaxHeight: options.expandedMaxHeight || '1000rem',
-    showToggleHint: options.showToggleHint ?? null,
-    skipMeasurement: options.skipMeasurement ?? false,
     _measured: false,
+    _resizeObserver: null,
 
     init() {
-        if (this.skipMeasurement && this.showToggleHint !== null) {
-            this.showToggle = !!this.showToggleHint;
-            this._measured = true;
-            return;
-        }
-
-        // 初回計測はテンプレート側の x-intersect.once から明示的に呼び出し、
-        // ここではリサイズ時の再計測のみを担当する。
-        // リサイズ時は debounce して再計測
+        // 初回は x-intersect.once で activate() が呼ばれる。
+        // ここでは以後のサイズ変化に備えて、必要最小限の再計測ハンドラだけを登録する。
         let resizeTimer = null;
         const resizeHandler = () => {
             clearTimeout(resizeTimer);
             resizeTimer = setTimeout(() => {
-                this._measured = false; // リサイズ後は再計測を許可
-                this.checkOverflow();
+                this.remeasure();
             }, 150);
         };
-        window.addEventListener('resize', resizeHandler);
+        globalThis.addEventListener('resize', resizeHandler);
         if (typeof this.$cleanup === 'function') {
             this.$cleanup(() => {
                 clearTimeout(resizeTimer);
-                window.removeEventListener('resize', resizeHandler);
+                globalThis.removeEventListener('resize', resizeHandler);
+                this.disconnectResizeObserver();
             });
         }
     },
 
+    activate() {
+        this.checkOverflow();
+        this.startResizeObservation();
+    },
+
+    startResizeObservation() {
+        if (this._resizeObserver || typeof globalThis.ResizeObserver === 'undefined') {
+            return;
+        }
+
+        const content = this.$refs.content;
+        if (!content) {
+            return;
+        }
+
+        this._resizeObserver = new globalThis.ResizeObserver(() => {
+            this.remeasure();
+        });
+        this._resizeObserver.observe(content);
+    },
+
+    disconnectResizeObserver() {
+        if (!this._resizeObserver) {
+            return;
+        }
+
+        this._resizeObserver.disconnect();
+        this._resizeObserver = null;
+    },
+
+    remeasure() {
+        this._measured = false;
+        this.checkOverflow();
+    },
+
     checkOverflow() {
         const content = this.$refs.content;
-        if (!content) return;
+        if (!content) {
+            return;
+        }
 
-        // x-intersect から呼ばれた場合、既に計測済みなら showToggle を上書きしない
-        if (this._measured) return;
+        if (this.expanded) {
+            this.showToggle = true;
+            this._measured = true;
+            return;
+        }
 
-        const maxHeightInPixels = parseFloat(window.getComputedStyle(content).maxHeight);
-        const overflows = content.scrollHeight > maxHeightInPixels + 1;
-        this.showToggle = overflows;
+        // 初回計測後は、remeasure() から呼ばれる場合のみ再判定を許可する。
+        if (this._measured) {
+            return;
+        }
+
+        const maxHeightInPixels = Number.parseFloat(globalThis.getComputedStyle(content).maxHeight);
+        if (Number.isNaN(maxHeightInPixels)) {
+            this.showToggle = false;
+            this._measured = true;
+            return;
+        }
+
+        this.showToggle = content.scrollHeight > maxHeightInPixels + 1;
         this._measured = true;
     },
 
@@ -66,3 +108,6 @@ export default (options) => ({
         this.expanded = !this.expanded;
     }
 });
+
+export default expandableContent;
+

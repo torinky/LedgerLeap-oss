@@ -15,7 +15,7 @@
     $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 
-<div class="relative" x-data="confidentialityScrollTracker"
+<div class="relative" x-data="confidentialityScrollTracker()"
     x-on:file-inspector-selection-applied.window="if ($event.detail.selectedLedgerId) { $nextTick(() => { const row = document.getElementById('ledger-row-' + $event.detail.selectedLedgerId); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.focus({ preventScroll: true }); } }); }"
     x-on:ledger-sections-rendered.window="setupObserver()">
 

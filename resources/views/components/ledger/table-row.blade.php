@@ -128,8 +128,8 @@
                     </div>
                 @else
                     @php
-                        //                        \Log::info('Debug table-row: rendering content', ['id' => $columnDefine->id, 'val' => $ledgerRecord->content[$columnDefine->id]]);
-                        // ColumnHtmlServiceを使用してバッジ表示などを適切にレンダリング
+                        // ColumnHtmlServiceでHTMLを生成し、もっと見るの表示可否は
+                        // expandable-content 側の実測（overflow）に委ねる。
                         $columnHtml = ColumnHtml::setAttachmentCollection(
                             $allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'),
                         )
@@ -147,19 +147,11 @@
                                 $currentTenantId,
                             );
                         $columnHtmlString = $columnHtml->toHtml();
-                        $columnTextLength = mb_strlen(trim(strip_tags($columnHtmlString)));
-                        $showToggleHint = $columnTextLength > 120
-                            || str_contains($columnHtmlString, '<br')
-                            || str_contains($columnHtmlString, '<p')
-                            || str_contains($columnHtmlString, '<ul')
-                            || str_contains($columnHtmlString, '<ol');
                     @endphp
 
                     <x-expandable-content
                         :content="$columnHtmlString"
                         max-height="6rem"
-                        :show-toggle-hint="$showToggleHint"
-                        skip-measurement
                     />
                 @endif
             @endif

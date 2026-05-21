@@ -39,3 +39,13 @@
 - `last_confirmed_at`: 2026-05-03
 - `recheck_after`: 90d
 - `recheck_trigger`: a clickable tenant-aware Blade component fails to navigate again, a Livewire UI test only checks rendering and not the link target, or a retrospective body forgets to capture cause / fix / tests / commit in one place
+
+## 2026-05-21 Issue-215 Sprint 4 Brushup
+
+- [docs/work/ui-ux/2026-05-21_issue-215_skill-brushup-retrospective.md](../../../docs/work/ui-ux/2026-05-21_issue-215_skill-brushup-retrospective.md)
+- [official-docs summary](official-docs-issue215.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-05-21
+- `recheck_after`: 90d
+- `recheck_trigger`: repeated `Can't find variable` errors show up across many Alpine bindings, a Livewire / Alpine page starts failing after bundle or layout changes, or a sprint finish needs both issue comments and the issue body updated together
+

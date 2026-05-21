@@ -272,6 +272,113 @@ class RecordsTableActionsTest extends TestCase
     }
 
     #[Test]
+    public function testRecordsTableRowRendersExpandableContentFromLongTextCell(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 1, 'name' => '本文', 'type' => 'textarea', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => $ledgerDefine->normalizeByColumnDefine([
+                1 => implode("\n\n", array_fill(0, 8, '長文セルの表示確認用コンテンツです。セル実寸ベースで「もっと見る」を判定します。')),
+            ]),
+            'content_attached' => [1 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        $view = $this->blade(
+            <<<'BLADE'
+<x-ledger.table-row
+    :ledger-record="$ledger"
+    :highlight-keyword="null"
+    :can-update="false"
+    :can-view="true"
+    :all-attachments="collect()"
+    :filtered-column-defines="$filteredColumnDefines"
+    :current-tenant-id="$currentTenantId"
+    :related-badge="null"
+    :selected-file-id="null"
+    :selected-ledger-id="null"
+    :selected-column-id="null"
+/>
+BLADE,
+            [
+                'ledger' => $ledger,
+                'filteredColumnDefines' => $ledgerDefine->column_define,
+                'currentTenantId' => $this->tenant->id,
+            ]
+        );
+
+        $view->assertSee('x-data="expandableContent(', false);
+        $view->assertSee('x-intersect.once.threshold.10="activate()"', false);
+        $view->assertSee("maxHeight: '6rem'", false);
+        $view->assertSee('長文セルの表示確認用コンテンツです。', false);
+        $view->assertDontSee('showToggleHint', false);
+        $view->assertDontSee('skipMeasurement', false);
+    }
+
+    #[Test]
+    public function records_table_row_short_text_cell_keeps_measurement_based_expandable_markup(): void
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                ['id' => 1, 'name' => '本文', 'type' => 'textarea', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+            'content' => $ledgerDefine->normalizeByColumnDefine([
+                1 => '短文',
+            ]),
+            'content_attached' => [1 => []],
+            'status' => WorkflowStatus::NONE,
+        ]);
+        $ledger->load('define');
+
+        $view = $this->blade(
+            <<<'BLADE'
+<x-ledger.table-row
+    :ledger-record="$ledger"
+    :highlight-keyword="null"
+    :can-update="false"
+    :can-view="true"
+    :all-attachments="collect()"
+    :filtered-column-defines="$filteredColumnDefines"
+    :current-tenant-id="$currentTenantId"
+    :related-badge="null"
+    :selected-file-id="null"
+    :selected-ledger-id="null"
+    :selected-column-id="null"
+/>
+BLADE,
+            [
+                'ledger' => $ledger,
+                'filteredColumnDefines' => $ledgerDefine->column_define,
+                'currentTenantId' => $this->tenant->id,
+            ]
+        );
+
+        $view->assertSee('x-data="expandableContent(', false);
+        $view->assertSee('x-intersect.once.threshold.10="activate()"', false);
+        $view->assertSee('短文', false);
+        $view->assertDontSee('showToggleHint', false);
+        $view->assertDontSee('skipMeasurement', false);
+    }
+
+    #[Test]
     public function records_table_row_renders_placeholder_for_lazy_loading(): void
     {
         $component = new RecordsTableRow;
