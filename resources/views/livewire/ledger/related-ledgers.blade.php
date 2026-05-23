@@ -173,6 +173,7 @@
                                     :filteredColumnDefines="$columns->toArray()"
                                     :currentTenantId="$currentTenantId"
                                     :highlightKeyword="null"
+                                    :expandableObserveResize="false"
                                     wire:key="related_row_{{ $ledgerRecord->id }}">
                                     <x-slot:relatedBadge>
                                         <x-ledger.related-reason-badge
@@ -196,4 +197,3 @@
         @endif
     @endif
 </div>
-

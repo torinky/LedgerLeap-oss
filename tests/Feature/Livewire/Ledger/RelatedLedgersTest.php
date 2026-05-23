@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\RelatedLedgers;
 use App\Models\ColumnDefine;
@@ -591,6 +592,50 @@ class RelatedLedgersTest extends TestCase
             'wire:target="showIdentifier,showSemantic,displayLevel"',
             $component->html()
         );
+    }
+
+    #[Test]
+    public function it_disables_resize_observation_for_related_tab_rows(): void
+    {
+        $relatedLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-001',
+                    1 => str_repeat('関連案件タブの表示確認用テキスト', 4),
+                    2 => '説明',
+                ],
+                'status' => WorkflowStatus::NONE,
+            ]);
+        $relatedLedger->load('define');
+
+        $view = $this->blade(
+            <<<'BLADE'
+<x-ledger.table-row
+    :ledger-record="$ledger"
+    :highlight-keyword="null"
+    :can-update="false"
+    :can-view="true"
+    :all-attachments="collect()"
+    :filtered-column-defines="$filteredColumnDefines"
+    :current-tenant-id="$currentTenantId"
+    :related-badge="null"
+    :selected-file-id="null"
+    :selected-ledger-id="null"
+    :selected-column-id="null"
+    :expandable-observe-resize="false"
+/>
+BLADE,
+            [
+                'ledger' => $relatedLedger,
+                'filteredColumnDefines' => $this->define->column_define,
+                'currentTenantId' => $this->tenant->id,
+            ]
+        );
+
+        $view->assertSee('observeResize: false', false);
     }
 
     // ─────────────────────────────────────────────

@@ -11,6 +11,7 @@
     'selectedFileId' => null,
     'selectedLedgerId' => null,
     'selectedColumnId' => null,
+    'expandableObserveResize' => true,
 ])
 @php
     use App\Helpers\SearchHelper;
@@ -152,6 +153,7 @@
                     <x-expandable-content
                         :content="$columnHtmlString"
                         max-height="6rem"
+                        :observe-resize="$expandableObserveResize"
                     />
                 @endif
             @endif

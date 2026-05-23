@@ -3,6 +3,7 @@ const expandableContent = (options) => ({
     showToggle: false,
     maxHeight: options.maxHeight || '6rem',
     expandedMaxHeight: options.expandedMaxHeight || '1000rem',
+    observeResize: options.observeResize ?? true,
     _measured: false,
     _resizeObserver: null,
 
@@ -32,7 +33,7 @@ const expandableContent = (options) => ({
     },
 
     startResizeObservation() {
-        if (this._resizeObserver || typeof globalThis.ResizeObserver === 'undefined') {
+        if (!this.observeResize || this._resizeObserver || typeof globalThis.ResizeObserver === 'undefined') {
             return;
         }
 
@@ -110,4 +111,3 @@ const expandableContent = (options) => ({
 });
 
 export default expandableContent;
-
