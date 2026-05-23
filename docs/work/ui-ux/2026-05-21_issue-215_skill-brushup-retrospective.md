@@ -90,3 +90,24 @@
 - toggle UI の回帰は、長文セルだけでなく短文セルもテストする。
 - Sprint 完了時は、issue コメントだけでなく本文も更新して履歴を残す。
 
+## 追記（2026-05-23）
+
+### Safari 差分の学び
+- 同じ `x-expandable-content` を使っていても、**関連案件タブの hidden `x-show` → visible 切替** と **一覧画面の常時可視描画** では Safari の挙動が違った。
+- `table-auto` の列再計算と `ResizeObserver` の再測定が噛み合うと、Safari ではセル幅のチャタリングが起きやすい。
+- そのため、共通コンポーネントを壊すより、**問題の出る利用箇所だけ `ResizeObserver` を止める opt-out** が安全だった。
+
+### 実施した修正
+- `resources/views/livewire/ledger/related-ledgers.blade.php`
+- `resources/views/components/ledger/table-row.blade.php`
+- `resources/views/components/expandable-content.blade.php`
+- `resources/js/components/expandable-content.js`
+- `tests/Feature/Livewire/Ledger/RelatedLedgersTest.php`
+
+### 成果
+- Safari の関連案件タブだけを局所的に抑制し、一覧画面の挙動は維持できた。
+- `bfe26bfc` `fix(ui): stop related tab resize loop`
+
+### 次回に残すルール
+- hidden タブ内の table で動的測定を入れるときは、`ResizeObserver` の既定有効を疑う。
+- visible 画面と hidden→visible 画面は、同じ row 実装でも別パターンとして扱う。
