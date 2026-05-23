@@ -1,7 +1,7 @@
 # Sprint 1: 公開リポジトリ初期化と CI ミラー構築
 
 ## 概要
-公開リポジトリを初期化し、プライベート main から公開側へ同期する仕組みを作ります。公開側は「セットアップしてデモ動作ができる状態」を最初の完成条件とします。
+private のまま公開用リポジトリの土台を初期化し、プライベート main から同期できる仕組みを作ります。公開切替は全体計画完了後に行い、setup.sh の完走確認とデモログイン確認は Sprint 1-A (#223) に分離します。
 
 ## 作成タイミング
 - 作成日時: 2026-05-23T08:08:26Z
@@ -9,10 +9,14 @@
 - 参照タイミング: 公開用ドキュメント整備の前提となる公開リポジトリ基盤の段階で作成
 
 ## このスプリントで作るもの
-- 公開リポジトリの初期化手順
+- private staging リポジトリの初期化手順
+	- Evidence: `docs/work/2026-05-23_oss-publication-plan.md` §4.1 に初期化手順を明記済み
 - `sync-to-public.yml` と公開同期の土台
+	- Evidence: `docs/work/2026-05-23_oss-publication-plan.md` §4.2〜§4.4 で継続同期フローと除外管理を確定済み
 - `.github/sync-excludes.txt` などの除外管理
-- 公開側でのセットアップとデモ検証の実行基盤
+	- Evidence: `.github/sync-excludes.txt` を新規作成済み
+- Sprint 1-A (#223) へ引き渡すための参照整理
+	- Evidence: issue #223 側で本体 baseline と `setup.sh` 完走確認を扱う前提を明記済み
 
 このスプリントでは公開ドキュメント本文はまだ作らない。同期と公開基盤だけを先に用意する。
 
@@ -24,21 +28,23 @@
 ## 現状
 - `phpunit.yml` はすでにテスト用の CI を持っている
 - ただし公開同期用ワークフローは未整備
-- 公開リポジトリ自体もまだ初期化されていない
+- 公開用リポジトリ `LedgerLeap-oss` は作成済みで、全体計画完了まで private のまま保持する
+- `sync-to-public.yml` の雛形を追加済みで、Phase 2 の同期基盤を private staging で整え始めた
+- 初回コミットを private staging リポジトリへ push 済み（commit: `aafcb7bb3d2702e7bc159583f447a0734b6d08b3`）
 
 ## 目標 / 完了状態
-- 公開リポジトリが作成される
+- private staging リポジトリに初回コミットが push される
 - 初回は orphan ブランチ由来の 1 コミットから始まる
 - `sync-to-public.yml` がプライベート側で動作する
-- 公開リポジトリで `./bin/setup.sh` とデモ動作が確認できる
+- GitHub 側で private main から private staging 側への同期可否を確認できる
 
 ## スコープ / 非スコープ
 ### 対象
-- 公開リポジトリの bootstrap
+- private staging リポジトリの bootstrap
 - `sync-to-public.yml` の実装
 - 除外パターンの管理（`.github/sync-excludes.txt`）
 - ブランチ保護と force push 回避
-- 公開側セットアップとデモ検証
+- GitHub 側の同期可否確認
 
 ### 対象外
 - ドキュメント本文の新規執筆
@@ -58,10 +64,19 @@
 - デモ動作の最小確認手順
 
 ## スプリント分解
-- [ ] 公開リポジトリの初期化方法を確定
-- [ ] CI ミラー実装方針を確定
-- [ ] 除外パターンと秘密情報の扱いを確定
-- [ ] 公開側でのセットアップ・デモ検証手順を確定
+- [x] 公開リポジトリの初期化方法を確定
+	- Evidence: `docs/work/2026-05-23_oss-publication-plan.md` §4.1 で、private 側の orphan ブランチ `public-bootstrap` から初回 private staging コミットを作る方式を確定済み
+- [x] CI ミラー実装方針を確定
+	- Evidence: `docs/work/2026-05-23_oss-publication-plan.md` §4.2〜§4.4 で、`sync-to-public.yml` の継続同期フロー、除外管理、逆同期の扱いを確定済み
+- [x] 除外パターンと秘密情報の扱いを確定
+	- Evidence: `.github/sync-excludes.txt` を新規作成し、除外対象と秘密情報の扱いを明示済み。`docs/development/demo-environment-setup.md` のトークン例も `<generated-token>` に置換済み
+- [x] private staging 側でのセットアップ・デモ検証手順を確定
+	- Evidence: `bin/setup.sh` で環境を立ち上げ、`docs/development/demo-credentials.md` の `superadmin@example.com` / `demo@example.com` でログインして基本動作と権限差分を確認する手順に確定済み
+
+## 完了判定
+- このスプリントで作るものに挙げた 4 項目は、いずれも evidence 付きで揃っている。
+- ただし、`## 完了条件` は公開リポジトリ実体の作成や同期動作確認に依存するため、Sprint 1 の issue 完了判定とは分けて扱う。
+- 現時点の判定は「計画・検証成果物は完了、実運用の公開基盤は後続実装待ち」。
 
 ## エビデンス / 参照先
 - `docs/work/2026-05-23_oss-publication-plan.md`
@@ -71,7 +86,58 @@
 - `docs/development/demo-credentials.md`
 
 ## 完了条件
-- [ ] 公開リポジトリが作成されている
-- [ ] 初回公開コミットが作成されている
-- [ ] プライベート main から公開側へ同期できる
-- [ ] 公開側でセットアップとデモ動作が完了する
+- [x] 公開用リポジトリの土台が作成されている（private 保持）
+	- Evidence: `gh repo view torinky/LedgerLeap-oss` で `isPrivate: true` を確認済み。visibility の切り替えは全体計画完了後に延期
+- [x] 初回コミットが private staging リポジトリに push される
+	- Evidence: `public-bootstrap` の orphan commit `aafcb7bb3d2702e7bc159583f447a0734b6d08b3` を `staging:main` へ push 済み
+- [ ] プライベート main から private staging 側へ同期できる
+	- Evidence: `git ls-remote --heads origin main` で private main は確認済み、`git ls-remote --heads staging main` で private staging も確認済み。ただし `sync-to-public.yml` は `PUBLIC_SYNC_ENABLED=true` と `PUBLIC_REPO_TOKEN` の投入前提で、現時点の実環境同期は未有効のため未確認。
+	- 次にやること: GitHub 側で `PUBLIC_SYNC_ENABLED=true` と `PUBLIC_REPO_TOKEN` を設定し、`workflow_dispatch` または main push で preview → sync の両方を通して、staging 側の反映結果を確認する。
+	- 実行手順:
+	  1. `PUBLIC_SYNC_ENABLED=true` と `PUBLIC_REPO_TOKEN` を GitHub 側で設定する。
+	  2. `main` へ対象変更を push するか、`workflow_dispatch` を実行する。
+	  3. Actions の `Preview public sync scope` で `should_sync=true` と対象ファイルを確認する。
+	  4. `Sync snapshot to public repo` が走り、private staging 側の反映結果が出ることを確認する。
+	  5. 反映結果を issue に evidence として記録する。
+	- 手動再現手順:
+	  1. GitHub の private repo `torinky/LedgerLeap` を開く。
+	  2. `Settings` → `Secrets and variables` → `Actions` を開く。
+	  3. `Variables` で `PUBLIC_SYNC_ENABLED` を `true` に設定する。
+	  4. `Secrets` で `PUBLIC_REPO_TOKEN` を登録する。
+	  5. `Actions` タブで `Sync to public` ワークフローを開く。
+	  6. `Run workflow` で branch を `main` にして実行するか、`main` へ対象変更を push する。
+	  7. 実行結果で `Preview public sync scope` の `should_sync` と `included_files` を確認する。
+	  8. `Sync snapshot to public repo` が成功したら、private staging 側の反映結果を確認する。
+	- `PUBLIC_REPO_TOKEN` の取得方法:
+	  1. GitHub の右上プロフィールから `Settings` を開く。
+	  2. 左メニューの `Developer settings` を開く。
+	  3. `Personal access tokens` → `Fine-grained tokens` を選び、`Generate new token` を押す。
+	  4. トークン名を付け、必要なら有効期限を設定する。
+	  5. `Repository access` で `Only select repositories` を選び、`torinky/LedgerLeap-oss` を対象にする。
+	  6. `Repository permissions` で少なくとも `Contents: Read and write` を許可する。
+	  7. 必要に応じて `Metadata: Read-only` はそのまま付与する。
+	  8. トークンを生成し、表示された値をコピーして `PUBLIC_REPO_TOKEN` として secret に登録する。
+	  9. もし fine-grained token が使えない組織設定なら、管理者に repo write 権限付きの代替 PAT を依頼する。
+
+> `./bin/setup.sh` の完走確認とデモログイン確認は issue #223 に移し、ここでは GitHub 側の同期確認に集中する。
+
+## 完了判定
+- Sprint 1 の成果物リストは evidence 付きで揃っている。
+- 公開化は全体計画完了後に延期するため、現時点の判定は **private staging 作業を進行中、公開切替待ち**。
+- 次に必要なのは、issue #223 で本体 baseline と `setup.sh` 完走をローカルで確認し、その後に 218 側で GitHub の同期検証へ進むこと。
+
+## ローカル確認 / GitHub 確認
+### ローカルで確認すること
+- `issue #223` で private staging baseline を作る
+- `./bin/setup.sh` をクリーン環境で完走させる
+- デモアカウントでログインできることを確認する
+
+### GitHub 側に任せること
+- `staging:main` への初回 push を受ける
+- `sync-to-public.yml` の実行条件を確認する
+- private main から private staging への同期可否を確認する
+- visibility 切り替えのタイミングを制御する
+
+## GitHub 追跡
+- Epic: #216（本 Issue）
+- Sprint 1-A: #223
