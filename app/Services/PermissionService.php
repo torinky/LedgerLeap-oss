@@ -36,7 +36,7 @@ class PermissionService
      * 指定されたリソースに対するアクセス可能なロールとその権限タイプを取得する
      * (変更なし)
      *
-     * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool}>
+     * @return Collection<object{role: Role, permissions: Collection<FolderPermissionType>, source: string, is_inherited: bool, source_folder_id: int|null, source_folder_title: string|null, source_folder_path: string|null, source_folder_path_items: array<int, array{id: int, title: string}>|null}>
      */
     public function getAccessRolesWithPermissions(int $resourceId, string $resourceType): Collection
     {
@@ -90,17 +90,27 @@ class PermissionService
                 //                dd($accessPermissions);
 
                 if ($accessPermissions->isNotEmpty()) {
+                    $sourceFolderPath = null;
+
+                    if ($targetFolder) {
+                        $sourceFolder = $this->findPermissionSourceFolder($targetFolder, $role);
+                        $sourceFolderPath = $sourceFolder ? $this->folderPathFromSourceFolder($sourceFolder) : null;
+                        $sourceFolderPathItems = $sourceFolder ? $this->sourceFolderPathItemsFromSourceFolder($sourceFolder) : null;
+                    }
+
                     $rolesWithPermissions->push((object) [
                         'role' => $role,
                         'permissions' => $accessPermissions,
                         'source' => 'folder', // 権限のソース
                         'is_inherited' => $targetFolder->id !== $resourceId, // 対象がフォルダ自身でなければ継承
+                        'source_folder_id' => $sourceFolder?->id,
+                        'source_folder_title' => $sourceFolder?->title,
+                        'source_folder_path' => $sourceFolderPath,
+                        'source_folder_path_items' => $sourceFolderPathItems,
                     ]);
                 }
             }
         }
-
-        // 2. 台帳定義に直接紐づくロールの権限を取得 (LedgerDefine または Ledger が対象の場合のみ)
         if ($targetLedgerDefine && in_array($resourceType, ['Ledger', 'LedgerDefine'])) {
             $ledgerDefineRoles = $targetLedgerDefine->roles;
             foreach ($ledgerDefineRoles as $role) {
@@ -415,6 +425,50 @@ class PermissionService
             'folder' => $targetFolder,
             'ledgerDefine' => $targetLedgerDefine,
         ];
+    }
+
+    private function findPermissionSourceFolder(Folder $targetFolder, Role $role): ?Folder
+    {
+        $folderChain = collect([$targetFolder])->merge($targetFolder->ancestors ?? []);
+
+        foreach ($folderChain as $candidateFolder) {
+            $directPermissions = collect($candidateFolder->getDirectPermissions($role));
+
+            $hasAccessPermission = $directPermissions->contains(function (string $permissionValue): bool {
+                $permissionType = FolderPermissionType::tryFrom($permissionValue);
+
+                return $permissionType?->isAccessType() ?? false;
+            });
+
+            if ($hasAccessPermission) {
+                return $candidateFolder;
+            }
+        }
+
+        return null;
+    }
+
+    private function folderPathFromSourceFolder(Folder $sourceFolder): string
+    {
+        $sourceFolder->loadMissing('ancestors');
+
+        return '/'.$sourceFolder->ancestors->pluck('title')->push($sourceFolder->title)->implode('/');
+    }
+
+    /**
+     * 要求元フォルダを階層リンクに変換する
+     *
+     * @return array<int, array{id: int, title: string}>
+     */
+    private function sourceFolderPathItemsFromSourceFolder(Folder $sourceFolder): array
+    {
+        $sourceFolder->loadMissing('ancestors');
+
+        return $sourceFolder->ancestors
+            ->map(fn (Folder $folder) => ['id' => $folder->id, 'title' => $folder->title])
+            ->push(['id' => $sourceFolder->id, 'title' => $sourceFolder->title])
+            ->values()
+            ->all();
     }
 
     /**

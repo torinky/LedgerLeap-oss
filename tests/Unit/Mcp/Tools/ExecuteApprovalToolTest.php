@@ -9,6 +9,8 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Services\WorkflowService;
+use Laravel\Mcp\Request;
+use Laravel\Mcp\Response;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -59,7 +61,7 @@ class ExecuteApprovalToolTest extends TestCase
         putenv('MCP_AUTH_TOKEN=');
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => 1,
                 'action' => 'approve',
             ]),
@@ -72,7 +74,7 @@ class ExecuteApprovalToolTest extends TestCase
     public function test_rejects_invalid_ledger_id(): void
     {
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'action' => 'approve',
             ]),
             $this->workflowService
@@ -92,7 +94,7 @@ class ExecuteApprovalToolTest extends TestCase
         ]);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'action' => 'invalid_action',
             ]),
@@ -138,7 +140,7 @@ class ExecuteApprovalToolTest extends TestCase
             ->andReturn($approvedLedger);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'action' => 'approve',
                 'comments' => '承認します',
@@ -188,7 +190,7 @@ class ExecuteApprovalToolTest extends TestCase
             ->andReturn($returnedLedger);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'action' => 'return_to_draft',
                 'comments' => '修正が必要です',
@@ -215,7 +217,7 @@ class ExecuteApprovalToolTest extends TestCase
         ]);
 
         $response = $this->tool->handle(
-            new \Laravel\Mcp\Request([
+            new Request([
                 'ledger_id' => $ledger->id,
                 'action' => 'approve',
             ]),
@@ -223,7 +225,7 @@ class ExecuteApprovalToolTest extends TestCase
         );
 
         // エラーレスポンスであることを確認
-        $this->assertInstanceOf(\Laravel\Mcp\Response::class, $response);
+        $this->assertInstanceOf(Response::class, $response);
         $this->assertTrue($response->isError());
     }
 }

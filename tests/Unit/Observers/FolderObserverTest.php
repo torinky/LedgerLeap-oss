@@ -3,6 +3,7 @@
 namespace Tests\Unit\Observers;
 
 use App\Models\Folder;
+use App\Observers\FolderObserver;
 use App\Services\TenantAccessService;
 use Mockery;
 use Mockery\MockInterface;
@@ -100,7 +101,7 @@ class FolderObserverTest extends TestCase
         $folder = Folder::factory()->create();
 
         // Folderモデルをパーシャルモックして、wasChanged()の動作を制御
-        $folderMock = \Mockery::mock($folder)->makePartial();
+        $folderMock = Mockery::mock($folder)->makePartial();
         $folderMock->shouldReceive('wasChanged')
             ->with('parent_id')
             ->andReturn(false);
@@ -112,7 +113,7 @@ class FolderObserverTest extends TestCase
 
         // act
         // Observerのsaved()メソッドを直接呼び出してテスト
-        $observer = new \App\Observers\FolderObserver($this->tenantAccessServiceMock);
+        $observer = new FolderObserver($this->tenantAccessServiceMock);
         $observer->saved($folderMock);
 
         // assert - Mockeryが検証

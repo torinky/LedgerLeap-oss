@@ -3,6 +3,14 @@
 namespace Tests;
 
 use App\Models\Tenant;
+use Illuminate\Foundation\Application;
+use Illuminate\Foundation\Bootstrap\BootProviders;
+use Illuminate\Foundation\Bootstrap\HandleExceptions;
+use Illuminate\Foundation\Bootstrap\LoadConfiguration;
+use Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables;
+use Illuminate\Foundation\Bootstrap\RegisterFacades;
+use Illuminate\Foundation\Bootstrap\RegisterProviders;
+use Illuminate\Foundation\Bootstrap\SetRequestForConsole;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Illuminate\Support\Facades\Queue;
 
@@ -29,9 +37,79 @@ abstract class TestCase extends BaseTestCase
     protected bool $fakeQueue = true;
 
     /**
+     * テストは Laravel Sail / Docker interpreter からのみ実行を許可する。
+     * ホスト実行では mysql ホスト名解決が壊れやすいため、DB接続前に明示中止する。
+     *
+     * @return array<int, string>
+     */
+    public static function getTestRuntimeAbortReasons(): array
+    {
+        $envVar = static function (string $key, mixed $default = null): mixed {
+            $value = $_ENV[$key] ?? $_SERVER[$key] ?? getenv($key);
+
+            return $value !== false && $value !== null ? $value : $default;
+        };
+
+        $abortReasons = [];
+        $appEnv = $envVar('APP_ENV');
+
+        if ($appEnv === 'production') {
+            $abortReasons[] = 'APP_ENV=production';
+        }
+
+        $runningInsideSail = (bool) $envVar('LARAVEL_SAIL') || file_exists('/.dockerenv') || (bool) $envVar('GITHUB_ACTIONS');
+
+        if (! $runningInsideSail) {
+            $abortReasons[] = 'Tests must run inside Laravel Sail / Docker interpreter';
+        }
+
+        $dbName = $envVar('DB_DATABASE');
+        $blockedDbNames = ['ledgerleap', 'ledgerleap_prod'];
+
+        if (in_array($dbName, $blockedDbNames, true)) {
+            $abortReasons[] = "DB_DATABASE is blocked: {$dbName}";
+        }
+
+        return $abortReasons;
+    }
+
+    /**
+     * @param  array<int, string>  $abortReasons
+     */
+    public static function formatTestRuntimeAbortMessage(array $abortReasons): string
+    {
+        $messageLines = array_map(
+            static fn (string $reason): string => " - {$reason}",
+            $abortReasons,
+        );
+
+        return implode("\n", [
+            '[ABORT TEST] Refusing to run tests in the current runtime:',
+            ...$messageLines,
+            '',
+            'Use Laravel Sail or a Docker-based PhpStorm interpreter instead.',
+            'Examples:',
+            '  ./vendor/bin/sail test',
+            '  ./vendor/bin/sail test tests/Feature/Api',
+            '  ./vendor/bin/sail pest --testsuite=Feature --exclude-group=external --exclude-group=database-migrations',
+            '',
+        ]);
+    }
+
+    public static function abortIfTestsShouldNotRunInCurrentRuntime(): void
+    {
+        $abortReasons = static::getTestRuntimeAbortReasons();
+
+        if ($abortReasons !== []) {
+            fwrite(STDERR, static::formatTestRuntimeAbortMessage($abortReasons));
+            exit(1);
+        }
+    }
+
+    /**
      * Creates the application.
      *
-     * @return \Illuminate\Foundation\Application
+     * @return Application
      */
     public function createApplication()
     {
@@ -39,13 +117,13 @@ abstract class TestCase extends BaseTestCase
 
         // Laravel 10+ の新しいブートストラップ方法
         $app->bootstrapWith([
-            \Illuminate\Foundation\Bootstrap\LoadEnvironmentVariables::class,
-            \Illuminate\Foundation\Bootstrap\LoadConfiguration::class,
-            \Illuminate\Foundation\Bootstrap\HandleExceptions::class,
-            \Illuminate\Foundation\Bootstrap\RegisterFacades::class,
-            \Illuminate\Foundation\Bootstrap\SetRequestForConsole::class,
-            \Illuminate\Foundation\Bootstrap\RegisterProviders::class,
-            \Illuminate\Foundation\Bootstrap\BootProviders::class,
+            LoadEnvironmentVariables::class,
+            LoadConfiguration::class,
+            HandleExceptions::class,
+            RegisterFacades::class,
+            SetRequestForConsole::class,
+            RegisterProviders::class,
+            BootProviders::class,
         ]);
 
         return $app;
@@ -66,20 +144,17 @@ abstract class TestCase extends BaseTestCase
 
     public static function setUpBeforeClass(): void
     {
-        parent::setUpBeforeClass();
+        static::abortIfTestsShouldNotRunInCurrentRuntime();
 
-        // アプリ未ブートでも安全な環境変数チェック
-        $appEnv = $_ENV['APP_ENV'] ?? $_SERVER['APP_ENV'] ?? getenv('APP_ENV') ?: null;
-        if ($appEnv === 'production') {
-            fwrite(STDERR, "[ABORT TEST] APP_ENV=production\n");
-            exit(1);
-        }
+        parent::setUpBeforeClass();
     }
 
     protected function initializeTenancy(): void // $domain 引数を削除
     {
         // テナントが存在しない場合のみ作成
-        $this->tenant = \App\Models\Tenant::firstOrCreate(['id' => 'test_tenant_id'], ['id' => 'test_tenant_id']);
+        /** @var Tenant $tenant */
+        $tenant = Tenant::query()->firstOrCreate(['id' => 'test_tenant_id'], ['id' => 'test_tenant_id']);
+        $this->tenant = $tenant;
         // ドメイン関連の行を削除
 
         tenancy()->initialize($this->tenant);

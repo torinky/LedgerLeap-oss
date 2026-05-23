@@ -108,6 +108,90 @@ class ActivityLogFormatterTest extends TestCase
     }
 
     #[Test]
+    public function it_returns_file_name_display_and_inspector_link_for_attached_file_subject()
+    {
+        $file = AttachedFile::factory()->create([
+            'filename' => 'test_document.pdf',
+            'hashedbasename' => 'hash123.pdf',
+        ]);
+
+        $file->refresh();
+
+        $activity = activity()
+            ->performedOn($file)
+            ->log('test');
+
+        $this->assertSame('添付ファイル: test_document.pdf', ActivityLogFormatter::getSubjectDisplay($activity));
+        $this->assertSame(
+            route('ledger.show', ['tenant' => tenant()->id, 'ledgerId' => $file->ledger->id, 'file' => $file->id]),
+            ActivityLogFormatter::getSubjectDetailLink($activity)
+        );
+    }
+
+    #[Test]
+    public function it_uses_the_subject_tenant_when_the_live_tenant_context_is_missing()
+    {
+        $file = AttachedFile::factory()->create([
+            'filename' => 'tenant_fallback.pdf',
+            'hashedbasename' => 'hash-fallback.pdf',
+        ]);
+
+        $activity = activity()
+            ->performedOn($file)
+            ->log('test');
+
+        $currentTenant = tenant();
+        tenancy()->end();
+
+        try {
+            $this->assertSame(
+                route('ledger.show', ['tenant' => $file->tenant_id, 'ledgerId' => $file->ledger->id, 'file' => $file->id]),
+                ActivityLogFormatter::getSubjectDetailLink($activity)
+            );
+        } finally {
+            if ($currentTenant) {
+                tenancy()->initialize($currentTenant);
+            }
+        }
+    }
+
+    #[Test]
+    public function it_translates_attached_file_subject_display_in_fallback_path()
+    {
+        $activity = new Activity;
+        $activity->subject_type = AttachedFile::class;
+        $activity->subject_id = 18;
+        $activity->setRelation('subject', new class
+        {
+            public int $id = 18;
+        });
+
+        $display = ActivityLogFormatter::getSubjectDisplay($activity);
+
+        $this->assertSame(__('ledger.activity.model_name.attached_file').': 18', $display);
+    }
+
+    #[Test]
+    public function it_translates_content_attached_attribute_label_in_changes()
+    {
+        $payload = [
+            'event' => 'updated',
+            'properties' => [
+                'attributes' => [
+                    'content_attached' => '{"1":"new value"}',
+                ],
+                'old' => [
+                    'content_attached' => '{"1":"old value"}',
+                ],
+            ],
+        ];
+
+        $changes = ActivityLogFormatter::formatChanges($payload);
+
+        $this->assertStringContainsString(__('ledger.activity.changes.attribute_label.content_attached'), $changes->toHtml());
+    }
+
+    #[Test]
     public function it_handles_various_file_events()
     {
         $user = User::factory()->create();

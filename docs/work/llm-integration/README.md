@@ -13,10 +13,34 @@
 
 ---
 
-### ✅ 現状サマリー (2025-10-13)
+### ✅ 現状サマリー (2026-03-14 / Sprint 6 + Issue #95反映)
 
-このカテゴリに記載されている機能（API基盤、MCPサーバー、各種MCPツール、統計機能、デモデータ、**スコアリング統合**）は、すべて実装・解決済みです。
-各ドキュメントに記載されている計画や仕様は、現在のコードベースに正しく反映されており、実装との間に大きな齟齬がないことを確認済みです。
+2025年までの計画で **API基盤 / MCPサーバー / 検索・登録・ワークフロー・統計** の基礎は整いました。
+一方、2026年3月の再検討により、今後の主計画は **クライアント別ファイル生成** ではなく、**MCP / API を唯一の接点とする client-first な公開契約の整備** に置き直しています。
+
+今後は次の3層を明確に分離して整理します。
+
+- **client-facing**: MCP / API クライアントや LLM が見る業務能力、台帳構造、操作導線
+- **developer-facing**: LedgerLeap 開発者向けの内部制約、同期、保守、生成補助
+- **bootstrap discovery**: クライアント初回接続時に、役割・モデル・用途に応じた最小 skill / prompt / resource を返す導線（具体 contract は Sprint 6 文書で定義済み）
+- **optional export**: discovery の後段で、client 別の派生ファイル群をローカル配置用ディレクトリとして生成する補助導線（Issue #95 で整理）
+
+また、client-facing capability は `docs/function/PersonaUseCaseScenario.md` のペルソナ（実務担当者 / 管理者 / 現場リーダー）を基準に再定義します。
+
+### まず読む順番
+
+1. **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)** — 2026年以降の主計画
+2. **[client-facing capability taxonomy](./2026-03-10_Client_Facing_Capability_Taxonomy.md)** — Sprint 2 で整理した client-facing capability の一覧とペルソナ別初期 skill セット
+3. **[developer-facing maintenance taxonomy](./2026-03-12_Developer_Facing_Maintenance_Taxonomy.md)** — Sprint 3 で整理した AI 資産の保守先・SoT / 派生物の境界・重複整理方針
+4. **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)** — Sprint 4 で整理した on-prem / local model 前提の onboarding 役割分担、text budget、Sprint 5 / 6 への引き継ぎ境界
+5. **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)** — Sprint 5 で整理した `ledger-update` の client-facing workflow、PATCH 主契約、read path 前提、API / MCP 差分
+6. **[first-access bootstrap discovery contract](./2026-03-14_First_Access_Bootstrap_Discovery_Contract.md)** — Sprint 6 で固定した初回 discovery contract、carrier 比較、local model budget、client/developer 境界
+7. **[optional client bootstrap export flow](./2026-03-14_Optional_Client_Bootstrap_Export_Flow.md)** — Issue #95 で整理した optional downstream export の責務境界、client 別出力物、overwrite policy、follow-up 境界
+8. **[client skill initialization gating proposal](./2026-03-14_Client_Skill_Initialization_Gating_Proposal.md)** — discovery 後に client-side skill を有効化し、pre-init では通常 tool を解放しない gate 案
+9. **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)** — VSCode + Continue + ローカルLLM 主体の UI 評価計画、ダミーデータ、期待応答、低能力SaaS比較
+10. **[MCP アーキテクチャと動作フロー](../../development/MCP_Architecture_and_Flow.md)** — 実装済みの MCP 公開契約
+11. **[API仕様](../../api/README.md)** — 実装済みの REST 公開契約
+12. 2025年の各計画書 — 歴史的経緯・実装判断の参照用
 
 ---
 
@@ -41,6 +65,30 @@
 - **[MCPスコアリング統合実装完了](./2025-10-13_MCP_Sorting_Implementation_Complete.md)**: SearchLedgersToolへのソートパラメータ追加の実装完了報告。
 
 #### 機能拡張
+- **[AI 指示書の同期と共有計画](./20260308_ai_instructions_sync_plan.md)**: `.github` を正本とした AI 指示資産の同期・共有方針。
+- **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)**: client-facing / developer-facing を分離し、オンプレ・ローカルモデル前提で、ペルソナ対応と初回 bootstrap discovery を含めて LLM 連携を再計画した親計画。
+- **[client-facing capability taxonomy](./2026-03-10_Client_Facing_Capability_Taxonomy.md)**: `ledger-search` / `ledger-create` / `ledger-update` / `workflow-review` を業務能力として整理し、ペルソナ別の初期 skill セットを定義した Sprint 2 の成果物。`docs/function/Ledger.md` / `Search.md` / `WorkFlow.md` は developer-facing の正式仕様として維持し、この文書群とは役割を分離する。
+- **[developer-facing maintenance taxonomy](./2026-03-12_Developer_Facing_Maintenance_Taxonomy.md)**: Sprint 3 の成果物。`.github` / `AGENTS.md` / `docs/runbooks` / `docs/work` / `resources/ai/capabilities` / generator prototype の責務を整理し、内部制約の保守先と SoT / 派生物の境界を明文化する。
+- **[on-prem / local model onboarding design](./2026-03-13_OnPrem_Local_Model_Onboarding_Design.md)**: Sprint 4 の成果物。on-prem / local model 前提で、offline docs / MCP / REST API の役割分担、prompt / resource / tool の責務分担、local model 向け text budget、Sprint 5 / 6 への引き継ぎ境界を整理する。
+- **[first-access bootstrap discovery contract](./2026-03-14_First_Access_Bootstrap_Discovery_Contract.md)**: Sprint 6 の成果物。REST bootstrap manifest を初期 contract として固定し、MCP `resource / prompt / tool` の比較、local model 向け text/schema budget、client-facing / developer-facing 境界、後続 Issue 分解を整理する。
+  - 後続実装 Issue: [#92](https://github.com/torinky/LedgerLeap/issues/92), [#93](https://github.com/torinky/LedgerLeap/issues/93), [#94](https://github.com/torinky/LedgerLeap/issues/94), [#95](https://github.com/torinky/LedgerLeap/issues/95)
+- **[optional client bootstrap export flow](./2026-03-14_Optional_Client_Bootstrap_Export_Flow.md)**: Issue #95 の判断記録。`ai:bootstrap-client-skills` を optional downstream export として正式化し、client 別出力物、配置責務、overwrite policy、follow-up 境界を整理する。
+- **[Issue #83 UI evaluation plan](./2026-03-14_Issue-83_UI_Evaluation_Plan.md)**: VSCode + Continue + ローカルLLM を主対象に、bootstrap discovery / capability / onboarding を UI から評価する計画。ダミーデータ、シナリオ、期待応答、低能力SaaS比較の観点を整理する。
+  - Tracking Issue: [#96](https://github.com/torinky/LedgerLeap/issues/96)
+- **[MCP tool description audit and reduction plan](./2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md)**: Issue #83 の検討結果として、`app/Mcp/Tools/*.php` の description を棚卸しし、tool contract に残す内容と client-side skill / capability / guide へ移す process guidance を整理した調査メモ。
+- **Issue #100: MCP tool description / client-skill separation**: #83 関連の follow-up issue。対象 tool、受け入れ基準、非対象、スプリント別チェックリストを GitHub issue として管理し、実装判断は [`2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md`](./2026-03-14_MCP_Tool_Description_Audit_and_Reduction_Plan.md) に追記する。
+- **[client skill initialization gating proposal](./2026-03-14_Client_Skill_Initialization_Gating_Proposal.md)**: serena 的なイメージで、client-side skill の初期化が終わるまで通常 tool を解放しない bootstrap gate を追加提案した検討メモ。discovery / initialization / gate / optional export の責務分離を整理する。
+- **Issue #101: client skill initialization gate**: #83 関連の follow-up issue。pre-init allowlist、初期化完了条件、re-init policy、optional export との境界を GitHub issue として起票済み。
+- **[update path public contract](./2026-03-13_Update_Path_Public_Contract.md)**: Sprint 5 の成果物。`ledger-update` を client-facing 契約として定義し、単一レコード read path の必要性、PATCH 主契約、pending 状態編集時の `DRAFT` 戻し、API 実装 / MCP 実装への分解単位を整理する。
+- **[update API implementation log](./2026-03-13_Update_API_Implementation_Log.md)**: Issue #90 の実装ログ。`GET/PATCH /api/v1/ledgers/{ledger}` の判断、既存 workflow サービス再利用方針、tag update を見送った理由、公式ドキュメント化の手掛かりを記録する。
+- **[MCP update tools implementation log](./2026-03-13_MCP_Update_Tools_Implementation_Log.md)**: Issue #91 の実装ログ。`GetLedgerDetailTool` / `UpdateLedgerTool` の役割分担、`dry_run` の最小差分設計、テストの責務分離、別スプリントへ切り出した論点を記録する。
+- **[MCP Search / Attachment Feedback Follow-up Plan](./2026-04-05_MCP_Search_Attachment_Feedback_Followup_Plan.md)**: MCP テストで見つかった検索断片 / 同義語 / 複数添付 / 添付詳細出力の 4 論点を、実装スプリントと prompt 改善に分けて整理したフォローアップ計画。MCP では `search_trace` で `original_q` / `selected_terms` / `kind` を確認できる前提で、`GetSearchTermsTool` で候補語を先に取り出してから `SearchLedgersTool` へ渡す流れも含む。Sprint A の tracking issue は #136。A2-4 の実施結果と issue #140 の完了メモも同ページに反映済み。
+- **[MCP Resource Read Bridge 計画](./2026-05-08_MCP_Resource_Read_Bridge_Plan.md)**: `resources/read` 非対応クライアント向けに、server-side で resource URI を中身へ橋渡しする汎用 resource bridge の検討計画。bootstrap / attachment などの server-registered resource 全般を対象にし、追跡先は issue #209。
+- **[Issue #136 Sprint A3: Lookup-First Tag / Folder / Ledger Partial Match Search Plan](./2026-04-05_Issue-136_Sprint_A3_Folder_Ledger_Fragment_Resolution_Plan.md)**: Sprint A の残課題であるタグ / フォルダ名 / 台帳名の部分一致検索を、`folder_id` / `ledgerDefineId` の候補探索から始める lookup-first 導線として、既存契約を壊さずにどう解決するかを整理した A3 の分解計画。実施結果と完走テストの記録も同ページに追記済み。
+  - 連動ツール: `GetTagsTool` / `GetFoldersTool` / `GetLedgerDefinesTool` / `SearchLedgersTool`
+- **[Issue 137 policy memo: synonym / technical-term selection](./2026-04-05_Issue-137_Synonym_Technical_Term_Selection_Policy_Memo.md)**: 同義語と技術用語候補の分離、業務慣熟度ベースの選択ポリシー、既存正規化の非ゴール化をまとめた A2-1 の最終アウトプット。
+- **[Issue 138 policy memo: search query trace explainability](./2026-04-05_Issue-138_Search_Query_Trace_Explainability_Memo.md)**: 検索クエリ trace の最小項目、ユーザー向け要約と開発者向け詳細の分離、後続対話での q 調整に関する A2-2 の最終アウトプット。
+- **[複数 `#タグ` 検索の一般的な挙動調査と LedgerLeap の判断整理](./2026-04-27_Tag_Search_Multi_Hashtag_Common_Principles_and_LedgerLeap_Policy.md)**: GitHub Code Search とタグ管理ライブラリの一般的な挙動を踏まえ、LedgerLeap の複数 `#タグ` 検索を AND / 部分一致として扱う判断との差分を整理した調査メモ。
 - **[改訂版MCP実装計画 (ビュー調査版)](./2025-10-01_Revised_MCP_Implementation_Plan.md)**: 既存のビューや翻訳リソースの活用を反映した改訂計画。
 - **[添付ファイル活用計画](./2025-10-04_MCP_AttachedFiles_Integration_Plan.md)**: MCP経由で添付ファイル情報を活用するための実装計画。
 - **[添付ファイル活用タスク分析](./2025-10-04_MCP_Task5.2_AttachedFile_Analysis.md)**: 添付ファイル関連の未実装タスクに関する要件分析。
@@ -72,11 +120,17 @@
 ## 📋 アクティブな実装計画
 
 ### 🚀 **メイン実装計画**
-- **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **現在進行中**
+- **[クライアント接続モデル再計画（MCP / API First）](./2026-03-09_Client_Skill_Bootstrap_Strategy.md)** ⭐ **最優先**
+  - **目標**: MCP / API を唯一の client 接点として、公開契約・client-facing skill・developer-facing SoT・初回 bootstrap discovery を再整理する
+  - **期間**: 6スプリント（情報設計 → client-facing taxonomy → developer-facing taxonomy → on-prem onboarding → update path → bootstrap discovery）
+  - **範囲**: ペルソナ対応、オンプレ・ローカルモデル前提、更新系公開契約、初回アクセス時 skill bootstrap discovery
+  - **関連Issue**: [#83](https://github.com/torinky/LedgerLeap/issues/83) （親計画・進捗管理先）
+  - **状況**: Sprint 1-6 完了（情報設計のリセット / client-facing capability taxonomy / developer-facing maintenance taxonomy / on-prem onboarding design / update path public contract / first-access bootstrap discovery contract） / static bootstrap resource（Issue #92）、bootstrap prompt starter（Issue #93）、MCP parity tool `GetClientBootstrapManifestTool`（Issue #94）を実装済み。Issue #95 では optional export flow を既存 CLI ベースで正式化し、後続は MCP export tool / archive 化の要否検討と UI 評価が中心
+- **[MCP包括的実装計画](./2025-09-29_Comprehensive_MCP_Implementation_Plan.md)** ⭐ **継続参照**
   - **目標**: AI統合業務管理プラットフォームへの完全発展
   - **期間**: 4-6週間
   - **範囲**: ワークフロー統合、監査機能、統計・レポート、高度検索
-  - **状況**: Phase 0 (準備段階) 開始準備中
+  - **状況**: 2025年時点の実装計画として参照。2026年以降の主計画は上記再計画へ集約
 
 ## 📚 完了済み計画
 
@@ -195,6 +249,6 @@ After: "業務全体を自然言語で操作可能"
 
 ---
 
-**更新日**: 2025年9月29日  
-**最新完了**: Step 0.1 - spatie/laravel-query-builder完全活用 (2025-09-29)  
+**更新日**: 2026年3月14日
+**現行方針**: MCP / API first の client-facing 契約整備
 **責任者**: LedgerLeap開発チーム

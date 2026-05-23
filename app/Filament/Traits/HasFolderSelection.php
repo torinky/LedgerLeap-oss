@@ -2,8 +2,10 @@
 
 namespace App\Filament\Traits;
 
+use App\Models\Tenant;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Forms\Components\Select;
+use Filament\Tables\Filters\Filter;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Stancl\Tenancy\Facades\Tenancy;
 
@@ -22,7 +24,7 @@ trait HasFolderSelection
                 ->label(__('ledger.tenant'))
                 ->options(
                     Tenancy::central(function () {
-                        return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
+                        return Tenant::all()->mapWithKeys(function ($tenant) {
                             return [$tenant->id => $tenant->name ?: $tenant->id];
                         });
                     })
@@ -58,15 +60,15 @@ trait HasFolderSelection
     /**
      * テナントによるフィルタを取得
      */
-    protected function getTenantFilter(): \Filament\Tables\Filters\Filter
+    protected function getTenantFilter(): Filter
     {
-        return \Filament\Tables\Filters\Filter::make('tenant_id')
+        return Filter::make('tenant_id')
             ->form([
                 Select::make('value')
                     ->label(__('ledger.tenant'))
                     ->options(
                         Tenancy::central(function () {
-                            return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
+                            return Tenant::all()->mapWithKeys(function ($tenant) {
                                 return [$tenant->id => $tenant->name ?: $tenant->id];
                             });
                         })
@@ -89,9 +91,9 @@ trait HasFolderSelection
     /**
      * フォルダによるフィルタを取得
      */
-    protected function getFolderFilter(): \Filament\Tables\Filters\Filter
+    protected function getFolderFilter(): Filter
     {
-        return \Filament\Tables\Filters\Filter::make('folder_id')
+        return Filter::make('folder_id')
             ->form([
                 Select::make('value')
                     ->label(__('ledger.folder.title'))

@@ -83,6 +83,12 @@ is misinterpreted by PHP as a closure. Always register with `Alpine.data()`.
 After fixing Blade syntax errors, run `php artisan view:clear`. Old cached files
 continue throwing errors even after the source is fixed.
 
+### Pitfall 4 — Timing telemetry through `$wire`
+
+If overlay timing is forwarded to a Livewire action such as `$wire.logPerformance(...)`, the metric itself can trigger an extra `livewire/update` request and cause duplicate rerenders. Use browser-side logging or another non-Livewire sink for pure telemetry.
+
+See also: [`docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md`](../../../../docs/work/ui-ux/2026-03-20_livewire_update_duplication_completion_report.md)
+
 ## requestIdleCallback for Expensive Alpine Init
 
 Spread `checkOverflow()` (DOM height measurement) across browser idle frames:

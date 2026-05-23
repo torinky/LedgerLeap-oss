@@ -2,6 +2,8 @@
 
 namespace App\Enums;
 
+use App\Models\AttachedFile;
+
 enum AttachedFileStatus: string
 {
     case PENDING_INITIAL_PROCESSING = 'pending_initial_processing';
@@ -111,7 +113,7 @@ enum AttachedFileStatus: string
     /**
      * ファイルの状態に応じた詳細なツールチップを生成
      */
-    public function getDetailedTooltip(\App\Models\AttachedFile $file): string
+    public function getDetailedTooltip(AttachedFile $file): string
     {
         return match ($this) {
             self::FINALIZED => $this->getFinalizedTooltip($file),
@@ -128,7 +130,7 @@ enum AttachedFileStatus: string
     /**
      * 最終化済みファイルのツールチップ
      */
-    private function getFinalizedTooltip(\App\Models\AttachedFile $file): string
+    private function getFinalizedTooltip(AttachedFile $file): string
     {
         if ($file->hasExtractionError()) {
             return __('ledger.uploadedFile.status.detailed.extraction_error');
@@ -147,7 +149,7 @@ enum AttachedFileStatus: string
     /**
      * 並列処理中のツールチップ
      */
-    private function getParallelProcessingTooltip(\App\Models\AttachedFile $file): string
+    private function getParallelProcessingTooltip(AttachedFile $file): string
     {
         $parts = [];
 
@@ -180,7 +182,7 @@ enum AttachedFileStatus: string
      * より良いソースで上書き可能か判定（ファイルタイプ考慮）
      * Phase 2.6
      */
-    public function canUpgradeWith(string $newSource, \App\Models\AttachedFile $file): bool
+    public function canUpgradeWith(string $newSource, AttachedFile $file): bool
     {
         // オフィスファイルの場合、Tikaが最高品質
         if ($this->isOfficeFile($file->mime)) {

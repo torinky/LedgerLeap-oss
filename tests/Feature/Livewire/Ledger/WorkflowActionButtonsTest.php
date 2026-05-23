@@ -4,6 +4,7 @@ namespace Tests\Feature\Livewire\Ledger;
 
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\WorkflowActionButtons;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
@@ -25,7 +26,7 @@ class WorkflowActionButtonsTest extends TestCase
 
     protected WorkflowService $workflowServiceMock;
 
-    protected \App\Models\Folder $folder;
+    protected Folder $folder;
 
     protected function setUp(): void
     {
@@ -35,7 +36,7 @@ class WorkflowActionButtonsTest extends TestCase
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
 
-        $this->folder = \App\Models\Folder::factory()->create();
+        $this->folder = Folder::factory()->create();
         $this->ledgerDefine = LedgerDefine::factory()
             ->for($this->folder)
             ->create();
@@ -62,6 +63,8 @@ class WorkflowActionButtonsTest extends TestCase
         $this->setupDefaultRenderMocks(false, false, false);
 
         Livewire::test(WorkflowActionButtons::class, ['ledgerRecord' => $this->ledger])
-            ->assertStatus(200);
+            ->assertStatus(200)
+            ->assertSee(__('ledger.action_bar_open'))
+            ->assertSee(__('ledger.action_bar_close'));
     }
 }

@@ -259,6 +259,15 @@ class TreeTest extends TestCase
         $component->assertSee('Deep L5');
     }
 
+    #[Test]
+    public function it_hides_collapsed_subtrees_until_alpine_initializes()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::test(Tree::class)
+            ->assertSeeHtml('x-cloak');
+    }
+
     /**
      * Sprint 3: アコーディオン展開状態テスト
      *
@@ -313,6 +322,23 @@ class TreeTest extends TestCase
         $component->assertStatus(200);
         // currentFolderId に対応するノードの x-data に open: true が埋め込まれる
         $component->assertSeeHtml('open: (function()');
+    }
+
+    #[Test]
+    public function it_syncs_current_folder_from_main_event()
+    {
+        $this->actingAs($this->user);
+
+        $childFolder = Folder::where('title', 'Child 1')->first();
+
+        $component = Livewire::test(Tree::class, [
+            'currentFolderId' => $childFolder->id,
+            'selectedFolderIds' => [$childFolder->id],
+        ]);
+
+        $component->dispatch('currentFolderChangedByMain', newFolderId: $childFolder->id, newSelectedFolderIds: [$childFolder->id]);
+
+        $component->assertSet('standaloneFolderId', $childFolder->id);
     }
 
     /**

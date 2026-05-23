@@ -2,14 +2,20 @@
 
 namespace Tests\Feature\Livewire;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -17,7 +23,7 @@ class LedgerColumnValidationTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
 
-    protected \App\Models\Tenant $tenant;
+    protected Tenant $tenant;
 
     protected User $user;
 
@@ -29,11 +35,11 @@ class LedgerColumnValidationTest extends TestCase
 
         $this->user = User::factory()->create();
 
-        $role = \App\Models\Role::firstOrCreate([
+        $role = Role::firstOrCreate([
             'name' => 'test-validator-role',
             'guard_name' => 'web',
         ]);
-        $permission = \Spatie\Permission\Models\Permission::firstOrCreate([
+        $permission = Permission::firstOrCreate([
             'name' => 'create_ledgers',
             'guard_name' => 'web',
         ]);
@@ -42,16 +48,16 @@ class LedgerColumnValidationTest extends TestCase
 
         $this->actingAs($this->user);
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     protected function assignFolderPermission(Folder $folder): void
     {
-        $role = \App\Models\Role::findByName('test-validator-role', 'web');
-        \App\Models\RoleFolderPermission::create([
+        $role = Role::findByName('test-validator-role', 'web');
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }
@@ -209,9 +215,9 @@ class LedgerColumnValidationTest extends TestCase
     public function create_column_passes_validation_across_tenants()
     {
         // テナント1を作成
-        $tenant1 = \App\Models\Tenant::factory()->create();
+        $tenant1 = Tenant::factory()->create();
         // テナント2を作成
-        $tenant2 = \App\Models\Tenant::factory()->create();
+        $tenant2 = Tenant::factory()->create();
 
         // テナント1で台帳定義を作成
         $ledgerDefine1 = $tenant1->run(function () {
@@ -238,10 +244,10 @@ class LedgerColumnValidationTest extends TestCase
         });
 
         // Assign permission for ledgerDefine2's folder
-        \App\Models\RoleFolderPermission::create([
-            'role_id' => \App\Models\Role::findByName('test-validator-role', 'web')->id,
+        RoleFolderPermission::create([
+            'role_id' => Role::findByName('test-validator-role', 'web')->id,
             'folder_id' => $ledgerDefine2->folder_id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => auth()->id(),
         ]);
 

@@ -2,11 +2,16 @@
 
 namespace App\Console\Commands;
 
+use App\Enums\FolderPermissionType;
+use App\Models\Folder;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
+use App\Models\User;
 use Exception;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Log;
+use Spatie\Permission\Models\Role;
 use Stancl\Tenancy\Database\Models\Domain;
 
 class SetupTenant extends Command
@@ -87,7 +92,7 @@ class SetupTenant extends Command
             // 1. 管理者ユーザーの検索 (中央DBのコンテキストで実行)
             $this->info("Processing admin user: {$adminEmail}");
             $user = tenancy()->central(function () use ($adminEmail) {
-                return \App\Models\User::where('email', $adminEmail)->first();
+                return User::where('email', $adminEmail)->first();
             });
 
             if (! $user) {
@@ -102,7 +107,7 @@ class SetupTenant extends Command
                 // NodeTraitのwhereIsRoot()メソッドでルートフォルダを取得
                 Log::info('Setting creator_id to: '.$user->id);
 
-                return \App\Models\Folder::whereIsRoot()->first();
+                return Folder::whereIsRoot()->first();
             });
 
             if (! $rootFolder) {
@@ -111,17 +116,17 @@ class SetupTenant extends Command
 
             // Super Admin ロールは中央DBから取得
             $superAdminRole = tenancy()->central(function () {
-                return \Spatie\Permission\Models\Role::findByName('Super Admin');
+                return Role::findByName('Super Admin');
             });
 
             if ($superAdminRole) {
                 // RoleFolderPermission の作成はテナントのコンテキストで行う
                 $tenant->run(function () use ($rootFolder, $user, $superAdminRole) {
                     $this->info('Granting Super Admin access to the root folder...');
-                    \App\Models\RoleFolderPermission::create([
+                    RoleFolderPermission::create([
                         'role_id' => $superAdminRole->id,
                         'folder_id' => $rootFolder->id,
-                        'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                        'permission' => FolderPermissionType::ADMIN,
                         'modifier_id' => $user->id,
                     ]);
                 });

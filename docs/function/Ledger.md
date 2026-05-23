@@ -1,5 +1,10 @@
 # 台帳管理機能
 
+## この文書の位置づけ
+
+この文書は **developer-facing の機能仕様** です。
+client-facing で使う capability 名や初期 skill セットは `docs/work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md` を正本とし、ここでは実装・内部構造・保守判断に必要な詳細を扱います。
+
 ## 概要
 
 台帳管理機能は、LedgerLeap の主要機能の一つであり、様々な情報を構造化して記録・管理するための機能です。ユーザーは台帳を使って、データを登録、編集、削除できます。また、台帳はフォルダーに整理できます。台帳の枠組みは、

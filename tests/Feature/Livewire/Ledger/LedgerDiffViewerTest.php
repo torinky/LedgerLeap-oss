@@ -9,12 +9,14 @@ use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\LedgerDiff;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\UserService;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
@@ -354,7 +356,7 @@ class LedgerDiffViewerTest extends TestCase
             ->for($this->user, 'creator')
             ->create(['version' => 3, 'tenant_id' => $this->tenant->id]);
 
-        $diff1 = \App\Models\LedgerDiff::factory()->create([
+        $diff1 = LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 1,
             'content' => ['v1'],
@@ -362,7 +364,7 @@ class LedgerDiffViewerTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        $diff2 = \App\Models\LedgerDiff::factory()->create([
+        $diff2 = LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 2,
             'content' => ['v2'],
@@ -370,7 +372,7 @@ class LedgerDiffViewerTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        $diff3 = \App\Models\LedgerDiff::factory()->create([
+        $diff3 = LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 3,
             'content' => ['v3'],
@@ -417,7 +419,7 @@ class LedgerDiffViewerTest extends TestCase
             ->create(['tenant_id' => $this->tenant->id]);
 
         // ダミーの添付ファイルを作成し、ストレージに配置
-        $file = \Illuminate\Http\UploadedFile::fake()->image('test_document.pdf', 100, 100);
+        $file = UploadedFile::fake()->image('test_document.pdf', 100, 100);
         $attachedFile = AttachedFile::factory()->create([
             'ledger_id' => $ledgerWithFiles->id,
             'ledger_define_id' => $ledgerDefineWithFiles->id,
@@ -470,7 +472,7 @@ class LedgerDiffViewerTest extends TestCase
         $livewire->assertSee('files/', false);
         $livewire->assertSee('/download', false);
         $livewire->assertSee((string) $attachedFile->id, false);
-        $livewire->assertSee('thumbnail=true', false);
+        $livewire->assertSee('thumbnail=1', false);
 
         // ファイル名も表示されていることを確認
         $livewire->assertSee($attachedFile->filename);
@@ -500,7 +502,7 @@ class LedgerDiffViewerTest extends TestCase
             ]);
 
         // 2. 過去バージョンの Diff を作成 (Name のみ変更)
-        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+        $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 1,
             'content' => ['Hanako Tanaka', '30', 'Tokyo'], // Name が異なる
@@ -556,7 +558,7 @@ class LedgerDiffViewerTest extends TestCase
             ]);
 
         // 2. 過去バージョンの Diff を作成 (全カラム同じ内容)
-        $oldDiff = \App\Models\LedgerDiff::factory()->create([
+        $oldDiff = LedgerDiff::factory()->create([
             'ledger_id' => $ledger->id,
             'version' => 1,
             'content' => ['Value A', 'Value B'], // 全て同じ

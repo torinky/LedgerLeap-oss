@@ -2,36 +2,42 @@
 
 namespace App\Filament\Resources;
 
-use Althinect\FilamentSpatieRolesPermissions\Resources\RoleResource as BaseRoleResource;
 use App\Enums\FolderPermissionType;
 use App\Filament\Resources\RoleResource\Pages;
 use App\Filament\Resources\RoleResource\RelationManagers\FolderPermissionRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\NotificationSettingsRelationManager;
 use App\Filament\Resources\RoleResource\RelationManagers\OrganizationRelationManager;
+use App\Filament\Resources\RoleResource\RelationManagers\UserRelationManager;
 use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Folder;
 use App\Models\NotificationType;
 use App\Models\Permission;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
-use Filament\Forms\Components\Grid;
-use Filament\Forms\Components\Section;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
-use Filament\Forms\Form;
-use Filament\Tables;
+use Filament\Resources\Resource;
+use Filament\Schemas\Components\Grid;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-class RoleResource extends BaseRoleResource
+class RoleResource extends Resource
 {
     use HasPermissionMetadata;
 
     protected static ?string $model = Role::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    public static bool $shouldRegisterNavigation = false;
+
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-rectangle-stack';
 
     protected static ?string $recordTitleAttribute = 'name';
 
@@ -62,13 +68,23 @@ class RoleResource extends BaseRoleResource
         return __('ledger.settings.roles');
     }
 
-    public static function form(Form $form): Form
+    public static function getNavigationGroup(): ?string
+    {
+        return __(config('filament-spatie-roles-permissions.navigation_section_group', 'ledger.setting'));
+    }
+
+    public static function getNavigationSort(): ?int
+    {
+        return config('filament-spatie-roles-permissions.sort.role_navigation', 1);
+    }
+
+    public static function form(Schema $schema): Schema
     {
         // --- 既存の parentForm と components の取得は不要になる ---
         // $parentForm = parent::form($form);
         // $components = $parentForm->getComponents();
 
-        return $form
+        return $schema
             ->schema([
                 Section::make()
                     ->schema([
@@ -79,6 +95,10 @@ class RoleResource extends BaseRoleResource
                                     ->required()
                                     ->maxLength(255)
                                     ->unique(Role::class, 'name', ignoreRecord: true),
+                                TextInput::make('abbreviation')
+                                    ->label(__('role.abbreviation'))
+                                    ->placeholder(__('role.abbreviation_placeholder'))
+                                    ->maxLength(255),
                                 Select::make('guard_name')
                                     ->label(__('role.guard_name'))
                                     ->options(config('filament-spatie-roles-permissions.guard_names'))
@@ -178,16 +198,16 @@ class RoleResource extends BaseRoleResource
 
     public static function table(Table $table): Table
     {
-        $parentTable = parent::table($table);
-        $columns = $parentTable->getColumns();
-
         $allFolderTree = Folder::get()->toTree();
         $allFolderList = Folder::treeList($allFolderTree);
 
         return $table
             ->columns([
-                ...$columns,
-                Tables\Columns\TextColumn::make('folders')
+                TextColumn::make('name')
+                    ->label(__('role.name'))
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('folders')
                     ->label(__('ledger.folder.scoped'))
                     ->getStateUsing(function ($record): array {
                         //                        dd($record);
@@ -213,10 +233,10 @@ class RoleResource extends BaseRoleResource
                     ->separator(' ') // バッジ間の区切り文字
                     ->wrap()         // 長い場合は折り返し
                     ->translateLabel(),
-                Tables\Columns\TextColumn::make('organizations.name')
+                TextColumn::make('organizations.name')
                     ->label(__('ledger.organizations.scoped'))
                     ->badge(),
-                Tables\Columns\TextColumn::make('permissions.name')
+                TextColumn::make('permissions.name')
                     ->label(__('ledger.settings.permissions'))
                     ->badge(),
                 TextColumn::make('permissions.name')
@@ -226,17 +246,27 @@ class RoleResource extends BaseRoleResource
                     })
                     ->badge(),
 
-                Tables\Columns\TextColumn::make('guard_name')
+                TextColumn::make('guard_name')
+                    ->label(__('role.guard_name'))
                     ->badge(),
-                Tables\Columns\TextColumn::make('description')
+                TextColumn::make('description')
                     ->label(__('ledger.description'))
                     ->sortable()
                     ->searchable(),
 
             ])
-            ->filters($parentTable->getFilters())
-            ->actions($parentTable->getActions())
-            ->bulkActions($parentTable->getBulkActions());
+            ->filters([
+                //
+            ])
+            ->actions([
+                EditAction::make(),
+                DeleteAction::make(),
+            ])
+            ->bulkActions([
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                ]),
+            ]);
     }
 
     public static function getRelations(): array
@@ -244,7 +274,7 @@ class RoleResource extends BaseRoleResource
         return [
             //            PermissionRelationManager::class,
             OrganizationRelationManager::class,
-            \App\Filament\Resources\RoleResource\RelationManagers\UserRelationManager::class,
+            UserRelationManager::class,
             FolderPermissionRelationManager::class,
             NotificationSettingsRelationManager::class,
         ];

@@ -2,8 +2,11 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
 use App\Enums\FolderPermissionType;
 use App\Enums\WorkflowStatus;
+use App\Jobs\Ledger\GenerateThumbnail;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Livewire\Ledger\Show;
 use App\Models\AttachedFile;
 use App\Models\Folder;
@@ -118,7 +121,10 @@ class ShowTest extends TestCase
 
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
             ->assertStatus(200)
-            ->assertSee($this->ledger->define->name);
+            ->assertSee($this->ledger->define->name)
+            ->assertSee(__('ledger.breadcrumb_top'))
+            ->assertSee(__('ledger.modified_by'))
+            ->assertSee(__('ledger.updated_at'));
     }
 
     #[Test]
@@ -210,7 +216,7 @@ class ShowTest extends TestCase
         Bus::fake();
 
         $attachedFile = AttachedFile::factory()->for($this->ledger)->create([
-            'status' => \App\Enums\AttachedFileStatus::TIKA_FAILED,
+            'status' => AttachedFileStatus::TIKA_FAILED,
         ]);
 
         $this->actingAs($this->user);
@@ -222,18 +228,18 @@ class ShowTest extends TestCase
         // $component->assertDispatchedJs('mary-toast', toast: ['title' => __('file.status.retry_success')]);
 
         $attachedFile->refresh();
-        $this->assertEquals(\App\Enums\AttachedFileStatus::PENDING_INITIAL_PROCESSING, $attachedFile->status);
+        $this->assertEquals(AttachedFileStatus::PENDING_INITIAL_PROCESSING, $attachedFile->status);
 
-        Bus::assertDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class, function ($job) use ($attachedFile) {
+        Bus::assertDispatched(ProcessAttachedFile::class, function ($job) use ($attachedFile) {
             return $job->attachedFile->id === $attachedFile->id;
         });
 
         // サムネイル生成ジョブも再ディスパッチされるケース
-        $attachedFile->update(['status' => \App\Enums\AttachedFileStatus::THUMBNAIL_FAILED]);
+        $attachedFile->update(['status' => AttachedFileStatus::THUMBNAIL_FAILED]);
         Livewire::test(Show::class, ['ledgerId' => $this->ledger->id])
             ->call('retryProcessing', $attachedFile->id);
 
-        Bus::assertDispatched(\App\Jobs\Ledger\GenerateThumbnail::class, function ($job) use ($attachedFile) {
+        Bus::assertDispatched(GenerateThumbnail::class, function ($job) use ($attachedFile) {
             return $job->attachedFileId === $attachedFile->id;
         });
 
@@ -255,6 +261,26 @@ class ShowTest extends TestCase
 
         // highlightプロパティが設定されていることを確認
         $component->assertSet('highlight', 'test keyword');
+    }
+
+    #[Test]
+    public function it_restores_canonical_detail_state_from_query_parameters()
+    {
+        $this->actingAs($this->user);
+
+        Livewire::withQueryParams([
+            'tab' => 'history',
+            'dl' => 2,
+            'sc' => 1,
+            'td' => $this->ledger->latestDiff->id,
+            'bd' => $this->ledger->latestDiff->id,
+        ])
+            ->test(Show::class, ['ledgerId' => $this->ledger->id])
+            ->assertSet('selectedTab', 'history')
+            ->assertSet('displayLevel', 2)
+            ->assertSet('showChanges', true)
+            ->assertSet('targetDiffId', $this->ledger->latestDiff->id)
+            ->assertSet('baseDiffId', $this->ledger->latestDiff->id);
     }
 
     #[Test]

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
 use Kalnoy\Nestedset\NodeTrait;
 use Spatie\Activitylog\LogOptions;
@@ -19,9 +20,20 @@ class Organization extends Model
     //    use HasFactory, HasRoles, HasTreeView, LogsActivity, NodeTrait, SoftDeletes;
     use HasFactory, HasRoles, InteractsWithTree, LogsActivity, NodeTrait, SoftDeletes;
 
-    protected $fillable = ['org_id', 'name', 'description', 'parent_id'];
+    protected $fillable = ['org_id', 'name', 'abbreviation', 'description', 'parent_id'];
 
     public $guard_name = 'web';
+
+    protected static function booted()
+    {
+        static::saved(function ($organization) {
+            Cache::forget("confidentiality:{$organization->tenant_id}:scopes");
+        });
+
+        static::deleted(function ($organization) {
+            Cache::forget("confidentiality:{$organization->tenant_id}:scopes");
+        });
+    }
 
     public static function getTreeLabelAttribute(): string
     {

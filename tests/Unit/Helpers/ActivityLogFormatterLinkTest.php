@@ -40,7 +40,7 @@ class ActivityLogFormatterLinkTest extends TestCase
     }
 
     #[Test]
-    public function it_returns_null_when_tenant_context_is_missing()
+    public function it_uses_subject_tenant_when_tenant_context_is_missing()
     {
         $ledger = Ledger::factory()->create();
         $activity = activity()->performedOn($ledger)->log('test');
@@ -48,10 +48,11 @@ class ActivityLogFormatterLinkTest extends TestCase
         // Forget current tenant to simulate missing context
         tenancy()->end();
 
-        // This should NOT throw an exception, but return null
+        // The formatter should fall back to the subject's tenant_id.
         $link = ActivityLogFormatter::getSubjectDetailLink($activity);
 
-        $this->assertNull($link);
+        $expected = route('ledger.show', ['tenant' => $ledger->tenant_id, 'ledgerId' => $ledger->id]);
+        $this->assertEquals($expected, $link);
     }
 
     #[Test]

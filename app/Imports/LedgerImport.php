@@ -6,6 +6,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Schema;
 use Maatwebsite\Excel\Concerns\ToModel;
 use Maatwebsite\Excel\Concerns\WithBatchInserts;
 use Maatwebsite\Excel\Concerns\WithChunkReading;
@@ -56,11 +57,11 @@ class LedgerImport implements ToModel, WithBatchInserts, WithChunkReading, WithC
 
         if ($this->importMode == self::MODE_DESTOROY) {
             // 外部キー制約を一時的に無効にして既存レコードを全削除する
-            \Illuminate\Support\Facades\Schema::disableForeignKeyConstraints();
+            Schema::disableForeignKeyConstraints();
 
             Ledger::where('ledger_define_id', $ledgerDefine->id)->delete();
 
-            \Illuminate\Support\Facades\Schema::enableForeignKeyConstraints();
+            Schema::enableForeignKeyConstraints();
         }
 
         Cache::forget("total_rows_{$this->id}");

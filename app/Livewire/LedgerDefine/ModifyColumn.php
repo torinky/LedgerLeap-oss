@@ -3,6 +3,7 @@
 namespace App\Livewire\LedgerDefine;
 
 use App\Enums\WorkflowStatus;
+use App\Helpers\LedgerDefineBackgroundImageUrlHelper;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\ColumnDefine;
@@ -108,6 +109,16 @@ class ModifyColumn extends BaseLivewireComponent
         foreach ($this->columns as $index => $column) {
             if (isset($column['file']['path'])) {
                 $this->createThumbnail($column['file']['path']);
+                $this->columns[$index]['file']['url'] = LedgerDefineBackgroundImageUrlHelper::downloadUrl(
+                    $this->ledgerDefineRecord->id,
+                    (int) $column['id'],
+                    $this->tenantId,
+                );
+                $this->columns[$index]['file']['thumbnail_url'] = LedgerDefineBackgroundImageUrlHelper::thumbnailUrl(
+                    $this->ledgerDefineRecord->id,
+                    (int) $column['id'],
+                    $this->tenantId,
+                );
             }
             // アップロード用プロパティの初期化
             $this->columnUploadedFile[$column['id']] = null;
@@ -205,6 +216,11 @@ class ModifyColumn extends BaseLivewireComponent
 
             return $column;
         })->all();
+    }
+
+    public function updatedColumnUploadedFile($value, $key)
+    {
+        $this->isDirty = true;
     }
 
     public function updatedColumns($value, $key)
@@ -372,6 +388,13 @@ class ModifyColumn extends BaseLivewireComponent
             return;
         }
 
+        // 全てのアップロードされた背景ファイルをストレージに保存する
+        foreach ($this->columns as $column) {
+            if (isset($this->columnUploadedFile[$column['id']])) {
+                $this->storeFile($column['id']);
+            }
+        }
+
         // Before saving, ensure all columns are simple associative arrays.
         $this->ledgerDefineRecord->column_define = collect($this->columns)->map(function ($column) {
             // group プロパティが配列の場合に文字列に変換
@@ -455,7 +478,20 @@ class ModifyColumn extends BaseLivewireComponent
             // $this->columns 配列内の該当カラムの 'file' プロパティを更新
             foreach ($this->columns as $index => &$column) {
                 if ($column['id'] == $columnId) {
-                    $column['file'] = ['name' => $originalFileName, 'path' => $filePath];
+                    $column['file'] = [
+                        'name' => $originalFileName,
+                        'path' => $filePath,
+                        'url' => LedgerDefineBackgroundImageUrlHelper::downloadUrl(
+                            $this->ledgerDefineRecord->id,
+                            (int) $columnId,
+                            $this->tenantId,
+                        ),
+                        'thumbnail_url' => LedgerDefineBackgroundImageUrlHelper::thumbnailUrl(
+                            $this->ledgerDefineRecord->id,
+                            (int) $columnId,
+                            $this->tenantId,
+                        ),
+                    ];
                     break;
                 }
             }

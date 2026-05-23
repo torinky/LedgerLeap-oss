@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Services\AdminAnnouncementService;
 use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -12,16 +13,21 @@ class NotificationController extends Controller
     /**
      * 通知関連ページのインデックス（タブコンテナ）を表示
      */
-    public function index(Request $request, NotificationService $notificationService): View
-    {
+    public function index(
+        Request $request,
+        NotificationService $notificationService,
+        AdminAnnouncementService $adminAnnouncementService
+    ): View {
         $user = Auth::user();
-        $initialNotificationCount = $user ? $notificationService->getUnreadNotificationCountForUser($user) : 0;
+        $adminAnnouncements = $adminAnnouncementService->notificationCenterAnnouncements();
+        $initialNotificationCount = ($user ? $notificationService->getUnreadNotificationCountForUser($user) : 0)
+            + count($adminAnnouncements);
         $initialTaskCount = $user ? ($user->pending_inspection_count + $user->pending_approval_count) : 0;
 
         // URL クエリパラメータからアクティブなタブを取得 (デフォルトは 'notifications')
         $activeTab = $request->query('tab', 'notifications');
         // デフォルトで未処理タスクがあれば 'tasks' に切り替える
-        if ($activeTab == 'notifications' && $initialTaskCount > 0) {
+        if ($activeTab === 'notifications' && $initialTaskCount > 0) {
             $activeTab = 'tasks';
         }
 
@@ -30,6 +36,7 @@ class NotificationController extends Controller
             'initialNotificationCount' => $initialNotificationCount,
             'initialTaskCount' => $initialTaskCount,
             'activeTab' => $activeTab,
+            'adminAnnouncements' => $adminAnnouncements,
         ]);
     }
 

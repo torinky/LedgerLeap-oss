@@ -50,6 +50,12 @@
             <x-mary-toast />
         </template>
     </div>
+
+    @php($adminAnnouncements = app(\App\Services\AdminAnnouncementService::class)->notificationCenterAnnouncements())
+    @if (! empty($adminAnnouncements) && ! request()->routeIs('notifications.index'))
+        <x-admin.announcement-stack :announcements="$adminAnnouncements" />
+    @endif
+
     <div class="min-h-screen">
         @include('layouts.daisyuiNavigation')
 
@@ -70,6 +76,7 @@
     <fooer>
         {{ $footer ?? '' }}
     </fooer>
+    @livewireScriptConfig
     @vite(['resources/js/app.js'])
     @stack('scripts')
     <script>

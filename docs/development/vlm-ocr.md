@@ -256,6 +256,24 @@ $mock->shouldReceive('extract')
 $this->app->instance(VlmClientService::class, $mock);
 ```
 
+### 5.4. キャッシュ判定の回帰テスト
+
+`docker/paddle/unified_api.py` の起動前キャッシュ判定や offline mode を変更した場合は、
+純粋ロジックの回帰テストを追加で実行してください。
+
+```bash
+python3 -m unittest discover -s docker/paddle/tests -p "test_*.py"
+```
+
+このテストは次を固定化します。
+
+- `rec/japan/japan_PP-OCRv4_rec_infer` を含む現行の日本語モデルキャッシュ
+- 旧 multilingual キャッシュとの後方互換
+- `VLM_OFFLINE=auto/1/0` の判定
+- 不完全キャッシュを誤って complete と見なさないこと
+
+CI では `.github/workflows/vlm-cache-regression.yml` が同じテストを実行します。
+
 ---
 
 ## 6. トラブルシューティング

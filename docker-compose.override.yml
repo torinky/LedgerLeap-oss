@@ -1,5 +1,5 @@
 services:
-  laravel:
+#  laravel:
 #    depends_on:
 #      - openldap
 
@@ -51,3 +51,6 @@ services:
 #      - '/dev/shm:/dev/shm'
 #    networks:
 #      - sail
+volumes:
+  sail-meilisearch:
+    driver: local

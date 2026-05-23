@@ -7,14 +7,25 @@ use App\Filament\Resources\UserResource\RelationManagers;
 use App\Filament\Traits\HasPermissionMetadata;
 use App\Models\Role;
 use App\Models\User;
+use Filament\Actions\BulkAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource
@@ -39,7 +50,7 @@ class UserResource extends Resource
 
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-user';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-user';
 
     public static function getTitle($ownerRecord, string $pageClass): string
     {
@@ -56,11 +67,11 @@ class UserResource extends Resource
         return __('ledger.user');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
-                Forms\Components\Section::make(__('user.user_details')) // セクション追加
+                Section::make(__('user.user_details')) // セクション追加
                     ->schema([
                         Forms\Components\TextInput::make('name')
                             ->required()
@@ -73,7 +84,7 @@ class UserResource extends Resource
                         Forms\Components\DateTimePicker::make('email_verified_at'),
                     ])->columns(2), // 2カラムレイアウト
 
-                Forms\Components\Section::make(__('user.password_settings')) // セクション追加
+                Section::make(__('user.password_settings')) // セクション追加
                     ->schema([
                         Forms\Components\TextInput::make('password')
                             ->password()
@@ -91,7 +102,7 @@ class UserResource extends Resource
                             ->dehydrated(false),
                     ])->columns(2), // 2カラムレイアウト
 
-                Forms\Components\Section::make(__('user.roles_and_permissions')) // セクション追加
+                Section::make(__('user.roles_and_permissions')) // セクション追加
                     ->schema([
                         Forms\Components\Select::make('roles')
                             ->multiple()
@@ -153,7 +164,7 @@ class UserResource extends Resource
                     ->label(__('ledger.ignore_ad_org_sync_until'))
                     ->date()
                     ->sortable()
-                    ->color(fn ($state) => $state && \Illuminate\Support\Carbon::parse($state)->isPast() ? 'danger' : 'success')
+                    ->color(fn ($state) => $state && Carbon::parse($state)->isPast() ? 'danger' : 'success')
                     ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('manual_sync_reason')
                     ->label(__('ledger.manual_sync_reason'))
@@ -215,20 +226,20 @@ class UserResource extends Resource
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
 
                 // Bulk action: extend manual AD sync protection
-                Tables\Actions\BulkAction::make('extendManualSync')
+                BulkAction::make('extendManualSync')
                     ->label(__('Extend Manual Sync'))
                     ->form([
                         Forms\Components\Textarea::make('manual_sync_reason')

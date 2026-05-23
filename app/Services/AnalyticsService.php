@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\CustomActivity;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
@@ -25,11 +26,8 @@ class AnalyticsService
      */
     public function getLedgerStatsByPeriod(User $user, Carbon $from, Carbon $to): array
     {
-        // ユーザーがアクセス可能なフォルダIDを取得
-        $accessibleFolderIds = $this->folderRepository
-            ->getWritableFolders($user)
-            ->pluck('id')
-            ->toArray();
+        // ユーザーが閲覧可能なフォルダIDを取得
+        $accessibleFolderIds = $this->folderRepository->getReadableFolderIds($user);
 
         // アクセス可能なフォルダがない場合は空の統計を返す
         if (empty($accessibleFolderIds)) {
@@ -125,11 +123,8 @@ class AnalyticsService
      */
     public function getUserActivityStats(User $user, Carbon $from, Carbon $to): array
     {
-        // ユーザーがアクセス可能なフォルダIDを取得
-        $accessibleFolderIds = $this->folderRepository
-            ->getWritableFolders($user)
-            ->pluck('id')
-            ->toArray();
+        // ユーザーが閲覧可能なフォルダIDを取得
+        $accessibleFolderIds = $this->folderRepository->getReadableFolderIds($user);
 
         // アクセス可能なフォルダがない場合は空の統計を返す
         if (empty($accessibleFolderIds)) {
@@ -236,9 +231,8 @@ class AnalyticsService
      */
     public function getFolderStats(User $user): array
     {
-        // ユーザーがアクセス可能なフォルダを取得
-        $accessibleFolders = $this->folderRepository
-            ->getWritableFolders($user);
+        // ユーザーが閲覧可能なフォルダを取得
+        $accessibleFolders = Folder::whereIn('id', $this->folderRepository->getReadableFolderIds($user))->get();
 
         $stats = $accessibleFolders->map(function ($folder) {
             // フォルダ内の台帳定義数

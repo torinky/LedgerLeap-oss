@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\FontAwesomeIconController;
 use App\Http\Controllers\GlobalMyPortalController;
 use App\Http\Controllers\LedgerLookupController;
+use App\Http\Controllers\NotificationController;
+use App\Livewire\Notifications\Settings;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -23,13 +26,26 @@ Route::middleware('auth')->group(function () {
 
     Route::get('/my-portal', [GlobalMyPortalController::class, 'index'])->name('global.my-portal');
 
+    // --- 通知関連ルート ---
+    Route::get('/notifications', [NotificationController::class, 'index'])->name('notifications.index');
+    Route::get('/notifications/settings', Settings::class)->name('notifications.settings');
+    Route::redirect('/activity-log', '/notifications?tab=activity', 301)->name('activity-log');
+
+    // --- ワークフロー関連ルート ---
+    Route::redirect('/workflow/pending', '/notifications?tab=tasks', 301)->name('workflow.pending');
+
     // --- アイコン取得用ルート (FilePondプレビュー等で使用) ---
     // MIMEタイプからアイコンを取得
-    Route::get('/icons/mime', [\App\Http\Controllers\FontAwesomeIconController::class, 'serveIconByMime'])
+    Route::get('/icons/mime', [FontAwesomeIconController::class, 'serveIconByMime'])
         ->name('api.fontawesome.icon.by_mime');
 
     // スタイルとアイコン名で直接アイコンを取得 (サムネイルのフォールバック用)
-    Route::get('/icons/{style}/{icon}', [\App\Http\Controllers\FontAwesomeIconController::class, 'serveIcon'])
+    Route::get('/icons/{style}/{icon}', [FontAwesomeIconController::class, 'serveIcon'])
         ->whereIn('style', ['solid', 'regular', 'brands'])
         ->name('api.fontawesome.icon');
 });
+
+if (app()->environment(['local', 'testing'])) {
+    Route::view('/__preview/admin-announcement-banner', 'ui-previews.admin-announcement-banner')
+        ->name('preview.admin-announcement-banner');
+}

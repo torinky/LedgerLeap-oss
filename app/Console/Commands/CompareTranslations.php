@@ -19,7 +19,7 @@ class CompareTranslations extends Command
      *
      * @var string
      */
-    protected $description = 'Compare translations between lang/ja/ledger.php and lang/ja.json';
+    protected $description = 'Compile ledger translations from PHP to JSON (One-Way)';
 
     /**
      * Execute the console command.
@@ -31,74 +31,81 @@ class CompareTranslations extends Command
         $ledgerPhpPath = lang_path('ja/ledger.php');
         $ledgerJsonPath = lang_path('ja.json');
 
+        if (! file_exists($ledgerPhpPath) || ! file_exists($ledgerJsonPath)) {
+            $this->error('Translation files missing.');
+
+            return;
+        }
+
         $ledgerPhpArray = require $ledgerPhpPath;
         $ledgerJsonArray = json_decode(file_get_contents($ledgerJsonPath), true);
 
+        // Flatten PHP array and prefix with 'ledger.'
         $flatPhpArray = Arr::dot($ledgerPhpArray);
+        $newLedgerJsonKeys = [];
+        foreach ($flatPhpArray as $key => $value) {
+            $newLedgerJsonKeys["ledger.{$key}"] = $value;
+        }
 
-        $this->compareTranslations($flatPhpArray, $ledgerJsonArray);
-    }
-
-    private function compareTranslations($phpArray, $jsonArray)
-    {
-        $mergedArray = $phpArray;
-
-        $changes = [];
-
-        foreach ($jsonArray as $key => $value) {
-            if (! str_contains($key, 'ledger.')) {
-                continue;
-            }
-            $phpKey = strtr($key, ['ledger.' => '']);
-            $this->info('php ['.$phpKey.'] : json ['.$key.']');
-            if (! isset($phpArray[$phpKey])) {
-                $this->info("Adding missing key to php: $phpKey");
-                $changes[] = "Added $key = $value";
-                $mergedArray[$phpKey] = $value;
-            } elseif ($value !== $phpArray[$phpKey]) {
-                $this->info("Updating key in php: $key");
-                $changes[] = "Updated $key from  $value to {$phpArray[$phpKey]}";
-                $jsonArray[$key] = $phpArray[$phpKey];
+        // Gather existing non-ledger JSON keys
+        $cleanedJsonArray = [];
+        $existingLedgerKeys = [];
+        foreach ($ledgerJsonArray as $key => $value) {
+            if (str_starts_with($key, 'ledger.')) {
+                $existingLedgerKeys[$key] = $value;
+            } else {
+                $cleanedJsonArray[$key] = $value;
             }
         }
 
-        $this->displayChanges($changes);
+        // Compare to see if there are changes
+        $added = array_diff_key($newLedgerJsonKeys, $existingLedgerKeys);
+        $removed = array_diff_key($existingLedgerKeys, $newLedgerJsonKeys);
+        $modified = [];
+        foreach (array_intersect_key($newLedgerJsonKeys, $existingLedgerKeys) as $k => $v) {
+            if ($existingLedgerKeys[$k] !== $v) {
+                $modified[$k] = ['old' => $existingLedgerKeys[$k], 'new' => $v];
+            }
+        }
+
+        if (empty($added) && empty($removed) && empty($modified)) {
+            $this->info('No changes detected. ja.json is up to date.');
+
+            return;
+        }
+
+        // Print differences
+        $this->info('Changes to be applied (PHP -> JSON):');
+        foreach ($added as $k => $v) {
+            $this->line("<info>+ Added:</info> $k = $v");
+        }
+        foreach ($removed as $k => $v) {
+            $this->line("<error>- Removed:</error> $k = $v");
+        }
+        foreach ($modified as $k => $v) {
+            $this->line("<comment>~ Modified:</comment> $k ({$v['old']} -> {$v['new']})");
+        }
 
         if ($this->option('dry-run')) {
+            $this->info('Dry run completed. No files modified.');
+
             return;
         }
 
         if (! $this->option('force')) {
-            if (! $this->confirm('Apply changes?')) {
+            if (! $this->confirm('Apply changes to ja.json?')) {
                 return;
             }
         }
 
-        ksort($mergedArray);
-        $this->updatePhpFile($mergedArray);
-        $this->updateJsonFile($jsonArray);
-    }
+        // Merge arrays: cleaned + new ledger keys
+        $finalJsonArray = array_merge($cleanedJsonArray, $newLedgerJsonKeys);
+        ksort($finalJsonArray);
 
-    private function displayChanges($changes)
-    {
-        $this->info('Changes:');
-        foreach ($changes as $change) {
-            $this->info($change);
-        }
-    }
+        // Update JSON
+        $json = json_encode($finalJsonArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)."\n";
+        file_put_contents($ledgerJsonPath, $json);
 
-    private function updatePhpFile($phpArray)
-    {
-        $unflatPhpArray = Arr::undot($phpArray);
-        $php = '<?php return '.var_export($unflatPhpArray, true).';';
-        file_put_contents(lang_path('ja/ledger.php'), $php);
-        $this->info('lang/ja/ledger.php updated successfully!');
-    }
-
-    private function updateJsonFile($phpArray)
-    {
-        $json = json_encode($phpArray, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
-        file_put_contents(lang_path('ja.json'), $json);
-        $this->info('lang/ja.json updated successfully!');
+        $this->info('lang/ja.json successfully updated with One-Way Sync from PHP!');
     }
 }

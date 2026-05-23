@@ -14,6 +14,7 @@ use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\HtmlString;
+use Illuminate\Support\Str;
 use Spatie\Activitylog\Models\Activity;
 
 /**
@@ -170,7 +171,8 @@ class ActivityLogFormatter
             $type = __('ledger.activity.model_name.attached_file');
         } else {
             // subject モデルが取得できなかった場合や不明なモデルタイプ
-            $type = class_basename($subjectType);
+            $typeKey = 'ledger.activity.model_name.'.Str::snake(class_basename($subjectType));
+            $type = __($typeKey) !== $typeKey ? __($typeKey) : class_basename($subjectType);
             $title = 'ID: '.$subjectId;
         }
 
@@ -242,6 +244,7 @@ class ActivityLogFormatter
 
         foreach ($attributes as $key => $newValue) {
             $oldValue = $old->get($key);
+            $attributeLabel = self::getChangeAttributeLabel($key);
 
             // `latest_diff_id`, `updated_at`, `modifier_id`, `created_at`, `creator_id` はスキップ
             if (in_array($key, ['latest_diff_id', 'updated_at', 'modifier_id', 'created_at', 'creator_id'])) {
@@ -251,12 +254,12 @@ class ActivityLogFormatter
             if ($key === 'deleted_at') {
                 if ($newValue !== null && $oldValue === null) {
                     $changes->push(
-                        '<strong>'.e($key).':</strong> '.
+                        '<strong>'.e($attributeLabel).':</strong> '.
                         '<span class="'.self::TEXT_COLOR_SUCCESS.'">'.__('ledger.activity.changes.attached').'</span>'
                     );
                 } elseif ($newValue === null && $oldValue !== null) {
                     $changes->push(
-                        '<strong>'.e($key).':</strong> '.
+                        '<strong>'.e($attributeLabel).':</strong> '.
                         '<span class="'.self::TEXT_COLOR_ERROR.' line-through">'.__('ledger.activity.changes.detached').'</span>'
                     );
                 }
@@ -289,7 +292,7 @@ class ActivityLogFormatter
                     (($isOldValueJsonString && $oldJsonError === JSON_ERROR_NONE) || ! $isOldValueJsonString)
                 ) {
                     if ($decodedNew !== $decodedOld) {
-                        $changes->push('<strong>'.e($key).':</strong> <span class="'.self::TEXT_COLOR_INFO.'">'.__('ledger.activity.changes.content_changed').'</span>');
+                        $changes->push('<strong>'.e($attributeLabel).':</strong> <span class="'.self::TEXT_COLOR_INFO.'">'.__('ledger.activity.changes.content_changed').'</span>');
                     }
                 } elseif ((is_string($newValue) || is_null($newValue) || is_bool($newValue)) && (is_string($oldValue) || is_null($oldValue) || is_bool($oldValue)) && (string) $newValue !== (string) $oldValue) {
                     $displayOld = is_array($oldValue) || is_object($oldValue) ? __('ledger.activity.changes.complex_data') : e((string) $oldValue);
@@ -303,7 +306,7 @@ class ActivityLogFormatter
                     }
 
                     $changes->push(
-                        '<strong>'.e($key).':</strong> '.
+                        '<strong>'.e($attributeLabel).':</strong> '.
                         '<span class="'.self::TEXT_COLOR_ERROR.' line-through">'.$displayOld.'</span> → '.
                         '<span class="'.self::TEXT_COLOR_SUCCESS.'">'.$displayNew.'</span>'
                     );
@@ -314,7 +317,7 @@ class ActivityLogFormatter
             // 配列やオブジェクトだがJSON処理の対象ではないカラム
             if (is_array($newValue) || is_object($newValue) || is_array($oldValue) || is_object($oldValue)) {
                 if ($newValue !== $oldValue) {
-                    $changes->push('<strong>'.e($key).':</strong> <span class="'.self::TEXT_COLOR_INFO.'">'.__('ledger.activity.changes.complex_data').'</span>');
+                    $changes->push('<strong>'.e($attributeLabel).':</strong> <span class="'.self::TEXT_COLOR_INFO.'">'.__('ledger.activity.changes.complex_data').'</span>');
                 }
 
                 continue;
@@ -328,13 +331,13 @@ class ActivityLogFormatter
             if ($displayNewValue !== $displayOldValue || ! $old->has($key)) {
                 if ($old->has($key)) {
                     $changes->push(
-                        '<strong>'.e($key).':</strong> '.
+                        '<strong>'.e($attributeLabel).':</strong> '.
                         '<span class="'.self::TEXT_COLOR_ERROR.' line-through">'.e($displayOldValue).'</span> → '.
                         '<span class="'.self::TEXT_COLOR_SUCCESS.'">'.e($displayNewValue).'</span>'
                     );
                 } else {
                     $changes->push(
-                        '<strong>'.e($key).':</strong> '.
+                        '<strong>'.e($attributeLabel).':</strong> '.
                         '<span class="'.self::TEXT_COLOR_SUCCESS.'">'.e($displayNewValue).'</span>'
                     );
                 }
@@ -345,7 +348,7 @@ class ActivityLogFormatter
         foreach ($old as $key => $value) {
             if (! $attributes->has($key) && ! in_array($key, ['latest_diff_id', 'updated_at', 'modifier_id', 'created_at', 'creator_id', 'deleted_at'])) {
                 $changes->push(
-                    '<strong>'.e($key).':</strong> '.
+                    '<strong>'.e(self::getChangeAttributeLabel($key)).':</strong> '.
                     '<span class="'.self::TEXT_COLOR_ERROR.' line-through">'.e(is_bool($value) ? ($value ? 'true' : 'false') : (is_null($value) ? 'null' : (string) $value)).'</span> → '.
                     '<span class="'.self::TEXT_STYLE_MUTED.'">'.__('ledger.activity.changes.removed').'</span>'
                 );
@@ -364,6 +367,13 @@ class ActivityLogFormatter
         }
 
         return new HtmlString($changes->implode('<br>'));
+    }
+
+    protected static function getChangeAttributeLabel(string $attribute): string
+    {
+        $key = 'ledger.activity.changes.attribute_label.'.$attribute;
+
+        return __($key) !== $key ? __($key) : $attribute;
     }
 
     /**
@@ -415,7 +425,7 @@ class ActivityLogFormatter
             return null;
         }
 
-        $tenantId = tenant()?->id;
+        $tenantId = tenant()?->id ?? $subject->tenant_id ?? null;
 
         if (! $tenantId) {
             return null;
@@ -429,6 +439,9 @@ class ActivityLogFormatter
         }
         if ($subject instanceof Folder) {
             return route('ledgersByFolderId', ['tenant' => $tenantId, 'folderId' => $subject->id]);
+        }
+        if ($subject instanceof AttachedFile) {
+            return $subject->ledger_id ? route('ledger.show', ['tenant' => $tenantId, 'ledgerId' => $subject->ledger_id, 'file' => $subject->id]) : null;
         }
         // 以下、Filament 管理画面へのリンクは一般ユーザー向けではないため null を返す
         if ($subject instanceof User || $subject instanceof Role || $subject instanceof Organization || $subject instanceof Permission || $subject instanceof RoleFolderPermission) {
@@ -512,9 +525,13 @@ class ActivityLogFormatter
             } else {
                 $title = "{$roleName} / {$folderName}";
             }
+        } elseif ($activity->subject instanceof AttachedFile) {
+            $title = $activity->subject->original_filename ?? $activity->subject->filename ?? ('ID: '.$activity->subject->id);
+            $type = __('ledger.activity.model_name.attached_file');
         } else {
-            // 未知のモデルタイプの場合、クラス名を表示
-            $type = class_basename($activity->subject_type);
+            // 未知のモデルタイプでも、翻訳があればモデル名を優先する
+            $typeKey = 'ledger.activity.model_name.'.Str::snake(class_basename($activity->subject_type));
+            $type = __($typeKey) !== $typeKey ? __($typeKey) : class_basename($activity->subject_type);
             $title = $activity->subject_id;
         }
 

@@ -2,12 +2,15 @@
 
 namespace Tests\Feature\Filament;
 
+use App\Filament\Resources\UserResource;
 use App\Filament\Resources\UserResource\Pages\ListUsers;
+use App\Models\Role;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class UserResourceTest extends TestCase
@@ -27,14 +30,14 @@ class UserResourceTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         // UserPolicy が期待するパーミッション名で作成
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'manage_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'create_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update_users', 'guard_name' => 'web']);
-        \Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'delete_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'view_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'manage_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'create_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'update_users', 'guard_name' => 'web']);
+        Permission::firstOrCreate(['name' => 'delete_users', 'guard_name' => 'web']);
 
-        $adminRole = \App\Models\Role::firstOrCreate(['name' => \App\Models\Role::SUPER_ADMIN, 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
+        $adminRole->givePermissionTo(Permission::all());
 
         $this->adminUser = User::factory()->create([
             'email' => 'admin@example.com',
@@ -80,8 +83,26 @@ class UserResourceTest extends TestCase
     {
         User::factory()->create(['ignore_ad_org_sync_until' => now()->subDays(1)]);
 
+        $expectedUrl = UserResource::getUrl('index', [
+            'tableFilters' => [
+                'manual_sync_status' => [
+                    'status' => 'expired',
+                ],
+            ],
+        ]);
+
         Livewire::test(ListUsers::class)
             ->assertSuccessful();
-        // 通知の詳細は確認しないが、エラーなく動作することを確認
+
+        $notification = collect(session('filament.notifications'))->last();
+
+        $this->assertNotNull($notification);
+        $this->assertSame(__('ledger.manual_sync_expired_warning_title'), $notification['title'] ?? null);
+        $this->assertSame(
+            __('ledger.manual_sync_expired_warning_body', ['count' => 1]),
+            $notification['body'] ?? null,
+        );
+        $this->assertSame(__('ledger.filter_expired_users'), $notification['actions'][0]['label'] ?? null);
+        $this->assertSame($expectedUrl, $notification['actions'][0]['url'] ?? null);
     }
 }

@@ -2,19 +2,25 @@
 
 namespace App\Services\Ledger;
 
-use App\Helpers\AttachedFilePathHelper;
+use App\Enums\AttachedFileStatus;
+use App\Helpers\SearchHelper;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Services\AutoLinkService;
 use App\Services\Util\HtmlProcessorService;
+use Illuminate\Cache\RedisStore;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Redis;
 use Illuminate\Support\HtmlString;
 use Spatie\LaravelMarkdown\MarkdownRenderer;
 
 class ColumnHtmlService
 {
+    use LogPerformance;
+
     private AutoLinkService $autoLinkService;
 
     private MarkdownRenderer $markdownRenderer;
@@ -41,9 +47,13 @@ class ColumnHtmlService
 
     private $columnDefineData; // カラム定義データを保持 (配列 or オブジェクト)
 
-    public const BADGE_CLASS_NAME = 'badge py-4 mx-1 my-1';
+    private ?Ledger $record = null;
 
-    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline py-4 mx-1 my-1';
+    private string $source = 'unknown';
+
+    public const BADGE_CLASS_NAME = 'badge badge-outline badge-secondary text-base md:text-lg md:badge-lg gap-1';
+
+    public const SELECT_BADGE_CLASS_NAME = 'badge badge-outline badge-primary text-base md:text-lg md:badge-lg gap-1';
 
     private const HIGHLIGHT_CLASS_NAME = 'text-error font-bold text-lg';
 
@@ -86,6 +96,8 @@ class ColumnHtmlService
         ?string $highlight = null,
         ?string $tenantId = null
     ): HtmlString {
+        $startedAt = microtime(true);
+
         if (! $canView) {
             return new HtmlString('');
         }
@@ -96,19 +108,21 @@ class ColumnHtmlService
         }
 
         $this->mount($columnDefineData, $initialValue, $attrs, $asCreate, $idPrefix);
+        $this->record = $record;
         $this->tenantId = $tenantId ?? $record?->define?->tenant_id ?? null;
 
         // Mock Attachment Column Support
         $colId = $this->getColumnDefineProperty('id');
-        if (\App\Services\Ledger\MockAttachmentService::isMockColumn($colId) && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
-            $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+        if (MockAttachmentService::isMockColumn($colId) && MockAttachmentService::isEnabled()) {
+            $mockFiles = MockAttachmentService::getMockFiles();
             $mode = $this->attrs['mode'] ?? 'full';
 
             // ヒット判定を追加
-            $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+            $keywords = SearchHelper::extractKeywords($highlight);
             foreach ($mockFiles as &$mf) {
-                $mf['is_hit'] = \App\Helpers\SearchHelper::isFileDataHit($mf, $keywords);
+                $mf['is_hit'] = SearchHelper::isFileDataHit($mf, $keywords);
             }
+            unset($mf);
 
             $html = view('components.ledger.attachment-list', [
                 'files' => $mockFiles,
@@ -116,6 +130,10 @@ class ColumnHtmlService
                 'tenantId' => $this->tenantId,
                 'search' => $highlight, // 検索キーワードを渡す
             ])->render();
+
+            $this->logPerformance('column_html_show_ms', (microtime(true) - $startedAt) * 1000, [
+                'render_kind' => 'mock_attachment',
+            ]);
 
             return new HtmlString($html);
         }
@@ -132,28 +150,54 @@ class ColumnHtmlService
         } elseif ($type === 'select') {
             $html = '<span class="'.self::SELECT_BADGE_CLASS_NAME.'">'.e($this->initialValue).'</span>';
         } elseif ($type === 'textarea') {
-            // 1. MarkdownをHTMLに変換
-            $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+            $currentTenantId = $this->tenantId ?? tenant()?->id ?? $record?->define?->tenant_id ?? 'global';
+            $colId = $this->getColumnDefineProperty('id');
 
-            // 2. 自動リンクを適用
-            $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record);
+            // ハイライトあり / レコード未設定時はキャッシュをバイパス
+            if ($highlight || ! $record) {
+                $cacheHit = false;
+                $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+                $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+                $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+            } else {
+                $updatedAtTs = $record->updated_at?->timestamp ?? 0;
+                $cacheKey = "column_html:textarea:{$currentTenantId}:{$record->id}:{$colId}:{$updatedAtTs}";
+                $ttl = config('ledgerleap.cache.column_html_ttl', 86400);
 
-            // 3. 展開可能なコンテンツ用のマーカーを追加
-            $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+                $cached = Cache::memo()->get($cacheKey);
+                if ($cached !== null) {
+                    $cacheHit = true;
+                    $html = $cached;
+                } else {
+                    $cacheHit = false;
+                    $convertedHtml = $this->markdownRenderer->toHtml((string) $this->initialValue);
+                    $processedHtml = $this->autoLinkService->convert($convertedHtml, $this->columnDefineData, $record, $highlight);
+                    $html = '<div class="expandable-textarea-content">'.$processedHtml.'</div>';
+                    Cache::memo()->put($cacheKey, $html, $ttl);
+                }
+            }
+
+            $this->logPerformance('textarea_cache_hit', $cacheHit ? 1 : 0, [
+                'tenant_id' => $currentTenantId,
+                'ledger_id' => $record?->id,
+                'column_id' => $colId,
+            ]);
 
         } elseif ($type === 'number') {
             $unit = $this->columnDefineData->getInputType()->unit ?? '';
-            $html = $this->initialValue.' '.$unit;
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $html, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $value = $this->initialValue;
+            $html = '<span>'.e($value).'</span>'.($unit ? '<span class="opacity-50 ml-1">'.e($unit).'</span>' : '');
+            $html = $this->getCachedColumnHtml($type, $record, $html, $highlight);
         } else {
             // auto_number, text, url など、他のテキストベースのカラムも自動リンクの対象とする
-            $html = $this->autoLinkService->convert(htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8'), $this->columnDefineData, $record);
+            $rawHtml = htmlspecialchars((string) $this->initialValue, ENT_QUOTES, 'UTF-8');
+            $html = $this->getCachedColumnHtml($type, $record, $rawHtml, $highlight);
 
         }
 
         // ハイライト処理
         if ($highlight) {
-            $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+            $keywords = SearchHelper::extractKeywords($highlight);
             if (! empty($keywords)) {
                 $html = $this->htmlProcessorService->processTextNodes(
                     $html,
@@ -162,7 +206,7 @@ class ColumnHtmlService
                         // 既にエスケープされている可能性を考慮せず、textNodeの内容をそのままSearchHelper::highlightに渡す。
                         // SearchHelper::highlightの内部で e() を呼ぶようにしているので、
                         // ここでは TextNode の生の値を渡し、生成されたHTMLをフラグメントとして追加する。
-                        $highlightedHtml = \App\Helpers\SearchHelper::highlight($textNode->nodeValue, $keywords, self::HIGHLIGHT_CLASS_NAME);
+                        $highlightedHtml = SearchHelper::highlight($textNode->nodeValue, $keywords, self::HIGHLIGHT_CLASS_NAME);
 
                         // HTMLを含む文字列をDOMノードに変換
                         $tempDom = new \DOMDocument;
@@ -190,6 +234,12 @@ class ColumnHtmlService
             $html = '<div class="prose dark:prose-invert max-w-none">'.$html.'</div>';
         }
 
+        $this->logPerformance('column_html_show_ms', (microtime(true) - $startedAt) * 1000, [
+            'render_kind' => $type === 'files' ? 'files' : ($type ?? 'unknown'),
+            'has_highlight' => (bool) $highlight,
+            'as_create' => $asCreate,
+        ]);
+
         return new HtmlString($html ?? '');
     }
 
@@ -209,7 +259,7 @@ class ColumnHtmlService
             }
 
             return ! empty($displayLabels)
-                ? '<span class="'.self::BADGE_CLASS_NAME.'">'.implode('</span><span class="'.self::BADGE_CLASS_NAME.'">', array_map('e', $displayLabels)).'</span>'
+                ? '<div class="flex flex-wrap gap-1">'.implode('', array_map(fn ($label) => '<span class="'.self::BADGE_CLASS_NAME.'">'.e($label).'</span>', $displayLabels)).'</div>'
                 : '';
         }
 
@@ -234,6 +284,13 @@ class ColumnHtmlService
         $this->id = $idPrefix.$this->valueNameBase;
     }
 
+    public function setSource(string $source): static
+    {
+        $this->source = $source;
+
+        return $this;
+    }
+
     private function getColumnDefineProperty(string $key, $default = null)
     {
         if (is_object($this->columnDefineData) && isset($this->columnDefineData->{$key})) {
@@ -244,6 +301,18 @@ class ColumnHtmlService
         }
 
         return $default;
+    }
+
+    protected function getPerformanceContext(): array
+    {
+        return [
+            'source' => $this->source,
+            'ledger_id' => $this->record?->id,
+            'column_id' => $this->getColumnDefineProperty('id'),
+            'column_type' => $this->getColumnDefineProperty('type'),
+            'mode' => $this->attrs['mode'] ?? null,
+            'tenant_id' => $this->tenantId,
+        ];
     }
 
     public function setAttachmentCollection(Collection $attachments): static
@@ -301,14 +370,46 @@ class ColumnHtmlService
             return '';
         }
 
-        $files = $this->prepareFilesData($highlight);
+        $startedAt = microtime(true);
+        $debugAttachmentHtmlLogs = config('ledgerleap.performance.attachment_html_debug_logs', false);
 
-        return view('components.ledger.attachment-list', [
+        $prepareStartedAt = microtime(true);
+        $files = $this->prepareFilesData($highlight);
+        $prepareFilesDurationMs = (microtime(true) - $prepareStartedAt) * 1000;
+
+        $bladeRenderStartedAt = microtime(true);
+        $html = view('components.ledger.attachment-list', [
             'files' => $files,
             'mode' => $mode,
             'tenantId' => $this->tenantId,
             'search' => $highlight,
         ])->render();
+        $bladeRenderDurationMs = (microtime(true) - $bladeRenderStartedAt) * 1000;
+
+        $this->logPerformance('column_html_prepare_files_ms', $prepareFilesDurationMs, [
+            'mode' => $mode,
+            'file_count' => count($files),
+        ]);
+        $this->logPerformance('column_html_blade_render_ms', $bladeRenderDurationMs, [
+            'mode' => $mode,
+            'file_count' => count($files),
+        ]);
+
+        if ($debugAttachmentHtmlLogs) {
+            Log::info('[AttachmentHtml] getFileHtml', [
+                'source' => $this->source,
+                'ledger_id' => $this->record?->id,
+                'column_id' => $this->getColumnDefineProperty('id'),
+                'mode' => $mode,
+                'file_count' => count($files),
+                'attachment_count' => $this->attachments->count(),
+                'prepare_files_ms' => round($prepareFilesDurationMs, 2),
+                'blade_render_ms' => round($bladeRenderDurationMs, 2),
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+            ]);
+        }
+
+        return $html;
     }
 
     /**
@@ -319,16 +420,65 @@ class ColumnHtmlService
      */
     private function prepareFilesData(?string $highlight = null): array
     {
+        $startedAt = microtime(true);
+        $debugAttachmentHtmlLogs = config('ledgerleap.performance.attachment_html_debug_logs', false);
         $files = [];
+        $filenameMap = [];
+        $lookupDurationMs = 0.0;
+        $urlBuildDurationMs = 0.0;
+        $hitDetectionDurationMs = 0.0;
+        $missingAttachmentCount = 0;
 
+        $filenameMapStartedAt = microtime(true);
         foreach ($this->initialValue as $hashedFilename => $originalFilename) {
+            $filenameMap[$hashedFilename] = $originalFilename;
+        }
+        $filenameMapBuildDurationMs = (microtime(true) - $filenameMapStartedAt) * 1000;
+
+        $filenameOriginalDurationMs = 0.0;
+        $filenameAttachedLookupDurationMs = 0.0;
+        $filenameBasenameDurationMs = 0.0;
+        $arrayAssemblyDurationMs = 0.0;
+        $payloadBuildDurationMs = 0.0;
+        $fileBuildDurationMs = 0.0;
+        $fallbackBuildDurationMs = 0.0;
+        $routeBuildDurationMs = 0.0;
+        $downloadBundleDurationMs = 0.0;
+        $scalarFieldDurationMs = 0.0;
+        $hitFlagDurationMs = 0.0;
+        $filenameResolveDurationMs = 0.0;
+
+        foreach ($filenameMap as $hashedFilename => $originalFilename) {
+            $fileStartedAt = microtime(true);
+
+            $phaseStartedAt = microtime(true);
             $attachment = $this->attachments->get($hashedFilename);
+            $lookupDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $filenameAttachedLookupDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             if (! $attachment) {
+                $missingAttachmentCount++;
+
+                $fallbackBuildDurationMs += (microtime(true) - $fileStartedAt) * 1000;
+
                 continue;
             }
 
+            $resolveStartedAt = microtime(true);
+            $phaseStartedAt = microtime(true);
+            $originalFilenameResolved = $originalFilename;
+            if (! is_string($originalFilenameResolved) || $originalFilenameResolved === '') {
+                $originalFilenameResolved = $attachment->original_filename ?? $attachment->filename ?? '';
+            }
+            $filenameOriginalDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+
+            $phaseStartedAt = microtime(true);
+            $basename = pathinfo($originalFilenameResolved, PATHINFO_FILENAME);
+            $filenameBasenameDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $filenameResolveDurationMs += (microtime(true) - $resolveStartedAt) * 1000;
+
             // ダウンロードURLの構築
+            $phaseStartedAt = microtime(true);
             if (! $this->tenantId) {
                 Log::error('Tenant ID is not provided to ColumnHtmlService.');
                 $mainDownloadUrl = '#';
@@ -340,21 +490,18 @@ class ColumnHtmlService
                 // サムネイルURL (画像かつサムネイルファイルが存在する場合)
                 $thumbnailUrl = null;
                 if (str_starts_with($attachment->original_mime_type, 'image/') && $attachment->hashedbasename) {
-                    $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachment->hashedbasename, $this->tenantId);
-                    $thumbnailExists = Storage::disk('public')->exists($thumbnailPath);
-
-                    if ($thumbnailExists) {
-                        $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => 'true']);
-                    }
+                    $thumbnailUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'thumbnail' => true]);
                 }
                 $originalDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id, 'original' => true]);
                 $optimizedPdfDownloadUrl = route('file.download', ['tenant' => $this->tenantId, 'attachedFile' => $attachment->id]);
             }
+            $routeBuildDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             // ダウンロードリンクの整理
             $primaryDownload = null;
             $secondaryDownload = null;
 
+            $phaseStartedAt = microtime(true);
             if (str_starts_with($attachment->original_mime_type, 'image/')) {
                 // 画像ファイル
                 // メイン: 元画像 (original=true)
@@ -394,13 +541,15 @@ class ColumnHtmlService
                     'icon' => 'fa-download',
                 ];
             }
+            $downloadBundleDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
+            $phaseStartedAt = microtime(true);
             $fileData = [
                 'id' => $attachment->id,
                 'column_id' => $attachment->column_id,
-                'filename' => $originalFilename,
+                'filename' => $originalFilenameResolved,
                 'mime' => $attachment->original_mime_type ?? $attachment->mime,
-                'status' => $attachment->status instanceof \App\Enums\AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得
+                'status' => $attachment->status instanceof AttachedFileStatus ? $attachment->status->value : $attachment->status, // Enum値を取得
                 'size' => $attachment->size,
                 'thumbnailUrl' => $thumbnailUrl,
                 'primary_download' => $primaryDownload,
@@ -409,24 +558,115 @@ class ColumnHtmlService
                 // エラーメッセージなどが必要ならここに追加
                 'error_message' => $attachment->error_message ?? null,
             ];
+            $payloadBuildDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
             // 検索ヒット判定を追加
+            $phaseStartedAt = microtime(true);
             if ($highlight) {
-                $keywords = \App\Helpers\SearchHelper::extractKeywords($highlight);
+                $keywords = SearchHelper::extractKeywords($highlight);
                 // ファイル名、VLMテキスト、OCR/Tikaテキストで検索ヒット判定
                 $ocrText = $attachment->getOcrTikaFormattedText('ocr');
                 $tikaText = $attachment->getOcrTikaFormattedText('tika');
-                $fileData['is_hit'] = \App\Helpers\SearchHelper::hasHit($originalFilename, $keywords)
-                    || \App\Helpers\SearchHelper::hasHit($attachment->vlm_markdown, $keywords)
-                    || \App\Helpers\SearchHelper::hasHit($ocrText, $keywords)
-                    || \App\Helpers\SearchHelper::hasHit($tikaText, $keywords);
+                $fileData['is_hit'] = SearchHelper::hasHit($originalFilenameResolved, $keywords)
+                    || SearchHelper::hasHit($attachment->vlm_markdown, $keywords)
+                    || SearchHelper::hasHit($ocrText, $keywords)
+                    || SearchHelper::hasHit($tikaText, $keywords);
             } else {
                 $fileData['is_hit'] = false;
             }
+            $hitDetectionDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+            $hitFlagDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
 
+            $phaseStartedAt = microtime(true);
             $files[] = $fileData;
+            $arrayAssemblyDurationMs += (microtime(true) - $phaseStartedAt) * 1000;
+
+            $fileBuildDurationMs += (microtime(true) - $fileStartedAt) * 1000;
+        }
+
+        if ($debugAttachmentHtmlLogs) {
+            Log::info('[AttachmentHtml] prepareFilesData', [
+                'source' => $this->source,
+                'ledger_id' => $this->record?->id,
+                'column_id' => $this->getColumnDefineProperty('id'),
+                'file_count' => count($files),
+                'attachment_count' => $this->attachments->count(),
+                'missing_attachment_count' => $missingAttachmentCount,
+                'lookup_ms' => round($lookupDurationMs, 2),
+                'route_build_ms' => round($routeBuildDurationMs, 2),
+                'download_bundle_ms' => round($downloadBundleDurationMs, 2),
+                'scalar_field_ms' => round($scalarFieldDurationMs, 2),
+                'hit_flag_ms' => round($hitFlagDurationMs, 2),
+                'filename_resolve_ms' => round($filenameResolveDurationMs, 2),
+                'filename_map_build_ms' => round($filenameMapBuildDurationMs, 2),
+                'filename_original_ms' => round($filenameOriginalDurationMs, 2),
+                'filename_attached_lookup_ms' => round($filenameAttachedLookupDurationMs, 2),
+                'filename_basename_ms' => round($filenameBasenameDurationMs, 2),
+                'array_assembly_ms' => round($arrayAssemblyDurationMs, 2),
+                'payload_build_ms' => round($payloadBuildDurationMs, 2),
+                'file_build_ms' => round($fileBuildDurationMs, 2),
+                'fallback_build_ms' => round($fallbackBuildDurationMs, 2),
+                'duration_ms' => round((microtime(true) - $startedAt) * 1000, 2),
+            ]);
         }
 
         return $files;
+    }
+
+    /**
+     * カラムHTMLをキャッシュから取得または生成する
+     */
+    private function getCachedColumnHtml(string $type, ?Ledger $record, string $rawHtml, ?string $highlight): string
+    {
+        if ($highlight || ! $record) {
+            return $this->autoLinkService->convert($rawHtml, $this->columnDefineData, $record, $highlight);
+        }
+
+        $currentTenantId = $this->tenantId ?? tenant()?->id ?? $record?->define?->tenant_id ?? 'global';
+        $colId = $this->getColumnDefineProperty('id');
+        // 同一レコード・同一カラムでも diff の current/old で rawHtml が異なるため、
+        // rawHtml のハッシュを含めてキャッシュを分離する。
+        $rawHtmlHash = md5($rawHtml);
+        $updatedAtTs = $record->updated_at?->timestamp ?? 0;
+        $cacheKey = "column_html:{$type}:{$currentTenantId}:{$record->id}:{$colId}:{$updatedAtTs}:{$rawHtmlHash}";
+        $ttl = config('ledgerleap.cache.column_html_ttl', 3600);
+
+        $cached = Cache::memo()->get($cacheKey);
+        if ($cached !== null) {
+            return $cached;
+        }
+
+        $html = $this->autoLinkService->convert($rawHtml, $this->columnDefineData, $record, $highlight);
+        Cache::memo()->put($cacheKey, $html, $ttl);
+
+        return $html;
+    }
+
+    /**
+     * 指定された台帳レコードのカラムHTMLキャッシュをクリアする
+     */
+    public function clearCacheForLedger(Ledger $ledger): void
+    {
+        $tenantId = $ledger->define?->tenant_id ?? tenant()?->id ?? 'global';
+
+        // MemoizedStore のメモリキャッシュもクリア（同一リクエスト内での古い値参照を防ぐ）
+        Cache::memo()->flush();
+
+        if (Cache::getStore() instanceof RedisStore) {
+            $pattern = '*column_html:*:'.$tenantId.':'.$ledger->id.':*';
+
+            try {
+                $keys = Redis::keys($pattern);
+                if (! empty($keys)) {
+                    Redis::del($keys);
+                }
+            } catch (\Exception $e) {
+                Log::warning('Failed to clear column html cache', [
+                    'ledger_id' => $ledger->id,
+                    'pattern' => $pattern,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
     }
 }

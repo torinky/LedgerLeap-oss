@@ -2,13 +2,17 @@
 
 namespace Tests\Feature\Api;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Models\Folder;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Mockery\MockInterface;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -28,7 +32,19 @@ class SearchLedgersToolTest extends TestCase
         $this->tenant = Tenant::factory()->create();
         tenancy()->initialize($this->tenant);
 
+        $folder = Folder::factory()->create();
+        $role = Role::create(['name' => 'mcp-search-test', 'guard_name' => 'web']);
+
         $this->user = User::factory()->create();
+        $this->user->assignRole($role);
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::READ,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
 
         // Create Sanctum token for MCP authentication
         $token = $this->user->createToken('mcp-test-token', ['mcp:*']);

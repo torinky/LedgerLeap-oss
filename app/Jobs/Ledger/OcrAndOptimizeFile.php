@@ -4,6 +4,7 @@ namespace App\Jobs\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Embedding\VectorizeAttachedFile;
 use App\Models\AttachedFile;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
@@ -12,8 +13,8 @@ use Illuminate\Process\Exceptions\ProcessFailedException;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Process;
 // use Symfony\Component\Process\Process;
+use Illuminate\Support\Facades\Process;
 use Illuminate\Support\Facades\Storage;
 
 class OcrAndOptimizeFile implements ShouldQueue
@@ -137,15 +138,19 @@ class OcrAndOptimizeFile implements ShouldQueue
 
             // 4. レコード情報の更新
             // --- 成功時の処理 ---
-            $this->attachedFile->update([
+            $this->attachedFile->refresh();
+            $updateData = [
                 'path' => $outputStoragePath,
                 'filename' => $outputFileName,
                 'mime' => 'application/pdf',
                 'optimized' => true,
                 'size' => Storage::disk('public')->size($outputStoragePath),
-                'status' => AttachedFileStatus::PENDING_INITIAL_PROCESSING->value, // Tika再処理のためのステータス
-                'ocr_processed_at' => now(), // ★ Phase5: OCR成功時のタイムスタンプ
-            ]);
+                'ocr_processed_at' => now(),
+            ];
+            if (! $this->attachedFile->processing_finalized_at) {
+                $updateData['status'] = AttachedFileStatus::PENDING_INITIAL_PROCESSING->value;
+            }
+            $this->attachedFile->update($updateData);
 
             Log::info('[OCR] Processing successful', [
                 'file_id' => $this->attachedFile->id,
@@ -153,7 +158,7 @@ class OcrAndOptimizeFile implements ShouldQueue
             ]);
 
             // ★ Phase2.6: OCR完了後、即座にベクトル化（Tikaより高品質で上書き）
-            \App\Jobs\Embedding\VectorizeAttachedFile::dispatch(
+            VectorizeAttachedFile::dispatch(
                 $this->attachedFile->id,
                 'ocr'
             );
@@ -172,10 +177,12 @@ class OcrAndOptimizeFile implements ShouldQueue
             ]);
 
             // ★ Phase5: OCR失敗時のタイムスタンプを設定
-            $this->attachedFile->update([
-                'status' => AttachedFileStatus::OCR_FAILED->value,
-                'ocr_failed_at' => now(), // ★ Phase5: OCR失敗時のタイムスタンプ
-            ]);
+            $this->attachedFile->refresh();
+            $updateData = ['ocr_failed_at' => now()];
+            if (! $this->attachedFile->processing_finalized_at) {
+                $updateData['status'] = AttachedFileStatus::OCR_FAILED->value;
+            }
+            $this->attachedFile->update($updateData);
 
             // ★ Phase5: VLMフォールバック削除（並列処理なので不要）
             // OCR失敗はOCR失敗として記録し、最終化処理がVLM結果を選択する

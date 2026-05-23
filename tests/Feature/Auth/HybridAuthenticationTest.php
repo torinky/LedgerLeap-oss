@@ -1,9 +1,15 @@
 <?php
 
+use App\Enums\FolderPermissionType;
+use App\Models\Folder;
 use App\Models\Organization;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
+use LdapRecord\Container;
 use LdapRecord\Laravel\Testing\DirectoryEmulator;
+use Spatie\Permission\Models\Role;
+use Tests\Ldap\OpenLdapUser;
 
 beforeEach(function () {
     $this->tenant = Tenant::create();
@@ -12,11 +18,11 @@ beforeEach(function () {
     // テスト用の検索ベースDNを設定 (OpenLDAPコンテナに合わせて)
     config()->set('ldap_sync.login_search_base_dns', ['dc=planetexpress,dc=com']);
     // テスト用のLDAPユーザーモデルを設定 (OpenLDAPスキーマに合わせて)
-    config()->set('ldap.auth.user_model', \Tests\Ldap\OpenLdapUser::class);
-    config()->set('auth.providers.ldap.model', \Tests\Ldap\OpenLdapUser::class);
+    config()->set('ldap.auth.user_model', OpenLdapUser::class);
+    config()->set('auth.providers.ldap.model', OpenLdapUser::class);
 
     DirectoryEmulator::setup('default');
-    \LdapRecord\Container::getConnection('default')->getLdapConnection()->shouldAllowAnyBind();
+    Container::getConnection('default')->getLdapConnection()->shouldAllowAnyBind();
 });
 
 afterEach(function () {
@@ -32,28 +38,28 @@ test('ad user can login and auto-register (hybrid auth)', function () {
 
     // テストに必要なロール、フォルダ、ロールフォルダ権限を設定
     // ユーザー作成後に紐付けるため、ロールとフォルダを先に作成
-    $role = \Spatie\Permission\Models\Role::create(['name' => 'test-ad-role']);
+    $role = Role::create(['name' => 'test-ad-role']);
 
     // ユーザーを作成する前に仮のユーザーIDを用意 (Folderのcreator/modifier用)
     // 自動登録されるユーザーが作成された後に、改めてそのユーザーにロールを割り当てる
     $tempUserId = User::factory()->create()->id;
 
-    $folder = \App\Models\Folder::create([
+    $folder = Folder::create([
         'title' => 'AD Sync Test Folder',
         'creator_id' => $tempUserId,
         'modifier_id' => $tempUserId,
         'tenant_id' => $this->tenant->id, // テナントに紐付ける
     ]);
 
-    \App\Models\RoleFolderPermission::create([
+    RoleFolderPermission::create([
         'role_id' => $role->id,
         'folder_id' => $folder->id,
-        'permission' => \App\Enums\FolderPermissionType::READ, // 読み取り権限で十分
+        'permission' => FolderPermissionType::READ, // 読み取り権限で十分
         'modifier_id' => $tempUserId,
     ]);
 
     // LDAPユーザーの作成
-    $ldapUser = \Tests\Ldap\OpenLdapUser::create([
+    $ldapUser = OpenLdapUser::create([
         'dn' => 'uid=fry,dc=planetexpress,dc=com',
         'uid' => 'fry',
         'cn' => 'Philip J. Fry',
@@ -110,7 +116,7 @@ test('ad user rejected if organization mismatch (strict check)', function () {
     // $org = Organization::create(['name' => 'Fry', 'org_id' => 'Fry']);
 
     // LDAPユーザーの作成 (SN=Fry)
-    \Tests\Ldap\OpenLdapUser::create([
+    OpenLdapUser::create([
         'dn' => 'uid=fry,dc=planetexpress,dc=com',
         'uid' => 'fry',
         'cn' => 'Philip J. Fry',

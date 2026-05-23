@@ -5,6 +5,7 @@ namespace Tests\Feature\Livewire\Ledger;
 use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Organization;
 use App\Models\User;
@@ -46,7 +47,7 @@ class LedgerHistoryManagerApprovalTest extends TestCase
         $this->actingAs($modifier);
 
         // 2. Setup Ledger and LedgerDiff (Explicitly)
-        $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
+        $ledgerDefine = LedgerDefine::factory()->create([
             'tenant_id' => $this->getTenant()->id,
             'column_define' => [
                 ['id' => 0, 'name' => 'Col1', 'type' => 'text', 'order' => 1],

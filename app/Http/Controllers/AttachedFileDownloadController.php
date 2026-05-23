@@ -2,8 +2,11 @@
 
 namespace App\Http\Controllers;
 
+use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Ledger\GenerateThumbnail;
 use App\Models\AttachedFile;
+use App\Services\Ledger\LedgerAttachmentBinaryResourceService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Log;
@@ -11,6 +14,10 @@ use Illuminate\Support\Facades\Storage;
 
 class AttachedFileDownloadController extends Controller
 {
+    public function __construct(
+        private readonly LedgerAttachmentBinaryResourceService $attachmentBinaryResourceService,
+    ) {}
+
     public function download(Request $request, AttachedFile $attachedFile)
     {
         Log::info('[DownloadController@download] Started.', [
@@ -34,26 +41,42 @@ class AttachedFileDownloadController extends Controller
         $filePath = '';
         $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
 
-        Log::info('[DownloadController@download] AttachedFile path: '.$attachedFile->path.', original_file_path: '.$attachedFile->original_file_path);
+        Log::info('[DownloadController@download] AttachedFile path.', [
+            'attached_file_path' => $attachedFile->path,
+            'original_file_path' => $attachedFile->original_file_path,
+        ]);
 
         if ($isThumbnailRequest) {
-            $filePath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename, $attachedFile->tenant_id);
+            $filePath = AttachedFilePathHelper::getThumbnailStoragePath(
+                $attachedFile->hashedbasename,
+                $attachedFile->tenant_id,
+            );
         } elseif ($isOriginalRequest && $attachedFile->original_file_path) {
-            $filePath = $attachedFile->original_file_path;
+            $filePath = $this->attachmentBinaryResourceService->resolveAttachmentPath($attachedFile, true);
             $fileNameToServe = $attachedFile->original_filename ?? $attachedFile->filename;
-            Log::info('[DownloadController@download] Original file path from helper: '.$filePath);
+            Log::info('[DownloadController@download] Original file path from helper.', [
+                'path' => $filePath,
+            ]);
         } else {
-            $filePath = $attachedFile->path;
-            Log::info('[DownloadController@download] Attachment file path from helper: '.$filePath);
+            $filePath = $this->attachmentBinaryResourceService->resolveAttachmentPath($attachedFile);
+            Log::info('[DownloadController@download] Attachment file path from helper.', [
+                'path' => $filePath,
+            ]);
             if ($attachedFile->optimized && $attachedFile->mime === 'application/pdf') {
                 $fileNameToServe = pathinfo($fileNameToServe, PATHINFO_FILENAME).'.pdf';
             }
         }
-        Log::info('[DownloadController@download] Determined file path and name.', ['path' => $filePath, 'serve_as' => $fileNameToServe]);
+        Log::info('[DownloadController@download] Determined file path and name.', [
+            'path' => $filePath,
+            'serve_as' => $fileNameToServe,
+        ]);
 
         // 5. レスポンス生成
         if ($isThumbnailRequest) {
-            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($attachedFile->hashedbasename, $attachedFile->tenant_id);
+            $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(
+                $attachedFile->hashedbasename,
+                $attachedFile->tenant_id,
+            );
             if (Storage::disk('public')->exists($thumbnailPath)) {
                 Log::info('[DownloadController@download] Returning actual thumbnail response with inline disposition.');
                 $mimeType = Storage::disk('public')->mimeType($thumbnailPath);
@@ -62,12 +85,24 @@ class AttachedFileDownloadController extends Controller
                     'Content-Type' => $mimeType,
                     'Content-Disposition' => 'inline; filename="'.$fileNameToServe.'"',
                 ]);
-            } else {
-                Log::info('[DownloadController@download] Thumbnail not found, returning icon instead of redirecting.');
-
-                // FontAwesomeIconControllerを使用して直接アイコンを返す
-                return app(\App\Http\Controllers\FontAwesomeIconController::class)->serveIconByMime($request->merge(['type' => $attachedFile->mime]));
             }
+
+            $previewMime = $attachedFile->original_mime_type ?? $attachedFile->mime ?? '';
+            $hasOriginalImage = str_starts_with($previewMime, 'image/')
+                && $attachedFile->original_file_path
+                && Storage::disk('public')->exists($attachedFile->original_file_path);
+
+            if ($hasOriginalImage) {
+                $this->queueThumbnailGeneration($attachedFile);
+
+                return $this->processingThumbnailResponse($fileNameToServe);
+            }
+
+            Log::info('[DownloadController@download] Thumbnail not found, returning icon instead of redirecting.');
+
+            // FontAwesomeIconControllerを使用して直接アイコンを返す
+            return app(FontAwesomeIconController::class)
+                ->serveIconByMime($request->merge(['type' => $previewMime]));
         }
 
         // 3. ファイルの物理的な存在を確認
@@ -80,7 +115,7 @@ class AttachedFileDownloadController extends Controller
         activity()
             ->performedOn($attachedFile)
             ->causedBy(auth()->user())
-            ->event($isThumbnailRequest ? 'viewed_thumbnail' : ($isOriginalRequest ? 'downloaded_original' : 'downloaded'))
+            ->event($this->getDownloadEventName($isThumbnailRequest, $isOriginalRequest))
             ->withProperties([
                 'ledger_id' => $attachedFile->ledger->id,
                 'ledger_define_id' => $attachedFile->ledger->ledger_define_id,
@@ -88,23 +123,79 @@ class AttachedFileDownloadController extends Controller
                 'ip_address' => $request->ip(),
                 'user_agent' => $request->userAgent(),
             ])
-            ->log("User activity logged for file: {$fileNameToServe}");
+            ->log('User activity logged for file: '.$fileNameToServe);
 
-        $mimeType = Storage::disk('public')->mimeType($filePath);
+        $mimeType = $this->attachmentBinaryResourceService->resolveAttachmentMimeType($attachedFile, $filePath);
 
         // original=trueの場合は必ずダウンロード（attachment）
         if ($isOriginalRequest) {
             $disposition = 'attachment';
         } else {
             // 通常のダウンロード: PDFや画像はinline、その他はattachment
-            $disposition = in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/gif']) ? 'inline' : 'attachment';
+            $inlineMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+            $disposition = in_array($mimeType, $inlineMimeTypes, true) ? 'inline' : 'attachment';
         }
 
-        Log::info('[DownloadController@download] Returning file response.', ['mime' => $mimeType, 'disposition' => $disposition]);
+        Log::info('[DownloadController@download] Returning file response.', [
+            'mime' => $mimeType,
+            'disposition' => $disposition,
+        ]);
 
         return response()->file(Storage::disk('public')->path($filePath), [
             'Content-Type' => $mimeType,
             'Content-Disposition' => $disposition.'; filename="'.$fileNameToServe.'"',
+        ]);
+    }
+
+    private function getDownloadEventName(bool $isThumbnailRequest, bool $isOriginalRequest): string
+    {
+        if ($isThumbnailRequest) {
+            return 'viewed_thumbnail';
+        }
+
+        if ($isOriginalRequest) {
+            return 'downloaded_original';
+        }
+
+        return 'downloaded';
+    }
+
+    private function queueThumbnailGeneration(AttachedFile $attachedFile): void
+    {
+        if ($attachedFile->status === AttachedFileStatus::OPTIMIZING) {
+            Log::info('[DownloadController@download] Thumbnail generation already in progress; skipping dispatch.', [
+                'attached_file_id' => $attachedFile->id,
+            ]);
+
+            return;
+        }
+
+        $attachedFile->update(['status' => AttachedFileStatus::OPTIMIZING->value]);
+
+        GenerateThumbnail::dispatch($attachedFile->id);
+
+        Log::info('[DownloadController@download] Thumbnail generation queued.', [
+            'attached_file_id' => $attachedFile->id,
+            'status' => AttachedFileStatus::OPTIMIZING->value,
+        ]);
+    }
+
+    private function processingThumbnailResponse(string $fileNameToServe)
+    {
+        $svg = <<<'SVG'
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Processing">
+  <rect width="64" height="64" rx="10" fill="#f8fafc"/>
+  <circle cx="32" cy="32" r="18" fill="none" stroke="#cbd5e1" stroke-width="6"/>
+  <path d="M32 14a18 18 0 1 1-18 18" fill="none" stroke="#3b82f6" stroke-width="6" stroke-linecap="round"/>
+  <text x="32" y="40" text-anchor="middle" font-family="sans-serif" font-size="10" fill="#64748b">Processing</text>
+</svg>
+SVG;
+
+        return response($svg, 200, [
+            'Content-Type' => 'image/svg+xml',
+            'Content-Disposition' => 'inline; filename="'.$fileNameToServe.'"',
+            'Cache-Control' => 'no-store, no-cache, must-revalidate, max-age=0',
+            'Pragma' => 'no-cache',
         ]);
     }
 
@@ -126,7 +217,9 @@ class AttachedFileDownloadController extends Controller
 
         // 2. VLM結果の存在確認
         if (! $attachedFile->hasVlmResult()) {
-            Log::error('[DownloadController@downloadVlm] VLM result not found.', ['attached_file_id' => $attachedFile->id]);
+            Log::error('[DownloadController@downloadVlm] VLM result not found.', [
+                'attached_file_id' => $attachedFile->id,
+            ]);
             abort(404, 'VLM Result Not Found');
         }
 
@@ -158,7 +251,10 @@ class AttachedFileDownloadController extends Controller
             ])
             ->log("User downloaded VLM result for file: {$filename}");
 
-        Log::info('[DownloadController@downloadVlm] Returning VLM result.', ['format' => $format, 'filename' => $filename]);
+        Log::info('[DownloadController@downloadVlm] Returning VLM result.', [
+            'format' => $format,
+            'filename' => $filename,
+        ]);
 
         // 5. レスポンス生成
         return response($content, 200, [
@@ -189,7 +285,9 @@ class AttachedFileDownloadController extends Controller
 
         // 2. OCR処理完了確認
         if (! $attachedFile->ocr_processed_at) {
-            Log::error('[DownloadController@downloadOcrPdf] OCR not processed yet.', ['attached_file_id' => $attachedFile->id]);
+            Log::error('[DownloadController@downloadOcrPdf] OCR not processed yet.', [
+                'attached_file_id' => $attachedFile->id,
+            ]);
             abort(404, 'OCR PDF Not Found');
         }
 
@@ -210,7 +308,10 @@ class AttachedFileDownloadController extends Controller
             // 画像ファイルの場合: .pdfに変換されたファイル
             // pathから.pdfに変更（元のpathと同じディレクトリ）
             $filePath = $attachedFile->path; // これがすでに正しいPDFパス
-            $downloadFileName = pathinfo($attachedFile->original_filename ?? $attachedFile->filename, PATHINFO_FILENAME).'.pdf';
+            $downloadFileName = pathinfo(
+                $attachedFile->original_filename ?? $attachedFile->filename,
+                PATHINFO_FILENAME
+            ).'.pdf';
         } else {
             // PDFファイルの場合: OCR最適化されたPDF（元のファイルパス）
             $filePath = $attachedFile->path;

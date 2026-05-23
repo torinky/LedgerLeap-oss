@@ -3,9 +3,9 @@
 namespace App\Filament\Resources\FolderResource\Widgets;
 
 use App\Models\Folder;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\EditAction;
-use Filament\Tables\Actions\ViewAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ViewAction;
 use Filament\Widgets\Widget as BaseWidget;
 use Illuminate\Database\Eloquent\Model;
 

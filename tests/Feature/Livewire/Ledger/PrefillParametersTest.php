@@ -2,18 +2,26 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
+use App\Livewire\Traits\HandlesPrefillLinks;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
+use Carbon\Carbon;
 use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
+#[CoversClass(CreateColumn::class)]
+#[CoversClass(HandlesPrefillLinks::class)]
 class PrefillParametersTest extends TestCase
 {
     use RefreshDatabaseWithTenant;
@@ -47,7 +55,7 @@ class PrefillParametersTest extends TestCase
         $this->actingAs($this->user);
 
         // Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // フォルダと台帳定義を作成
         $this->folder = Folder::create([
@@ -57,10 +65,10 @@ class PrefillParametersTest extends TestCase
             'modifier_id' => $this->user->id,
         ]);
 
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => Role::findByName('test-creator-role', 'web')->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
 
@@ -150,6 +158,20 @@ class PrefillParametersTest extends TestCase
     public function it_applies_array_prefill_params()
     {
         $prefillParams = [
+            3 => ['オプションA' => true, 'オプションC' => true],
+        ];
+
+        Livewire::test(CreateColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'prefillParams' => $prefillParams,
+        ])
+            ->assertSet('content.3', ['オプションA' => true, 'オプションC' => true]);
+    }
+
+    #[Test]
+    public function it_normalizes_legacy_checkbox_prefill_params_on_mount()
+    {
+        $prefillParams = [
             3 => ['オプションA', 'オプションC'],
         ];
 
@@ -157,7 +179,7 @@ class PrefillParametersTest extends TestCase
             'ledgerDefineId' => $this->ledgerDefine->id,
             'prefillParams' => $prefillParams,
         ])
-            ->assertSet('content.3', ['オプションA', 'オプションC']);
+            ->assertSet('content.3', ['オプションA' => true, 'オプションC' => true]);
     }
 
     #[Test]
@@ -170,6 +192,7 @@ class PrefillParametersTest extends TestCase
                 0 => 'テスト値',
                 1 => '456',
                 2 => '選択肢1',
+                3 => ['オプションA' => true, 'オプションB' => false, 'オプションC' => true],
             ])
             ->set('tenantId', $this->tenant->id)
             ->call('generatePrefillLink');
@@ -178,9 +201,14 @@ class PrefillParametersTest extends TestCase
 
         $url = $component->get('generatedPrefillURL');
 
+        parse_str(parse_url($url, PHP_URL_QUERY) ?? '', $query);
+
         $this->assertStringContainsString('prefill', $url);
         $this->assertStringContainsString($this->tenant->id, $url);
         $this->assertStringContainsString((string) $this->ledgerDefine->id, $url);
+        $this->assertSame('1', $query['prefill'][3]['オプションA']);
+        $this->assertSame('1', $query['prefill'][3]['オプションC']);
+        $this->assertArrayNotHasKey('オプションB', $query['prefill'][3]);
     }
 
     #[Test]
@@ -335,5 +363,36 @@ class PrefillParametersTest extends TestCase
             ->assertSet('prefillQRCode', function ($value) {
                 return str_contains($value, '<svg') && str_contains($value, '</svg>');
             });
+    }
+
+    #[Test]
+    public function it_returns_empty_qr_code_for_too_long_prefill_url()
+    {
+        Livewire::test(CreateColumn::class, [
+            'tenantId' => $this->tenant->id,
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'folderId' => $this->folder->id,
+        ])
+            ->set('generatedPrefillURL', 'http://example.com/?prefill='.str_repeat('a', 6000))
+            ->assertSet('prefillQRCode', '');
+    }
+
+    #[Test]
+    public function it_generates_prefill_download_file_name_from_ledger_define_title()
+    {
+        Carbon::setTestNow('2026-03-15 13:30:00');
+
+        $this->ledgerDefine->update(['title' => '見積 / 依頼 : 2026 | draft']);
+
+        $component = Livewire::test(CreateColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ]);
+
+        $this->assertSame(
+            '見積_依頼_2026_draft_事前入力用QR_20260315_133000.svg',
+            $component->instance()->getPrefillDownloadFileNameProperty()
+        );
+
+        Carbon::setTestNow();
     }
 }

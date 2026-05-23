@@ -2,7 +2,10 @@
 
 namespace App\Filament\Resources\TenantResource\Pages;
 
+use App\Enums\FolderPermissionType;
 use App\Filament\Resources\TenantResource;
+use App\Models\Folder;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Exception;
 use Filament\Notifications\Notification;
@@ -10,6 +13,7 @@ use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
+use Spatie\Permission\Models\Role;
 use Stancl\Tenancy\Database\Models\Domain;
 
 class CreateTenant extends CreateRecord
@@ -68,23 +72,23 @@ class CreateTenant extends CreateRecord
                 // 【変更点】シーダー実行後にルートフォルダを取得
                 $rootFolder = $tenant->run(function () {
                     // nestedset の roots() メソッドでルートフォルダを特定する
-                    return \App\Models\Folder::whereIsRoot()->first();
+                    return Folder::whereIsRoot()->first();
                 });
 
                 // ルートフォルダが見つかった場合のみ権限を付与
                 if ($rootFolder) {
                     // Super Admin ロールは中央DBから取得
                     $superAdminRole = tenancy()->central(function () {
-                        return \Spatie\Permission\Models\Role::findByName('Super Admin');
+                        return Role::findByName('Super Admin');
                     });
 
                     if ($superAdminRole) {
                         // RoleFolderPermission の作成はテナントのコンテキストで行う
                         $tenant->run(function () use ($rootFolder, $user, $superAdminRole) {
-                            \App\Models\RoleFolderPermission::create([
+                            RoleFolderPermission::create([
                                 'role_id' => $superAdminRole->id,
                                 'folder_id' => $rootFolder->id,
-                                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                                'permission' => FolderPermissionType::ADMIN,
                                 'creator_id' => $user->id,
                                 'modifier_id' => $user->id,
                             ]);

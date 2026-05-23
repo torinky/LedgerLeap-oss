@@ -9,12 +9,15 @@ use App\Models\Ledger;
 use App\Models\Organization;
 use App\Models\Role;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Log;
 use Mary\Traits\Toast;
+use Spatie\Permission\PermissionRegistrar;
 
 class UserService
 {
@@ -197,7 +200,7 @@ class UserService
     public function clearUserPermissionsCache(User $user): void
     {
         Cache::tags(['user_permissions'])->forget("user:{$user->id}:all_permissions");
-        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**
@@ -205,9 +208,9 @@ class UserService
      */
     public function flushAllUserPermissionsCache(): void
     {
-        \Illuminate\Support\Facades\Log::info('UserService: flushing all user permissions cache.');
+        Log::info('UserService: flushing all user permissions cache.');
         Cache::tags(['user_permissions'])->flush();
-        app()->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        app()->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     /**
@@ -501,7 +504,7 @@ class UserService
 
         // さらに、取得した各 Ledger が実際に引き継ぎ可能か（権限があるか）を最終確認
         return $claimableLedgers->filter(function (Ledger $ledger) use ($user) {
-            /** @var \App\Models\Folder|null $folder */
+            /** @var Folder|null $folder */
             $folder = $ledger->define?->folder;
             if (! $folder) {
                 return false;
@@ -544,7 +547,7 @@ class UserService
     /**
      * ユーザーが役割を通じてアクセス可能なテナントのコレクションを取得する
      *
-     * @return Collection<\App\Models\Tenant>
+     * @return Collection<Tenant>
      */
     public function getAccessibleTenantsForUser(User $user): Collection
     {
@@ -571,7 +574,7 @@ class UserService
                 return collect();
             }
 
-            return \App\Models\Tenant::whereIn('id', $tenantIds)->get();
+            return Tenant::whereIn('id', $tenantIds)->get();
         });
     }
 

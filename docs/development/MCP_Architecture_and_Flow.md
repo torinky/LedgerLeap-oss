@@ -251,6 +251,7 @@ class LedgerLeapServer extends Server
     protected string $version = '0.0.1';
     protected string $instructions = '...'; // LLMへの動作指示
     protected array $tools = [
+        GetClientBootstrapManifestTool::class,
         GetLedgerDefinesTool::class,
         SearchLedgersTool::class,
         CreateLedgerTool::class,
@@ -260,6 +261,7 @@ class LedgerLeapServer extends Server
 ```
 
 #### 2. MCPツールクラス群
+- **GetClientBootstrapManifestTool**: 認証済み MCP client 向け bootstrap manifest parity
 - **SearchLedgersTool**: 台帳検索機能
 - **CreateLedgerTool**: 台帳作成機能  
 - **GetLedgerDefinesTool**: 台帳定義取得機能
@@ -460,6 +462,41 @@ present the information in a user-friendly format:
 php artisan mcp:start ledgerleap:mcp
 ```
 
+#### HTTP transport
+
+LedgerLeap では local MCP (`ledgerleap:mcp`) に加えて、remote AI client 向けに
+`/mcp/ledgerleap` の web transport も公開する。
+
+```php
+Mcp::web('/mcp/ledgerleap', LedgerLeapServer::class)
+    ->middleware([
+        InitializeTenancyByDomain::class,
+        'auth:sanctum',
+        EnsureAuthenticatedUserHasCurrentTenantAccess::class,
+    ]);
+
+Mcp::web('/{tenant}/mcp/ledgerleap', LedgerLeapServer::class)
+    ->middleware([
+        InitializeTenancyByPath::class,
+        'auth:sanctum',
+        EnsureAuthenticatedUserHasCurrentTenantAccess::class,
+    ]);
+```
+
+推奨は **path-based tenant URL**、互換として **subdomain / domain-based URL** も使える。
+
+```text
+https://ledgerleap.example.com/tenant-a/mcp/ledgerleap
+https://ledgerleap.example.com/tenant-b/mcp/ledgerleap
+
+https://tenant-a.example.com/mcp/ledgerleap
+https://tenant-b.example.com/mcp/ledgerleap
+```
+
+path-based では `InitializeTenancyByPath`、subdomain-based では `InitializeTenancyByDomain` が tenant を解決する。
+どちらの remote route でも、`EnsureAuthenticatedUserHasCurrentTenantAccess` により
+**認証済みユーザーが現在 tenant へ実際にアクセス可能か** を追加検証する。
+
 #### 設定ファイル（推定構造）
 ```php
 // config/mcp.php または サービスプロバイダ内
@@ -478,6 +515,13 @@ php artisan mcp:start ledgerleap:mcp
 - 標準出力にJSONRPCレスポンスを送信
 - エラー情報は標準エラー出力に送信
 
+**HTTP Transport:**
+- `POST /{tenant}/mcp/ledgerleap` または `POST /mcp/ledgerleap` に JSON-RPC を送る
+- `Authorization: Bearer <token>` を付与する
+- path-based を使う場合は `{tenant}` セグメントで tenant を指定する
+- subdomain-based を使う場合は host が tenant を解決できる必要がある
+- どちらの場合も、token 利用者にその tenant へのアクセス権が無ければ `403` を返す
+
 **メッセージフロー:**
 ```
 stdin  ← {"jsonrpc":"2.0","method":"tools/call","params":{...}}
@@ -489,19 +533,22 @@ stderr → エラーログ（該当時のみ）
 
 #### トークンベース認証
 ```php
-// SearchLedgersTool::handle() 内
+// AuthenticatedMcpTool::authenticateUser() 内
+$authenticatedUser = Auth::user();
+
+if ($authenticatedUser instanceof User) {
+    return $authenticatedUser; // HTTP + auth:sanctum の正規経路
+}
+
 $token = getenv('MCP_AUTH_TOKEN');
-if (!$token) {
-    return Response::error('Authentication token not provided.', 401);
+if (! $token) {
+    throw new Exception('MCP_AUTH_TOKEN environment variable is not set');
 }
 
+// local command MCP / 既存テスト互換の fallback
 $accessToken = PersonalAccessToken::findToken($token);
-if (!$accessToken || !$accessToken->tokenable) {
-    return Response::error('Invalid authentication token.', 401);
-}
-
 $user = $accessToken->tokenable;
-Auth::setUser($user); // 認証状態設定
+Auth::setUser($user);
 ```
 
 #### 権限チェック
@@ -660,18 +707,52 @@ try {
 
 ### 新しいツールの追加
 ```php
-// 将来的な拡張例
+// 実装済み + 将来的な拡張例
 protected array $tools = [
+    GetClientBootstrapManifestTool::class, // ✅ bootstrap manifest parity
     GetLedgerDefinesTool::class,
+    GetLedgerDetailTool::class,
+    GetRelatedLedgersTool::class,          // ✅ 関連レコード調査
     SearchLedgersTool::class,
     CreateLedgerTool::class,
+    UpdateLedgerTool::class,            // ✅ 台帳更新
     GetPendingApprovalsTool::class,     // ✅ 実装済み
-    UpdateLedgerTool::class,            // 台帳更新
     DeleteLedgerTool::class,            // 台帳削除
     ExecuteApprovalTool::class,         // 🔄 承認実行
     GetWorkflowHistoryTool::class,      // 🔄 ワークフロー履歴
 ];
 ```
+
+### Sprint 5 時点の update path 契約メモ
+
+- `GetLedgerDetailTool` / `UpdateLedgerTool` は Issue #91 で初期実装済み
+- 更新系は **検索結果から即更新せず、単一レコード read path で最新内容・状態を確認してから実行する** 前提にする
+- MCP 側では `SearchLedgersTool` → `GetLedgerDetailTool` → `GetLedgerDefinesTool` → `UpdateLedgerTool(dry_run=true)` → `UpdateLedgerTool` の流れを標準 workflow とする
+- `dry_run` は列単位の最小差分 (`changed_columns`) を返す初期実装とし、複雑な自然言語差分要約は後続スプリントへ分離した
+- 詳細は `docs/work/llm-integration/2026-03-13_Update_Path_Public_Contract.md` を参照
+- 実装判断の詳細は `docs/work/llm-integration/2026-03-13_MCP_Update_Tools_Implementation_Log.md` を参照
+
+### related ledger investigation 契約メモ
+
+- `GetRelatedLedgersTool` は、単一レコード詳細を起点に関連レコード候補を調査する MCP tool として追加した
+- 初期実装では **既存 capability `ledger-search` の拡張シナリオ** として扱い、新 capability 分離は後続判断に委ねる
+- 出力は client-facing に `reason`（identifier / semantic / both）、`score`、詳細確認へ進む識別情報を返す
+- まず MCP の最小契約を優先し、REST の補助 contract は必要性が固まった段階で追加検討する
+
+### workflow history comparison 契約メモ
+
+- `GetWorkflowHistoryTool` は履歴一覧取得に加えて、比較入力が渡された時だけ **版比較の最小契約** を返す
+- 初期実装では `base_diff_id` + `target_diff_id` による任意2版比較と、`compare_latest_vs_previous=true` による直近比較をサポートする
+- 出力は client-facing に `changed_fields`、`changed_by`、`changed_at`、比較した版情報、最小の `next_actions` を返し、内部 diff engine の詳細は露出しない
+- 位置づけは **履歴一覧 → 必要時に比較** の 2 段階導線であり、`activity-audit` / `workflow-review` から補助的に使う
+
+### Sprint 6 bootstrap discovery parity メモ
+
+- `GetClientBootstrapManifestTool` は Issue #94 で実装済み
+- MCP からも `client_type` / `role_profile` / `model_profile` / `language` を受けて、REST bootstrap manifest と同じ bundle 解決を返せる
+- 実装は `BootstrapManifestService::resolve()` を再利用し、client-facing な `recommended_capabilities` / `resources` / `prompts` / `files` / `placement_instructions` / `warnings` のみを返す
+- `ledgerleap://bootstrap/{client}` resource template は Issue #92 で実装済み
+- `bootstrap-client-skills` prompt は Issue #93 で実装済み。最初の質問例 / 確認事項 / 次アクションだけを返す補助導線として扱う
 
 ### 多言語対応
 ```php

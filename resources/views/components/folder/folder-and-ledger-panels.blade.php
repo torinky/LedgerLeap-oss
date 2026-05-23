@@ -19,11 +19,10 @@
                     <div class="flex justify-center items-center">
                         <button class="btn btn-ghost" wire:click.prevent="toggleFolderId({{ $folderRecord->id }})"
                             wire:key="selected_folder_{{ $folderRecord->id }}">
-                            <span class="fa-layers fa-fw text-3xl">
+                            <span class="relative inline-flex items-center justify-center text-3xl w-[1.25em] h-[1.25em]">
                                 <i
                                     class="fa-solid {{ in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder' }} "></i>
-                                <span class="fa-layers-text text-secondary" data-fa-transform="shrink-8 down-1"
-                                    style="font-weight:900">{{ $folderRecord->descendantCount() }}</span>
+                                <span class="absolute text-[0.4em] text-secondary font-black mt-2">{{ $folderRecord->descendantCount() }}</span>
                             </span>
                         </button>
                         {{-- 階層移動ボタン --}}
@@ -49,7 +48,7 @@
                 class=" place-self-center fa-solid {{ in_array($ledgerDefineRecord->id, $selectedLedgerDefineIds) ? 'fa-book-open' : 'fa-book' }} text-3xl "></i>
             <div class="ledgerTitle text-base mt-2 mb-2 break-all">{{ $ledgerDefineRecord->title }}
 
-                @if (($ledgerDefineRecord->ledgers_count ?? $ledgerDefineRecord->ledgers()->count()) == 0)
+                @if (($ledgerDefineRecord->ledgers_count ?? 0) == 0)
                     <a href="{{ route('ledger.create', ['tenant' => tenant()?->id, 'ledgerDefineId' => $ledgerDefineRecord->id]) }}"
                         class="btn btn-xs btn-neutral tooltip items-center pt-1"
                         target="ledgerCreate_{{ $ledgerDefineRecord->id }}}}" data-tip="{{ __('ledger.create') }}"><i

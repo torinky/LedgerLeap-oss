@@ -6,7 +6,9 @@ use App\Livewire\Ledger\IndexManager; // RecordsTable から IndexManager へ変
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -23,17 +25,17 @@ class RecordsTableCompositeScoreSortTest extends TestCase
 
     private Folder $folder;
 
-    protected \App\Models\Tenant $tenant;
+    protected Tenant $tenant;
 
     protected function setUp(): void
     {
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
+        $this->tenant = Tenant::create(['id' => 'test-'.uniqid()]);
 
         $this->user = User::factory()->create([
-            'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
+            'email' => 'test.'.Str::random(10).'@example.com',
         ]);
 
         $rootFolder = Folder::factory()->create(['parent_id' => null]);
@@ -52,6 +54,9 @@ class RecordsTableCompositeScoreSortTest extends TestCase
         $this->user->givePermissionTo('view_ledger_defines');
         Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
         $this->user->givePermissionTo('ledgerView');
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     protected function getTablesToTruncate(): array

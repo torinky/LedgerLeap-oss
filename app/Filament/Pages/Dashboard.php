@@ -2,6 +2,7 @@
 
 namespace App\Filament\Pages;
 
+use App\Filament\Widgets\DashboardLinksWidget;
 use App\Models\Folder;
 use Exception;
 use Filament\Actions\Action;
@@ -22,7 +23,7 @@ class Dashboard extends \Filament\Pages\Dashboard
     public function getWidgets(): array
     {
         return [
-            \App\Filament\Widgets\DashboardLinksWidget::class,
+            DashboardLinksWidget::class,
         ];
     }
 

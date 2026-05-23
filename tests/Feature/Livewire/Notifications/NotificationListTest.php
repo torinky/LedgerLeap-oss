@@ -3,6 +3,7 @@
 namespace Tests\Feature\Livewire\Notifications;
 
 use App\Livewire\Notifications\NotificationList;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -10,6 +11,7 @@ use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
 
 /**
  * Livewire\Notifications\NotificationList テスト
@@ -19,13 +21,21 @@ use Tests\TestCase;
 #[CoversClass(NotificationList::class)]
 class NotificationListTest extends TestCase
 {
+    use RefreshDatabaseWithTenant;
+
     protected bool $tenancy = true;
+
+    protected Tenant $tenant;
 
     protected User $user;
 
     protected function setUp(): void
     {
         parent::setUp();
+
+        $this->setUpRefreshDatabaseWithTenant();
+        $this->tenant = $this->getTenant();
+        tenancy()->initialize($this->tenant);
 
         $this->user = User::factory()->create();
         $this->actingAs($this->user);
@@ -69,6 +79,49 @@ class NotificationListTest extends TestCase
     {
         Livewire::test(NotificationList::class)
             ->assertSet('totalNotifications', 0);
+
+        Livewire::test(NotificationList::class)
+            ->assertSee(__('ledger.no_notification'));
+    }
+
+    #[Test]
+    public function component_renders_admin_announcements_without_workflow_notifications(): void
+    {
+        $adminAnnouncements = [[
+            'title' => 'システムメンテナンス',
+            'body' => 'この時間帯は管理者お知らせだけが表示されます。',
+            'level' => 'warning',
+            'sticky' => false,
+            'scope' => ['current_tenant'],
+            'status' => 'published',
+            'priority' => 10,
+            'starts_at' => now()->subMinute()->toDateTimeString(),
+            'ends_at' => now()->addDay()->toDateTimeString(),
+            'published_at' => now()->subMinute()->toDateTimeString(),
+            'links' => [
+                ['label' => __('ledger.details'), 'url' => '/announcements/system-maintenance'],
+            ],
+        ]];
+
+        $component = Livewire::test(NotificationList::class, [
+            'adminAnnouncements' => $adminAnnouncements,
+        ]);
+
+        $component
+            ->assertSet('workflowNotificationCount', 0)
+            ->assertSet('totalNotifications', 1)
+            ->assertSee(__('ledger.admin_announcement_banner_title'))
+            ->assertDontSee(__('ledger.mark_all_as_read'));
+
+        $adminAnnouncements = $component->viewData('adminAnnouncements');
+        $html = $component->html();
+
+        $this->assertCount(1, $adminAnnouncements);
+        $this->assertSame('システムメンテナンス', $adminAnnouncements[0]['title']);
+        $this->assertSame('この時間帯は管理者お知らせだけが表示されます。', $adminAnnouncements[0]['body']);
+        $this->assertStringContainsString('システムメンテナンス', $html);
+        $this->assertStringContainsString('この時間帯は管理者お知らせだけが表示されます。', $html);
+        $this->assertStringNotContainsString(__('ledger.no_notification'), $html);
     }
 
     #[Test]
@@ -79,6 +132,17 @@ class NotificationListTest extends TestCase
 
         Livewire::test(NotificationList::class)
             ->assertSet('totalNotifications', 2);
+    }
+
+    #[Test]
+    public function component_renders_actions_for_unread_notifications(): void
+    {
+        $this->createNotification(['event' => 'created']);
+
+        Livewire::test(NotificationList::class)
+            ->assertSee(__('ledger.mark_all_as_read'))
+            ->assertSee(__('ledger.mark_as_read'))
+            ->assertSee(__('ledger.unread'));
     }
 
     // ================================================================

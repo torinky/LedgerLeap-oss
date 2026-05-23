@@ -2,18 +2,25 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Organization;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
-use Tests\Traits\RefreshDatabaseWithTenant; // ColumnDefine をインポート
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+ // ColumnDefine をインポート
 
 class CreateColumnTest extends TestCase
 {
@@ -46,7 +53,7 @@ class CreateColumnTest extends TestCase
         $this->actingAs($this->user);
 
         // ★ Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     // ★ tearDownメソッドを追加
@@ -58,10 +65,10 @@ class CreateColumnTest extends TestCase
 
     protected function assignFolderPermission(Folder $folder): void
     {
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => Role::findByName('test-creator-role', 'web')->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }
@@ -107,7 +114,7 @@ class CreateColumnTest extends TestCase
         ]);
 
         // contentの内容も検証
-        $ledger = \App\Models\Ledger::where('ledger_define_id', $this->ledgerDefine->id)->first();
+        $ledger = Ledger::where('ledger_define_id', $this->ledgerDefine->id)->first();
         $this->assertNotNull($ledger);
         // normalizeByColumnDefine は 0..maxId で欠番を埋めるため、実際の保存時は元のカラムIDがそのまま
         // 反映される（このテストではカラムID=1）。したがって content[1] に値が入る。
@@ -148,6 +155,10 @@ class CreateColumnTest extends TestCase
         $url = $component->get('generatedPrefillURL');
         $this->assertStringContainsString('prefill%5B1%5D=', $url);
         $this->assertStringContainsString('prefill%5B2%5D=', $url);
+
+        $component
+            ->assertSeeHtml('toastIcon(type)')
+            ->assertDontSeeHtml("icon: ''");
     }
 
     #[Test]
@@ -164,6 +175,7 @@ class CreateColumnTest extends TestCase
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
             ['id' => 2, 'name' => 'Number Column', 'type' => 'number', 'order' => 2, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
+            ['id' => 3, 'name' => 'Textarea Column', 'type' => 'textarea', 'order' => 3, 'required' => false, 'unique' => false, 'options' => ['placeholder' => '複数行で入力'], 'group' => null, 'file' => null],
         ];
 
         $this->ledgerDefine = LedgerDefine::factory()->create([
@@ -341,6 +353,7 @@ class CreateColumnTest extends TestCase
         $columnDefineArray = [
             ['id' => 1, 'name' => 'Text Column', 'type' => 'text', 'order' => 1, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
             ['id' => 2, 'name' => 'Number Column', 'type' => 'number', 'order' => 2, 'required' => false, 'unique' => false, 'options' => [], 'group' => null, 'file' => null],
+            ['id' => 3, 'name' => 'Textarea Column', 'type' => 'textarea', 'order' => 3, 'required' => false, 'unique' => false, 'options' => ['placeholder' => '複数行で入力'], 'group' => null, 'file' => null],
         ];
 
         $this->ledgerDefine = LedgerDefine::factory()->create([
@@ -356,12 +369,94 @@ class CreateColumnTest extends TestCase
             'prefillParams' => [
                 1 => '事前入力テキスト',
                 2 => '999',
+                3 => "1行目\n2行目",
             ],
         ]);
 
         // contentに正しく設定されているか確認
         $this->assertEquals('事前入力テキスト', $component->get('content')[1]);
         $this->assertEquals('999', $component->get('content')[2]);
+        $this->assertSame("1行目\n2行目", $component->get('content')[3]);
+    }
+
+    #[Test]
+    public function it_renders_textarea_columns_with_markdown_editor()
+    {
+        $folder = Folder::create([
+            'title' => 'Test Folder',
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+        $this->assignFolderPermission($folder);
+
+        $columnDefineArray = [
+            [
+                'id' => 1,
+                'name' => '複数行テキスト',
+                'type' => 'textarea',
+                'order' => 1,
+                'required' => false,
+                'unique' => false,
+                'options' => [
+                    'placeholder' => '複数行で入力',
+                    'hint' => '補足説明',
+                ],
+                'group' => null,
+                'file' => null,
+            ],
+        ];
+
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->tenant->id,
+            'workflow_enabled' => false,
+            'column_define' => $columnDefineArray,
+        ]);
+
+        Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
+            ->assertSee('複数行テキスト')
+            ->assertSee('補足説明')
+            ->assertSeeHtml('x-ref="markdown')
+            ->assertSeeHtml('window.Livewire.find');
+    }
+
+    #[Test]
+    public function it_shows_warning_when_prefill_url_is_too_long_for_qr_generation()
+    {
+        $folder = Folder::create([
+            'title' => 'Test Folder',
+            'tenant_id' => $this->tenant->id,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+        $this->assignFolderPermission($folder);
+
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $folder->id,
+            'tenant_id' => $this->tenant->id,
+            'workflow_enabled' => false,
+            'column_define' => [
+                [
+                    'id' => 1,
+                    'name' => 'Text Column',
+                    'type' => 'text',
+                    'order' => 1,
+                    'required' => false,
+                    'unique' => false,
+                    'options' => [],
+                    'group' => null,
+                    'file' => null,
+                ],
+            ],
+        ]);
+
+        Livewire::test(CreateColumn::class, ['ledgerDefineId' => $this->ledgerDefine->id])
+            ->set('showPrefillModal', true)
+            ->set('generatedPrefillURL', 'http://example.com/?prefill='.str_repeat('a', 6000))
+            ->assertSee(__('ledger.prefill.long_url_warning'))
+            ->assertSee(__('ledger.prefill.qr_code_unavailable'))
+            ->assertDontSeeHtml('id="prefill-qr-svg"');
     }
 
     #[Test]
@@ -408,7 +503,7 @@ class CreateColumnTest extends TestCase
     public function it_initializes_user_name_column_with_organization(): void
     {
         // ユーザーに組織を設定 (primaryOrganizationリレーションを使用)
-        $organization = \App\Models\Organization::factory()->create([
+        $organization = Organization::factory()->create([
             'tenant_id' => $this->tenant->id,
         ]);
 

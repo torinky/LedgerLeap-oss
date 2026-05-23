@@ -125,7 +125,8 @@ $ledger->content_attached[$columnId][$filename] = [
 2. Markdown、構造化データを取得。
 3. `attached_files`に保存。
 4. `vlm_processed_at`または`vlm_failed_at`設定。
-5. VLM処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/EmbeddingをVLM結果で上書き更新する。
+5. **Status guard**: `processing_finalized_at`が既に設定されている場合（最終化済み）、`VLM_PROCESSING`/`VLM_FAILED`のステータス上書きは行わない。タイムスタンプ（`vlm_processed_at`/`vlm_failed_at`）のみ設定する。これにより、初期処理（Tika/OCR）で先に最終化されたファイルの`COMPLETED`ステータスがVLMの後続処理で上書きされるのを防ぐ。
+6. VLM処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/EmbeddingをVLM結果で上書き更新する。
 
 **データ保存:**
 ```php
@@ -153,7 +154,8 @@ $attachedFile->update([
 1. OcrMyPDFでOCR処理。
 2. テキストレイヤー付きPDF生成。
 3. `ocr_processed_at`または`ocr_failed_at`設定。
-4. OCR処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/EmbeddingをOCR結果で上書き更新する。
+4. **Status guard**: `processing_finalized_at`が既に設定されている場合（最終化済み）、`PENDING_INITIAL_PROCESSING`/`OCR_FAILED`のステータス上書きは行わない。タイムスタンプのみ設定する。
+5. OCR処理後、`VectorizeAttachedFile`ジョブをディスパッチし、RAGチャンク/EmbeddingをOCR結果で上書き更新する。
 
 **データ保存:**
 ```php
@@ -206,7 +208,7 @@ $schedule->command('ledger:finalize-processing')
 1. **最終化待ちファイルを検索**: `tika_processed_at` が設定済みで `processing_finalized_at` が未設定のファイル、かつVLM/OCR処理がタイムアウトしたファイルを検索。
 2. **結果選択（優先順位）**: `VLM > OCR > Tika` の優先順位で最適なコンテンツを選択。
 3. **content_attached更新**: 選択されたコンテンツで `ledger->content_attached` の該当部分を更新。
-4. **最終化マーク**: `processing_finalized_at` および `finalized_source` を更新。
+4. **最終化マーク**: `processing_finalized_at` および `finalized_source` を更新。**画像由来ファイル**（`original_mime_type`が`image/`で始まり、OCRまたはTikaが完了済みの場合）は、テキストが空でも`COMPLETED`としてマークする。画像ファイルのテキスト抽出はオプショナルであるため。
 5. **RAGジョブディスパッチ**: `ProcessLedgerForRagJob` をディスパッチし、RAGチャンク/Embeddingを更新。
 
 ---

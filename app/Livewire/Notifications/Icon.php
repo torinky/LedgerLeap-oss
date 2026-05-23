@@ -3,15 +3,17 @@
 namespace App\Livewire\Notifications;
 
 use App\Livewire\BaseLivewireComponent;
-use App\Livewire\Traits\InitializesTenantContext;
+use App\Services\AdminAnnouncementService;
 use App\Services\NotificationService;
 use Illuminate\Support\Facades\Auth;
 
 class Icon extends BaseLivewireComponent
 {
-    use InitializesTenantContext;
-
     public $unreadCount = 0;
+
+    public $adminAnnouncementCount = 0;
+
+    public $notificationCount = 0;
 
     public $pendingTaskCount = 0; // ワークフロー未処理件数
 
@@ -20,9 +22,14 @@ class Icon extends BaseLivewireComponent
     // NotificationService は boot でインジェクトする方がより安全
     protected NotificationService $notificationService;
 
-    public function boot(NotificationService $notificationService)
-    {
+    protected AdminAnnouncementService $adminAnnouncementService;
+
+    public function boot(
+        NotificationService $notificationService,
+        AdminAnnouncementService $adminAnnouncementService
+    ): void {
         $this->notificationService = $notificationService;
+        $this->adminAnnouncementService = $adminAnnouncementService;
     }
 
     public function mount() // NotificationService のインジェクト削除
@@ -39,9 +46,14 @@ class Icon extends BaseLivewireComponent
     {
         if ($user = Auth::user()) { // ログインしているか確認
             $this->unreadCount = $this->notificationService->getUnreadNotificationCountForUser($user);
-            $this->pendingTaskCount = $user->pending_inspection_count + $user->pending_approval_count; // <<<--- 追加: User モデルから直接取得
+            $this->adminAnnouncementCount = count($this->adminAnnouncementService->notificationCenterAnnouncements());
+            $this->notificationCount = $this->unreadCount + $this->adminAnnouncementCount;
+            $this->pendingTaskCount = $user->pending_inspection_count
+                + $user->pending_approval_count; // <<<--- 追加: User モデルから直接取得
         } else {
             $this->unreadCount = 0;
+            $this->adminAnnouncementCount = 0;
+            $this->notificationCount = 0;
             $this->pendingTaskCount = 0;
         }
     }

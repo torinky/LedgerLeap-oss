@@ -1,0 +1,57 @@
+{
+  "$schema": "https://raw.githubusercontent.com/google-gemini/gemini-cli/main/schemas/settings.schema.json",
+  // Copy this file to `settings.json` in the copied harness workspace.
+  // This template assumes remote MCP over HTTP.
+  // Prefer the path-based tenant URL (for example http://localhost/{tenant}/mcp/ledgerleap)
+  // so the MCP endpoint matches the rest of LedgerLeap's tenant URL style.
+  // A tenant-resolving host such as tenant-name.localhost is also supported.
+  // LedgerLeap web app must already be reachable at that endpoint.
+  // Replace every __PLACEHOLDER__ before starting Gemini CLI.
+  "privacy": {
+    "usageStatisticsEnabled": false
+  },
+  "ui": {
+    "hideContextSummary": false,
+    "showHomeDirectoryWarning": true
+  },
+  "context": {
+    "fileName": [
+      "GEMINI.md"
+    ],
+    "includeDirectoryTree": true,
+    "discoveryMaxDirs": 50,
+    "includeDirectories": [],
+    "loadMemoryFromIncludeDirectories": false,
+    "fileFiltering": {
+      "respectGitIgnore": true,
+      "respectGeminiIgnore": true
+    }
+  },
+  "skills": {
+    "enabled": true,
+    "disabled": []
+  },
+  "mcpServers": {
+    // mcp-remote is an stdio→HTTP proxy that works with any MCP client that only supports stdio.
+    // It proxies to a remote HTTP (StreamableHTTP / SSE) MCP endpoint.
+    // Install requirement: Node.js + npx must be available on PATH.
+    //   Windows: install Node.js from https://nodejs.org/ or via winget (see platforms/windows.md)
+    //   macOS:   install Node.js via Homebrew: brew install node
+    // mcp-remote is fetched automatically by npx on first run (no global install needed).
+    // Avoid spaces inside the --header arg value; put spaces in the env var instead.
+    "ledgerleap-api": {
+      "command": "npx",
+      "args": [
+        "mcp-remote",
+        "__LEDGERLEAP_MCP_HTTP_URL__",
+        "--header",
+        "Authorization:${AUTH_HEADER}"
+      ],
+      "env": {
+        // Replace the token below with a Sanctum token that has mcp:* ability.
+        "AUTH_HEADER": "Bearer __LEDGERLEAP_MCP_BEARER_TOKEN__"
+      }
+    }
+  }
+}
+

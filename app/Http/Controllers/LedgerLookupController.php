@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Ledger;
 use App\Models\Tenant;
 use App\Services\Config\SynonymServiceConfig;
+use App\Services\Ledger\LedgerShareUrlService;
 use App\Services\Ledger\SearchContext;
 use App\Services\SynonymService;
 use Illuminate\Http\Request;
@@ -14,7 +15,12 @@ class LedgerLookupController extends Controller
     public function handle(Request $request, string $query)
     {
         if (empty($query)) {
-            return redirect()->route('ledger.index', ['tenant' => tenant()->id]);
+            $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
+                'ledger.index',
+                ['tenant' => tenant()->id]
+            );
+
+            return redirect($url);
         }
 
         // Create a search context to find the ledger
@@ -27,16 +33,34 @@ class LedgerLookupController extends Controller
 
         // Force list mode
         if ($request->input('mode') === 'list') {
-            return redirect()->route('ledger.index', ['tenant' => tenant()->id, 'q' => $query, 'highlight' => $query, 'l' => '', 'f' => '']);
+            $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
+                'ledger.index',
+                ['tenant' => tenant()->id],
+                ['q' => $query]
+            );
+
+            return redirect($url);
         }
 
         // Unique match, redirect to show page
         if ($results->count() === 1) {
-            return redirect()->route('ledger.show', ['tenant' => tenant()->id, 'ledgerId' => $results->first()->id, 'highlight' => $query]);
+            $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
+                'ledger.show',
+                ['tenant' => tenant()->id, 'ledgerId' => $results->first()->id],
+                ['highlight' => $query]
+            );
+
+            return redirect($url);
         }
 
         // 0 or multiple matches, redirect to index page
-        return redirect()->route('ledger.index', ['tenant' => tenant()->id, 'q' => $query, 'highlight' => $query, 'l' => '', 'f' => '']);
+        $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
+            'ledger.index',
+            ['tenant' => tenant()->id],
+            ['q' => $query]
+        );
+
+        return redirect($url);
     }
 
     public function searchAllTenants(?string $query = null)
@@ -51,7 +75,7 @@ class LedgerLookupController extends Controller
         foreach ($tenants as $tenant) {
             $tenant->run(function () use ($query, &$allResults, $tenant) {
                 // 全文検索を実行
-                $ledgers = \App\Models\Ledger::query()->search($query)->with('define')->get();
+                $ledgers = Ledger::query()->search($query)->with('define')->get();
 
                 foreach ($ledgers as $ledger) {
                     // defineリレーションがロードされているか確認
@@ -61,9 +85,11 @@ class LedgerLookupController extends Controller
                         if (in_array($query, $contentValues, true)) {
                             // パスベーステナントの場合、正しいURLを生成
                             // tenant_route()は誤ったホスト名を生成するため、直接URLを構築
-                            $baseUrl = config('ledgerleap.auto_links.base_url', config('app.url'));
-                            $path = route('ledger.show', ['tenant' => $tenant->id, 'ledgerId' => $ledger->id, 'highlight' => $query], false);
-                            $url = rtrim($baseUrl, '/').$path;
+                            $url = app(LedgerShareUrlService::class)->buildAbsoluteRouteUrl(
+                                'ledger.show',
+                                ['tenant' => $tenant->id, 'ledgerId' => $ledger->id],
+                                ['highlight' => $query]
+                            );
 
                             $allResults->push([
                                 'tenant_id' => $tenant->id,

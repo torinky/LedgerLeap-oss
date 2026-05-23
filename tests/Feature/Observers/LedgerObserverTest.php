@@ -5,6 +5,8 @@ namespace Tests\Feature\Observers;
 use App\Enums\WorkflowStatus;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Models\Ledger;
+use App\Models\Tenant;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Queue;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -16,7 +18,7 @@ class LedgerObserverTest extends TestCase
 
     protected bool $fakeQueue = false;
 
-    protected \App\Models\Tenant $tenant;
+    protected Tenant $tenant;
 
     protected function setUp(): void
     {
@@ -26,7 +28,7 @@ class LedgerObserverTest extends TestCase
         // phpunit.xml では RAG_ENABLED=false のため、Observer の Job dispatch テストには明示的に有効化が必要
         config(['rag.enabled' => true]);
 
-        $this->tenant = \App\Models\Tenant::create(['id' => 'test-'.uniqid()]);
+        $this->tenant = Tenant::create(['id' => 'test-'.uniqid()]);
         tenancy()->initialize($this->tenant);
     }
 
@@ -111,7 +113,7 @@ class LedgerObserverTest extends TestCase
         ]);
 
         // Manually create a chunk to simulate the job's effect
-        \Illuminate\Support\Facades\DB::table('ledger_chunks')->insert([
+        DB::table('ledger_chunks')->insert([
             'ledger_id' => $ledger->id,
             'ledger_define_id' => $ledger->ledger_define_id,
             'folder_id' => $ledger->define->folder_id,

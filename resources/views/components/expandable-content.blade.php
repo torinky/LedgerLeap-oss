@@ -3,9 +3,13 @@
     'maxHeight' => '6rem',
     'showMoreText' => __('ledger.show_more'),
     'showLessText' => __('ledger.show_less'),
+    'observeResize' => true,
 ])
 
-<div x-data="expandableContent({ maxHeight: '{{ $maxHeight }}' })" x-intersect.once.threshold.10="checkOverflow()" class="relative">
+<div x-data="expandableContent({
+    maxHeight: '{{ $maxHeight }}',
+    observeResize: @js($observeResize),
+})" x-intersect.once.threshold.10="activate()" class="relative">
     <div x-ref="content" :class="{ 'overflow-hidden': !expanded }" :style="contentStyle"
         {{ $attributes->merge(['class' => 'transition-all duration-500']) }}>
         {!! $content !!}

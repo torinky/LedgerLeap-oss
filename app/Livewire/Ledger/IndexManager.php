@@ -6,11 +6,14 @@ use App\Http\Requests\Ledger\SearchRequest; // 追加
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HasSortingLabels;
 use App\Livewire\Traits\InitializesTenantContext;
+use App\Livewire\Traits\LogPerformance;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
+use App\Services\ConfidentialityLevelService;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
-use App\Services\SynonymService; // 追加
+use App\Services\PermissionService; // 追加
+use App\Services\SynonymService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema as FacadesSchema;
 use Livewire\Attributes\Computed;
@@ -20,18 +23,21 @@ use Mary\Traits\Toast;
 
 class IndexManager extends BaseLivewireComponent
 {
-    use HasSortingLabels, InitializesTenantContext, Toast;
+    use HasSortingLabels, InitializesTenantContext, LogPerformance, Toast;
 
     #[Url(as: 'q')]
     public $search = '';
 
+    #[Url(as: 'sort')]
     public $orderBy = 'composite_score';
 
+    #[Url(as: 'dir')]
     public $orderAsc = false;
 
+    #[Url(as: 'status')]
     public $filterStatus = '';
 
-    #[Url(as: 'fi')]
+    #[Url(as: 'filter')]
     public $filter = [];
 
     #[Url(as: 'l')]
@@ -46,13 +52,16 @@ class IndexManager extends BaseLivewireComponent
     #[Url(as: 'dl')]
     public int $displayLevel = 1;
 
+    #[Url(as: 'pp')]
     public $perPage = 100;
 
     #[Url(as: 'sem', history: true)]
     public bool $useSemanticSearch = false;
 
+    #[Url(as: 'syn')]
     public $useSynonym = true;
 
+    #[Url(as: 'tt')]
     public $useTechnicalTerm = true;
 
     public string $orderByLabel = '';
@@ -65,9 +74,15 @@ class IndexManager extends BaseLivewireComponent
 
     public $keywords = [];
 
+    public $tags = [];
+
     public $synonyms = [];
 
     public $totalRecords = 0;
+
+    public bool $totalRecordsLoaded = false;
+
+    public int $recordsTableMountKey = 0;
 
     public $highlights = [];
 
@@ -89,7 +104,7 @@ class IndexManager extends BaseLivewireComponent
             return null;
         }
 
-        return app(\App\Services\PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
+        return app(PermissionService::class)->getCurrentUserHighestPermission($this->currentFolder->id, 'Folder');
     }
 
     #[Computed]
@@ -113,7 +128,7 @@ class IndexManager extends BaseLivewireComponent
         }
 
         return $this->currentFolder->children()
-            ->addSelect(['ledger_defines_count' => \App\Models\LedgerDefine::selectRaw('count(*)')
+            ->addSelect(['ledger_defines_count' => LedgerDefine::selectRaw('count(*)')
                 ->whereIn('folder_id', function ($query) {
                     $query->select('id')
                         ->from('folders as f2')
@@ -141,6 +156,14 @@ class IndexManager extends BaseLivewireComponent
 
     public function mount(SearchRequest $request, $folderId = null, $defineId = null)
     {
+        $startedAt = microtime(true);
+        $selectedFolderCount = is_countable($this->selectedFolderIds)
+            ? count($this->selectedFolderIds)
+            : 0;
+        $selectedLedgerDefineCount = is_countable($this->selectedLedgerDefineIds)
+            ? count($this->selectedLedgerDefineIds)
+            : 0;
+
         $this->currentTenantId = tenant()?->id;
 
         // 初期表示レベルのバリデーション
@@ -192,6 +215,12 @@ class IndexManager extends BaseLivewireComponent
 
         $this->updateSearchMetadata();
         $this->initSearchContext();
+
+        $this->logPerformance('ledger_index_mount', (microtime(true) - $startedAt) * 1000, [
+            'selected_folder_count' => $selectedFolderCount,
+            'selected_ledger_define_count' => $selectedLedgerDefineCount,
+            'search_present' => ! empty($this->search),
+        ]);
     }
 
     public function initSearchContext()
@@ -207,6 +236,7 @@ class IndexManager extends BaseLivewireComponent
         $searchContext->setFilter($this->filter);
 
         $this->keywords = $searchContext->keywords ?? [];
+        $this->tags = $searchContext->tags ?? [];
         $this->highlights = $searchContext->highlights ?? [];
         $this->synonyms = $searchContext->synonyms ?? [];
     }
@@ -329,6 +359,7 @@ class IndexManager extends BaseLivewireComponent
     #[On('currentFolderChangeRequested')]
     public function changeCurrentFolder($newFolderId)
     {
+        $startedAt = microtime(true);
         Log::info('[IndexManager] Received currentFolderChangeRequested', ['newFolderId' => $newFolderId]);
         Log::info('[IndexManager] changeCurrentFolder called', ['newFolderId' => $newFolderId]);
         if ($newFolderId == 1) {
@@ -343,19 +374,42 @@ class IndexManager extends BaseLivewireComponent
             }
         }
         $this->currentFolderId = $newFolderId;
+        $this->recordsTableMountKey++;
         $this->updateSearchMetadata();
+        $this->dispatch('currentFolderChangedByMain', newFolderId: $this->currentFolderId, newSelectedFolderIds: $this->selectedFolderIds);
+
+        $this->logPerformance('ledger_change_current_folder', (microtime(true) - $startedAt) * 1000, [
+            'new_folder_id' => $newFolderId,
+            'selected_folder_count' => is_countable($this->selectedFolderIds)
+                ? count($this->selectedFolderIds)
+                : 0,
+            'selected_ledger_define_count' => is_countable($this->selectedLedgerDefineIds)
+                ? count($this->selectedLedgerDefineIds)
+                : 0,
+        ]);
     }
 
     #[On('focusLedgerDefineRequested')]
     public function focusLedgerDefine($defineId)
     {
+        $startedAt = microtime(true);
         $this->selectedLedgerDefineIds = [$defineId];
         $this->updateSearchMetadata();
+
+        $this->logPerformance(
+            'ledger_focus_define',
+            (microtime(true) - $startedAt) * 1000,
+            [
+                'define_id' => $defineId,
+                'selected_ledger_define_count' => 1,
+            ]
+        );
     }
 
     #[On('folderIdToggled')]
     public function toggleFolderId($folderId)
     {
+        $startedAt = microtime(true);
         if ($folderId == 1) {
             $this->selectedFolderIds = [];
             $this->selectedLedgerDefineIds = [];
@@ -375,11 +429,26 @@ class IndexManager extends BaseLivewireComponent
         sort($this->selectedLedgerDefineIds);
 
         $this->updateSearchMetadata();
+
+        $this->logPerformance(
+            'ledger_toggle_folder',
+            (microtime(true) - $startedAt) * 1000,
+            [
+                'folder_id' => $folderId,
+                'selected_folder_count' => is_countable($this->selectedFolderIds)
+                    ? count($this->selectedFolderIds)
+                    : 0,
+                'selected_ledger_define_count' => is_countable($this->selectedLedgerDefineIds)
+                    ? count($this->selectedLedgerDefineIds)
+                    : 0,
+            ]
+        );
     }
 
     #[On('ledgerDefineIdToggled')]
     public function toggleLedgerDefineId($ledgerDefineId)
     {
+        $startedAt = microtime(true);
         if (in_array($ledgerDefineId, $this->selectedLedgerDefineIds)) {
             $this->selectedLedgerDefineIds = array_values(array_diff($this->selectedLedgerDefineIds, [$ledgerDefineId]));
         } else {
@@ -389,12 +458,21 @@ class IndexManager extends BaseLivewireComponent
         sort($this->selectedLedgerDefineIds);
 
         $this->updateSearchMetadata();
+
+        $this->logPerformance(
+            'ledger_toggle_define',
+            (microtime(true) - $startedAt) * 1000,
+            [
+                'define_id' => $ledgerDefineId,
+                'selected_ledger_define_count' => count($this->selectedLedgerDefineIds),
+            ]
+        );
     }
 
-    #[On('recordsUpdated')]
     public function updateRecordCount($total)
     {
         $this->totalRecords = $total;
+        $this->totalRecordsLoaded = true;
     }
 
     #[On('openPermissionModal')]
@@ -428,6 +506,23 @@ class IndexManager extends BaseLivewireComponent
         $this->initSearchContext();
     }
 
+    protected function getPerformanceContext(): array
+    {
+        $selectedFolderCount = is_countable($this->selectedFolderIds) ? count($this->selectedFolderIds) : 0;
+        $selectedLedgerDefineCount = is_countable($this->selectedLedgerDefineIds) ? count($this->selectedLedgerDefineIds) : 0;
+
+        return [
+            'tenant_id' => $this->currentTenantId ?? tenant()?->id,
+            'current_folder_id' => $this->currentFolderId,
+            'display_level' => $this->displayLevel,
+            'per_page' => $this->perPage,
+            'use_semantic_search' => $this->useSemanticSearch,
+            'selected_folder_count' => $selectedFolderCount,
+            'selected_ledger_define_count' => $selectedLedgerDefineCount,
+            'has_workflow_enabled' => $this->hasWorkflowEnabled,
+        ];
+    }
+
     public function render()
     {
         Log::info('IndexManager render', [
@@ -440,8 +535,16 @@ class IndexManager extends BaseLivewireComponent
             'filterStatus' => $this->filterStatus,
         ]);
 
+        $folderConfidentiality = null;
+        $canEditFolderConfidentiality = false;
+        if ($this->currentFolder) {
+            $folderConfidentiality = ConfidentialityLevelService::getEffectiveLevel($this->currentFolder);
+            $canEditFolderConfidentiality = auth()->user()->can('update', $this->currentFolder);
+        }
+
         return view('livewire.ledger.index-manager', [
             'keywords' => $this->keywords ?? [],
+            'tags' => $this->tags ?? [],
             'synonyms' => $this->synonyms ?? [],
             'totalRecords' => $this->totalRecords ?? 0,
             'highlights' => $this->highlights ?? [],
@@ -453,6 +556,8 @@ class IndexManager extends BaseLivewireComponent
             'ledgerDefineRecords' => $this->ledgerDefineRecords,
             'currentFolder' => $this->currentFolder,
             'currentUserPermissionForFolder' => $this->currentUserPermissionForFolder,
+            'confidentiality' => $folderConfidentiality,
+            'canEditConfidentiality' => $canEditFolderConfidentiality,
         ])->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }
 }

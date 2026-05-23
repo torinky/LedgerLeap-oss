@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Common;
 
+use App\Helpers\ActivityLogFormatter;
 use App\Livewire\Common\ActivityHistoryDisplay;
 use App\Models\CustomActivity;
 use App\Models\Folder;
@@ -67,9 +68,34 @@ class ActivityHistoryDisplayTest extends TestCase
     {
         $this->actingAs($this->adminUser);
 
-        Livewire::test(ActivityHistoryDisplay::class)
+        $component = Livewire::test(ActivityHistoryDisplay::class)
             ->assertViewIs('livewire.common.activity-history-display')
+            ->assertSee(__('ledger.activity.title'))
             ->assertOk();
+
+        $labels = collect($component->instance()->descriptionOptions)->pluck('label');
+
+        $this->assertContains(__('ledger.activity.filter.description.created'), $labels->all());
+    }
+
+    #[Test]
+    public function translates_change_attribute_labels_in_table_content()
+    {
+        $payload = [
+            'event' => 'updated',
+            'properties' => [
+                'attributes' => [
+                    'content' => '{"1":"new value"}',
+                ],
+                'old' => [
+                    'content' => '{"1":"old value"}',
+                ],
+            ],
+        ];
+
+        $changes = ActivityLogFormatter::formatChanges($payload);
+
+        $this->assertStringContainsString(__('ledger.activity.changes.attribute_label.content'), $changes->toHtml());
     }
 
     #[Test]

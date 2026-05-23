@@ -2,6 +2,7 @@
 
 namespace App\Console\Commands\Ledger;
 
+use App\Jobs\Ledger\RegenerateLedgerSortValuesJob;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use Illuminate\Console\Command;
@@ -59,7 +60,7 @@ class RegenerateLedgerDefaultSort extends Command
 
             foreach ($defines as $define) {
                 $this->info("  Dispatching regeneration job for LedgerDefine [{$define->id}]: {$define->name}");
-                \App\Jobs\Ledger\RegenerateLedgerSortValuesJob::dispatch($define->id);
+                RegenerateLedgerSortValuesJob::dispatch($define->id);
             }
         }
 

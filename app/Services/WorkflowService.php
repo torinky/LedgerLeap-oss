@@ -9,6 +9,7 @@ use App\Exceptions\Workflow\InvalidWorkflowActionException;
 use App\Exceptions\Workflow\UnauthorizedWorkflowActionException;
 use App\Exceptions\Workflow\WorkflowConditionException;
 use App\Models\Ledger;
+use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\User;
@@ -93,7 +94,7 @@ class WorkflowService
         // Log::debug('[WorkflowService::saveDraft] Received content_attached:', $contentAttached);
         // ToDo: 権限チェック (modifierId が下書き保存できるか？)
 
-        $ledgerDefine = \App\Models\LedgerDefine::findOrFail($ledgerDefineId);
+        $ledgerDefine = LedgerDefine::findOrFail($ledgerDefineId);
 
         return DB::transaction(function () use ($ledgerId, $ledgerDefine, $ledgerDefineId, $content, $contentAttached, $modifierId) {
             $ledger = null;
@@ -759,7 +760,7 @@ class WorkflowService
             // DB::table('users')->where('id', $userId)->increment($column); // Query Builder
             User::where('id', $userId)->increment($column); // Eloquent
             Log::info("Incremented pending {$type} count for user: {$userId}");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Failed to increment pending {$type} count for user {$userId}: ".$e->getMessage());
             // ここで例外を再スローするかどうかは要件による
         }
@@ -779,7 +780,7 @@ class WorkflowService
             // DB::table('users')->where('id', $userId)->where($column, '>', 0)->decrement($column);
             User::where('id', $userId)->where($column, '>', 0)->decrement($column); // Eloquent
             Log::info("Decremented pending {$type} count for user: {$userId}");
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error("Failed to decrement pending {$type} count for user {$userId}: ".$e->getMessage());
         }
     }
@@ -852,21 +853,21 @@ class WorkflowService
      * @param  string|null  $comments  引き継ぎコメント
      * @return Ledger 更新後のLedger
      *
-     * @throws \Throwable
+     * @throws Throwable
      */
     public function claimTask(Ledger $ledger, User $claimer, ?string $comments): Ledger
     {
         // 1. 基本的なバリデーション
         if (! $ledger->status->isWorkflowPending()) { // isWorkflowPending() は Enum に定義されている想定
-            throw new \Exception(__('ledger.errors.cannot_claim_not_pending_task'));
+            throw new Exception(__('ledger.errors.cannot_claim_not_pending_task'));
         }
         if ($ledger->creator_id === $claimer->id) {
-            throw new \Exception(__('ledger.errors.applicant_cannot_claim'));
+            throw new Exception(__('ledger.errors.applicant_cannot_claim'));
         }
 
         $latestDiff = $ledger->latestDiff()->first();
         if (! $latestDiff) {
-            throw new \Exception(__('ledger.errors.latest_diff_not_found'));
+            throw new Exception(__('ledger.errors.latest_diff_not_found'));
         }
 
         // 2. 現在の担当者情報を取得 (元の担当者)
@@ -883,7 +884,7 @@ class WorkflowService
 
         // 既に自分が担当者ならエラー
         if ($originalAssignee && $originalAssignee->id === $claimer->id) {
-            throw new \Exception(__('ledger.errors.already_assignee'));
+            throw new Exception(__('ledger.errors.already_assignee'));
         }
 
         // 3. 引き継ぎ者の権限チェック
@@ -891,7 +892,7 @@ class WorkflowService
             ? FolderPermissionType::INSPECT
             : FolderPermissionType::APPROVE;
         if (! $ledger->define?->folder || ! $this->userService->hasFolderPermission($claimer, $ledger->define->folder, $requiredPermission)) {
-            throw new \Exception(__('ledger.errors.no_permission_to_claim'));
+            throw new Exception(__('ledger.errors.no_permission_to_claim'));
         }
 
         return DB::transaction(function () use ($ledger, $claimer, $comments, $latestDiff, $originalAssignee, $currentTaskRoleType) {

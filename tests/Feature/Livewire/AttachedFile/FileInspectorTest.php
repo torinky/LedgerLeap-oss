@@ -2,6 +2,10 @@
 
 namespace Tests\Feature\Livewire\AttachedFile;
 
+use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
+use App\Jobs\Ledger\GenerateThumbnail;
+use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Jobs\Ledger\RetryVlmProcessingJob;
 use App\Livewire\AttachedFile\FileInspector;
 use App\Models\AttachedFile;
@@ -11,6 +15,8 @@ use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -33,10 +39,9 @@ class FileInspectorTest extends TestCase
         parent::setUp();
 
         $this->setUpRefreshDatabaseWithTenant();
+        // テナント初期化（RefreshDatabaseWithTenant が作成した共有テナントを使用）
         $this->tenant = $this->getTenant();
-
-        // テナント初期化（RefreshDatabaseWithTenantがstatic::$sharedTenantを作成・初期化している）
-        $this->tenant = static::$sharedTenant;
+        tenancy()->initialize($this->tenant);
 
         // テストユーザー作成とログイン
         $this->user = User::factory()->create();
@@ -73,7 +78,7 @@ class FileInspectorTest extends TestCase
             'ledger_define_id' => $this->ledger->ledger_define_id,
             'filename' => 'real_data_test.pdf',
             'mime' => 'application/pdf',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'finalized_source' => 'tika',
             'processing_finalized_at' => now(),
             'tenant_id' => $this->tenant->id,
@@ -90,6 +95,146 @@ class FileInspectorTest extends TestCase
             ->assertSet('open', true)
             ->assertSet('isLoading', false)
             ->assertSee('real_data_test.pdf');
+    }
+
+    #[Test]
+    public function it_auto_opens_when_the_selected_file_is_present_in_the_query_string(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'query_file.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        Livewire::withQueryParams(['file' => $file->id])
+            ->test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->assertSet('fileId', $file->id)
+            ->assertSet('open', true)
+            ->assertSet('isLoading', false)
+            ->assertSee('query_file.pdf');
+    }
+
+    #[Test]
+    public function it_prefills_search_keyword_from_the_query_string_when_payload_is_missing(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'highlighted_file.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        Livewire::withQueryParams(['file' => $file->id, 'highlight' => 'detail-keyword'])
+            ->test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->assertSet('fileId', $file->id)
+            ->assertSet('searchKeyword', 'detail-keyword')
+            ->assertSet('open', true)
+            ->assertSee('highlighted_file.pdf');
+    }
+
+    #[Test]
+    public function it_keeps_search_keyword_when_reopening_the_inspector_with_the_same_payload(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'reopen_search_file.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id, 'search' => 'reopen-keyword'])
+            ->assertSet('searchKeyword', 'reopen-keyword')
+            ->assertSet('open', true)
+            ->call('close')
+            ->assertSet('open', false)
+            ->call('openInspector', ['id' => $file->id, 'search' => 'reopen-keyword'])
+            ->assertSet('searchKeyword', 'reopen-keyword')
+            ->assertSet('open', true)
+            ->assertSee('reopen_search_file.pdf');
+
+        $this->assertSame($file->id, $component->get('fileId'));
+    }
+
+    #[Test]
+    public function it_dispatches_selection_sync_events_when_opening_and_closing(): void
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'column_id' => 0,
+            'filename' => 'sync_target.pdf',
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', [
+                'id' => $file->id,
+                'column_id' => $file->column_id,
+                'search' => 'sync',
+            ])
+            ->assertDispatched('file-inspector-selection-changed',
+                selectedFileId: $file->id,
+                selectedColumnId: $file->column_id,
+                isOpen: true,
+            )
+            ->call('close')
+            ->assertDispatched('file-inspector-selection-changed',
+                selectedFileId: null,
+                selectedColumnId: null,
+                isOpen: false,
+            );
+    }
+
+    #[Test]
+    public function it_constrains_drawer_and_tab_widths_to_prevent_horizontal_scroll()
+    {
+        config(['mock.attachment.enabled' => true]);
+
+        Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => 10001])
+            ->assertSet('open', true)
+            ->assertSeeHtml('fixed inset-y-0 right-0 w-full md:w-[600px]')
+            ->assertSeeHtml('flex flex-col flex-1 h-full min-w-0 overflow-x-hidden')
+            ->assertSeeHtml('file-inspector-selection-changed.window')
+            ->assertSeeHtml('bg-base-100 border-b border-base-300 p-3 flex gap-2 flex-none relative z-50 isolate min-w-0 overflow-x-hidden')
+            ->assertSeeHtml('tooltip-left')
+            ->assertSeeHtml('flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative min-w-0')
+            ->assertSeeHtml('tabs tabs-lift pl-3')
+            ->assertSeeHtml('tab-content bg-base-100 border-base-300');
     }
 
     #[Test]
@@ -138,7 +283,7 @@ class FileInspectorTest extends TestCase
             'mime' => 'image/jpeg',
             'original_mime_type' => 'image/jpeg',
             'path' => 'attachments/test_image.jpg',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -154,7 +299,12 @@ class FileInspectorTest extends TestCase
         $this->assertTrue($component->get('isImage'));
         $this->assertFalse($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $this->assertStringContainsString('storage/attachments/test_image.jpg', $component->get('previewUrl'));
+        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]);
+        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'original' => true]);
+
+        $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
+        $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
+        $this->assertEquals($expectedDownloadUrl, $component->get('downloadUrl'));
     }
 
     #[Test]
@@ -169,7 +319,7 @@ class FileInspectorTest extends TestCase
             'mime' => 'application/pdf',
             'original_mime_type' => 'application/pdf',
             'path' => 'attachments/test_document.pdf',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -185,7 +335,275 @@ class FileInspectorTest extends TestCase
         $this->assertFalse($component->get('isImage'));
         $this->assertTrue($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $this->assertStringContainsString('storage/attachments/test_document.pdf', $component->get('previewUrl'));
+        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]);
+        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'original' => true]);
+
+        $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
+        $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
+        $this->assertEquals($expectedDownloadUrl, $component->get('downloadUrl'));
+    }
+
+    #[Test]
+    public function it_exposes_available_formats_for_vlm_pdf_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'available_formats.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'vlm_markdown' => '# VLM result',
+            'vlm_structured_data' => [
+                'pages' => [
+                    ['page_index' => 1],
+                ],
+            ],
+            'finalized_source' => 'vlm',
+            'processing_finalized_at' => now(),
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertSame(['text', 'markdown', 'structured', 'json', 'visual'], $component->get('availableFormats'));
+    }
+
+    #[Test]
+    public function it_falls_back_to_the_file_tenant_when_livewire_tenant_context_is_missing()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Gate::before(fn () => true);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'fallback_tenant.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => 'attachments/fallback_tenant.pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'ocr_processed_at' => now(),
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        tenancy()->end();
+
+        $expectedOcrPdfUrl = route('file.download-ocr-pdf', [
+            'tenant' => $this->tenant->id,
+            'attachedFile' => $file->id,
+        ]);
+        $expectedPermissionsTabUrl = route('ledger.show', [
+            'tenant' => $this->tenant->id,
+            'ledgerId' => $this->ledger->id,
+            'tab' => 'permissions',
+        ]);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => null])
+            ->call('openInspector', ['id' => $file->id])
+            ->set('selectedTab', 'details');
+
+        $component->assertSee($expectedOcrPdfUrl);
+        $this->assertSame($expectedPermissionsTabUrl, $component->get('permissionsTabUrl'));
+    }
+
+    #[Test]
+    public function it_renders_pdf_iframe_for_low_id_real_files()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'id' => 5,
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'low_id_report.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => 'attachments/low_id_report.pdf',
+            'size' => 4096,
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertTrue($component->get('isPdf'));
+        $this->assertTrue($component->get('showPreview'));
+        $component->assertSeeHtml('title="PDF Preview"');
+    }
+
+    #[Test]
+    public function it_renders_real_download_urls_for_low_id_real_files()
+    {
+        // リグレッション: quick-actions.blade.php の $isMockFile チェックが
+        // ID 1-12 を誤ってモックファイルと見なし #download-... アンカーを生成していたバグ
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'id' => 3,
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'low_id_real_download.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => 'attachments/low_id_real_download.pdf',
+            'size' => 4096,
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $expectedDownloadUrl = route('file.download', [
+            'tenant' => $this->tenant->id,
+            'attachedFile' => $file->id,
+            'original' => true,
+        ]);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        // quick-actions にリアルなルートURLが出力されること
+        $component->assertSeeHtml('href="'.$expectedDownloadUrl.'"');
+        // モック用アンカー（#download-original-3）が出力されないこと
+        $component->assertDontSeeHtml('href="#download-original-'.$file->id.'"');
+    }
+
+    #[Test]
+    public function it_renders_mock_download_anchors_for_mock_files()
+    {
+        // リグレッション: モックファイルは実ルートURLでなく #download-... アンカーになること
+        config(['mock.attachment.enabled' => true]);
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => 10001])
+            ->assertSet('open', true);
+
+        // モックファイルは #download-original-10001 のアンカーになること
+        $component->assertSeeHtml('href="#download-original-10001"');
+        // リアルなルートURLが download href に使われていないこと
+        $component->assertDontSeeHtml('href="'.route('file.download', [
+            'tenant' => $this->tenant->id,
+            'attachedFile' => 10001,
+            'original' => true,
+        ]).'"');
+    }
+
+    #[Test]
+    public function it_treats_pdf_extension_as_previewable_when_mime_is_generic()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'id' => 6,
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'mime_generic.pdf',
+            'mime' => 'application/octet-stream',
+            'original_mime_type' => 'application/octet-stream',
+            'path' => 'attachments/mime_generic.pdf',
+            'size' => 4096,
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertTrue($component->get('isPdf'));
+        $this->assertTrue($component->get('showPreview'));
+        $this->assertEquals(route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]), $component->get('previewUrl'));
+    }
+
+    #[Test]
+    public function it_uses_thumbnail_route_for_large_image_files_when_thumbnail_exists()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Storage::fake('public');
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'large_image.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'hashedbasename' => 'large_image.jpg',
+            'path' => 'attachments/large_image.jpg',
+            'size' => 2 * 1024 * 1024,
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath($file->hashedbasename, $this->tenant->id);
+        Storage::disk('public')->put($thumbnailPath, 'thumbnail-bytes');
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $expectedThumbnailUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'thumbnail' => true]);
+
+        $this->assertEquals($expectedThumbnailUrl, $component->get('thumbnailUrl'));
+        $this->assertEquals($expectedThumbnailUrl, $component->get('previewUrl'));
+    }
+
+    #[Test]
+    public function it_queues_thumbnail_generation_only_once_when_thumbnail_is_missing()
+    {
+        config(['mock.attachment.enabled' => false]);
+        Storage::fake('public');
+        Queue::fake();
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'filename' => 'missing_thumbnail.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'hashedbasename' => 'missing_thumbnail.jpg',
+            'path' => 'attachments/missing_thumbnail.jpg',
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(function ($user, $ability) {
+            return true;
+        });
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->call('openInspector', ['id' => $file->id])
+            ->assertSet('open', true);
+
+        $this->assertSame(AttachedFileStatus::OPTIMIZING->value, $file->fresh()->status->value);
+        Queue::assertPushed(GenerateThumbnail::class, 1);
+        $this->assertTrue($component->get('showPreview'));
     }
 
     #[Test]
@@ -199,7 +617,7 @@ class FileInspectorTest extends TestCase
             'filename' => 'test_document.docx',
             'mime' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'path' => 'attachments/test_document.docx',
-            'status' => \App\Enums\AttachedFileStatus::COMPLETED->value,
+            'status' => AttachedFileStatus::COMPLETED->value,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -262,6 +680,39 @@ class FileInspectorTest extends TestCase
     }
 
     #[Test]
+    public function it_tracks_loaded_tabs_and_resets_them_on_close()
+    {
+        config(['mock.attachment.enabled' => false]);
+
+        $file = AttachedFile::factory()->create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledger->ledger_define_id,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        Gate::before(fn ($user, $ability) => true);
+
+        $component = Livewire::test(FileInspector::class, ['tenantId' => $this->tenant->id])
+            ->call('openInspector', ['id' => $file->id]);
+
+        $this->assertSame(['content'], $component->get('loadedTabs'));
+
+        $component->set('selectedTab', 'details');
+        $component->set('selectedTab', 'history');
+
+        $loadedTabs = $component->get('loadedTabs');
+        $this->assertContains('content', $loadedTabs);
+        $this->assertContains('details', $loadedTabs);
+        $this->assertContains('history', $loadedTabs);
+
+        $component->call('close');
+        $this->assertSame([], $component->get('loadedTabs'));
+
+        $component->call('openInspector', ['id' => $file->id]);
+        $this->assertSame(['content'], $component->get('loadedTabs'));
+    }
+
+    #[Test]
     public function it_dispatches_process_attached_file_on_retry_processing()
     {
         config(['mock.attachment.enabled' => false]);
@@ -283,7 +734,7 @@ class FileInspectorTest extends TestCase
             ->call('retryProcessing')
             ->assertDispatched('mary-toast');
 
-        Bus::assertDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class, function ($job) use ($file) {
+        Bus::assertDispatched(ProcessAttachedFile::class, function ($job) use ($file) {
             return $job->attachedFile->id === $file->id;
         });
     }
@@ -343,7 +794,7 @@ class FileInspectorTest extends TestCase
                 return $data['type'] === 'error';
             });
 
-        Bus::assertNotDispatched(\App\Jobs\Ledger\ProcessAttachedFile::class);
+        Bus::assertNotDispatched(ProcessAttachedFile::class);
     }
 
     #[Test]

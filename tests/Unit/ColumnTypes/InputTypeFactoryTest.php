@@ -6,6 +6,7 @@ use App\Models\ColumnTypes\AutoNumberType;
 use App\Models\ColumnTypes\CheckboxType;
 use App\Models\ColumnTypes\DateType;
 use App\Models\ColumnTypes\FilesType;
+use App\Models\ColumnTypes\InputType;
 use App\Models\ColumnTypes\InputTypeFactory;
 use App\Models\ColumnTypes\NumberType;
 use App\Models\ColumnTypes\PhoneNumberType;
@@ -145,7 +146,7 @@ class InputTypeFactoryTest extends TestCase
     {
         $types = InputTypeFactory::getAllTypes();
         foreach ($types as $identifier => $type) {
-            $this->assertInstanceOf(\App\Models\ColumnTypes\InputType::class, $type,
+            $this->assertInstanceOf(InputType::class, $type,
                 "Type '{$identifier}' should implement InputType"
             );
         }

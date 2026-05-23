@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Seeder;
 
@@ -52,7 +53,7 @@ class AutoLinkCrossReferenceSeeder extends Seeder
 
     private function initializeTenant(): void
     {
-        $this->tenant = \App\Models\Tenant::where('id', 'demo-tenant')->first();
+        $this->tenant = Tenant::where('id', 'demo-tenant')->first();
 
         if (! $this->tenant) {
             $this->command->error('   ✗ Tenant "demo-tenant" not found. Please run DemoCompleteSeeder first.');

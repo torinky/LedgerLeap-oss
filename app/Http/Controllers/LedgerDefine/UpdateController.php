@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\View;
 
 class UpdateController extends Controller
 {
-    public function edit(request $request): \Illuminate\Contracts\View\View
+    public function edit(Request $request): \Illuminate\Contracts\View\View
     {
         $ledgerDefine = new LedgerDefine;
         $ledgerDefineId = (int) $request->route('ledgerDefineId');
@@ -24,7 +24,17 @@ class UpdateController extends Controller
         $folderRecords = Folder::whereDescendantOf($rootFolder->pluck('id')[0])->get();
         $folderRecords = $rootFolder->merge($folderRecords);
 
-        return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords'));
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerDefineRecord && $ledgerDefineRecord->folder_id) {
+            $folder = Folder::with('ancestors')->find($ledgerDefineRecord->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+
+        return View::make('ledgerDefine.edit', compact('ledgerDefineRecord', 'folderRecords', 'breadcrumbs'));
 
     }
 
@@ -41,7 +51,7 @@ class UpdateController extends Controller
 
     }
 
-    public function delete(request $request)
+    public function delete(Request $request)
     {
         $ledgerDefineId = (int) $request->route('ledgerDefineId');
 

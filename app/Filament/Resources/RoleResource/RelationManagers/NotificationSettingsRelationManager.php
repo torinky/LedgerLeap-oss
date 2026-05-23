@@ -12,24 +12,24 @@ use App\Models\Role;
 use App\Models\RoleFolderPermission;
 // ★ 使用するモデル
 use Exception;
-use Filament\Forms\Components\CheckboxList;
+use Filament\Actions\Action;
 // ★ Toggle を使う方がシンプル
-use Filament\Forms\Components\Select;
-use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
-use Filament\Notifications\Notification;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 // ★ カスタムアクション用に Action を使う
-// use Filament\Tables\Actions\AttachAction; // ★ AttachAction は使わない
-use Filament\Resources\RelationManagers\RelationManager;
-// use Filament\Tables\Actions\CreateAction;
+// use Filament\Actions\AttachAction; // ★ AttachAction は使わない
+use Filament\Forms\Components\CheckboxList;
+// use Filament\Actions\CreateAction;
 
 // ★ CreateAction を使う
-use Filament\Tables\Actions\Action;
+use Filament\Forms\Components\Select;
 // ★ 標準の DeleteAction を使う
-use Filament\Tables\Actions\BulkActionGroup;
-use Filament\Tables\Actions\DeleteAction;
-use Filament\Tables\Actions\DeleteBulkAction;
-use Filament\Tables\Actions\EditAction;
+use Filament\Forms\Components\Toggle;
+use Filament\Notifications\Notification;
+use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\Filter;
@@ -380,9 +380,9 @@ class NotificationSettingsRelationManager extends RelationManager
     }
 
     // form() メソッドは空のままで良い
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form->schema([]);
+        return $schema->schema([]);
     }
 
     // --- 権限チェック ---

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\AttachedFile;
 use App\Models\Folder;
@@ -9,6 +10,7 @@ use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -103,9 +105,10 @@ class LedgerHistoryManagerTest extends TestCase
     {
         Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
-            ->assertSee('Ver.1')
-            ->assertSee('Ver.2')
-            ->assertSee('Ver.3')
+            ->assertSee(__('ledger.version').'1')
+            ->assertSee(__('ledger.version').'2')
+            ->assertSee(__('ledger.version').'3')
+            ->assertSee(__('ledger.column.expand_all'))
             ->assertViewHas('history', function ($history) {
                 return $history->count() === 3;
             })
@@ -211,13 +214,13 @@ class LedgerHistoryManagerTest extends TestCase
         config(['ledgerleap.performance.enabled' => true]);
         config(['ledgerleap.performance.log_destination' => 'log']);
 
-        \Illuminate\Support\Facades\Log::spy();
+        Log::spy();
 
         $component = Livewire::actingAs($this->user)
             ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
             ->set('perPage', 1);
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('info')
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_mount'
                     && isset($context['duration_ms'])
@@ -227,7 +230,7 @@ class LedgerHistoryManagerTest extends TestCase
         // Toggle selection logic check
         $component->call('toggleSelection', $this->diff2->id);
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('info')
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_toggle_selection'
                     && isset($context['duration_ms']);
@@ -236,7 +239,7 @@ class LedgerHistoryManagerTest extends TestCase
         // Load more logic check
         $component->call('loadMore');
 
-        \Illuminate\Support\Facades\Log::shouldHaveReceived('info')
+        Log::shouldHaveReceived('info')
             ->withArgs(function ($message, $context) {
                 return $message === '[Performance] ledger_load_more'
                     && isset($context['duration_ms']);
@@ -314,6 +317,45 @@ class LedgerHistoryManagerTest extends TestCase
             ->assertViewHas('targetDiff')
             ->assertViewHas('allAttachments', function ($attachments) {
                 return $attachments !== null && $attachments->count() === 1;
+            });
+    }
+
+    #[Test]
+    public function it_filters_redundant_sequential_entries()
+    {
+        // 既存の diff3 にコメントとステータスを設定
+        $this->diff3->update([
+            'comments' => 'Redundant test',
+            'status' => WorkflowStatus::DRAFT,
+        ]);
+
+        // 冗長なエントリを作成（同じバージョン、ステータス、更新者、コメント）
+        // IDがより大きい（＝より新しい）ものが優先的に残るため、これを作成
+        $redundantDiff = LedgerDiff::create([
+            'ledger_id' => $this->ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'version' => 3,
+            'status' => WorkflowStatus::DRAFT,
+            'content' => [['0' => 'Value 3.1']], // 内容が違っていても、リスト上のメタデータが同じならフィルタリングされる
+            'column_define' => $this->ledgerDefine->column_define,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+            'modifier_id' => $this->user->id,
+            'creator_id' => $this->user->id,
+            'comments' => 'Redundant test',
+            'created_at' => now()->addMinute(),
+        ]);
+
+        // コンポーネント実行
+        Livewire::actingAs($this->user)
+            ->test(LedgerHistoryManager::class, ['ledgerId' => $this->ledger->id])
+            ->assertViewHas('history', function ($history) use ($redundantDiff) {
+                // 元々3件（diff1, diff2, diff3）あったところに1件追加したが、
+                // diff3 と redundantDiff が重複するので、結果として3件になるはず。
+                // また、より新しい redundantDiff が残っているはず。
+                return $history->count() === 3
+                    && $history->contains('id', $redundantDiff->id)
+                    && ! $history->contains('id', $this->diff3->id);
             });
     }
 }

@@ -96,3 +96,6 @@ coverage-unit-check/
 .idea/*
 !.idea/runConfigurations/
 !.idea/runConfigurations/*.xml
+
+# Browser HAR captures (large, not committed)
+*.har

@@ -2,6 +2,7 @@
 
 namespace Tests\Traits;
 
+use App\Models\Tenant;
 use Illuminate\Contracts\Console\Kernel;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\ParallelTesting;
@@ -14,6 +15,8 @@ use Illuminate\Support\Facades\ParallelTesting;
  */
 trait RefreshDatabaseWithTenant
 {
+    use ResetsTenantRuntimeState;
+
     /**
      * クラスごとにデータベースが初期化されたかを管理
      *
@@ -104,15 +107,23 @@ trait RefreshDatabaseWithTenant
      */
     protected function setUpRefreshDatabaseWithTenant(): void
     {
-        $this->ensureCurrentTestingDatabaseConnection();
+        $this->resetTenantRuntimeState();
+        $this->reapplyWorkerDatabaseConnection();
 
         $className = static::class;
         $initialized = static::$databaseInitializedByClass[$className] ?? false;
 
         if (! $initialized) {
             if (! static::hasMigratedForCurrentProcess()) {
+                // refreshDatabase() がワーカー DB への切り替えを内部で行う
                 $this->refreshDatabase();
                 static::markMigratedForCurrentProcess();
+            } else {
+                // 同一プロセスの 2 番目以降のテストクラス:
+                // createApplication() が LoadConfiguration を再実行して
+                // mysql_testing.database を env() のデフォルト値にリセットする。
+                // ワーカー DB への接続を復元してから DB アクセスを行う。
+                $this->reapplyWorkerDatabaseConnection();
             }
 
             $tenant = static::getSharedTenantForCurrentProcess();
@@ -128,12 +139,36 @@ trait RefreshDatabaseWithTenant
             $this->createSharedData();
             static::$databaseInitializedByClass[$className] = true;
         } else {
+            // 同一クラスの 2 番目以降のテストメソッド:
+            // createApplication() が LoadConfiguration を再実行して
+            // mysql_testing.database を env() のデフォルト値にリセットする。
+            // ワーカー DB への接続を復元してから DB アクセスを行う。
+            $this->reapplyWorkerDatabaseConnection();
+
             if ($tenant = static::getSharedTenantForCurrentProcess()) {
                 tenancy()->initialize($tenant);
             }
         }
 
         $this->beginDatabaseTransaction();
+    }
+
+    /**
+     * ワーカー DB への接続設定を再適用する
+     *
+     * createApplication() → LoadConfiguration が実行されるたびに
+     * mysql_testing.database が env('DB_DATABASE') の値にリセットされる。
+     * parallel 実行時は各テストメソッドの setUp() でこのメソッドを呼び出して
+     * ワーカー DB への接続を復元する必要がある。
+     *
+     * シリアル実行や CI の直列実行（ワーカートークンなし）では何もしない。
+     */
+    protected function reapplyWorkerDatabaseConnection(): void
+    {
+        $workerDatabase = $this->currentWorkerDatabaseName() ?: $this->currentTestingDatabaseName();
+
+        DB::purge('mysql_testing');
+        config()->set('database.connections.mysql_testing.database', $workerDatabase);
     }
 
     /**
@@ -151,7 +186,14 @@ trait RefreshDatabaseWithTenant
 
     protected function currentTestingDatabaseName(): string
     {
-        return $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test';
+        return $this->normalizeTestingDatabaseName(
+            $_SERVER['DB_DATABASE'] ?? $_ENV['DB_DATABASE'] ?? 'ledgerleap_test'
+        );
+    }
+
+    protected function normalizeTestingDatabaseName(string $databaseName): string
+    {
+        return preg_replace('/(?:_test_\d+)+$/', '', $databaseName) ?: $databaseName;
     }
 
     protected function currentWorkerDatabaseName(): ?string
@@ -165,12 +207,19 @@ trait RefreshDatabaseWithTenant
         return $this->currentTestingDatabaseName().'_test_'.$token;
     }
 
-    protected function ensureCurrentTestingDatabaseConnection(): void
+    protected function isCiEnvironment(): bool
     {
-        if ($workerDatabase = $this->currentWorkerDatabaseName()) {
-            DB::purge('mysql_testing');
-            config()->set('database.connections.mysql_testing.database', $workerDatabase);
+        $value = $_SERVER['CI']
+            ?? $_ENV['CI']
+            ?? $_SERVER['GITHUB_ACTIONS']
+            ?? $_ENV['GITHUB_ACTIONS']
+            ?? getenv('CI');
+
+        if ($value === false || $value === null || $value === '') {
+            $value = getenv('GITHUB_ACTIONS');
         }
+
+        return filter_var($value, FILTER_VALIDATE_BOOL);
     }
 
     protected static function markMigratedForCurrentProcess(): void
@@ -250,12 +299,11 @@ trait RefreshDatabaseWithTenant
                 '--drop-types' => $this->shouldDropTypes(),
             ]);
             $this->app[Kernel::class]->setArtisan(null);
-            $this->ensureCurrentTestingDatabaseConnection();
 
             return;
         }
 
-        if (env('CI')) {
+        if ($this->isCiEnvironment()) {
             // CI の直列実行: ワークフローで migrate --force 実行済みのため何もしない
             return;
         }
@@ -279,7 +327,7 @@ trait RefreshDatabaseWithTenant
      */
     protected function migrateTenantDatabase(): void
     {
-        if (env('CI')) {
+        if ($this->isCiEnvironment()) {
             // CI: ワークフローで tenants:migrate 実行済みのため何もしない
             return;
         }
@@ -302,13 +350,13 @@ trait RefreshDatabaseWithTenant
     {
         $processKey = static::currentProcessKey();
 
-        if (env('CI')) {
+        if ($this->isCiEnvironment()) {
             $candidates = $processKey === 'global'
                 ? ['ci-test-tenant']
                 : ["ci-test-tenant_{$processKey}", 'ci-test-tenant'];
 
             foreach ($candidates as $candidateId) {
-                $existing = \App\Models\Tenant::find($candidateId);
+                $existing = Tenant::find($candidateId);
                 if ($existing) {
                     static::setSharedTenantForCurrentProcess($existing);
 
@@ -316,7 +364,7 @@ trait RefreshDatabaseWithTenant
                 }
             }
 
-            if ($existing = \App\Models\Tenant::first()) {
+            if ($existing = Tenant::first()) {
                 static::setSharedTenantForCurrentProcess($existing);
 
                 return;
@@ -325,8 +373,8 @@ trait RefreshDatabaseWithTenant
 
         $tenantId = $processKey === 'global' ? 'test_tenant' : "test_tenant_{$processKey}";
 
-        $tenant = \App\Models\Tenant::find($tenantId)
-            ?? \App\Models\Tenant::factory()->create(['id' => $tenantId]);
+        $tenant = Tenant::find($tenantId)
+            ?? Tenant::factory()->create(['id' => $tenantId]);
 
         static::setSharedTenantForCurrentProcess($tenant);
     }

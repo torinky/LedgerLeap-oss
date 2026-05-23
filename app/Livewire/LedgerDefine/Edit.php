@@ -8,6 +8,7 @@ use App\Livewire\Traits\HasFolderTree;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Services\ConfidentialityLevelService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Log;
 use Livewire\Attributes\Renderless;
@@ -33,9 +34,41 @@ class Edit extends BaseLivewireComponent
 
     public bool $workflow_enabled = false;
 
+    public string $confidentialityLevel = 'public';
+
+    public array $confidentialityScopes = [];
+
+    protected function rules(): array
+    {
+        return [
+            'title' => ['required', 'string', 'max:255'],
+            'parentFolderId' => ['required', 'integer', 'exists:folders,id'],
+            'confidentialityLevel' => ['required', 'string', 'in:public,internal,confidential,secret'],
+            'confidentialityScopes' => ['nullable', 'array'],
+            'confidentialityScopes.*' => ['string'],
+            'workflow_enabled' => ['boolean'],
+        ];
+    }
+
+    protected function validationAttributes(): array
+    {
+        return [
+            'title' => __('ledger.define.title'),
+            'parentFolderId' => __('ledger.folder.containing'),
+            'confidentialityLevel' => __('ledger.confidentiality.level.label'),
+            'confidentialityScopes' => __('ledger.confidentiality.scope.label'),
+        ];
+    }
+
     public function render()
     {
-        return view('livewire.ledger-define.edit');
+        $confidentialityLevelOptions = ConfidentialityLevelService::selectOptions();
+        $confidentialityScopeOptions = ConfidentialityLevelService::allScopes();
+
+        return view('livewire.ledger-define.edit', [
+            'confidentialityLevelOptions' => $confidentialityLevelOptions,
+            'confidentialityScopeOptions' => $confidentialityScopeOptions,
+        ]);
     }
 
     /**
@@ -45,9 +78,9 @@ class Edit extends BaseLivewireComponent
      * コンポーネントのさまざまなプロパティを設定します。また、階層的なフォルダデータを処理し、
      * フォルダIDとそれに対応する名前や選択状態のマップを構築します。
      *
-     * @param  \Illuminate\Http\Request  $request  入力やルートデータを含むリクエスト。
+     * @param  Request  $request  入力やルートデータを含むリクエスト。
      */
-    public function mount(request $request)
+    public function mount(Request $request)
     {
         if ($request->input('fromCreate')) {
             $this->dispatch('reloadParentWindow');
@@ -64,14 +97,18 @@ class Edit extends BaseLivewireComponent
         $this->listDescription = $this->ledgerDefineRecord->list_description;
         $this->detailDescription = $this->ledgerDefineRecord->detail_description;
         $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
-
-        $this->workflow_enabled = (bool) $this->ledgerDefineRecord->workflow_enabled;
+        $this->confidentialityLevel = $this->ledgerDefineRecord->confidentiality_level ?? 'public';
+        $this->confidentialityScopes = ConfidentialityLevelService::buildScopeChoices(
+            $this->ledgerDefineRecord->confidentiality_scopes
+        );
 
         $this->initializeFolderTree($this->parentFolderId);
     }
 
     public function store(): void
     {
+        $this->validate();
+
         // --- ステップ5: ワークフロー設定変更時の処理 ---
         $originalWorkflowEnabled = (bool) $this->ledgerDefineRecord->getOriginal('workflow_enabled');
         $newWorkflowEnabled = $this->workflow_enabled;
@@ -117,6 +154,10 @@ class Edit extends BaseLivewireComponent
         $this->ledgerDefineRecord->list_description = $this->listDescription;
         $this->ledgerDefineRecord->detail_description = $this->detailDescription;
         $this->ledgerDefineRecord->workflow_enabled = $this->workflow_enabled;
+        $this->ledgerDefineRecord->confidentiality_level = $this->confidentialityLevel;
+        $this->ledgerDefineRecord->confidentiality_scopes = ConfidentialityLevelService::parseScopeChoices(
+            $this->confidentialityScopes
+        );
         $this->ledgerDefineRecord->modifier_id = auth()->id();
         $this->ledgerDefineRecord->save();
         $this->success(__('ledger.has_been_updated'));

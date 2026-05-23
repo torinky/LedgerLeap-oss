@@ -1,7 +1,7 @@
 # マイポータルから台帳一覧へのフォルダ遷移計画
 
 **日付:** 2026-04-27  
-**ステータス:** 計画段階
+**ステータス:** 計画段階  
 **対象:** tenant 側マイポータル、フォルダツリー、台帳一覧のフォルダ選択状態
 
 ## 1. 目的
@@ -60,6 +60,14 @@
 - 文字サイズとアイコンサイズは固定の小サイズに閉じ込めず、desktop で読める標準サイズを優先する
 - 専門的な内輪表現より、一般的な業務画面で多くの人が理解しやすい最大公約数的な見せ方を採る
 - 1 画面で多くの情報を扱う場合でも、主役は 1 つ、準主役は 1〜2 個に絞る
+
+### 3.5 類似サービス調査からの示唆
+
+- Google Drive の Home は、最近開いたファイルや共有・編集済みの対象を先に出し、必要に応じて検索やフィルタへ逃がす構成になっている
+- Google Drive では Starred が「よく使うものの即時入口」として機能しており、マイポータルにもお気に入りや頻出フォルダの短い導線を置く余地がある
+- Drive の Home は詳細一覧そのものではなく、次に開く対象を選ぶための入口として設計されているため、ポータルも作業一覧の代替にしない方針と整合する
+- Material Design 3 の cards / tooltips / badges の分担は、portal で「何が重要か」を先に伝えてから補足情報に分ける構成に向いている
+- 以上を踏まえると、追加候補は「最近使ったフォルダ」「よく使うフォルダ」「検索への近道」だが、まずは overview の役割を壊さない範囲で採用可否を決める
 
 ## 4. ペルソナ別の設計要件
 
@@ -137,9 +145,11 @@
 ### 6.5 GitHub 追跡
 
 - 親 issue: `#176`
-- Sprint 1: `#177`
-- Sprint 2: `#178`
-- Sprint 3: `#179`
+- Sprint 1: `#178`
+- Sprint 2: `#179`
+- Sprint 3: `#177`
+
+> 実際の GitHub issue 番号は、Sprint 1 = #178、Sprint 2 = #179、Sprint 3 = #177。
 
 ### 6.6 Sprint 1 完了メモ
 
@@ -150,7 +160,7 @@
 - 文字サイズとアイコンサイズは、desktop で読める標準寄りのサイズ感を優先する方針で確定した
 - フォルダツリーから台帳一覧への遷移は、既存の `currentFolderId` / `selectedFolderIds` 契約を再利用する方針で確定した
 - Sprint 2 以降は、この設計方針を前提に view と state handoff を実装する
-- 2026-04-27 時点で Sprint 1 は完了済み
+- Sprint 1 の完了報告は [こちら](2026-04-27_my-portal-folder-handoff-sprint1-completion.md)
 
 ## 7. 関連ファイル
 
@@ -210,4 +220,33 @@
 
 1. フォルダ行そのものを遷移対象にするか、行内 CTA を置くか
 2. 一覧へ遷移するときに、検索語や表示レベルまで引き継ぐかどうか
-3. この計画を実装後の retrospective まで含めて追記するかどうか
+3. 最近使ったフォルダやよく使うフォルダをポータルに置くかどうか
+4. この計画を実装後の retrospective まで含めて追記するかどうか
+
+## 12. イシュー179以外で実施した変更メモ
+
+この計画に含まれる `#179` の実装とは別に、同じ流れで発生した周辺修正を整理しておく。
+
+### 12.1 通知まわりを tenant 非依存に戻した
+
+- `routes/web.php` に `notifications.index`、`notifications.settings`、`workflow.pending`、`activity-log` を戻した。
+- `routes/tenant.php` から notifications 系ルートを外した。
+- ナビゲーションの通知ボタンと設定リンクを global route に揃えた。
+- 理由: 通知は tenant ごとに分ける想定ではなく、どの tenant からでも同じ導線で参照できる状態を維持する必要があったため。
+
+### 12.2 グローバル通知ページの台帳リンクを修正した
+
+- `app/Livewire/Workflow/OtherRelatedTasksList.php` で task データに `tenant_id` を持たせた。
+- `resources/views/livewire/workflow/other-related-tasks-list.blade.php` と `resources/views/livewire/workflow/pending-list.blade.php` で、`ledger.show` 生成時に `tenant_id` を優先するようにした。
+- 理由: global な通知ページでは `tenant()` が使えないため、通知元の tenant_id を使わないと台帳詳細へ正しく遷移できなかったため。
+
+### 12.3 ポータルのホバーちらつきを抑えた
+
+- `resources/views/livewire/my-portal.blade.php` の詳細フォルダツリーを `wire:ignore` で包んだ。
+- `resources/views/components/folder/tree.blade.php` に `showPermissionTooltip` を追加し、portal では permission tooltip を無効化して静的な `title` 表示に切り替えた。
+- 理由: DaisyUI の tooltip が hover のたびに DOM の見え方を揺らし、アコーディオン全体がフラッシュして見える状態を起こしていたため。
+
+### 12.4 検証結果
+
+- `./vendor/bin/sail test tests/Feature/Http/Controllers/NotificationControllerTest.php tests/Feature/Livewire/Notifications/IconTest.php tests/Feature/Livewire/Workflow/OtherRelatedTasksListAdditionalTest.php tests/Feature/Livewire/MyPortalTest.php` を通過した。
+- 理由: ルートの戻し、通知ページの台帳リンク修正、ポータルの hover ちらつき対策が、それぞれ回帰せずに動くことを固定するため。

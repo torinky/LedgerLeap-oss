@@ -13,6 +13,8 @@ return [
     'delete.confirm' => '削除します',
     'new' => '新規ロール',
     'name' => '名前',
+    'abbreviation' => '略称',
+    'abbreviation_placeholder' => '正式名を省略した表記（例：管理者）',
     'permission' => '権限',
     'permissions' => '権限',
     'guard_name' => '認証名',

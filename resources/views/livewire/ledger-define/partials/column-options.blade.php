@@ -2,8 +2,8 @@
 
 {{-- File Upload Section --}}
 @if(isset($column['file']['path']))
-    <a href="{{ asset('storage/'.$column['file']['path']) }}" target="_blank">
-        <img src="{{ asset('storage/thumbnails/'.$column['file']['path']) }}" alt="{{ $column['file']['name'] }}">
+    <a href="{{ $column['file']['url'] ?? '#' }}" target="_blank">
+        <img src="{{ $column['file']['thumbnail_url'] ?? ($column['file']['url'] ?? '#') }}" alt="{{ $column['file']['name'] }}">
     </a>
     <label for="delete-file-modal-{{$column['id']}}" class="btn btn-sm tooltip"
            data-tip="{{__('ledger.column.delete_file')}}">
@@ -14,7 +14,7 @@
             <div>
                 {{-- 背景画像削除確認モーダル --}}
                 <input type="checkbox" id="delete-file-modal-{{$column['id']}}" class="modal-toggle hidden"/>
-                <div class="modal !z-[9999]" role="dialog">
+                <div class="modal z-9999!" role="dialog">
                     <div class="modal-box">
                         <h3 class="font-bold text-lg">{{__('ledger.column.delete_file')}}</h3>
                         <p class="py-4">{{__('ledger.column.delete_file_message', ['name' => $column['name']])}}</p>

@@ -3,9 +3,14 @@
 namespace App\Filament\Resources\UserResource\RelationManagers;
 
 use App\Models\User;
+use Filament\Actions\AttachAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
@@ -34,10 +39,10 @@ class OrganizationRelationManager extends RelationManager
         return __('ledger.organization');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         // この form メソッドは EditAction で使用されます
-        return $form
+        return $schema
             ->schema([
                 // EditAction のフォームでは Select は不要なため、is_primary のみに絞ります
                 Forms\Components\Toggle::make('is_primary')
@@ -84,9 +89,9 @@ class OrganizationRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make()
+                AttachAction::make()
                     ->preloadRecordSelect()
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect(),
                         Forms\Components\Toggle::make('is_primary')
                             ->label(__('ledger.organizations.primary'))
@@ -103,7 +108,7 @@ class OrganizationRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                EditAction::make()
                     // afterコールバック内の排他制御ロジックは引き続き必要
                     ->after(function (Model $record, array $data) {
                         if ($data['is_primary']) {
@@ -112,11 +117,11 @@ class OrganizationRelationManager extends RelationManager
                                 ->update(['is_primary' => false]);
                         }
                     }),
-                Tables\Actions\DetachAction::make(),
+                DetachAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make(),
+                BulkActionGroup::make([
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }

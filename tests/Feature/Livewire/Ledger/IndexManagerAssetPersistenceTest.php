@@ -55,6 +55,9 @@ class IndexManagerAssetPersistenceTest extends TestCase
             'title' => 'Root Ledger',
             'folder_id' => $this->folder->id,
         ]);
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     #[Test]

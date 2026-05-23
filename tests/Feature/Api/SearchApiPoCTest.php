@@ -7,9 +7,11 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\Support\TestDatabaseState;
 use Tests\TestCase;
 
@@ -39,7 +41,7 @@ class SearchApiPoCTest extends TestCase
         // 1. テナント作成と初期化（ベストプラクティス）
         // ドメインはテスト間の汚染を避けるためユニーク化する（test.localhost は他テストと競合するため使用禁止）
         $uniqueId = uniqid('', true);
-        $tenant = \App\Models\Tenant::create(['id' => 'test-'.substr(md5($uniqueId), 0, 8)]);
+        $tenant = Tenant::create(['id' => 'test-'.substr(md5($uniqueId), 0, 8)]);
         $fqdn = "poc-{$uniqueId}.localhost";
         $tenant->domains()->create(['domain' => $fqdn]);
 
@@ -65,7 +67,7 @@ class SearchApiPoCTest extends TestCase
         \URL::forceRootUrl(config('app.url'));
 
         // 5. 権限設定
-        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+        app()[PermissionRegistrar::class]->forgetCachedPermissions();
         $permission = Permission::create(['name' => 'view_ledgers', 'guard_name' => 'web']);
         $adminRole = Role::create(['name' => 'admin', 'guard_name' => 'web']);
         $adminRole->givePermissionTo($permission);

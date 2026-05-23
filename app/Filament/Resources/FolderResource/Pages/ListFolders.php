@@ -5,6 +5,15 @@ namespace App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource;
 use App\Models\Folder;
 use Filament\Actions;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
+use Filament\Actions\ViewAction;
 use Filament\Resources\Pages\ListRecords;
 use Filament\Tables;
 use Filament\Tables\Table;
@@ -18,19 +27,21 @@ class ListFolders extends ListRecords
     {
         return [
             Actions\CreateAction::make()
-                ->icon('heroicon-o-plus'),
+                ->icon('heroicon-o-plus')
+                ->url(FolderResource::getUrl('create', FolderResource::tenantContextParameters())),
+            FolderResource::tenantSwitchAction('index'),
             Actions\Action::make('tree_view')
                 ->label(__('ledger.views.tree'))
                 ->color('info')
                 ->icon('heroicon-o-share')
-                ->url(FolderResource::getUrl('tree')),
+                ->url(FolderResource::getUrl('tree', FolderResource::tenantContextParameters())),
         ];
     }
 
     public function table(Table $table): Table
     {
         return $table
-            ->query(fn () => Folder::withDepth()->orderBy('_lft'))
+            ->query(fn () => FolderResource::tenantScopedQuery()->withDepth()->orderBy('_lft'))
             ->columns([
                 Tables\Columns\TextColumn::make('id')
                     ->label('ID')
@@ -101,19 +112,19 @@ class ListFolders extends ListRecords
                     ->preload(),
             ])
             ->actions([
-                //                Tables\Actions\ActionGroup::make([
-                Tables\Actions\ViewAction::make(),
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make(),
-                Tables\Actions\RestoreAction::make(),
+                //                \Filament\Actions\ActionGroup::make([
+                ViewAction::make(),
+                EditAction::make(),
+                DeleteAction::make(),
+                ForceDeleteAction::make(),
+                RestoreAction::make(),
                 //                ]),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
-                    Tables\Actions\ForceDeleteBulkAction::make(),
-                    Tables\Actions\RestoreBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
+                    ForceDeleteBulkAction::make(),
+                    RestoreBulkAction::make(),
                 ]),
             ]);
     }

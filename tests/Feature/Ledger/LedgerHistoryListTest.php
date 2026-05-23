@@ -2,11 +2,14 @@
 
 namespace Tests\Feature\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
+use Stancl\Tenancy\Tenancy;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -26,10 +29,11 @@ class LedgerHistoryListTest extends TestCase
     public function test_component_receives_all_diffs_within_tenant_context(): void
     {
         $this->actingAs(User::factory()->create());
+        tenancy()->initialize($this->getTenant());
 
         $ledger = Ledger::factory()->create([
             'version' => 10, // 意図的に進める
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
         ]);
 
         // 10件の履歴を作成
@@ -40,7 +44,7 @@ class LedgerHistoryListTest extends TestCase
                 'content' => [],
                 'column_define' => [],
                 'version' => $i,
-                'status' => \App\Enums\WorkflowStatus::DRAFT,
+                'status' => WorkflowStatus::DRAFT,
                 'creator_id' => $ledger->creator_id,
                 'modifier_id' => $ledger->modifier_id,
                 'completed_inspector_role_ids' => [],
@@ -57,55 +61,115 @@ class LedgerHistoryListTest extends TestCase
     }
 
     /**
-     * tenant_id が欠落したデータがある場合に、取得漏れが発生することを（負のテストとして）検証し、
-     * 開発者が不整合に気づけるようにする
+     * Livewire の初回描画時に tenant コンテキストが外れていても、
+     * 台帳自身の tenant_id から履歴を復元できることを検証する
      */
-    public function test_component_misses_diffs_with_missing_tenant_id(): void
+    public function test_component_recovers_when_tenant_context_is_missing(): void
     {
         $this->actingAs(User::factory()->create());
+        tenancy()->initialize($this->getTenant());
 
         $ledger = Ledger::factory()->create([
             'version' => 2,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
+            'tenant_id' => $this->getTenant()->id,
         ]);
 
-        // 正当な履歴
-        LedgerDiff::create([
+        $firstDiff = LedgerDiff::create([
             'ledger_id' => $ledger->id,
             'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
             'content' => [],
             'column_define' => [],
             'version' => 1,
-            'status' => \App\Enums\WorkflowStatus::DRAFT,
+            'status' => WorkflowStatus::DRAFT,
             'creator_id' => $ledger->creator_id,
             'modifier_id' => $ledger->modifier_id,
             'completed_inspector_role_ids' => [],
             'completed_approver_role_ids' => [],
         ]);
 
-        // 不整合な履歴 (tenant_id を NULL にする。withoutEventsを使って自動付与を回避)
-        LedgerDiff::withoutEvents(function () use ($ledger) {
-            LedgerDiff::create([
-                'ledger_id' => $ledger->id,
-                'ledger_define_id' => $ledger->ledger_define_id,
-                'content' => [],
-                'column_define' => [],
-                'version' => 2,
-                'tenant_id' => null, // 明示的に NULL
-                'status' => \App\Enums\WorkflowStatus::DRAFT,
-                'creator_id' => $ledger->creator_id,
-                'modifier_id' => $ledger->modifier_id,
-                'completed_inspector_role_ids' => [],
-                'completed_approver_role_ids' => [],
-            ]);
-        });
+        $secondDiff = LedgerDiff::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
+            'content' => [],
+            'column_define' => [],
+            'version' => 2,
+            'status' => WorkflowStatus::DRAFT->value,
+            'creator_id' => $ledger->creator_id,
+            'modifier_id' => $ledger->modifier_id,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+            'created_at' => now(),
+            'updated_at' => now(),
+        ]);
 
-        // 期待値: 1件のみ表示される (不整合データはフィルタリングされる)
-        // このテストが存在することで、将来的に「なぜか表示されない」という問題が起きた際に
-        // テナント隔離の影響であることを示唆できる
+        // tenancy()->end() はTenancyEndedイベントを発火し、CacheTenancyBootstrapper等のrevert()を
+        // トリガーする。これによりCIでは後続のLivewire::test()のDB接続・キャッシュ状態に副作用が
+        // 生じてテストが不安定になる。直接プロパティをリセットすることで、ブートストラッパーの
+        // 副作用を回避しつつ「テナントコンテキストなし」状態を再現する。
+        $tenancy = app(Tenancy::class);
+        $tenancy->initialized = false;
+        $tenancy->tenant = null;
+
+        // tenant コンテキストが空でも、ledger の tenant_id から復元できることを確認する
         Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
-            ->assertViewHas('history', function ($history) {
-                return $history->count() === 1;
+            ->assertViewHas('history', function ($history) use ($firstDiff, $secondDiff) {
+                return $history->count() === 2
+                    && $history->contains('id', $firstDiff->id)
+                    && $history->contains('id', $secondDiff->id);
+            });
+    }
+
+    public function test_component_recovers_when_wrong_tenant_is_still_initialized(): void
+    {
+        $this->actingAs(User::factory()->create());
+        tenancy()->initialize($this->getTenant());
+
+        $ledger = Ledger::factory()->create([
+            'version' => 2,
+            'status' => WorkflowStatus::DRAFT,
+            'tenant_id' => $this->getTenant()->id,
+        ]);
+
+        $firstDiff = LedgerDiff::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
+            'content' => [],
+            'column_define' => [],
+            'version' => 1,
+            'status' => WorkflowStatus::DRAFT,
+            'creator_id' => $ledger->creator_id,
+            'modifier_id' => $ledger->modifier_id,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+        ]);
+
+        $secondDiff = LedgerDiff::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledger->ledger_define_id,
+            'tenant_id' => $ledger->tenant_id,
+            'content' => [],
+            'column_define' => [],
+            'version' => 2,
+            'status' => WorkflowStatus::DRAFT,
+            'creator_id' => $ledger->creator_id,
+            'modifier_id' => $ledger->modifier_id,
+            'completed_inspector_role_ids' => [],
+            'completed_approver_role_ids' => [],
+        ]);
+
+        $foreignTenantId = 'tenant_history_foreign_'.uniqid();
+        $foreignTenant = Tenant::factory()->create(['id' => $foreignTenantId]);
+        tenancy()->initialize($foreignTenant);
+
+        Livewire::test(LedgerHistoryManager::class, ['ledgerId' => $ledger->id])
+            ->assertViewHas('history', function ($history) use ($firstDiff, $secondDiff) {
+                return $history->count() === 2
+                    && $history->contains('id', $firstDiff->id)
+                    && $history->contains('id', $secondDiff->id);
             });
     }
 }

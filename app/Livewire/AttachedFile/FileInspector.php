@@ -2,16 +2,30 @@
 
 namespace App\Livewire\AttachedFile;
 
+use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Helpers\SearchHelper;
+use App\Jobs\Ledger\GenerateThumbnail;
+use App\Jobs\Ledger\RetryVlmProcessingJob;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Livewire\Traits\LogPerformance;
 use App\Models\AttachedFile;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\User;
+use App\Services\Ledger\MockAttachmentService;
 use App\Services\PermissionService;
+use App\Services\UserService;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\On;
+use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
+use Stancl\Tenancy\Tenancy;
 
 class FileInspector extends BaseLivewireComponent
 {
@@ -40,11 +54,15 @@ class FileInspector extends BaseLivewireComponent
 
     public bool $isLoading = false;
 
+    #[Url(as: 'file')]
     public ?int $fileId = null;
 
     public ?AttachedFile $file = null;
 
     public string $selectedTab = 'content';
+
+    /** @var array<int, string> */
+    public array $loadedTabs = [];
 
     public ?string $activeSource = null;
 
@@ -54,6 +72,8 @@ class FileInspector extends BaseLivewireComponent
 
     // キャッシュ用プロパティ（WBS 5.2.1）
     protected ?string $cachedPreviewText = null;
+
+    protected ?string $cachedPreviewBaseText = null;
 
     protected ?bool $cachedHasKeywordHit = null;
 
@@ -69,6 +89,16 @@ class FileInspector extends BaseLivewireComponent
 
     public ?string $mockCreatorName = null;
 
+    public array $previewState = [
+        'showPreview' => false,
+        'isImage' => false,
+        'isPdf' => false,
+        'shouldUseThumbnail' => false,
+        'thumbnailUrl' => null,
+        'originalUrl' => null,
+        'previewUrl' => null,
+    ];
+
     public bool $isInLedgerDetailPage = false; // 台帳詳細画面内かどうか
 
     public function mount(): void
@@ -77,6 +107,13 @@ class FileInspector extends BaseLivewireComponent
         $this->open = false;
         $this->isLoading = false;
         $this->selectedTab = 'content'; // デフォルトは「内容」タブ
+        if (empty($this->loadedTabs)) {
+            $this->loadedTabs = [$this->selectedTab];
+        }
+
+        if ($this->fileId !== null) {
+            $this->openInspector($this->fileId);
+        }
     }
 
     /**
@@ -119,6 +156,7 @@ class FileInspector extends BaseLivewireComponent
     protected function clearPreviewCache(): void
     {
         $this->cachedPreviewText = null;
+        $this->cachedPreviewBaseText = null;
         $this->cachedHasKeywordHit = null;
         $this->cachedSearchKeyword = null;
         $this->cachedActiveSource = null;
@@ -164,6 +202,8 @@ class FileInspector extends BaseLivewireComponent
             'updated_at' => now()->subDays(2),
             'vlm_confidence' => $data['mock_confidence'] ?? $data['confidence'] ?? 0.0,
             'vlm_markdown' => $data['mock_preview_text'] ?? $data['preview_text'] ?? null,
+            'vlm_structured_data' => $data['mock_vlm_structured_data'] ?? $data['vlm_structured_data'] ?? null,
+            'vlm_model' => $data['vlm_model'] ?? null,
             'finalized_source' => strtolower($data['mock_source'] ?? $data['source'] ?? 'tika'),
             'ocr_processed_at' => $data['ocr_processed_at'] ?? null,
             'tika_processed_at' => ($data['created_at'] ?? now()->subDays(10))->addSeconds(5),
@@ -180,7 +220,7 @@ class FileInspector extends BaseLivewireComponent
 
         // Tikaメタデータをモックとしてシミュレート
         if (isset($data['mock_metadata'])) {
-            $this->file->setRelation('ledger', (new \App\Models\Ledger)->forceFill([
+            $this->file->setRelation('ledger', (new Ledger)->forceFill([
                 'content_attached' => [
                     $this->file->column_id => [
                         $this->file->hashedbasename => [
@@ -190,6 +230,8 @@ class FileInspector extends BaseLivewireComponent
                 ],
             ]));
         }
+
+        $this->preparePreviewState();
     }
 
     #[On('open-file-inspector')]
@@ -197,10 +239,12 @@ class FileInspector extends BaseLivewireComponent
     {
         $id = null;
         $search = null;
+        $column_id = null;
 
         if (is_array($payload)) {
             $id = $payload['id'] ?? null;
             $search = $payload['search'] ?? null;
+            $column_id = $payload['column_id'] ?? null;
             // column_idは送信されても使用しない（AttachedFile IDは一意のため）
         } else {
             $id = $payload;
@@ -210,7 +254,14 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        \Illuminate\Support\Facades\Log::info('FileInspector: openInspector called', [
+        if (blank($search)) {
+            $search = request()->query('search')
+                ?? request()->query('highlight')
+                ?? request()->query('q')
+                ?? null;
+        }
+
+        Log::info('FileInspector: openInspector called', [
             'id' => $id,
             'search' => $search,
         ]);
@@ -219,12 +270,24 @@ class FileInspector extends BaseLivewireComponent
         $this->searchKeyword = $search ?? '';
         $this->file = null;
         $this->isLoading = true;
+        $this->selectedTab = 'content';
+        $this->loadedTabs = [$this->selectedTab];
+
+        $this->dispatch(
+            'file-inspector-selection-changed',
+            selectedFileId: $this->fileId,
+            selectedColumnId: $column_id,
+            isOpen: true,
+        );
 
         // 実データが存在するかチェック
-        $realFileExists = AttachedFile::where('id', $id)->exists();
+        $realFileExists = AttachedFile::find($id) !== null;
 
         // 実データが存在する場合は実データを優先、存在しない場合でモックモードが有効なら場合モックデータを使用
-        if (! $realFileExists && $id >= 10001 && $id <= 10012 && \App\Services\Ledger\MockAttachmentService::isEnabled()) {
+        if (! $realFileExists
+            && $id >= 10001
+            && $id <= 10012
+            && MockAttachmentService::isEnabled()) {
             // 開発環境でローディングUIを確認できるように僅かな遅延を入れる
             if (app()->environment('local')) {
                 usleep(800000); // 0.8秒
@@ -246,16 +309,16 @@ class FileInspector extends BaseLivewireComponent
     public function loadData(int $id): void
     {
         try {
-            /** @var \App\Models\User|null $currentUser */
+            /** @var User|null $currentUser */
             $currentUser = auth()->user();
             $currentTenant = tenant();
 
-            \Illuminate\Support\Facades\Log::info('FileInspector: loadData started', [
+            Log::info('FileInspector: loadData started', [
                 'id' => $id,
                 'user_id' => $currentUser?->id,
                 'user_email' => $currentUser?->email,
                 'tenant_id' => $currentTenant?->id ?? tenant('id'),
-                'tenancy_initialized' => app(\Stancl\Tenancy\Tenancy::class)->initialized,
+                'tenancy_initialized' => app(Tenancy::class)->initialized,
             ]);
 
             $this->file = AttachedFile::with([
@@ -283,7 +346,7 @@ class FileInspector extends BaseLivewireComponent
                 return;
             }
 
-            \Illuminate\Support\Facades\Log::info('FileInspector: File loaded', [
+            Log::info('FileInspector: File loaded', [
                 'file_id' => $this->file->id,
                 'has_ledger' => $this->file->ledger !== null,
             ]);
@@ -291,7 +354,7 @@ class FileInspector extends BaseLivewireComponent
             // 権限チェック: LedgerPolicy::view を使用
             // AttachedFilePolicyが空実装のため、親である台帳の権限を確認する
             if (! $this->file->ledger) {
-                \Illuminate\Support\Facades\Log::error('FileInspector: Ledger relation is null');
+                Log::error('FileInspector: Ledger relation is null');
                 $this->error(__('ledger.vlm.result_not_found'));
 
                 if (app()->runningUnitTests()) {
@@ -311,12 +374,14 @@ class FileInspector extends BaseLivewireComponent
 
             $this->open = true;
             $this->isLoading = false;
-            \Illuminate\Support\Facades\Log::info('FileInspector: Data loaded successfully', [
+            Log::info('FileInspector: Data loaded successfully', [
                 'file_id' => $id,
                 'active_source' => $this->activeSource,
             ]);
+
+            $this->preparePreviewState();
         } catch (\Exception $e) {
-            \Illuminate\Support\Facades\Log::error('FileInspector loadData failed', [
+            Log::error('FileInspector loadData failed', [
                 'id' => $id,
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString(),
@@ -336,7 +401,7 @@ class FileInspector extends BaseLivewireComponent
      */
     private function loadMockData(int $id): void
     {
-        $mockFiles = \App\Services\Ledger\MockAttachmentService::getMockFiles();
+        $mockFiles = MockAttachmentService::getMockFiles();
         $data = null;
         foreach ($mockFiles as $f) {
             if ($f['id'] == $id) {
@@ -354,7 +419,7 @@ class FileInspector extends BaseLivewireComponent
 
         // 利用可能な最初のソースを自動選択
         $this->activeSource = $this->selectFirstAvailableSource();
-        \Illuminate\Support\Facades\Log::info('FileInspector: Mock data loaded', [
+        Log::info('FileInspector: Mock data loaded', [
             'id' => $this->file->id,
             'filename' => $this->file->filename,
             'active_source' => $this->activeSource,
@@ -367,11 +432,28 @@ class FileInspector extends BaseLivewireComponent
         $this->isLoading = false;
         $this->fileId = null;
         $this->file = null;
+        $this->loadedTabs = [];
         $this->mockData = [];
         $this->activeSource = null;
         $this->searchKeyword = '';
         $this->isExpanded = false;
+        $this->previewState = [
+            'showPreview' => false,
+            'isImage' => false,
+            'isPdf' => false,
+            'shouldUseThumbnail' => false,
+            'thumbnailUrl' => null,
+            'originalUrl' => null,
+            'previewUrl' => null,
+        ];
         $this->clearPreviewCache(); // WBS 5.2.1: キャッシュクリア
+
+        $this->dispatch(
+            'file-inspector-selection-changed',
+            selectedFileId: null,
+            selectedColumnId: null,
+            isOpen: false,
+        );
     }
 
     /**
@@ -393,19 +475,132 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(
             $this->file->hashedbasename,
             $this->file->tenant_id
         );
 
-        // サムネイルが存在しない場合は生成ジョブをディスパッチ
-        if (! \Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
-            \App\Jobs\Ledger\GenerateThumbnail::dispatch($this->file->id);
-            \Illuminate\Support\Facades\Log::info('FileInspector: Dispatched thumbnail generation job', [
+        // サムネイルが存在しない場合は、処理中状態へ遷移できたときだけ生成ジョブをディスパッチ
+        if (! Storage::disk('public')->exists($thumbnailPath)) {
+            if ($this->file->status === AttachedFileStatus::OPTIMIZING) {
+                Log::info(
+                    'FileInspector: Thumbnail generation already in progress; skipping dispatch',
+                    [
+                        'file_id' => $this->file->id,
+                        'filename' => $this->file->filename,
+                    ]
+                );
+
+                return;
+            }
+
+            $this->file->update(['status' => AttachedFileStatus::OPTIMIZING->value]);
+
+            GenerateThumbnail::dispatch($this->file->id);
+            Log::info('FileInspector: Dispatched thumbnail generation job', [
                 'file_id' => $this->file->id,
                 'filename' => $this->file->filename,
             ]);
         }
+    }
+
+    protected function getFileRouteUrl(array $extraQuery = [], bool $forceDownload = false): ?string
+    {
+        if (! $this->file) {
+            return null;
+        }
+
+        $tenantId = $this->resolveTenantId($this->file->tenant_id);
+        if (! $tenantId) {
+            return null;
+        }
+
+        $parameters = array_merge([
+            'tenant' => $tenantId,
+            'attachedFile' => $this->file->id,
+        ], $extraQuery);
+
+        if ($forceDownload) {
+            $parameters['original'] = true;
+        }
+
+        return route('file.download', $parameters);
+    }
+
+    protected function getThumbnailRouteUrl(): ?string
+    {
+        if (! $this->file || $this->isMockFile()) {
+            return null;
+        }
+
+        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
+        if (! str_starts_with($mime, 'image/') || ! $this->file->hashedbasename) {
+            return null;
+        }
+
+        $thumbnailPath = AttachedFilePathHelper::getThumbnailStoragePath(
+            $this->file->hashedbasename,
+            $this->file->tenant_id
+        );
+
+        if (! Storage::disk('public')->exists($thumbnailPath)) {
+            return null;
+        }
+
+        return $this->getFileRouteUrl(['thumbnail' => true]);
+    }
+
+    protected function preparePreviewState(): void
+    {
+        if (! $this->file) {
+            $this->previewState = [
+                'showPreview' => false,
+                'isImage' => false,
+                'isPdf' => false,
+                'shouldUseThumbnail' => false,
+                'thumbnailUrl' => null,
+                'originalUrl' => null,
+                'previewUrl' => null,
+            ];
+
+            return;
+        }
+
+        $mime = strtolower((string) ($this->file->original_mime_type ?? $this->file->mime ?? ''));
+        $isImage = str_starts_with($mime, 'image/');
+        $isPdf = $this->isPdf();
+        $showPreview = $isImage || $isPdf;
+        $shouldUseThumbnail = ! $this->isMockFile() && (($this->file->size ?? 0) >= 1048576);
+
+        $thumbnailUrl = $this->getThumbnailRouteUrl();
+
+        $originalUrl = null;
+        $previewUrl = null;
+
+        if ($showPreview) {
+            if ($this->isMockFile()) {
+                if ($isImage) {
+                    $originalUrl = $this->getMockImagePreviewUrl();
+                } elseif ($isPdf) {
+                    $originalUrl = '#pdf-preview';
+                }
+
+                $previewUrl = $originalUrl;
+            } else {
+                $originalUrl = $this->getFileRouteUrl();
+                $previewUrl = $thumbnailUrl ?: $originalUrl;
+            }
+        }
+
+        $this->previewState = [
+            'showPreview' => $showPreview,
+            'isImage' => $isImage,
+            'isPdf' => $isPdf,
+            'shouldUseThumbnail' => $shouldUseThumbnail,
+            'thumbnailUrl' => $thumbnailUrl,
+            'originalUrl' => $originalUrl,
+            'previewUrl' => $previewUrl,
+        ];
     }
 
     /**
@@ -418,6 +613,23 @@ class FileInspector extends BaseLivewireComponent
 
         // Alpine.jsの状態をリセットするイベントを発行
         $this->dispatch('source-switched');
+    }
+
+    public function updatedSelectedTab(string $tab): void
+    {
+        $this->markTabLoaded($tab);
+    }
+
+    protected function markTabLoaded(string $tab): void
+    {
+        if (! in_array($tab, $this->loadedTabs, true)) {
+            $this->loadedTabs[] = $tab;
+        }
+    }
+
+    public function isTabLoaded(string $tab): bool
+    {
+        return in_array($tab, $this->loadedTabs, true);
     }
 
     /**
@@ -462,7 +674,7 @@ class FileInspector extends BaseLivewireComponent
             return;
         }
 
-        \App\Jobs\Ledger\RetryVlmProcessingJob::dispatch($this->file);
+        RetryVlmProcessingJob::dispatch($this->file);
 
         $this->success(__('ledger.file_inspector.messages.vlm_retry_started'));
 
@@ -499,7 +711,7 @@ class FileInspector extends BaseLivewireComponent
 
         // その他の画面からの場合は、別タブで開くためのイベントをディスパッチ
         $url = route('ledger.show', [
-            'tenant' => tenant('id'),
+            'tenant' => $this->resolveTenantId($this->file->tenant_id),
             'ledgerId' => $this->file->ledger_id,
             'tab' => 'permissions',
         ]);
@@ -549,7 +761,7 @@ class FileInspector extends BaseLivewireComponent
         }
 
         // 管理者権限（manage_attachments）
-        $hasManageAttachment = \Illuminate\Support\Facades\Gate::allows('manage_attachments');
+        $hasManageAttachment = Gate::allows('manage_attachments');
 
         return [
             'read' => Gate::allows('view', $ledger),
@@ -574,7 +786,7 @@ class FileInspector extends BaseLivewireComponent
         }
 
         $params = [
-            'tenant' => tenant('id'),
+            'tenant' => $this->resolveTenantId($this->file->tenant_id),
             'ledgerId' => $this->file->ledger_id,
             'tab' => 'permissions',
         ];
@@ -591,7 +803,7 @@ class FileInspector extends BaseLivewireComponent
      * アクセス可能なロールと権限のリストを取得
      */
     #[Computed]
-    public function accessRoles(): \Illuminate\Support\Collection
+    public function accessRoles(): Collection
     {
         if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
             return collect();
@@ -607,7 +819,7 @@ class FileInspector extends BaseLivewireComponent
      * アクセス可能な組織と権限のリストを取得
      */
     #[Computed]
-    public function accessOrganizations(): \Illuminate\Support\Collection
+    public function accessOrganizations(): Collection
     {
         if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
             return collect();
@@ -620,7 +832,7 @@ class FileInspector extends BaseLivewireComponent
     }
 
     #[Computed]
-    public function accessUsers(): \Illuminate\Support\Collection
+    public function accessUsers(): Collection
     {
         if (! $this->file || $this->isMockFile() || ! $this->file->ledger) {
             return collect();
@@ -645,16 +857,33 @@ class FileInspector extends BaseLivewireComponent
         return $perms[$action] ?? false;
     }
 
+    public function requestPreviewText(string $purpose = 'copy'): void
+    {
+        if (! $this->file) {
+            $this->dispatch('preview-text-ready', purpose: $purpose, text: '', filename: null);
+
+            return;
+        }
+
+        $text = $this->getPreviewText(false) ?? '';
+
+        $this->dispatch('preview-text-ready',
+            purpose: $purpose,
+            text: $text,
+            filename: $this->file->original_filename ?? $this->file->filename ?? 'preview'
+        );
+    }
+
     public function getFolderPermission(): ?string
     {
-        /** @var \App\Models\User|null $user */
+        /** @var User|null $user */
         $user = auth()->user();
         if (! $user || ! $this->file || ! $this->file->ledger?->define?->folder || $this->isMockFile()) {
             return null;
         }
-        /** @var \App\Models\Folder|null $folder */
+        /** @var Folder|null $folder */
         $folder = $this->file->ledger->define->folder;
-        $userService = app(\App\Services\UserService::class);
+        $userService = app(UserService::class);
 
         if ($userService->isManageableFolderForUser($user, $folder)) {
             return 'admin';
@@ -696,13 +925,52 @@ class FileInspector extends BaseLivewireComponent
 
     public function getPreviewText(bool $withHighlight = true): ?string
     {
-        $startTime = microtime(true);
 
         if (! $this->file) {
             return null;
         }
 
-        // 1. テキスト取得
+        $text = $this->getPreviewBaseText($withHighlight);
+
+        if (! $text) {
+            return null;
+        }
+
+        // 2. 段階的ロード（大規模テキスト対応）: とりあえず先頭10,000文字で制限
+        $limit = 10000;
+        $isTruncated = ! $this->isExpanded && mb_strlen($text) > $limit;
+        if ($isTruncated && $withHighlight) {
+            $text = mb_substr($text, 0, $limit)."\n\n... (テキストが長いため省略されました。全表示ボタンで確認できます) ...";
+        }
+
+        // 3. ハイライト処理 (HTML出力用のみ)
+        if ($withHighlight && ! empty($this->searchKeyword)) {
+            $keywords = SearchHelper::extractKeywords($this->searchKeyword);
+
+            if (! empty($keywords)) {
+                // vlm (Markdown) と structured (JSON) の場合はエスケープせず、それ以外はエスケープしてハイライト
+                $shouldEscape = ! in_array($this->activeSource, ['vlm', 'structured']);
+                $text = SearchHelper::highlight($text, $keywords, 'bg-yellow-200 text-black px-0.5 rounded', $shouldEscape);
+            }
+        }
+
+        if ($withHighlight) {
+            $this->cachedPreviewText = $text;
+            $this->cachedSearchKeyword = $this->searchKeyword;
+            $this->cachedActiveSource = $this->activeSource;
+        }
+
+        return $text;
+    }
+
+    protected function getPreviewBaseText($withHighlight): ?string
+    {
+        $startTime = microtime(true);
+
+        if ($this->cachedPreviewBaseText !== null && $this->cachedActiveSource === $this->activeSource) {
+            return $this->cachedPreviewBaseText;
+        }
+
         if ($this->isMockFile()) {
             // モックデータの場合はソース固有のテキストがあれば優先
             $baseText = $this->mockData['mock_preview_text'] ?? '';
@@ -711,7 +979,7 @@ class FileInspector extends BaseLivewireComponent
                 'ocr' => $this->mockData['mock_ocr_text'] ?? ("【文字認識結果】\n".$baseText),
                 'tika' => $this->mockData['mock_tika_text'] ?? ("【システム抽出結果】\n".$baseText),
                 'structured' => isset($this->mockData['mock_vlm_structured_data'])
-                    ? json_encode($this->mockData['mock_vlm_structured_data'], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    ? collect($this->mockData['mock_vlm_structured_data'])->toJson(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                     : null,
                 default => $baseText,
             };
@@ -720,7 +988,7 @@ class FileInspector extends BaseLivewireComponent
                 'vlm' => $this->file->vlm_markdown,
                 'ocr', 'tika' => $this->file->getOcrTikaFormattedText($this->activeSource),
                 'structured' => $this->file->vlm_structured_data
-                    ? json_encode($this->file->vlm_structured_data, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+                    ? collect($this->file->vlm_structured_data)->toJson(JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
                     : null,
                 default => null,
             };
@@ -728,7 +996,7 @@ class FileInspector extends BaseLivewireComponent
 
         if (! $text) {
             $duration = (microtime(true) - $startTime) * 1000;
-            \Illuminate\Support\Facades\Log::info('[FileInspector Performance] getPreviewText (no text)', [
+            Log::info('[FileInspector Performance] getPreviewText (no text)', [
                 'duration_ms' => round($duration, 2),
                 'source' => $this->activeSource,
             ]);
@@ -867,7 +1135,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * 現在表示中のテキストに検索キーワードが含まれているか（キャッシング対応 WBS 5.2.1）
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function hasKeywordHit(): bool
     {
         $startTime = microtime(true);
@@ -882,7 +1150,7 @@ class FileInspector extends BaseLivewireComponent
             $this->cachedActiveSource === $this->activeSource) {
 
             $duration = (microtime(true) - $startTime) * 1000;
-            \Illuminate\Support\Facades\Log::info('[FileInspector Performance] hasKeywordHit (cache hit)', [
+            Log::info('[FileInspector Performance] hasKeywordHit (cache hit)', [
                 'duration_ms' => round($duration, 2),
                 'result' => $this->cachedHasKeywordHit,
             ]);
@@ -910,7 +1178,7 @@ class FileInspector extends BaseLivewireComponent
         $this->cachedActiveSource = $this->activeSource;
 
         $duration = (microtime(true) - $startTime) * 1000;
-        \Illuminate\Support\Facades\Log::info('[FileInspector Performance] hasKeywordHit (cache miss)', [
+        Log::info('[FileInspector Performance] hasKeywordHit (cache miss)', [
             'duration_ms' => round($duration, 2),
             'text_length' => mb_strlen($text),
             'keywords_count' => count($keywords),
@@ -928,7 +1196,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * プレビューテキストを取得（computed property）
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function previewText(): ?string
     {
         return $this->getPreviewText(true);
@@ -937,7 +1205,7 @@ class FileInspector extends BaseLivewireComponent
     /**
      * テキストが長すぎて展開ボタンが必要か判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function canExpand(): bool
     {
         $plainText = $this->getPreviewText(false);
@@ -948,16 +1216,45 @@ class FileInspector extends BaseLivewireComponent
     /**
      * ファイルがプレビュー可能か判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function showPreview(): bool
     {
         return $this->isImage() || $this->isPdf();
     }
 
     /**
+     * 利用可能な取得形式を返す
+     */
+    #[Computed]
+    public function availableFormats(): array
+    {
+        if (! $this->file) {
+            return ['text'];
+        }
+
+        $formats = ['text'];
+        $mime = strtolower((string) ($this->file->original_mime_type ?? $this->file->mime ?? ''));
+
+        if (! empty($this->file->vlm_markdown)) {
+            $formats[] = 'markdown';
+        }
+
+        if ($this->isStructuredMimeType($mime) || ! empty($this->file->vlm_structured_data)) {
+            $formats[] = 'structured';
+            $formats[] = 'json';
+        }
+
+        if ($this->isVisualMimeType($mime)) {
+            $formats[] = 'visual';
+        }
+
+        return array_values(array_unique($formats));
+    }
+
+    /**
      * ファイルが画像か判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function isImage(): bool
     {
         if (! $this->file) {
@@ -971,21 +1268,34 @@ class FileInspector extends BaseLivewireComponent
     /**
      * ファイルがPDFか判定
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function isPdf(): bool
     {
         if (! $this->file) {
             return false;
         }
-        $mime = $this->file->original_mime_type ?? $this->file->mime ?? '';
 
-        return $mime === 'application/pdf';
+        $mime = strtolower((string) ($this->file->original_mime_type ?? $this->file->mime ?? ''));
+        $filename = strtolower((string) ($this->file->original_filename ?? $this->file->filename ?? ''));
+
+        return in_array($mime, ['application/pdf', 'application/x-pdf'], true)
+            || str_ends_with($filename, '.pdf');
+    }
+
+    private function isVisualMimeType(string $mime): bool
+    {
+        return str_starts_with($mime, 'image/') || $mime === 'application/pdf';
+    }
+
+    private function isStructuredMimeType(string $mime): bool
+    {
+        return $mime === 'application/json';
     }
 
     /**
      * サムネイルを使用すべきか判定（1MB以上の場合）
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function shouldUseThumbnail(): bool
     {
         if (! $this->file || $this->isMockFile()) {
@@ -999,29 +1309,16 @@ class FileInspector extends BaseLivewireComponent
     /**
      * サムネイル用のURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function thumbnailUrl(): ?string
     {
-        if (! $this->file || $this->isMockFile()) {
-            return null;
-        }
-
-        $thumbnailPath = \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
-            $this->file->hashedbasename,
-            $this->file->tenant_id
-        );
-
-        if (\Illuminate\Support\Facades\Storage::disk('public')->exists($thumbnailPath)) {
-            return \Illuminate\Support\Facades\Storage::disk('public')->url($thumbnailPath);
-        }
-
-        return null;
+        return $this->getThumbnailRouteUrl();
     }
 
     /**
      * オリジナルファイルのURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function originalUrl(): ?string
     {
         if (! $this->file) {
@@ -1032,17 +1329,26 @@ class FileInspector extends BaseLivewireComponent
             return $this->previewUrl;
         }
 
-        if (! $this->file->path) {
+        return $this->getFileRouteUrl();
+    }
+
+    /**
+     * ダウンロード用のURLを取得
+     */
+    #[Computed]
+    public function downloadUrl(): ?string
+    {
+        if (! $this->file || $this->isMockFile()) {
             return null;
         }
 
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+        return $this->getFileRouteUrl([], true);
     }
 
     /**
      * プレビュー用のURLを取得
      */
-    #[\Livewire\Attributes\Computed]
+    #[Computed]
     public function previewUrl(): ?string
     {
         if (! $this->file) {
@@ -1057,27 +1363,31 @@ class FileInspector extends BaseLivewireComponent
         // モックデータの場合
         if ($this->isMockFile()) {
             if ($this->isImage()) {
-                return 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.
-                    urlencode($this->file->original_filename ?? 'Image');
-            } elseif ($this->isPdf()) {
+                return $this->getMockImagePreviewUrl();
+            }
+
+            if ($this->isPdf()) {
                 return '#pdf-preview';
             }
 
             return null;
         }
 
-        // 実ファイルの場合
-        if (! $this->file->path) {
-            return null;
-        }
-
         // 画像で、かつサムネイルを表示すべき条件を満たし、サムネイルが存在する場合
-        if ($this->isImage() && $this->shouldUseThumbnail() && $this->thumbnailUrl()) {
+        $thumbnailUrl = $this->thumbnailUrl();
+        if ($this->isImage() && $this->shouldUseThumbnail() && $thumbnailUrl) {
             return $this->thumbnailUrl();
         }
 
-        // 通常はオリジナルのURLを返す
-        return \Illuminate\Support\Facades\Storage::disk('public')->url($this->file->path);
+        // 通常はダウンロードルートをそのままプレビューに使う
+        return $this->originalUrl();
+    }
+
+    private function getMockImagePreviewUrl(): string
+    {
+        $imageLabel = urlencode($this->file->original_filename ?? 'Image');
+
+        return 'https://via.placeholder.com/600x400/4CAF50/FFFFFF?text='.$imageLabel;
     }
 
     /**

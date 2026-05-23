@@ -1,41 +1,69 @@
-<x-app-layout title="{{__('Ledger.create')}}">
+<x-app-layout title="{{ __('ledger.create') }}">
     @push('scripts')
         @vite(['resources/js/ledgerEdit.js'])
     @endpush
     @push('stylesheets')
         @vite(['resources/sass/ledgerEdit.scss'])
     @endpush
-        <x-slot name="header" class="sticky top-0 z-10">
-            <div class="ttl_3d5 warn md:flex md:items-center space-x-4 bg-warning/40 rounded">
-                <h2 class="font-black text-lg text-warning-content/60 sm:text-xl md:text-2xl">
-                    <i class="fas fa-plus-circle mr-2"></i>
-                    {{ __('Ledger.create') }}
-                </h2>
-                <div class="text-warning-content/50 text-sm"><i
-                        class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}</div>
-            </div>
-    </x-slot>
-        {{--    <divclass="p-0 md:p-4 bg-base-100 rounded-b-xl grid grid-cols-1 xl:grid-cols-2 gap-10 ">--}}
-        <div class="p-0 md:p-4 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5 ">
 
-            <div class="collapse bg-base-200 collapse-arrow border-base-300 border">
-                <input type="checkbox" id="createDescription" checked/>
-                <label for="createDescription"
-                       class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
-                <div class="collapse-content">
-                    @if($ledgerDefineRecord->detail_description)
-                        <x-markdown class="prose text-sm leading-relaxed max-w-none">
-                            {!! app(App\Services\AutoLinkService::class)
-->convert(app(Spatie\LaravelMarkdown\MarkdownRenderer::class)
-->toHtml($ledgerDefineRecord->create_description, null, $ledgerDefineRecord)) !!}
-                        </x-markdown>
-                    @endif
+    <div class="container max-w-full px-0 md:px-4 mt-4">
+        {{-- Unified header card matching the detail page pattern --}}
+        <x-mary-card shadow class="bg-primary/30 border border-base-300 mb-6">
+            <x-slot:title>
+                <div class="flex flex-col w-full">
+                    <div class="flex items-center gap-3 w-full">
+                        <div class="shrink-0 hidden md:block">
+                            <x-mary-icon name="o-plus-circle" class="text-warning w-15" />
+                        </div>
+                        <div class="flex flex-col min-w-0 w-full">
+                            <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 w-full mb-3">
+                                <div class="min-w-0">
+                                    <x-ledger.livewire-breadcrumbs
+                                        :thisLedgerDefine="$ledgerDefineRecord"
+                                        :breadcrumbs="$breadcrumbs"
+                                        :isLivewire="false" />
+                                    <h2 class="flex text-xl md:text-2xl font-black tracking-tighter text-base-content truncate mt-2 space-x-4">
+                                        <span class="text-base-content/50"> {{ __('ledger.create') }} </span><span class="divider divider-horizontal"></span><span>{{ $ledgerDefineRecord->title }}</span>
+                                    </h2>
+                                </div>
+
+                            </div>
+                        </div>
+                    </div>
                 </div>
-            </div>
+            </x-slot:title>
 
+            @if($ledgerDefineRecord->create_description)
+                <div class="mt-4 text-base-content" x-data="{ expanded: false }">
+                    <div class="bg-base-200/70 rounded-lg p-3 border border-base-300 transition-colors hover:bg-base-200/90">
+                        <div class="flex justify-between items-center cursor-pointer opacity-80 hover:opacity-100 transition-opacity" @click="expanded = !expanded">
+                            <div class="font-bold text-base md:text-lg flex items-center gap-2">
+                                <x-mary-icon name="o-information-circle" class="size-5 text-warning" />
+                                {{ __('ledger.description') }} / {{ __('ledger.guideline') }}
+                            </div>
+                            <span class="inline-flex transition-transform duration-300" :class="expanded ? 'rotate-180' : ''">
+                                <x-mary-icon name="o-chevron-down" class="size-5" />
+                            </span>
+                        </div>
+                        <div x-show="expanded" x-collapse>
+                            <div class="pt-3 mt-2 border-t border-base-300">
+                                @php
+                                    $descriptionHtml = app(App\Services\AutoLinkService::class)->convert(
+                                        app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->create_description),
+                                        null,
+                                        $ledgerDefineRecord
+                                    );
+                                @endphp
+                                <div class="prose prose-sm md:prose-base text-sm md:text-base leading-relaxed max-w-none prose-p:my-2 prose-headings:mb-2 prose-headings:mt-4">
+                                    {!! $descriptionHtml !!}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            @endif
+        </x-mary-card>
 
-            <livewire:ledger.create-column :ledger-define-id="$ledgerDefineRecord->id" :prefill-params="$prefillParams ?? []" />
-        </div>
-
-
+        <livewire:ledger.create-column :ledger-define-id="$ledgerDefineRecord->id" :prefill-params="$prefillParams ?? []" />
+    </div>
 </x-app-layout>

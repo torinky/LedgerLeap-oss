@@ -3,6 +3,7 @@
 namespace Tests\Feature\Mcp;
 
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Models\User;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Mockery;
@@ -30,7 +31,7 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->setUpRefreshDatabaseWithTenant();
 
         // ユーザーとトークンを作成
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $token = $user->createToken('test')->plainTextToken;
 
         // MCP_AUTH_TOKEN 環境変数を設定
@@ -51,14 +52,14 @@ class SearchLedgersToolSortingTest extends TestCase
         parent::tearDown();
     }
 
-    #[test]
+    #[Test]
     public function test_accepts_order_by_parameter(): void
     {
         // order_byパラメータが正しく受け取られることを確認
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
             ->with(
-                Mockery::type(\App\Models\User::class),
+                Mockery::type(User::class),
                 Mockery::on(function ($params) {
                     return $params['order_by'] === 'activity_score'
                         && $params['format'] === 'raw';
@@ -79,14 +80,14 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
-    #[test]
+    #[Test]
     public function test_accepts_order_direction_parameter(): void
     {
         // order_directionパラメータが正しく受け取られることを確認
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
             ->with(
-                Mockery::type(\App\Models\User::class),
+                Mockery::type(User::class),
                 Mockery::on(function ($params) {
                     return $params['order_by'] === 'composite_score'
                         && $params['order_direction'] === 'asc';
@@ -108,14 +109,14 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
-    #[test]
+    #[Test]
     public function test_defaults_to_composite_score_when_no_order_by_specified(): void
     {
         // order_byが指定されていない場合のデフォルト動作を確認
         $this->ledgerService->shouldReceive('searchLedgersForApi')
             ->once()
             ->with(
-                Mockery::type(\App\Models\User::class),
+                Mockery::type(User::class),
                 Mockery::on(function ($params) {
                     // order_byが指定されていないか、composite_scoreがデフォルト
                     return ! isset($params['order_by']) || $params['order_by'] === 'composite_score';
@@ -133,7 +134,7 @@ class SearchLedgersToolSortingTest extends TestCase
         $this->assertFalse($response->isError());
     }
 
-    #[test]
+    #[Test]
     public function test_supports_all_sort_field_options(): void
     {
         // 全てのソートオプションが受け入れられることを確認
@@ -143,7 +144,7 @@ class SearchLedgersToolSortingTest extends TestCase
             $this->ledgerService->shouldReceive('searchLedgersForApi')
                 ->once()
                 ->with(
-                    Mockery::type(\App\Models\User::class),
+                    Mockery::type(User::class),
                     Mockery::on(function ($params) use ($field) {
                         return $params['order_by'] === $field;
                     })
@@ -164,7 +165,7 @@ class SearchLedgersToolSortingTest extends TestCase
         }
     }
 
-    #[test]
+    #[Test]
     public function test_supports_both_sort_directions(): void
     {
         // 昇順・降順の両方が受け入れられることを確認
@@ -172,7 +173,7 @@ class SearchLedgersToolSortingTest extends TestCase
             $this->ledgerService->shouldReceive('searchLedgersForApi')
                 ->once()
                 ->with(
-                    Mockery::type(\App\Models\User::class),
+                    Mockery::type(User::class),
                     Mockery::on(function ($params) use ($direction) {
                         return $params['order_direction'] === $direction;
                     })

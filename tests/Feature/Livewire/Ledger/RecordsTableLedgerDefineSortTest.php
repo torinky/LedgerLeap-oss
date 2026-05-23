@@ -7,6 +7,7 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -37,7 +38,7 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         Ledger::query()->delete();
 
         $this->user = User::factory()->create([
-            'email' => 'test.'.\Illuminate\Support\Str::random(10).'@example.com',
+            'email' => 'test.'.Str::random(10).'@example.com',
         ]);
 
         $rootFolder = Folder::factory()->create(['parent_id' => null]);
@@ -49,6 +50,9 @@ class RecordsTableLedgerDefineSortTest extends TestCase
         $this->user->givePermissionTo('view_ledger_defines');
         Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
         $this->user->givePermissionTo('ledgerView');
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     protected function tearDown(): void

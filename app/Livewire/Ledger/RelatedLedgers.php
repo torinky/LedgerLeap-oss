@@ -7,17 +7,14 @@ use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
-use App\Repositories\WritableFolderRepository;
-use App\Services\AutoNumberPatternService;
-use App\Services\Config\SynonymServiceConfig;
-use App\Services\Ledger\SearchContext;
-use App\Services\SynonymService;
+use App\Models\Tenant;
+use App\Services\Ledger\RelatedLedgerService;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Lazy;
 use Livewire\Attributes\On;
-use Livewire\Attributes\Reactive;
 use Livewire\WithPagination;
+use Stancl\Tenancy\Tenancy;
 
 #[Lazy]
 class RelatedLedgers extends BaseLivewireComponent
@@ -49,7 +46,6 @@ class RelatedLedgers extends BaseLivewireComponent
     public bool $hasAutoNumber = false;
 
     /** 表示レベル（基本情報タブと同期） */
-    #[Reactive]
     public int $displayLevel = 1;
 
     /** 1ページあたりの件数 */
@@ -74,9 +70,9 @@ class RelatedLedgers extends BaseLivewireComponent
         }
 
         if ($this->tenantId) {
-            $tenancy = app(\Stancl\Tenancy\Tenancy::class);
+            $tenancy = app(Tenancy::class);
             if (! $tenancy->initialized) {
-                $tenant = \App\Models\Tenant::find($this->tenantId);
+                $tenant = Tenant::find($this->tenantId);
                 if ($tenant) {
                     $tenancy->initialize($tenant);
                 }
@@ -106,6 +102,17 @@ class RelatedLedgers extends BaseLivewireComponent
         $this->resetPage('related_page');
     }
 
+    public function updatedDisplayLevel(int $displayLevel): void
+    {
+        $this->dispatch('relatedDisplayLevelRequested', displayLevel: $displayLevel);
+    }
+
+    #[On('displayLevelUpdated')]
+    public function updateDisplayLevel(int $displayLevel): void
+    {
+        $this->displayLevel = $displayLevel;
+    }
+
     // ─────────────────────────────────────────────
     // 識別番号（auto_number）関連
     // ─────────────────────────────────────────────
@@ -117,174 +124,25 @@ class RelatedLedgers extends BaseLivewireComponent
      * - パターンB: 全 auto_number パターンで自レコードのテキスト列にマッチング
      *
      * @return array<string, array{source: string, column: string}>
-     *                                                              キー = 識別番号値、値 = ['source' => 'auto_number'|'text_column', 'column' => 列名]
-     *                                                              例: ['EQ-042' => ['source' => 'auto_number', 'column' => '設備番号'],
-     *                                                              'SPEC-001' => ['source' => 'text_column', 'column' => '作業内容']]
      */
     public function extractAutoNumberValues(Ledger $ledger): array
     {
-        $ledger->loadMissing('define');
-        $define = $ledger->define;
-        if (! $define) {
-            return [];
-        }
-
-        $result = [];
-
-        // ─── Step A: auto_number 型列の値を直接取得 ───
-        foreach ($define->column_define as $column) {
-            if ($column->type !== 'auto_number') {
-                continue;
-            }
-            // AsColumnArrayJson cast 済みの配列に直接アクセス（data_get() は不可）
-            $value = $ledger->content[$column->id] ?? null;
-            if (! empty($value)) {
-                $result[(string) $value] = [
-                    'source' => 'auto_number',
-                    'column' => $column->name,
-                ];
-            }
-        }
-
-        // ─── Step B: テキスト列に含まれる識別番号値を正規表現で抽出 ───
-        // パターンB対象の列型（auto_number / files / chk / YMD / YMDHM / user_name は除外）
-        $textColumnTypes = ['text', 'textarea', 'memo'];
-
-        /** @var AutoNumberPatternService $patternService */
-        $patternService = app(AutoNumberPatternService::class);
-        $patterns = $patternService->getPatterns();
-
-        if ($patterns->isNotEmpty()) {
-            foreach ($define->column_define as $column) {
-                if (! in_array($column->type, $textColumnTypes, true)) {
-                    continue;
-                }
-                $text = $ledger->content[$column->id] ?? null;
-                if (empty($text) || ! is_string($text)) {
-                    continue;
-                }
-
-                foreach ($patterns as $entry) {
-                    if (preg_match_all($entry['pattern'], $text, $matches)) {
-                        foreach ($matches[1] as $matched) {
-                            $matched = trim($matched);
-                            if (empty($matched)) {
-                                continue;
-                            }
-                            // パターンAで既に取得済みの値は上書きしない
-                            if (! isset($result[$matched])) {
-                                $result[$matched] = [
-                                    'source' => 'text_column',
-                                    'column' => $column->name,
-                                ];
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
-        return $result;
+        return app(RelatedLedgerService::class)->extractAutoNumberValues($ledger);
     }
 
     /**
      * 識別番号の連想配列で台帳を横断検索し、自身を除外した結果を返す
      *
      * @param  array<string, array{source: string, column: string}>  $identifierKeys
-     *                                                                                キー = 識別番号値、値 = source 情報
-     * @return Collection<int, array{ledger: Ledger, matched_keys: array<int, array{value: string, source: string, column: string}>}>
+     * @return Collection<int, array{ledger: Ledger, matched_keys: array<int, array<string, string>>}>
      */
     public function searchByIdentifiers(array $identifierKeys): Collection
     {
-        if (empty($identifierKeys)) {
-            return collect();
-        }
-
-        $user = auth()->user();
-        if (! $user) {
-            return collect();
-        }
-
-        /** @var WritableFolderRepository $folderRepo */
-        $folderRepo = app(WritableFolderRepository::class);
-        $readableFolderIds = $folderRepo->getReadableFolderIds($user);
-
-        if (empty($readableFolderIds)) {
-            return collect();
-        }
-
-        // 閲覧可能フォルダに紐づく台帳定義IDを取得
-        $allowedDefineIds = LedgerDefine::whereIn('folder_id', $readableFolderIds)
-            ->pluck('id')
-            ->toArray();
-
-        if (empty($allowedDefineIds)) {
-            return collect();
-        }
-
-        // $key → [ledger_id, ...] のマッピングを保持しながら検索
-        // Mroonga 制約: 複合インデックス不可 → 単一カラム MATCH() AGAINST() を使用
-        $keyToIds = [];   // ['EQ-042' => [1, 3, 5], ...]
-        foreach ($identifierKeys as $key => $sourceInfo) {
-            $synonymServiceConfig = new SynonymServiceConfig(['useSynonym' => false, 'useTechnicalTerm' => false]);
-            $synonymService = new SynonymService($synonymServiceConfig);
-            $searchContext = new SearchContext($synonymService);
-            $searchContext->setSearch($key);
-
-            $ids = Ledger::whereIn('ledger_define_id', $allowedDefineIds)
-                ->searchContext($searchContext)
-                ->where('id', '!=', $this->ledgerId)
-                ->pluck('id')
-                ->toArray();
-
-            foreach ($ids as $id) {
-                $keyToIds[$key][] = $id;
-            }
-        }
-
-        // 全 ledger_id を収集
-        $uniqueIds = collect($keyToIds)->flatten()->unique()->values()->toArray();
-
-        if (empty($uniqueIds)) {
-            return collect();
-        }
-
-        $ledgers = Ledger::whereIn('id', $uniqueIds)
-            ->with(['define'])
-            ->get()
-            ->keyBy('id');
-
-        // 各 Ledger に matched_keys（source 情報付き構造体の配列）を付与して返す
-        // [ledger_id => [['value' => 'EQ-042', 'source' => 'auto_number', 'column' => '設備番号'], ...]]
-        $idToKeys = [];
-        foreach ($keyToIds as $key => $ids) {
-            $sourceInfo = $identifierKeys[$key];
-            foreach ($ids as $id) {
-                $idToKeys[$id][] = [
-                    'value' => $key,
-                    'source' => $sourceInfo['source'],
-                    'column' => $sourceInfo['column'],
-                ];
-            }
-        }
-
-        return collect($uniqueIds)->map(function (int $id) use ($ledgers, $idToKeys) {
-            $ledger = $ledgers->get($id);
-            if (! $ledger) {
-                return null;
-            }
-
-            // 同一 value の重複を排除
-            $matchedKeys = collect($idToKeys[$id] ?? [])
-                ->unique('value')
-                ->values()
-                ->all();
-
-            return [
-                'ledger' => $ledger,
-                'matched_keys' => $matchedKeys,
-            ];
-        })->filter()->values();
+        return app(RelatedLedgerService::class)->searchByIdentifiers(
+            identifierKeys: $identifierKeys,
+            user: auth()->user(),
+            sourceLedgerId: $this->ledgerId,
+        );
     }
 
     // ─────────────────────────────────────────────
@@ -298,36 +156,7 @@ class RelatedLedgers extends BaseLivewireComponent
      */
     public function buildSemanticQuery(Ledger $ledger): string
     {
-        $ledger->loadMissing('define');
-        $define = $ledger->define;
-        if (! $define) {
-            return '';
-        }
-
-        $parts = [];
-        foreach ($define->column_define as $column) {
-            // files タイプは除外
-            if ($column->type === 'files') {
-                continue;
-            }
-            $value = $ledger->content[$column->id] ?? null;
-            if (empty($value)) {
-                continue;
-            }
-            // 配列型（chk 等）はカンマ結合
-            if (is_array($value)) {
-                $value = implode(' ', array_filter($value));
-            }
-            $text = strip_tags((string) $value);
-            if (! empty($text)) {
-                $parts[] = mb_substr(trim($text), 0, 200);
-            }
-        }
-
-        // 全体でのトークン長上限（RAGへの入力を節約）
-        $query = implode(' ', $parts);
-
-        return mb_substr($query, 0, 500);
+        return app(RelatedLedgerService::class)->buildSemanticQuery($ledger);
     }
 
     /**
@@ -336,80 +165,19 @@ class RelatedLedgers extends BaseLivewireComponent
      *
      * @return Collection<int, array{ledger: Ledger, score: float}>
      */
-    public function searchBySemantic(Ledger $ledger): Collection
+    public function searchBySemantic(Ledger $ledger, ?int $limit = null): Collection
     {
-        if (! config('rag.enabled', false)) {
-            $this->ragAvailable = false;
-            return collect();
-        }
+        $resolved = app(RelatedLedgerService::class)->searchBySemantic(
+            ledger: $ledger,
+            user: auth()->user(),
+            sourceLedgerId: $this->ledgerId,
+            limit: $limit ?? config('rag.related_ledger.semantic_limit', 10),
+        );
 
-        $query = $this->buildSemanticQuery($ledger);
-        if (empty($query)) {
-            return collect();
-        }
+        $this->ragAvailable = $resolved['rag_available'];
+        $this->lastError = $resolved['error'];
 
-        $user = auth()->user();
-        if (! $user) {
-            return collect();
-        }
-
-        try {
-            $ragService = app(\App\Services\RagSearchService::class);
-
-            $ragResults = $ragService->searchLedgers(
-                query: $query,
-                limit: 20,
-                filters: ['user' => $user]
-            );
-
-            if (empty($ragResults)) {
-                return collect();
-            }
-
-            // 自身を除外し、スコアマップを保持
-            $scoreMap = [];   // [ledger_id => max_score]
-            foreach ($ragResults as $result) {
-                $id = $result['ledger_id'];
-                if ($id !== $this->ledgerId) {
-                    $scoreMap[$id] = $result['max_score'];
-                }
-            }
-
-            if (empty($scoreMap)) {
-                return collect();
-            }
-
-            $this->ragAvailable = true;
-
-            // スコア降順で並んだ ID 順を維持してモデルを取得
-            $ledgerIds = array_keys($scoreMap);
-            $ledgers = Ledger::whereIn('id', $ledgerIds)
-                ->with(['define'])
-                ->get()
-                ->keyBy('id');
-
-            // スコア降順で返す（scoreMap はすでに max_score 降順で ragResults から構築済み）
-            return collect($ledgerIds)
-                ->map(function (int $id) use ($ledgers, $scoreMap) {
-                    $ledger = $ledgers->get($id);
-                    if (! $ledger) {
-                        return null;
-                    }
-
-                    return [
-                        'ledger' => $ledger,
-                        'score' => $scoreMap[$id],
-                    ];
-                })
-                ->filter()
-                ->values();
-        } catch (\Throwable $e) {
-            // RAGサービス未起動・利用不可はエラーにしない（グレースフルデグラデーション）
-            $this->ragAvailable = false;
-            $this->lastError = $e->getMessage();
-
-            return collect();
-        }
+        return $resolved['results'];
     }
 
     // ─────────────────────────────────────────────
@@ -420,54 +188,13 @@ class RelatedLedgers extends BaseLivewireComponent
      * 識別番号検索と意味検索の結果をマージし、識別理由（reason）・スコア・matched_keys を付与する
      * ソート: semantic/both はスコア降順、identifier のみは末尾
      *
-     * @param  Collection<int, array{ledger: Ledger, matched_keys: array<int, array{value: string, source: string, column: string}>}>  $identifiers
+     * @param  Collection<int, array{ledger: Ledger, matched_keys: array<int, array<string, string>>}>  $identifiers
      * @param  Collection<int, array{ledger: Ledger, score: float}>  $semantics
-     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array{value: string, source: string, column: string}>}>
+     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array<string, string>>}>
      */
     public function mergeResults(Collection $identifiers, Collection $semantics): array
     {
-        $merged = [];
-
-        // 識別番号検索結果を追加
-        foreach ($identifiers as $item) {
-            $ledger = $item['ledger'];
-            $merged[$ledger->id] = [
-                'ledger' => $ledger,
-                'reason' => 'identifier',
-                'score' => null,
-                'matched_keys' => $item['matched_keys'],
-            ];
-        }
-
-        // 意味検索結果をマージ（識別番号検索にも含まれる場合は 'both' に昇格）
-        foreach ($semantics as $item) {
-            $ledger = $item['ledger'];
-            $score = $item['score'];
-            if (isset($merged[$ledger->id])) {
-                // 両方ヒット → reason を 'both' に昇格、スコアを付与
-                $merged[$ledger->id]['reason'] = 'both';
-                $merged[$ledger->id]['score'] = $score;
-            } else {
-                $merged[$ledger->id] = [
-                    'ledger' => $ledger,
-                    'reason' => 'semantic',
-                    'score' => $score,
-                    'matched_keys' => [],
-                ];
-            }
-        }
-
-        $result = array_values($merged);
-
-        // ソート: score あり（semantic/both）はスコア降順、identifier のみ（score=null）は末尾
-        usort($result, function (array $a, array $b) {
-            $scoreA = $a['score'] ?? -1.0;
-            $scoreB = $b['score'] ?? -1.0;
-
-            return $scoreB <=> $scoreA;
-        });
-
-        return $result;
+        return app(RelatedLedgerService::class)->mergeResults($identifiers, $semantics);
     }
 
     /**
@@ -475,8 +202,8 @@ class RelatedLedgers extends BaseLivewireComponent
      *
      * reason='both' はどちらかのトグルがオンなら表示
      *
-     * @param  array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>  $merged
-     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>
+     * @param  array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array<string, string>>}>  $merged
+     * @return array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array<string, string>>}>
      */
     public function applyFilter(array $merged): array
     {
@@ -520,8 +247,8 @@ class RelatedLedgers extends BaseLivewireComponent
     /**
      * ページ内のアイテムを ledger_define_id でグループ化する
      *
-     * @param  array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>  $pageItems
-     * @return Collection<int|string, Collection<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: string[]}>>
+     * @param  array<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array<string, string>>}>  $pageItems
+     * @return Collection<int|string, Collection<int, array{ledger: Ledger, reason: string, score: float|null, matched_keys: array<int, array<string, string>>}>>
      */
     public function groupByDefine(array $pageItems): Collection
     {
@@ -571,16 +298,6 @@ class RelatedLedgers extends BaseLivewireComponent
         $allAttachments = AttachedFile::whereIn('ledger_id', $pageledgerIds)
             ->get()
             ->groupBy('ledger_id');
-
-        // content / content_attached を台帳定義に基づいて正規化（table-row が期待する形式）
-        $groupedResults->flatten(1)->each(function (array $item) {
-            $ledger = $item['ledger'];
-            $define = $ledger->define;
-            if ($define) {
-                $ledger->content = $define->normalizeByColumnDefine($ledger->content ?? []);
-                $ledger->content_attached = $define->normalizeByColumnDefine($ledger->content_attached ?? []);
-            }
-        });
 
         // semantic_score を Ledger インスタンスに動的付与（table-row のスコアオーバーレイで使用）
         // identifier のみのレコードは score=null のまま（オーバーレイなし）

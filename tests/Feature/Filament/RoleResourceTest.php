@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 #[CoversClass(RoleResource::class)]
@@ -38,10 +39,10 @@ class RoleResourceTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         foreach (self::PERMISSIONS as $perm) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
         }
         $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        $adminRole->givePermissionTo(Permission::all());
 
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole($adminRole);
@@ -124,6 +125,25 @@ class RoleResourceTest extends TestCase
         $this->assertDatabaseHas('roles', ['name' => 'NewTestRole', 'guard_name' => 'web']);
     }
 
+    #[Test]
+    public function create_page_can_create_role_with_abbreviation(): void
+    {
+        Livewire::test(CreateRole::class)
+            ->fillForm([
+                'name' => 'NewTestRole',
+                'guard_name' => 'web',
+                'abbreviation' => 'NTR',
+            ])
+            ->call('create')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('roles', [
+            'name' => 'NewTestRole',
+            'guard_name' => 'web',
+            'abbreviation' => 'NTR',
+        ]);
+    }
+
     // ================================================================
     // 編集フォーム
     // ================================================================
@@ -135,6 +155,19 @@ class RoleResourceTest extends TestCase
 
         Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
             ->assertFormSet(['name' => 'FilledRole']);
+    }
+
+    #[Test]
+    public function edit_page_can_save_updated_abbreviation(): void
+    {
+        $role = Role::firstOrCreate(['name' => 'AbbrevRole', 'guard_name' => 'web', 'abbreviation' => 'AR']);
+
+        Livewire::test(EditRole::class, ['record' => $role->getRouteKey()])
+            ->fillForm(['abbreviation' => 'UpdatedAR'])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('roles', ['id' => $role->id, 'abbreviation' => 'UpdatedAR']);
     }
 
     // ================================================================

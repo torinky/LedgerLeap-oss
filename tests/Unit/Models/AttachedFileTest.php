@@ -6,6 +6,7 @@ use App\Enums\AttachedFileStatus;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
+use App\Models\User;
 use Illuminate\Support\Facades\Bus;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -447,7 +448,7 @@ class AttachedFileTest extends TestCase
     #[Test]
     public function get_user_timeline_attribute_returns_correct_activities()
     {
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $file = AttachedFile::factory()->create();
 
         // Create some activities

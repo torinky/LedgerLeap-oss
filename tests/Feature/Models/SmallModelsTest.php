@@ -18,6 +18,8 @@ use App\Models\RoleTag;
 use App\Models\Tag;
 use App\Models\User;
 use App\Models\UserOrganization;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -319,21 +321,21 @@ class SmallModelsTest extends TestCase
     public function test_auto_link_scopes_relation_returns_has_many(): void
     {
         $relation = (new AutoLink)->scopes();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\HasMany::class, $relation);
+        $this->assertInstanceOf(HasMany::class, $relation);
     }
 
     public function test_auto_link_creator_relation_returns_belongs_to(): void
     {
         $autoLink = new AutoLink;
         $relation = $autoLink->creator();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+        $this->assertInstanceOf(BelongsTo::class, $relation);
     }
 
     public function test_auto_link_modifier_relation_returns_belongs_to(): void
     {
         $autoLink = new AutoLink;
         $relation = $autoLink->modifier();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+        $this->assertInstanceOf(BelongsTo::class, $relation);
     }
 
     public function test_auto_link_get_activitylog_options(): void
@@ -366,7 +368,7 @@ class SmallModelsTest extends TestCase
     {
         $scope = new AutoLinkScope;
         $relation = $scope->autoLink();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+        $this->assertInstanceOf(BelongsTo::class, $relation);
     }
 
     // ================================================================
@@ -402,21 +404,21 @@ class SmallModelsTest extends TestCase
     {
         $rfp = new RoleFolderPermission;
         $relation = $rfp->notificationType();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+        $this->assertInstanceOf(BelongsTo::class, $relation);
     }
 
     public function test_role_folder_permission_folder_relation(): void
     {
         $rfp = new RoleFolderPermission;
         $relation = $rfp->folder();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+        $this->assertInstanceOf(BelongsTo::class, $relation);
     }
 
     public function test_role_folder_permission_role_relation(): void
     {
         $rfp = new RoleFolderPermission;
         $relation = $rfp->role();
-        $this->assertInstanceOf(\Illuminate\Database\Eloquent\Relations\BelongsTo::class, $relation);
+        $this->assertInstanceOf(BelongsTo::class, $relation);
     }
 
     public function test_role_folder_permission_get_description_for_event(): void

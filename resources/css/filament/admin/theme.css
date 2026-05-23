@@ -1,7 +1,10 @@
-/*@import '../../../../vendor/filament/filament/resources/css/theme.css';*/
-@import '/vendor/filament/filament/resources/css/theme.css';
-@config './tailwind.config.js';
+@import '../../../../vendor/filament/filament/resources/css/theme.css';
 
+@source '../../../../app/Filament/**/*';
+@source '../../../../resources/views/filament/**/*';
+@source '../../../../resources/views/components/**/*';
+@source '../../../../resources/views/livewire/**/*';
+@source '../../../../app/Livewire/**/*';
 
 
 /*
@@ -19,27 +22,52 @@
  * この数値を 0.1 (薄い) 〜 0.9 (濃い) の間で調整してください。
  */
 
-.link-hover-color-primary:hover {
-    background-color: hsl(var(--p) / 0.15); /* Primary */
+html:not(.dark) .link-hover-color-primary:hover {
+    background-color: hsl(var(--p) / 0.5); /* Primary */
 }
 
-.link-hover-color-secondary:hover {
-    background-color: hsl(var(--s) / 0.15); /* Secondary */
+.dark .link-hover-color-primary:hover {
+    background-color: hsl(var(--p) / 0.35); /* Primary */
 }
 
-.link-hover-color-success:hover {
-    background-color: hsl(var(--su) / 0.15); /* Success */
+html:not(.dark) .link-hover-color-secondary:hover {
+    background-color: hsl(var(--s) / 0.5); /* Secondary */
 }
 
-.link-hover-color-warning:hover {
-    background-color: hsl(var(--wa) / 0.15); /* Warning */
+.dark .link-hover-color-secondary:hover {
+    background-color: hsl(var(--s) / 0.35); /* Secondary */
 }
 
-.link-hover-color-danger:hover {
+html:not(.dark) .link-hover-color-success:hover {
+    background-color: hsl(var(--su) / 0.5); /* Success */
+}
+
+.dark .link-hover-color-success:hover {
+    background-color: hsl(var(--su) / 0.35); /* Success */
+}
+
+html:not(.dark) .link-hover-color-warning:hover {
+    background-color: hsl(var(--wa) / 0.5); /* Warning */
+}
+
+.dark .link-hover-color-warning:hover {
+    background-color: hsl(var(--wa) / 0.35); /* Warning */
+}
+
+html:not(.dark) .link-hover-color-danger:hover {
     /* `danger` は DaisyUI/Filament の `error` カラーに対応 */
-    background-color: hsl(var(--er) / 0.15); /* Danger(Error) */
+    background-color: hsl(var(--er) / 0.5); /* Danger(Error) */
 }
 
-.link-hover-color-info:hover {
-    background-color: hsl(var(--in) / 0.15); /* Info */
+.dark .link-hover-color-danger:hover {
+    /* `danger` は DaisyUI/Filament の `error` カラーに対応 */
+    background-color: hsl(var(--er) / 0.35); /* Danger(Error) */
+}
+
+html:not(.dark) .link-hover-color-info:hover {
+    background-color: hsl(var(--in) / 0.5); /* Info */
+}
+
+.dark .link-hover-color-info:hover {
+    background-color: hsl(var(--in) / 0.35); /* Info */
 }

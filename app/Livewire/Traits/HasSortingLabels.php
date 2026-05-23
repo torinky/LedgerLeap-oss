@@ -2,6 +2,8 @@
 
 namespace App\Livewire\Traits;
 
+use App\Models\LedgerDefine;
+
 trait HasSortingLabels
 {
     /**
@@ -29,7 +31,7 @@ trait HasSortingLabels
             // 単一台帳選択時のみ具体的な項目名を表示
             if (count($this->selectedLedgerDefineIds) === 1) {
                 $columnId = str_replace('content->', '', $columnName);
-                $singleLedgerDefine = \App\Models\LedgerDefine::find(head($this->selectedLedgerDefineIds));
+                $singleLedgerDefine = LedgerDefine::find(head($this->selectedLedgerDefineIds));
 
                 if ($singleLedgerDefine) {
                     $column = collect($singleLedgerDefine->column_define)

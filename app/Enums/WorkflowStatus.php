@@ -54,6 +54,20 @@ enum WorkflowStatus: string
     }
 
     /**
+     * ステータスに応じた Heroicon 名を返すメソッド (Mary UI 向け)
+     */
+    public function heroicon(): string
+    {
+        return match ($this) {
+            self::NONE => 'o-minus-circle',
+            self::DRAFT => 'o-document-text',
+            self::PENDING_INSPECTION => 'o-magnifying-glass',
+            self::PENDING_APPROVAL => 'o-clock',
+            self::APPROVED => 'o-check-circle',
+        };
+    }
+
+    /**
      * このステータスが承認済みかどうかを判定する
      */
     public function isApproved(): bool

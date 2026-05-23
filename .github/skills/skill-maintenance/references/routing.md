@@ -21,6 +21,18 @@ Choose **one primary destination** first, then sync adjacent files only when the
 
 ## Neighbor Sync Rules
 
+### When the learning is "tool description is too heavy"...
+- move client-facing workflow and fallback guidance to `resources/ai/capabilities/*.yaml`
+- move implementation rationale and destination mapping to `docs/work/*`
+- keep tool descriptions focused on contract, response shape, and misuse-prevention constraints
+- confirm generated skills or discovery assets can still recover the removed guidance
+
+### When the learning depends on evidence freshness...
+- put repo proof in `docs/work/*` or another durable repo document
+- summarize official product evidence in `references/*.md` with direct URLs
+- store `last_confirmed_at`, `recheck_after`, and `status` next to the summary
+- if the recheck window has expired or the same product area changed, refresh the upstream source before treating the claim as confirmed
+
 ### Update prompt neighbors when...
 - a skill was added but there is no obvious slash entrypoint
 - a runbook or issue template became part of the normal workflow
@@ -49,6 +61,7 @@ Do **not** put long workflows, examples, or task-specific procedures there.
 - `copilot-instructions.md` is absorbing long operational content.
 - A runbook changed but the prompt still points to the old flow.
 - A prompt and skill drift apart on terminology or steps.
+- A reusable claim has no evidence link or no freshness metadata even though it depends on upstream docs.
 
 ## Recommended Maintenance Sequence
 
@@ -57,5 +70,5 @@ Do **not** put long workflows, examples, or task-specific procedures there.
 3. Update the destination file.
 4. Check prompt / skill / AGENTS / issue template / runbook neighbors.
 5. Remove stale duplicates.
-6. Validate links and discovery.
+6. Validate links, discovery, evidence reachability, and overdue rechecks.
 

@@ -11,11 +11,10 @@
       ]
     },
     "ledgerleap-api": {
-      "command": "./vendor/bin/sail",
+      "command": "/bin/sh",
       "args": [
-        "artisan",
-        "mcp:start",
-        "ledgerleap:mcp"
+        "-c",
+        "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && vendor/bin/sail artisan mcp:start ledgerleap:mcp"
       ]
     },
     "serena": {

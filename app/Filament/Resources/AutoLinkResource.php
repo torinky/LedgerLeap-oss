@@ -7,17 +7,21 @@ use App\Models\AutoLink;
 use App\Models\Tenant;
 use App\Rules\ValidAutoLinkPattern;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ReplicateAction;
 use Filament\Forms\Components\Placeholder;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
 use Filament\Resources\Resource;
-use Filament\Tables;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
+use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Filters\SelectFilter;
@@ -26,12 +30,13 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Blade;
 use Illuminate\Support\HtmlString;
 use Illuminate\Support\Str;
+use Stancl\Tenancy\Facades\Tenancy;
 
 class AutoLinkResource extends Resource
 {
     protected static ?string $model = AutoLink::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-link';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-link';
 
     public static bool $shouldRegisterNavigation = false;
 
@@ -50,9 +55,9 @@ class AutoLinkResource extends Resource
         return __('ledger.settings.auto_link');
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make()->schema([
                     Select::make('template')
@@ -107,7 +112,7 @@ class AutoLinkResource extends Resource
                                     relationship: 'folders',
                                     titleAttribute: 'display_name',
                                     parentAttribute: 'parent_id',
-                                    modifyQueryUsing: fn (Builder $query) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query) {
+                                    modifyQueryUsing: fn (Builder $query) => Tenancy::central(function () use ($query) {
                                         return $query->with('tenant');
                                     })
                                 )
@@ -300,8 +305,8 @@ class AutoLinkResource extends Resource
                     ->searchable(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\ReplicateAction::make()
+                EditAction::make(),
+                ReplicateAction::make()
                     ->beforeReplicaSaved(function (AutoLink $replica) {
                         $originalLabel = $replica->label;
                         $copyCount = 1;
@@ -310,11 +315,11 @@ class AutoLinkResource extends Resource
                         }
                         $replica->label = $originalLabel.' ('.$copyCount.')';
                     }),
-                Tables\Actions\DeleteAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

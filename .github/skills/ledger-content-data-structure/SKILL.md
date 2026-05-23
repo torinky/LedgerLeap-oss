@@ -8,12 +8,12 @@ compatibility: LedgerLeap (AsColumnArrayJson cast, LedgerDefine column_define, L
 
 ## Decision Tree
 
-```
+```mermaid
 content[n] returns null or wrong value?
 │
 ├─ Is test data created with Ledger::factory()->create() directly?
-│   YES → normalizeByColumnDefine() is NOT called. Gaps in column IDs shift indices.
-│          FIX: fill all indices 0..maxId (see references/test-data-patterns.md)
+│   YES → normalizeByColumnDefine() is called automatically on saving since 2026-05-03.
+│          FIX: call $ledger->fresh() before asserting content[n]
 │
 ├─ Using data_get($ledger->content, '1')?
 │   YES → AsColumnArrayJson uses ___serialized___ prefix; data_get() breaks.
@@ -30,11 +30,12 @@ content[n] returns null or wrong value?
 
 ## content Storage Pipeline
 
-```
-Livewire input : [1 => 'text', 3 => 'val']         ← column IDs as keys
-normalizeByColumnDefine() : [0=>'', 1=>'text', 2=>'', 3=>'val']
-AsColumnArrayJson::set() : array_values() → ["","text","","val"]  ← stored JSON
-AsColumnArrayJson::get() : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
+```text
+Livewire input : [1 => 'text', 3 => 'val']              ← column IDs as keys
+Ledger::saving event      : normalizeByColumnDefine()   ← automatic since 2026-05-03
+  → [0=>'', 1=>'text', 2=>'', 3=>'val']
+AsColumnArrayJson::set()  : array_values() → ["","text","","val"]  ← stored JSON
+AsColumnArrayJson::get()  : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
 ```
 
 ## Key Rules
@@ -49,12 +50,34 @@ AsColumnArrayJson::get() : [0=>'', 1=>'text', 2=>'', 3=>'val']   ← after read
 
 ## Checklist
 
-- [ ] Test data uses consecutive indices from 0 to maxColumnId
+- [ ] `Ledger::factory()->create()` 後は `$ledger->fresh()` で正規化済み内容を確認する
 - [ ] No `data_get()` on `content` or `content_attached`
 - [ ] `content_attached` includes `0 => []`
 - [ ] `latest_diff_id` set explicitly with `$ledger->update()`
 - [ ] `$ledger->fresh()` called after `update()` when referencing relations
+**Pattern — Defensive Check:**
+
+```php
+$columnDefine = $item->column_define;
+if (is_string($columnDefine)) {
+    $columnDefine = json_decode($columnDefine, true) ?? [];
+}
+// Now safe to map/toArray
+collect($columnDefine)->map(...)
+```
+
+**Pattern — Cast Enhancement:**
+
+Ensure `AsColumnDefinesArrayJson` (and similar casts) handles non-array inputs gracefully in the `get` method:
+
+```php
+public function get($model, string $key, $value, array $attributes)
+{
+    if (is_array($value)) return $value;
+    if (empty($value)) return [];
+    return json_decode($value, true) ?? [];
+}
+```
 
 See [references/test-data-patterns.md](references/test-data-patterns.md) for code examples.
 See [references/cast-internals.md](references/cast-internals.md) for AsColumnArrayJson details.
-

@@ -3,6 +3,10 @@
 namespace App\Mcp\Tools;
 
 use App\Enums\WorkflowStatus;
+use App\Exceptions\Workflow\InsufficientPermissionsException;
+use App\Exceptions\Workflow\InvalidWorkflowActionException;
+use App\Exceptions\Workflow\UnauthorizedWorkflowActionException;
+use App\Exceptions\Workflow\WorkflowConditionException;
 use App\Mcp\Helpers\ResponseHelper;
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Ledger;
@@ -95,13 +99,13 @@ MARKDOWN;
 
             return Response::json($response);
 
-        } catch (\App\Exceptions\Workflow\InvalidWorkflowActionException $e) {
+        } catch (InvalidWorkflowActionException $e) {
             return Response::error($e->getMessage());
-        } catch (\App\Exceptions\Workflow\UnauthorizedWorkflowActionException $e) {
+        } catch (UnauthorizedWorkflowActionException $e) {
             return Response::error($e->getMessage());
-        } catch (\App\Exceptions\Workflow\InsufficientPermissionsException $e) {
+        } catch (InsufficientPermissionsException $e) {
             return Response::error($e->getMessage());
-        } catch (\App\Exceptions\Workflow\WorkflowConditionException $e) {
+        } catch (WorkflowConditionException $e) {
             return Response::error($e->getMessage());
         } catch (\Exception $e) {
             return Response::error(

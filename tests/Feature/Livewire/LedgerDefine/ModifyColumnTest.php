@@ -5,10 +5,13 @@ namespace Tests\Feature\Livewire\LedgerDefine;
 use App\Livewire\LedgerDefine\ModifyColumn;
 use App\Livewire\LedgerDefine\Preview;
 use App\Models\ColumnDefine;
+use App\Models\ColumnTypes\DateType;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -123,6 +126,128 @@ class ModifyColumnTest extends TestCase
         $preview->assertDontSee('Column 1');
     }
 
+    #[Test]
+    public function preview_background_images_refresh_on_sync_event()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Background Image',
+                    'type' => 'files',
+                    'order' => 1,
+                ]),
+            ],
+        ]);
+
+        $preview = Livewire::test(Preview::class, [
+            'ledgerDefineId' => $ledgerDefine->id,
+        ]);
+
+        $this->assertNull($preview->get('backgroundImages')[0]);
+
+        $ledgerDefine->column_define = [
+            new ColumnDefine((object) [
+                'id' => 0,
+                'name' => 'Background Image',
+                'type' => 'files',
+                'order' => 1,
+                'file' => [
+                    'name' => 'background.png',
+                    'path' => 'column_files/background.png',
+                ],
+            ]),
+        ];
+        $ledgerDefine->save();
+
+        $preview->dispatch('ledgerDefineRecordStored');
+
+        $expectedUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+            'thumbnail' => true,
+        ]);
+
+        $this->assertSame($expectedUrl, $preview->get('backgroundImages')[0]);
+    }
+
+    #[Test]
+    public function preview_background_images_use_secure_routes()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Background Image',
+                    'type' => 'files',
+                    'order' => 1,
+                    'file' => [
+                        'name' => 'background.png',
+                        'path' => 'column_files/background.png',
+                    ],
+                ]),
+            ],
+        ]);
+
+        $preview = Livewire::test(Preview::class, [
+            'ledgerDefineId' => $ledgerDefine->id,
+        ]);
+
+        $expectedUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+            'thumbnail' => true,
+        ]);
+
+        $this->assertSame($expectedUrl, $preview->get('backgroundImages')[0]);
+    }
+
+    #[Test]
+    public function modify_column_initial_files_include_secure_background_image_routes()
+    {
+        $ledgerDefine = LedgerDefine::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'folder_id' => $this->folder->id,
+            'column_define' => [
+                new ColumnDefine((object) [
+                    'id' => 0,
+                    'name' => 'Background Image',
+                    'type' => 'files',
+                    'order' => 1,
+                    'file' => [
+                        'name' => 'background.png',
+                        'path' => 'column_files/background.png',
+                    ],
+                ]),
+            ],
+        ]);
+
+        $component = Livewire::test(ModifyColumn::class, [
+            'ledgerDefineId' => $ledgerDefine->id,
+        ]);
+
+        $expectedOriginalUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+        ]);
+        $expectedThumbnailUrl = route('ledgerDefine.background-image', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $ledgerDefine->id,
+            'columnId' => 0,
+            'thumbnail' => true,
+        ]);
+
+        $this->assertSame($expectedOriginalUrl, $component->get('columns')[0]['file']['url']);
+        $this->assertSame($expectedThumbnailUrl, $component->get('columns')[0]['file']['thumbnail_url']);
+    }
+
     // --- Date Type Specific Tests (Migrated from ModifyColumnDateTypeTest) ---
 
     #[Test]
@@ -146,7 +271,7 @@ class ModifyColumnTest extends TestCase
         $this->assertEquals('1d', $column->options['default_offset'] ?? null);
 
         $inputType = $column->getInputType();
-        $this->assertInstanceOf(\App\Models\ColumnTypes\DateType::class, $inputType);
+        $this->assertInstanceOf(DateType::class, $inputType);
         $this->assertEquals('1d', $inputType->default_offset);
     }
 
@@ -202,5 +327,44 @@ class ModifyColumnTest extends TestCase
             $column = $ledgerDefine->column_define[0];
             $this->assertEquals($offset, $column->options['default_offset'] ?? null, "Failed for offset: {$offset}");
         }
+    }
+
+    #[Test]
+    public function it_sets_is_dirty_when_background_file_is_uploaded()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->image('background.png');
+
+        Livewire::test(ModifyColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ])
+            ->assertSet('isDirty', false)
+            ->set('columnUploadedFile.0', $file)
+            ->assertSet('isDirty', true);
+    }
+
+    #[Test]
+    public function it_stores_uploaded_background_file_on_bulk_save()
+    {
+        Storage::fake('public');
+
+        $file = UploadedFile::fake()->image('background.png');
+
+        Livewire::test(ModifyColumn::class, [
+            'ledgerDefineId' => $this->ledgerDefine->id,
+        ])
+            ->set('columnUploadedFile.0', $file)
+            ->call('save')
+            ->assertDispatched('ledgerDefineRecordStored')
+            ->assertHasNoErrors();
+
+        $this->ledgerDefine->refresh();
+        $savedFileProperty = $this->ledgerDefine->column_define[0]->file;
+
+        $this->assertIsArray($savedFileProperty);
+        $this->assertEquals('background.png', $savedFileProperty['name']);
+
+        Storage::disk('public')->assertExists($savedFileProperty['path']);
     }
 }

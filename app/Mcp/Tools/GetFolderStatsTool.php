@@ -4,6 +4,7 @@ namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Services\AnalyticsService;
+use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -134,9 +135,9 @@ MARKDOWN;
     /**
      * Get the tool's input schema.
      *
-     * @return array<string, \Illuminate\Contracts\JsonSchema\JsonSchema>
+     * @return array<string, JsonSchema>
      */
-    public function schema(\Illuminate\Contracts\JsonSchema\JsonSchema $schema): array
+    public function schema(JsonSchema $schema): array
     {
         return [
             'format' => $schema->string()

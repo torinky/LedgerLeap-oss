@@ -5,11 +5,13 @@ namespace App\Mcp\Tools;
 use App\Helpers\ActivityLogFormatter;
 use App\Mcp\Helpers\TranslationHelper;
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\TruncatableResponse;
 use App\Models\CustomActivity;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\User;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Support\HtmlString;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
@@ -23,6 +25,7 @@ use Laravel\Mcp\Server\Tool;
 class GetActivityLogTool extends Tool
 {
     use AuthenticatedMcpTool;
+    use TruncatableResponse;
 
     protected string $description = <<<'MARKDOWN'
         Get activity logs with filtering options and Japanese translations
@@ -71,6 +74,7 @@ MARKDOWN;
 
             // レスポンス構築
             $response = $this->buildActivityLogResponse($activities, $format);
+            $response = $this->truncateIfNeeded($response);
 
             return Response::json($response);
 
@@ -152,7 +156,7 @@ MARKDOWN;
     private function formatActivityForResponse(CustomActivity $activity): array
     {
         $changes = ActivityLogFormatter::formatChanges($activity);
-        $changesHtml = $changes instanceof \Illuminate\Support\HtmlString ? $changes->toHtml() : (string) $changes;
+        $changesHtml = $changes instanceof HtmlString ? $changes->toHtml() : (string) $changes;
         $changesText = strip_tags($changesHtml);
 
         // getSubjectDetailLinkはroute()を呼び出すためエラーが発生する可能性がある

@@ -2,14 +2,17 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Enums\FolderPermissionType;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LedgerCreateControllerPrefillTest extends TestCase
@@ -29,7 +32,7 @@ class LedgerCreateControllerPrefillTest extends TestCase
         parent::setUp();
 
         // テナントとドメインを作成し、テナンシーを初期化（CI で複数テストが同ドメインを作らないようユニーク化）
-        $this->tenant = Tenant::create(['id' => 'prefill-'.uniqid()]);
+        $this->tenant = Tenant::create(['id' => 'prefill-'.uniqid('', true)]);
         $this->tenant->domains()->firstOrCreate(['domain' => 'ledger-prefill-test.localhost']);
         tenancy()->initialize($this->tenant);
 
@@ -46,7 +49,7 @@ class LedgerCreateControllerPrefillTest extends TestCase
         $this->actingAs($this->user);
 
         // Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // フォルダと台帳定義を作成
         $this->folder = Folder::create([
@@ -57,10 +60,10 @@ class LedgerCreateControllerPrefillTest extends TestCase
         ]);
 
         // フォルダへの書き込み権限を付与
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
 
@@ -309,6 +312,80 @@ class LedgerCreateControllerPrefillTest extends TestCase
     }
 
     #[Test]
+    public function it_accepts_multiline_textarea_prefill_parameters()
+    {
+        $columnDefines = $this->ledgerDefine->column_define;
+        $columnDefines[] = [
+            'id' => 6,
+            'name' => 'Textarea Column',
+            'type' => 'textarea',
+            'order' => 6,
+            'required' => false,
+            'unique' => false,
+            'options' => [
+                'placeholder' => '複数行で入力',
+                'hint' => '複数行テキスト',
+            ],
+            'group' => null,
+            'file' => null,
+        ];
+
+        $this->ledgerDefine->update(['column_define' => $columnDefines]);
+
+        $textareaValue = "1行目\n2行目";
+
+        $response = $this->get(route('ledger.create', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'prefill' => [
+                6 => $textareaValue,
+            ],
+        ]));
+
+        $response->assertStatus(200);
+
+        $prefillParams = $response->viewData('prefillParams');
+
+        $this->assertSame($textareaValue, $prefillParams[6]);
+    }
+
+    #[Test]
+    public function it_sanitizes_textarea_prefill_parameters_while_preserving_newlines()
+    {
+        $columnDefines = $this->ledgerDefine->column_define;
+        $columnDefines[] = [
+            'id' => 6,
+            'name' => 'Textarea Column',
+            'type' => 'textarea',
+            'order' => 6,
+            'required' => false,
+            'unique' => false,
+            'options' => [],
+            'group' => null,
+            'file' => null,
+        ];
+
+        $this->ledgerDefine->update(['column_define' => $columnDefines]);
+
+        $response = $this->get(route('ledger.create', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'prefill' => [
+                6 => "<b>1行目</b>\n<script>alert('xss')</script>2行目",
+            ],
+        ]));
+
+        $response->assertStatus(200);
+
+        $prefillParams = $response->viewData('prefillParams');
+
+        $this->assertStringNotContainsString('<b>', $prefillParams[6]);
+        $this->assertStringNotContainsString('</script>', $prefillParams[6]);
+        $this->assertStringContainsString("1行目\n", $prefillParams[6]);
+        $this->assertStringContainsString('2行目', $prefillParams[6]);
+    }
+
+    #[Test]
     public function it_handles_user_name_columns_correctly()
     {
         // user_nameカラムを追加
@@ -417,8 +494,39 @@ class LedgerCreateControllerPrefillTest extends TestCase
 
         // 配列形式の事前入力も正しく処理される
         $this->assertIsArray($prefillParams[5]);
-        $this->assertContains('Option1', $prefillParams[5]);
-        $this->assertContains('Option3', $prefillParams[5]);
-        $this->assertNotContains('Option2', $prefillParams[5]);
+        $this->assertSame(['Option1' => true, 'Option3' => true], $prefillParams[5]);
+    }
+
+    #[Test]
+    public function it_accepts_checkbox_prefill_boolean_map_parameters()
+    {
+        $columnDefines = $this->ledgerDefine->column_define;
+        $columnDefines[] = [
+            'id' => 5,
+            'name' => 'Checkbox Column',
+            'type' => 'chk',
+            'order' => 5,
+            'required' => false,
+            'unique' => false,
+            'options' => ['Option1', 'Option2', 'Option3'],
+            'group' => null,
+            'file' => null,
+        ];
+
+        $this->ledgerDefine->update(['column_define' => $columnDefines]);
+
+        $response = $this->get(route('ledger.create', [
+            'tenant' => $this->tenant->id,
+            'ledgerDefineId' => $this->ledgerDefine->id,
+            'prefill' => [
+                5 => ['Option1' => '1', 'Option2' => '0', 'Option3' => '1'],
+            ],
+        ]));
+
+        $response->assertStatus(200);
+
+        $prefillParams = $response->viewData('prefillParams');
+
+        $this->assertSame(['Option1' => true, 'Option3' => true], $prefillParams[5]);
     }
 }

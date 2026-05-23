@@ -1,0 +1,252 @@
+# 添付画像・サムネイルのセキュア配信統一計画
+
+**作成日:** 2026-03-18  
+**ステータス:** ✅ 完了（2026-03-20）  
+**Tracking Issue:** [#110](https://github.com/torinky/LedgerLeap/issues/110)
+
+---
+
+## 1. 目的
+
+画像ダウンロード、サムネイル表示、FilePond の poster、FileInspector のプレビューについて、`storage` 直参照を残さず、必ず権限チェック付きのダウンロード経路を通す。
+
+既存の「安全なダウンロード」方針は過去の調査で確立済みだが、コードベースにはまだ `Storage::disk('public')->url()` や `asset('storage/...')` が残っている。今回はその取りこぼしを回収し、UI からの直アクセスを完全に減らす。
+
+---
+
+## 2. 調査結果サマリ
+
+### 2.1 既に確立している方針
+
+- `AttachedFileDownloadController` で `Gate::authorize('view', $ledger)` を通す。
+- `file.download` 系ルートを画像/原本/サムネイルの正規入口とする。
+- サムネイルは `?thumbnail=true` で同じダウンロード経路に乗せる。
+- これらは `docs/function/Attachment.md` と過去の work 文書で明記済み。
+
+### 2.2 既存の関連文書
+
+- `docs/work/core-features/attachment/2025-07-13_attachment-feature-enhancement.md`
+- `docs/work/core-features/attachment/2025-07-19_refactor-filepond-blade-logic.md`
+- `docs/work/core-features/attachment/2025-07-19_refactor-attached-file-path.md`
+- `docs/work/core-features/attachment/2025-11-22_fix-thumbnail-generation-conflict.md`
+- `docs/work/ui-ux/attachment/2025-12-15_file-inspector-data-structure.md`
+- `docs/work/ui-ux/attachment/2025-12-19_phase3_detailed_plan.md`
+- `docs/work/ui-ux/attachment/2026-01-02_official-docs-update-plan.md`
+
+### 2.3 今回確認できた残存経路
+
+- `app/Livewire/AttachedFile/FileInspector.php`
+  - `Storage::disk('public')->url(...)` が残っている
+- `resources/views/livewire/attached-file/file-inspector/preview.blade.php`
+  - `previewUrl` / `originalUrl` をそのまま表示している
+- `app/Livewire/Ledger/ModifyColumn.php`
+  - FilePond poster 用にサムネイル存在確認をしている
+- `app/Services/Ledger/ColumnHtmlService.php`
+  - 添付一覧の URL 構築を行っている
+- `resources/views/components/ledger/table-row.blade.php`
+  - 添付一覧の補助データを組み立てている
+- `resources/views/livewire/ledger-define/partials/column-options.blade.php`
+  - `asset('storage/...')` で背景画像へ直接アクセスしている
+- `app/Livewire/LedgerDefine/Preview.php`
+  - 背景画像URLを `asset('storage/...')` で生成している
+- `app/Livewire/Traits/HandlesFormInitialization.php`
+  - 背景画像URLを `asset('storage/...')` で生成している
+
+### 2.4 結論
+
+「セキュアダウンロードの設計」は実装済みだが、**UI の一部がまだ直参照を出している**。したがって今回は設計刷新ではなく、**残存経路の回収と統一**が中心になる。
+
+---
+
+## 3. スプリント分割
+
+### Sprint 1: FileInspector を権限付き配信へ統一
+
+**対象:**
+- `app/Livewire/AttachedFile/FileInspector.php`
+- `resources/views/livewire/attached-file/file-inspector/preview.blade.php`
+- `resources/views/livewire/attached-file/file-inspector/quick-actions.blade.php`
+- `resources/views/livewire/attached-file/file-inspector/tabs/content.blade.php`
+
+**やること:**
+- `Storage::disk('public')->url()` を route ベースへ置換
+- `thumbnailUrl()` / `originalUrl()` / `previewUrl()` をダウンロード経路へ揃える
+- 画像/サムネイルの表示が `file.download` 系のみになることを確認
+- 権限なし時の挙動をテストで固定
+
+**完了条件:**
+- FileInspector から `storage` 直URL が出ない
+- 画像表示とダウンロードの両方で認可が通る
+
+---
+
+### Sprint 2: 添付一覧・FilePond poster の統一
+
+**対象:**
+- `app/Livewire/Ledger/ModifyColumn.php`
+- `app/Services/Ledger/ColumnHtmlService.php`
+- `resources/views/components/ledger/table-row.blade.php`
+- `resources/views/components/ledger/attachment-list.blade.php`
+- `resources/views/components/ledger/attachment-card.blade.php`
+
+**やること:**
+- 添付一覧の URL 生成を route ベースに揃える
+- `attachment-list` / `attachment-card` は受け取った URL を描画するだけに寄せる
+- FilePond poster の分岐を維持しつつ、実際の表示先は権限付き route に統一する
+- 画像/非画像/optimized PDF の回帰を確認する
+
+**完了条件:**
+- 一覧 UI から raw storage URL が消える
+- poster とダウンロードの期待値がテストで固定される
+
+---
+
+### Sprint 3: ledger-define 背景画像の安全配信化
+
+**対象:**
+- `app/Livewire/LedgerDefine/Preview.php`
+- `app/Livewire/Traits/HandlesFormInitialization.php`
+- `resources/views/livewire/ledger-define/partials/column-options.blade.php`
+- `resources/views/livewire/ledger-define/preview.blade.php`
+
+**やること:**
+- 背景画像の URL 生成を `asset('storage/...')` から別の安全な配信経路へ切り替える
+- 必要なら背景画像専用の route / helper を追加する
+- 編集画面とプレビューの両方で差し替える
+- 画面崩れがないことを確認する
+
+**完了条件:**
+- ledger-define 側の背景画像も storage 直参照しない
+- 既存の UI/UX を壊さない
+
+---
+
+## 4. 受け入れ条件
+
+- `storage` 直アクセスで画像やサムネイルが表示されない
+- 画像/サムネイル/原本/FilePond poster がすべて権限付き route 経由になる
+- 背景画像も安全な配信口へ統一される
+- 既存テストが通り、回帰がない
+
+---
+
+## 5. テスト方針
+
+### 優先テスト
+
+- `tests/Feature/Livewire/AttachedFile/FileInspectorTest.php`
+- `tests/Feature/Livewire/Ledger/ModifyColumnTest.php`
+- `tests/Feature/Livewire/AttachedFile/TextPreviewModalTest.php`
+- 追加が必要なら ledger-define の表示テスト
+
+### 確認観点
+
+- `previewUrl` が storage URL ではなく route になること
+- `thumbnailUrl` が `file.download?thumbnail=true` を使うこと
+- 権限のないユーザーが 403/404 で止まること
+- 背景画像の表示が既存の見た目を壊さないこと
+
+---
+
+## 6. 実装メモ
+
+- まず Sprint 1 を先行する
+- 背景画像は別系統なので Sprint 3 に分けてリスクを抑える
+- `docs/function/Attachment.md` にも今回の「残存経路回収」の観点を追記候補として残す
+- もし route 追加が必要なら、既存の `file.download` の契約を壊さずに helper を追加する方向で進める
+
+---
+
+## 7. 進捗ログ
+
+### 7.1 Sprint 1 開始時点の実装
+
+- `app/Livewire/AttachedFile/FileInspector.php`
+  - `Storage::disk('public')->url()` を route ベースへ置換
+  - `thumbnailUrl()` / `originalUrl()` / `previewUrl()` を安全な配信経路へ統一
+  - `downloadUrl()` を追加し、ダウンロードと表示の URL を分離
+- `resources/views/livewire/attached-file/file-inspector/quick-actions.blade.php`
+  - ダウンロードとコピーを `downloadUrl` へ切り替え
+- `tests/Feature/Livewire/AttachedFile/FileInspectorTest.php`
+  - `previewUrl` / `originalUrl` / `downloadUrl` の route 期待値を追加
+  - サムネイル存在時の `thumbnail=true` ルートも検証
+
+### 7.2 直近の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php --stop-on-failure`
+  - **31 passed**
+  - 画像、PDF、サムネイル、権限拒否、パフォーマンス系の既存テストが継続成功
+
+### 7.3 Sprint 2 の実装
+
+- `app/Livewire/Ledger/ModifyColumn.php`
+  - FilePond poster の生成を storage 存在確認なしの route ベースへ統一
+  - 画像は `file.download?thumbnail=true`、非画像は icon route に固定
+- `app/Services/Ledger/ColumnHtmlService.php`
+  - 添付一覧の thumbnail URL を route ベースへ統一
+  - `Storage::disk('public')->exists()` を削除
+- `resources/views/components/ledger/table-row.blade.php`
+  - 添付一覧の thumbnail 判定を route ベースへ統一
+  - view 側で storage を見に行かない構成へ寄せた
+
+### 7.4 Sprint 2 の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Livewire/Ledger/ModifyColumnTest.php tests/Feature/Components/AttachmentListComponentTest.php tests/Unit/Services/Ledger/ColumnHtmlServiceTest.php --stop-on-failure`
+  - **34 passed**
+  - FilePond 初期化、添付一覧描画、ColumnHtmlService の既存挙動が継続成功
+
+### 7.5 Sprint 3 の実装と想定外の派生修正
+
+- `app/Livewire/LedgerDefine/Preview.php`
+  - 背景画像URLの再描画で `initBackgroundImages()` を再実行するように変更
+- `app/Livewire/Traits/HandlesFormInitialization.php`
+  - 背景画像URLを tenant-aware の helper 経由へ統一
+- `resources/views/livewire/ledger-define/partials/column-options.blade.php`
+  - 背景画像の `asset('storage/...')` 直参照を排除し、`thumbnail_url` / `url` 前提へ統一
+- `app/Http/Controllers/AttachedFileDownloadController.php`
+  - `thumbnail=true` でサムネイルが未生成の画像は `GenerateThumbnail` を再発行し、処理中 SVG を返すように変更
+  - サムネイル生成待ちのときに PDF アイコンへ落ちないようにした
+- `tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php`
+  - サムネイル欠損時のキュー発行と処理中レスポンスを回帰テスト化
+
+### 7.6 Sprint 3 / 派生修正の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Livewire/LedgerDefine/ModifyColumnTest.php --stop-on-failure`
+  - **10 passed**
+- `./vendor/bin/sail test tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php --stop-on-failure`
+  - **1 passed**
+- `./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php --filter=it_uses_thumbnail_route_for_large_image_files_when_thumbnail_exists --stop-on-failure`
+  - **1 passed**
+
+### 7.7 想定外の作業メモ
+
+- Issue #110 の調査中に、`thumbnail=true` の欠損時に PDF アイコンへ落ちる経路を確認したため、`GenerateThumbnail` の再発行と処理中プレースホルダ返却を追加対応した。
+- これは当初の ledger-define 背景画像整理とは別の派生修正だが、添付ファイルのセキュア配信を壊さないために必要だった。
+
+### 7.8 サムネイル重複キュー抑止の追加対応
+
+- `app/Jobs/Ledger/GenerateThumbnail.php`
+  - `ShouldBeUnique` を実装し、同一 `attachedFileId` の重複 dispatch をキュー段階で抑止するように変更
+- `app/Http/Controllers/AttachedFileDownloadController.php`
+  - `OPTIMIZING` への遷移が成功したときだけサムネイル生成ジョブを積むように変更
+- `app/Livewire/AttachedFile/FileInspector.php`
+  - `openInspector` を繰り返しても同じサムネイル生成ジョブが連続 dispatch されないように変更
+- `tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php`
+  - `thumbnail=true` を 2 回呼んでも 1 件しか queued されないことを回帰テスト化
+- `tests/Feature/Livewire/AttachedFile/FileInspectorTest.php`
+  - FileInspector 側の重複 dispatch 抑止も回帰テスト化
+
+### 7.9 サムネイル重複キュー抑止の検証結果
+
+- `./vendor/bin/sail test tests/Feature/Http/Controllers/AttachedFileDownloadControllerTest.php --stop-on-failure`
+  - **1 passed (9 assertions)**
+- `./vendor/bin/sail test tests/Feature/Livewire/AttachedFile/FileInspectorTest.php --stop-on-failure`
+  - **32 passed (80 assertions)**
+
+### 7.10 スプリント完了メモ
+
+- 予定していた `storage` 直参照の回収、セキュア配信への統一、サムネイル欠損時の処理中表示、重複キュー抑止まで完了した。
+- 追加の再利用知識は `docs/function/Attachment.md` と `docs/runbooks/ai-asset-maintenance-playbook.md` の既存導線で十分に追跡できるため、今回の完了時点では `.github` の追加更新は不要と判断した。
+- 最終コミット: `b7cc1503` (`fix(attachment): suppress duplicate thumbnail jobs`)
+- 以後のフォローアップが出る場合は、`issue #110` の後続ではなく新しい work log / issue として切り出す。
+

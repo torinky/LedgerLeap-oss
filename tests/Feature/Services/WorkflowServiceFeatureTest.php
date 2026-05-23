@@ -10,6 +10,7 @@ use App\Models\LedgerDiff;
 use App\Models\NotificationType;
 use App\Models\Role;
 use App\Models\User;
+use App\Services\UserService;
 use App\Services\WorkflowService;
 use Illuminate\Support\Facades\Notification;
 use PHPUnit\Framework\Attributes\CoversClass;
@@ -93,10 +94,10 @@ class WorkflowServiceFeatureTest extends TestCase
     {
         Notification::fake();
 
-        $userServiceMock = $this->mock(\App\Services\UserService::class);
+        $userServiceMock = $this->mock(UserService::class);
         $userServiceMock->shouldReceive('hasFolderPermission')->andReturn(true);
         $userServiceMock->shouldReceive('getAllUniqueRolesForUser')->andReturn(collect());
-        app()->instance(\App\Services\UserService::class, $userServiceMock);
+        app()->instance(UserService::class, $userServiceMock);
         $workflowService = app(WorkflowService::class);
 
         $ledger = Ledger::factory()->create([
@@ -141,10 +142,10 @@ class WorkflowServiceFeatureTest extends TestCase
     {
         Notification::fake();
 
-        $userServiceMock = $this->mock(\App\Services\UserService::class);
+        $userServiceMock = $this->mock(UserService::class);
         $userServiceMock->shouldReceive('hasFolderPermission')->andReturn(true);
         $userServiceMock->shouldReceive('getAllUniqueRolesForUser')->andReturn(collect());
-        app()->instance(\App\Services\UserService::class, $userServiceMock);
+        app()->instance(UserService::class, $userServiceMock);
         $workflowService = app(WorkflowService::class);
 
         $ledger = Ledger::factory()->create([
@@ -186,10 +187,10 @@ class WorkflowServiceFeatureTest extends TestCase
     {
         Notification::fake();
 
-        $userServiceMock = $this->mock(\App\Services\UserService::class);
+        $userServiceMock = $this->mock(UserService::class);
         $userServiceMock->shouldReceive('hasFolderPermission')->andReturn(true);
         $userServiceMock->shouldReceive('getAllUniqueRolesForUser')->andReturn(collect());
-        app()->instance(\App\Services\UserService::class, $userServiceMock);
+        app()->instance(UserService::class, $userServiceMock);
         $workflowService = app(WorkflowService::class);
 
         $ledger = Ledger::factory()->create([
@@ -328,10 +329,10 @@ class WorkflowServiceFeatureTest extends TestCase
         ]);
         $ledger->update(['latest_diff_id' => $diff->id]);
 
-        $userServiceMock = $this->mock(\App\Services\UserService::class);
+        $userServiceMock = $this->mock(UserService::class);
         $userServiceMock->shouldReceive('hasFolderPermission')->andReturn(true);
         $userServiceMock->shouldReceive('getAllUniqueRolesForUser')->andReturn(collect());
-        app()->instance(\App\Services\UserService::class, $userServiceMock);
+        app()->instance(UserService::class, $userServiceMock);
         $workflowService = app(WorkflowService::class);
 
         $updatedLedger = $workflowService->claimTask(

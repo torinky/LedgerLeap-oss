@@ -8,8 +8,13 @@
         <testsuite name="Unit">
             <directory suffix="Test.php">./tests/Unit</directory>
         </testsuite>
-        <testsuite name="Feature">
+        <testsuite name="FeatureSerial">
             <directory suffix="Test.php">./tests/Feature</directory>
+            <exclude>./tests/Feature/Livewire</exclude>
+            <exclude>./tests/Feature/Services</exclude>
+            <file>./tests/Feature/Livewire/Folder/TreeTest.php</file>
+            <file>./tests/Feature/Livewire/TenantSwitcherTest.php</file>
+            <file>./tests/Feature/Livewire/LedgerColumnValidationTest.php</file>
         </testsuite>
     </testsuites>
     <source>

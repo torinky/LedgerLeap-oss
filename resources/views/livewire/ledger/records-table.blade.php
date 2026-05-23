@@ -15,7 +15,9 @@
     $allTargets = $heavyNavTargets . ',' . $itemActionTargets;
 @endphp
 
-<div class="relative">
+<div class="relative" x-data="confidentialityScrollTracker()"
+    x-on:file-inspector-selection-applied.window="if ($event.detail.selectedLedgerId) { $nextTick(() => { const row = document.getElementById('ledger-row-' + $event.detail.selectedLedgerId); if (row) { row.scrollIntoView({ behavior: 'smooth', block: 'center' }); row.focus({ preventScroll: true }); } }); }"
+    x-on:ledger-sections-rendered.window="setupObserver()">
 
     {{-- Info & Results Section --}}
     <div class="px-4 relative min-h-[400px]">
@@ -42,62 +44,41 @@
                                 continue;
                             }
                             $canManage = auth()->user()->can('update', $ledgerDefine);
-                            $canCreate = auth()
-                                ->user()
-                                ->can('ledgerCreate', $ledgerDefine);
-                            $canUpdate = auth()
-                                ->user()
-                                ->can('ledgerUpdate', $ledgerDefine);
+                            $canCreate = auth()->user()->can('ledgerCreate', $ledgerDefine);
+                            $canUpdate = auth()->user()->can('ledgerUpdate', $ledgerDefine);
                             $canView = auth()->user()->can('ledgerView', $ledgerDefine);
-                            \Log::info('RecordsTable render loop: permissions', [
-                                'ledgerDefineId' => $ledgerDefineId,
-                                'canView' => $canView,
-                                'canUpdate' => $canUpdate,
-                                'user' => auth()->user()->email
-                            ]);
-                        @endphp
-                        <div class="card bg-base-100 shadow-xl my-10 border border-base-200 overflow-hidden"
-                            wire:key="ledger_record_{{ $ledgerDefineId }}">
-                            <div class="card-body pt-0 px-0">
-                                <x-ledgerDefine.header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine" :search="$search"
-                                    :filter="$filter" :keywords="$keywords" :canManage="$canManage" :canCreate="$canCreate"
-                                    :canView="$canView" :ledgerDefineId="$ledgerDefineId" :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById" :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
-                                    :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null" :currentTenantId="$currentTenantId" />
 
-                                <div class="overflow-x-auto max-h-[70vh]" wire:key="ledgerDefine_block-{{ $ledgerDefineId }}">
-                                    @php
-                                        $displayColumns = $filteredColumnDefines[$ledgerDefineId] ?? [];
-                                        if ($displayColumns instanceof \Illuminate\Support\Collection) {
-                                            $displayColumns = $displayColumns->toArray();
-                                        }
-                                        $displayColumnsWithMock = $displayColumns;
-                                        if (\App\Services\Ledger\MockAttachmentService::isEnabled()) {
-                                            $mockDef = (object) \App\Services\Ledger\MockAttachmentService::getMockColumnDefine();
-                                            $mockDef->label = '添付(モック)';
-                                            $displayColumnsWithMock = array_merge($displayColumns, [$mockDef]);
-                                        }
-                                    @endphp
-                                    <table
-                                        class="table table-zebra table-compact table-auto table-pin-rows table-pin-cols w-full">
-                                        <thead>
-                                            <x-ledger.table-header :ledgerDefine="$ledgerDefineRecordsKeyById[$ledgerDefineId]" :orderBy="$orderBy"
-                                                :orderAsc="$orderAsc" :filteredColumnDefines="$displayColumnsWithMock" :defaultSortColumns="$defaultSortColumns" />
-                                        </thead>
-                                        <tbody>
-                                            @foreach ($ledgerDefineAndRecords as $ledgerRecordValues)
-                                                <x-ledger.table-row :ledgerRecord="$ledgerRecordValues" :highlightKeyword="$search"
-                                                    :canUpdate="$canUpdate" :canView="$canView" :allAttachments="$allAttachments"
-                                                    :filteredColumnDefines="$displayColumnsWithMock" :currentTenantId="$currentTenantId" />
-                                            @endforeach
-                                        </tbody>
-                                    </table>
-                                </div>
-                            </div>
-                        </div>
+                        @endphp
+                        <x-ledger.records-section
+                            :ledgerDefineId="$ledgerDefineId"
+                            :records="$ledgerDefineAndRecords"
+                            :ledgerDefine="$ledgerDefine"
+                            :breadcrumbsPerLedgerDefine="$breadcrumbsPerLedgerDefine"
+                            :scoreStats="$scoreStatsByDefineId[$ledgerDefineId] ?? null"
+                            :overallStats="$overallStatsByDefineId[$ledgerDefineId] ?? null"
+                            :filteredColumnDefines="$filteredColumnDefines[$ledgerDefineId]"
+                            :search="$search"
+                            :filter="$filter"
+                            :keywords="$keywords"
+                            :canManage="$canManage"
+                            :canCreate="$canCreate"
+                            :canUpdate="$canUpdate"
+                            :canView="$canView"
+                            :ledgerDefineRecordsKeyById="$ledgerDefineRecordsKeyById"
+                            :orderBy="$orderBy"
+                            :orderAsc="$orderAsc"
+                            :defaultSortColumns="$defaultSortColumns"
+                            :currentTenantId="$currentTenantId"
+                            :selectedFileId="$selectedFileId"
+                            :selectedLedgerId="$selectedLedgerId"
+                            :selectedColumnId="$selectedColumnId"
+                        />
                     @endforeach
+{{--
                     <div class="mt-8">
                         {!! $ledgerRecords->links('components.ledger.pagination-links', ['position' => 'bottom']) !!}
                     </div>
+--}}
                 @else
                     @include('components.ledger.alert', [
                         'message' => __('ledger.select_message'),
@@ -142,3 +123,5 @@
     {{-- 添付ファイルのドロワーを一覧ページにも常駐配置 --}}
     <livewire:attached-file.file-inspector />
 </div>
+
+

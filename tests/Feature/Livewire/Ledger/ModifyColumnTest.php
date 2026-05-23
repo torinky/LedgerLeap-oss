@@ -2,11 +2,17 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\AttachedFileStatus;
+use App\Enums\FolderPermissionType;
+use App\Helpers\AttachedFilePathHelper;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Models\AttachedFile;
 use App\Models\ColumnDefine;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Http\UploadedFile;
@@ -14,6 +20,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -41,9 +48,9 @@ class ModifyColumnTest extends TestCase
         $this->actingAs($this->user);
 
         // 権限設定
-        $role = \App\Models\Role::firstOrCreate(['name' => 'test-editor-role', 'guard_name' => 'web']);
-        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']));
-        $role->givePermissionTo(\Spatie\Permission\Models\Permission::firstOrCreate(['name' => 'update_ledgers', 'guard_name' => 'web']));
+        $role = Role::firstOrCreate(['name' => 'test-editor-role', 'guard_name' => 'web']);
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']));
+        $role->givePermissionTo(Permission::firstOrCreate(['name' => 'update_ledgers', 'guard_name' => 'web']));
         $this->user->assignRole($role);
 
         // ファイルカラムを持つ台帳定義を作成
@@ -67,22 +74,22 @@ class ModifyColumnTest extends TestCase
 
         // フォルダ権限設定
         if ($this->ledgerDefine->folder) {
-            \App\Models\RoleFolderPermission::create([
+            RoleFolderPermission::create([
                 'role_id' => $role->id,
                 'folder_id' => $this->ledgerDefine->folder_id,
-                'permission' => \App\Enums\FolderPermissionType::WRITE,
+                'permission' => FolderPermissionType::WRITE,
                 'modifier_id' => $this->user->id,
             ]);
         }
     }
 
-    protected function assignFolderPermission(\App\Models\Folder $folder): void
+    protected function assignFolderPermission(Folder $folder): void
     {
-        $role = \App\Models\Role::findByName('test-editor-role', 'web');
-        \App\Models\RoleFolderPermission::create([
+        $role = Role::findByName('test-editor-role', 'web');
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }
@@ -100,8 +107,9 @@ class ModifyColumnTest extends TestCase
 
         // ダミーファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
+        $expectedSize = Storage::disk('public')->size($path);
 
         // 添付ファイル情報を持つLedgerレコードを作成
         $ledger = Ledger::factory()->create([
@@ -122,6 +130,7 @@ class ModifyColumnTest extends TestCase
             'column_id' => 0, // 1から0に変更
             'path' => $path, // 生成したパスを設定
             'mime' => 'image/jpeg', // MIMEタイプを明示的に設定
+            'size' => null,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -150,12 +159,14 @@ class ModifyColumnTest extends TestCase
         $firstFile = $filesForColumn[0] ?? null;
         $this->assertNotNull($firstFile, 'File object not found.');
 
-        // 4. sourceとposterのURLが期待通りか厳密に検証
+        // 4. sourceとsize、posterが期待通りか厳密に検証
         $expectedSourceUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id]);
         $expectedPosterUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id, 'thumbnail' => true]);
 
         $this->assertEquals($expectedSourceUrl, $firstFile['source'], 'The file source URL is incorrect.');
-        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'The file poster URL is incorrect.');
+        $this->assertSame($expectedSize, $firstFile['options']['file']['size'], 'File size should be preserved for FilePond.');
+        $this->assertFalse($firstFile['options']['metadata']['is_icon']);
+        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Image poster should point to thumbnail preview.');
     }
 
     #[Test]
@@ -171,7 +182,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーPDFファイルを作成
         $dummyFile = UploadedFile::fake()->create($originalFilename, 100, 'application/pdf');
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 添付ファイル情報を持つLedgerレコードを作成
@@ -193,6 +204,7 @@ class ModifyColumnTest extends TestCase
             'column_id' => 0,
             'path' => $path,
             'mime' => 'application/pdf',
+            'size' => null,
             'tenant_id' => $this->tenant->id,
         ]);
 
@@ -211,13 +223,12 @@ class ModifyColumnTest extends TestCase
         $firstFile = $filesForColumn[0] ?? null;
         $this->assertNotNull($firstFile);
 
-        // 1. is_iconフラグがtrueであることを確認（非画像ファイル）
-        $this->assertArrayHasKey('is_icon', $firstFile['options']['metadata']);
-        $this->assertTrue($firstFile['options']['metadata']['is_icon'], 'is_icon should be true for non-image files.');
+        // 1. MIMEアイコン用posterが設定されることを確認
+        $this->assertTrue($firstFile['options']['metadata']['is_icon'], 'Poster should be the file-type icon for non-image files.');
+        $this->assertEquals(route('api.fontawesome.icon.by_mime', ['type' => 'application/pdf']), $firstFile['options']['metadata']['poster']);
 
-        // 2. posterURLがアイコンAPIのルートを指していることを確認
-        $expectedPosterUrl = route('api.fontawesome.icon.by_mime', ['type' => 'application/pdf']);
-        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Poster URL should point to icon API for non-image files.');
+        // 2. 既存ファイルサイズが FilePond に渡ることを確認
+        $this->assertSame(Storage::disk('public')->size($path), $firstFile['options']['file']['size']);
     }
 
     #[Test]
@@ -255,7 +266,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($multiColumnDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($multiColumnDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 複数のカラムに対応するcontentを持つLedgerレコードを作成
@@ -336,7 +347,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミーファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($sparseColumnDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($sparseColumnDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 疎なcontentを持つLedgerレコードを作成
@@ -566,7 +577,7 @@ class ModifyColumnTest extends TestCase
 
         // ダミー画像ファイルを作成
         $dummyFile = UploadedFile::fake()->image($originalFilename);
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $hashedBasename);
         Storage::disk('public')->put($path, $dummyFile->get());
 
         // 添付ファイル情報を持つLedgerレコードを作成
@@ -615,6 +626,58 @@ class ModifyColumnTest extends TestCase
         $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster'], 'Poster URL should point to thumbnail API for image files.');
     }
 
+    #[Test]
+    public function it_treats_pdf_optimized_images_as_images_for_filepond_initial_files()
+    {
+        Storage::fake('public');
+
+        tenancy()->initialize($this->tenant);
+        $hashedBasename = 'optimized_image.pdf';
+        $originalFilename = 'optimized_image.jpg';
+
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'tenant_id' => $this->tenant->id,
+            'content' => [
+                0 => [
+                    $hashedBasename => $originalFilename,
+                ],
+            ],
+        ]);
+
+        $attachedFile = AttachedFile::factory()->create([
+            'ledger_id' => $ledger->id,
+            'hashedbasename' => $hashedBasename,
+            'filename' => $originalFilename,
+            'column_id' => 0,
+            'path' => 'attachments/'.$hashedBasename,
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'image/jpeg',
+            'size' => null,
+            'status' => AttachedFileStatus::COMPLETED->value,
+            'tenant_id' => $this->tenant->id,
+        ]);
+
+        $livewireTest = Livewire::actingAs($this->user)
+            ->test(ModifyColumn::class, ['ledgerId' => $ledger->id]);
+
+        $livewireTest->set('tenantId', $this->tenant->id);
+
+        $filePondFiles = $livewireTest->get('filePondInitialFiles');
+        $filesForColumn = $filePondFiles[0] ?? null;
+        $this->assertNotNull($filesForColumn);
+
+        $firstFile = $filesForColumn[0] ?? null;
+        $this->assertNotNull($firstFile);
+
+        $this->assertArrayHasKey('is_icon', $firstFile['options']['metadata']);
+        $this->assertFalse($firstFile['options']['metadata']['is_icon'], 'Optimized images should still be treated as image thumbnails.');
+
+        $expectedPosterUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $attachedFile->id, 'thumbnail' => true]);
+        $this->assertEquals($expectedPosterUrl, $firstFile['options']['metadata']['poster']);
+        $this->assertSame('image/jpeg', $firstFile['options']['file']['type']);
+    }
+
     /**
      * 複数のファイルタイプ（Word、Excel、PDF）のアイコン表示を確認
      * Issue #62: 台帳編集画面の添付ファイルプレビュー表示改善
@@ -637,7 +700,7 @@ class ModifyColumnTest extends TestCase
         $contentArray = [];
         foreach ($documentTypes as $index => $docType) {
             $dummyFile = UploadedFile::fake()->create($docType['basename'], 100, $docType['mime']);
-            $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']);
+            $path = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']);
             Storage::disk('public')->put($path, $dummyFile->get());
 
             $contentArray[$docType['basename']] = $docType['basename'];
@@ -659,7 +722,7 @@ class ModifyColumnTest extends TestCase
                 'hashedbasename' => $docType['basename'],
                 'filename' => $docType['basename'],
                 'column_id' => 0,
-                'path' => \App\Helpers\AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']),
+                'path' => AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, $docType['basename']),
                 'mime' => $docType['mime'],
                 'tenant_id' => $this->tenant->id,
             ]);
@@ -677,13 +740,13 @@ class ModifyColumnTest extends TestCase
         $this->assertNotNull($filesForColumn);
         $this->assertCount(3, $filesForColumn, 'Should have 3 files.');
 
-        // すべてのファイルでis_iconがtrueであることを確認
+        // すべてのファイルで poster が MIME アイコンを指し、size が渡ることを確認
         foreach ($filesForColumn as $file) {
             $this->assertArrayHasKey('is_icon', $file['options']['metadata']);
             $this->assertTrue($file['options']['metadata']['is_icon'], "is_icon should be true for {$file['options']['file']['name']}");
-
-            // posterURLがアイコンAPIを指していることを確認
             $this->assertStringContainsString('/icons/mime?type=', $file['options']['metadata']['poster']);
+            $this->assertArrayHasKey('size', $file['options']['file']);
+            $this->assertGreaterThan(0, $file['options']['file']['size'], "File size should be present for {$file['options']['file']['name']}");
         }
     }
 

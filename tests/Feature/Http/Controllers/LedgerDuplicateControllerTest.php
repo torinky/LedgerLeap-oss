@@ -13,6 +13,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 /**
@@ -46,7 +47,7 @@ class LedgerDuplicateControllerTest extends TestCase
         parent::setUp();
 
         // テナントとドメインを作成し、テナンシーを初期化（CI で複数テストが同ドメインを作らないようユニーク化）
-        $this->tenant = Tenant::create(['id' => 'duplicate-'.uniqid()]);
+        $this->tenant = Tenant::create(['id' => 'duplicate-'.uniqid('', true)]);
         $this->tenant->domains()->firstOrCreate(['domain' => 'ledger-duplicate-test.localhost']);
         tenancy()->initialize($this->tenant);
 
@@ -109,7 +110,7 @@ class LedgerDuplicateControllerTest extends TestCase
         ]);
 
         // Spatieの権限キャッシュをクリア
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
     }
 
     protected function tearDown(): void
@@ -367,8 +368,7 @@ class LedgerDuplicateControllerTest extends TestCase
         // タグ（カラムID: 7）は複製される
         $this->assertArrayHasKey(7, $prefillParams);
         $this->assertIsArray($prefillParams[7]);
-        $this->assertContains('タグ1', $prefillParams[7]);
-        $this->assertContains('タグ3', $prefillParams[7]);
+        $this->assertSame(['タグ1' => true, 'タグ3' => true], $prefillParams[7]);
     }
 
     #[Test]
@@ -561,9 +561,8 @@ class LedgerDuplicateControllerTest extends TestCase
         // 有効な選択肢のみが含まれる
         $this->assertArrayHasKey(7, $prefillParams);
         $this->assertIsArray($prefillParams[7]);
-        $this->assertContains('タグ1', $prefillParams[7]);
-        $this->assertContains('タグ3', $prefillParams[7]);
-        $this->assertNotContains('削除されたタグ', $prefillParams[7]);
+        $this->assertSame(['タグ1' => true, 'タグ3' => true], $prefillParams[7]);
+        $this->assertArrayNotHasKey('削除されたタグ', $prefillParams[7]);
     }
 
     #[Test]

@@ -6,6 +6,7 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Models\Role;
+use App\Services\ConfidentialityLevelService;
 use Illuminate\Support\Collection as SupportCollection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +38,10 @@ class FolderForm extends BaseLivewireComponent
 
     public bool $isCreating = false;
 
+    public string $confidentialityLevel = 'public';
+
+    public array $confidentialityScopes = [];
+
     // --- 削除確認モーダル用 ---
     public bool $confirmingFolderDeletion = false;
 
@@ -55,6 +60,9 @@ class FolderForm extends BaseLivewireComponent
                 'integer',
                 Rule::exists('folders', 'id')->whereNot('id', $this->folderId ?? 0),
             ],
+            'confidentialityLevel' => ['required', 'string', 'in:public,internal,confidential,secret'],
+            'confidentialityScopes' => ['nullable', 'array'],
+            'confidentialityScopes.*' => ['string'],
             'selectedInspectorRoleIds' => ['array'],
             'selectedInspectorRoleIds.*' => ['integer', 'exists:roles,id'],
             'selectedApproverRoleIds' => ['array'],
@@ -67,6 +75,8 @@ class FolderForm extends BaseLivewireComponent
         return [
             'title' => __('ledger.folder.form.label.title'),
             'parentId' => __('ledger.folder.form.label.parent_id'),
+            'confidentialityLevel' => __('ledger.confidentiality.confidentiality.level.label'),
+            'confidentialityScopes' => __('ledger.confidentiality.confidentiality.scope.label'),
             'selectedInspectorRoleIds' => __('ledger.folder.form.label.required_inspector_roles'),
             'selectedApproverRoleIds' => __('ledger.folder.form.label.required_approver_roles'),
         ];
@@ -112,6 +122,8 @@ class FolderForm extends BaseLivewireComponent
             $this->parentId = $this->folder->parent_id;
             $this->selectedInspectorRoleIds = $this->folder->requiredInspectorRoles()->pluck('roles.id')->toArray();
             $this->selectedApproverRoleIds = $this->folder->requiredApproverRoles()->pluck('roles.id')->toArray();
+            $this->confidentialityLevel = $this->folder->confidentiality_level ?? 'public';
+            $this->confidentialityScopes = ConfidentialityLevelService::buildScopeChoices($this->folder->confidentiality_scopes);
         } else {
             // 新規作成モードの初期化
             if (is_null($this->parentId) && Folder::count() > 0) {
@@ -178,6 +190,8 @@ class FolderForm extends BaseLivewireComponent
                 $this->folder = Folder::find($this->folderId);
             }
             $this->folder->title = $this->title;
+            $this->folder->confidentiality_level = $this->confidentialityLevel;
+            $this->folder->confidentiality_scopes = ConfidentialityLevelService::parseScopeChoices($this->confidentialityScopes);
             $this->folder->modifier_id = Auth::id();
             $isNewRecordBeforeSave = $this->isCreating; // 保存前の状態を保持
             if ($this->isCreating) {
@@ -383,6 +397,8 @@ class FolderForm extends BaseLivewireComponent
         // $this->parentId = null; // または $this->parentId = request()->input('parent_id', Folder::whereIsRoot()->first()?->id);
         $this->selectedInspectorRoleIds = [];
         $this->selectedApproverRoleIds = [];
+        $this->confidentialityLevel = 'public';
+        $this->confidentialityScopes = [];
         $this->isCreating = true;
         $this->formDisabled = false;
         $this->justSaved = false;
@@ -392,8 +408,12 @@ class FolderForm extends BaseLivewireComponent
 
     public function render()
     {
-        return view('livewire.folder.folder-form')
-            ->layout('layouts.app', ['title' => __('ledger.folder.settings')]);
+        $confidentialityLevelOptions = ConfidentialityLevelService::selectOptions();
+        $confidentialityScopeOptions = ConfidentialityLevelService::allScopes();
 
+        return view('livewire.folder.folder-form', [
+            'confidentialityLevelOptions' => $confidentialityLevelOptions,
+            'confidentialityScopeOptions' => $confidentialityScopeOptions,
+        ])->layout('layouts.app', ['title' => __('ledger.folder.settings')]);
     }
 }

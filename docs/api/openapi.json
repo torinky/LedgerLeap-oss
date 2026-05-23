@@ -206,6 +206,117 @@
                 ]
             }
         },
+        "/api/v1/ledgers/{ledger}": {
+            "get": {
+                "tags": [
+                    "Ledgers"
+                ],
+                "summary": "Get a single ledger for update confirmation",
+                "description": "Retrieve a single ledger with status and column definition details before applying an update.",
+                "operationId": "getSingleLedgerForUpdateConfirmation",
+                "parameters": [
+                    {
+                        "name": "ledger",
+                        "in": "path",
+                        "required": true,
+                        "description": "Ledger ID",
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LedgerDetailResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Ledgers"
+                ],
+                "summary": "Partially update a ledger",
+                "description": "Apply a partial update to a ledger after confirming its latest status and current content.",
+                "operationId": "patchLedger",
+                "parameters": [
+                    {
+                        "name": "ledger",
+                        "in": "path",
+                        "required": true,
+                        "description": "Ledger ID",
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Ledger patch payload",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateLedgerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LedgerDetailResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "409": {
+                        "description": "Locked by workflow status"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/api/v1/ledger-defines": {
             "get": {
                 "tags": [
@@ -593,6 +704,25 @@
                 },
                 "type": "object"
             },
+            "UpdateLedgerRequest": {
+                "title": "Update Ledger Request Body",
+                "required": [
+                    "content_patch"
+                ],
+                "properties": {
+                    "content_patch": {
+                        "description": "An object where keys are column definition IDs and values are only the fields to update.",
+                        "type": "object"
+                    },
+                    "comment": {
+                        "description": "Optional comment describing why the update was made.",
+                        "type": "string",
+                        "nullable": true,
+                        "example": "差し戻し指摘を反映"
+                    }
+                },
+                "type": "object"
+            },
             "LedgerResource": {
                 "title": "Ledger Resource",
                 "properties": {
@@ -660,6 +790,125 @@
                             },
                             "type": "object"
                         }
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "LedgerDetailResource": {
+                "title": "Ledger Detail Resource",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "define": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "日報"
+                            },
+                            "description": {
+                                "type": "string",
+                                "example": "日報入力用の台帳です"
+                            },
+                            "workflow_enabled": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "content": {
+                        "type": "object"
+                    },
+                    "content_by_column_id": {
+                        "type": "object"
+                    },
+                    "column_definitions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 0
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "件名"
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "example": "text"
+                                },
+                                "required": {
+                                    "type": "boolean",
+                                    "example": true
+                                },
+                                "order": {
+                                    "type": "integer",
+                                    "example": 1
+                                }
+                            }
+                        }
+                    },
+                    "content_attached": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "folder": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 5
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Project A"
+                            },
+                            "path": {
+                                "type": "string",
+                                "example": "/Root/Project A"
+                            }
+                        }
+                    },
+                    "workflow": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "draft"
+                            },
+                            "status_label": {
+                                "type": "string",
+                                "example": "作成中"
+                            },
+                            "editable": {
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "returns_to_draft_on_save": {
+                                "type": "boolean",
+                                "example": false
+                            },
+                            "latest_comment": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "version": {
+                        "type": "integer",
+                        "example": 2
                     },
                     "updated_at": {
                         "type": "string",

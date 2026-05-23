@@ -23,7 +23,9 @@ class ExportController extends Controller
     {
         // ダウンロードするCSVのカラム定義を取得
         $ledgerDefineId = $request->ledgerDefineId();
-        $columnDefines = LedgerDefine::where('id', $ledgerDefineId)->pluck('column_define')->sortBy('order')->all()[0];
+        $columnDefines = LedgerDefine::findOrFail($ledgerDefineId)->column_define
+            ->sortBy('order')
+            ->values();
 
         $exportFilename = LedgerDefine::find($ledgerDefineId)->title.'.csv';
 
@@ -34,6 +36,11 @@ class ExportController extends Controller
          * ファイルの形式は第二引数の拡張子から判別されるため、基本的に指定不要
          * 第四引数: ヘッダーに含める情報を指定する配列
          */
-        return Excel::download(new LedgerExport($ledgerDefineId, $request->keywords(), $request->filter(), $columnDefines), $exportFilename, \Maatwebsite\Excel\Excel::CSV, ['X-Vapor-Base64-Encode' => 'True']);
+        return Excel::download(
+            new LedgerExport($ledgerDefineId, $request->keywords(), $request->filter(), $columnDefines),
+            $exportFilename,
+            \Maatwebsite\Excel\Excel::CSV,
+            ['X-Vapor-Base64-Encode' => 'True']
+        );
     }
 }

@@ -23,11 +23,39 @@ export default function ledgerInitOverlay() {
         visible: true,
         t0: performance.now(),
 
-        hide() {
+        dispatchTiming(metric, duration, metadata = {}) {
+            window.dispatchEvent(new CustomEvent('ledger-init-overlay:timing', {
+                detail: {
+                    metric,
+                    duration,
+                    metadata,
+                },
+            }));
+        },
+
+        hide(reason = 'unknown') {
             if (!this.visible) return;
-            const elapsed = (performance.now() - this.t0).toFixed(0);
-            console.log('[INIT-TIMING] overlay hidden at ' + elapsed + 'ms after page load');
+            const elapsed = Number((performance.now() - this.t0).toFixed(2));
+            console.log('[INIT-TIMING] overlay hidden at ' + elapsed.toFixed(0) + 'ms after page load', {
+                reason,
+                duration_ms: elapsed,
+            });
+            this.dispatchTiming('ledger_init_overlay_hidden', elapsed, {
+                reason,
+                t0_ms: this.t0,
+            });
             this.visible = false;
+            requestAnimationFrame(() => {
+                const paintedElapsed = Number((performance.now() - this.t0).toFixed(2));
+                console.log('[INIT-TIMING] overlay paint-ready at ' + paintedElapsed.toFixed(0) + 'ms after page load', {
+                    reason,
+                    duration_ms: paintedElapsed,
+                });
+                this.dispatchTiming('ledger_init_overlay_painted', paintedElapsed, {
+                    reason,
+                    t0_ms: this.t0,
+                });
+            });
         },
 
         startFallbackTimer() {
@@ -35,7 +63,7 @@ export default function ledgerInitOverlay() {
             setTimeout(function () {
                 if (self.visible) {
                     console.log('[INIT-TIMING] overlay hidden by 8s fallback timeout');
-                    self.hide();
+                    self.hide('timeout');
                 }
             }, 8000);
         },

@@ -28,43 +28,47 @@ tenant() returns null in Livewire render()?
 ## Pattern A — Render-time fallback (recommended for all tenant-aware components)
 
 ```php
-// render() — always use $model->tenant_id as final fallback
 $currentTenantId = $this->tenantId      // Livewire state (saved across requests)
     ?? tenant()?->id                     // tenancy() initialized by boot
     ?? $ledger->tenant_id;              // model always has correct tenant_id
 ```
 
-## Pattern B — mount() explicit init (required for #[Lazy] components)
+## Pattern C — Shared resolver for Blade and URL helpers
 
 ```php
-public function mount(int $ledgerId): void
-{
-    $this->ledgerId = $ledgerId;
-
-    // boot() runs before mount() so $this->tenantId may still be null here.
-    // Explicitly read route param and initialize tenant.
-    if (is_null($this->tenantId)) {
-        $this->tenantId = request()->route()?->originalParameters()['tenant'] ?? null;
-    }
-    if ($this->tenantId) {
-        $tenancy = app(\Stancl\Tenancy\Tenancy::class);
-        if (! $tenancy->initialized) {
-            $tenant = \App\Models\Tenant::find($this->tenantId);
-            if ($tenant) $tenancy->initialize($tenant);
-        }
-    }
-}
+$tenantId = $this->resolveTenantId($ledger->tenant_id);
+$url = route('file.download-ocr-pdf', [
+    'tenant' => $tenantId,
+    'attachedFile' => $file->id,
+]);
 ```
 
-## Why #[Lazy] breaks tenant context
+- Use when a component, computed property, or Blade partial needs the same tenant fallback in multiple places.
+- Do not duplicate `tenant()?->id ?? $model->tenant_id` inline in Blade; use the shared resolver from `InitializesTenantContext`.
+- Keep `render()` / `mount()` responsible for state setup; keep URL generation on the resolver path.
 
-| Request phase | What happens |
-|---|---|
-| Initial page load | `placeholder()` renders; Livewire snapshots `tenantId=null` into JS state |
-| Lazy-load request | `mount()` is called with correct route; sets `tenantId` correctly |
-| Subsequent update | `mount()` NOT called; `boot()` runs with `tenantId` from snapshot (OK if saved) |
-| BUT: lazy-load via `/livewire/update` | Route has no `{tenant}` param → `boot()` cannot recover `tenantId` from route |
+## Pattern D — Tenant-safe shared Blade component links
 
-See [references/patterns.md](references/patterns.md) for full examples, tenant context edge cases, and loading indicator control.  
-See [references/parent-binding.md](references/parent-binding.md) for `$parent` binding patterns and Tailwind JIT note.
+See [references/blade-component-links.md](references/blade-component-links.md) for:
+- Passing `tenantId` explicitly from parent to shared Blade components
+- Why `tenant()` can be null during `/livewire/update` re-renders
+- `wire:ignore` anti-pattern on clickable anchors
 
+## Pattern B — mount() explicit init (required for #[Lazy] components)
+
+See [references/mount-init-pattern.md](references/mount-init-pattern.md) for:
+- Full `mount()` implementation with route param recovery
+- `#[Lazy]` tenant context lifecycle table
+- Loading indicator control and `$parent` binding patterns
+
+## Evidence
+
+- `docs/work/core-features/confidentiality-classification/2026-05-03_retrospective_issue191.md`
+- `docs/work/testing/2026-04-02_livewire-tenant-resolver-sharing.md`
+
+## Freshness
+
+- status: confirmed
+- last_confirmed_at: 2026-05-03
+- recheck_after: 2026-08-03
+- recheck_trigger: clickable tenant-aware Blade component fails to navigate, Livewire UI test checks rendering but not link target, or `wire:ignore` added to an anchor inside a shared component

@@ -6,6 +6,7 @@ use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\Folder;
 use App\Repositories\WritableFolderRepository;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Log;
 use Kalnoy\Nestedset\Collection as NestedSetCollection;
@@ -16,7 +17,7 @@ class Tree extends BaseLivewireComponent
 {
     use InitializesTenantContext;
 
-    public \Illuminate\Database\Eloquent\Collection $folders;
+    public Collection $folders;
 
     #[Reactive]
     public $currentFolderId = null;
@@ -89,9 +90,7 @@ class Tree extends BaseLivewireComponent
     #[On('currentFolderChangedByMain')]
     public function syncCurrentFolderFromMain($newFolderId): void
     {
-        if (! $this->parentComponentId) {
-            $this->standaloneFolderId = $newFolderId;
-        }
+        $this->standaloneFolderId = $newFolderId;
     }
 
     #[On('permissions-changed')]

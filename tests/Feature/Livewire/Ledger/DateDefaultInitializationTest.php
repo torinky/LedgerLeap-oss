@@ -2,15 +2,19 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Livewire\Ledger\ModifyColumn;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -32,10 +36,10 @@ class DateDefaultInitializationTest extends TestCase
         $this->user = User::factory()->create();
 
         // 権限設定
-        \Spatie\Permission\Models\Permission::findOrCreate('create_ledgers', 'web');
-        \Spatie\Permission\Models\Permission::findOrCreate('view_ledgers', 'web');
-        \Spatie\Permission\Models\Permission::findOrCreate('update_ledgers', 'web');
-        $role = \App\Models\Role::findOrCreate('test-user-role', 'web');
+        Permission::findOrCreate('create_ledgers', 'web');
+        Permission::findOrCreate('view_ledgers', 'web');
+        Permission::findOrCreate('update_ledgers', 'web');
+        $role = Role::findOrCreate('test-user-role', 'web');
         $role->givePermissionTo(['create_ledgers', 'view_ledgers', 'update_ledgers']);
         $this->user->assignRole($role);
 
@@ -48,10 +52,10 @@ class DateDefaultInitializationTest extends TestCase
             'tenant_id' => $this->tenant->id,
         ]);
 
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }

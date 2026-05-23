@@ -3,7 +3,6 @@
 namespace App\Exports;
 
 use App\Models\Ledger;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Database\Query\Builder;
 use Maatwebsite\Excel\Concerns\Exportable;
 use Maatwebsite\Excel\Concerns\FromQuery;
@@ -11,7 +10,7 @@ use Maatwebsite\Excel\Concerns\WithCustomCsvSettings;
 use Maatwebsite\Excel\Concerns\WithHeadings;
 use Maatwebsite\Excel\Concerns\WithMapping;
 
-class LedgerExport implements FromQuery, ShouldQueue, WithCustomCsvSettings, WithHeadings, WithMapping
+class LedgerExport implements FromQuery, WithCustomCsvSettings, WithHeadings, WithMapping
 {
     use Exportable;
 
@@ -86,7 +85,7 @@ class LedgerExport implements FromQuery, ShouldQueue, WithCustomCsvSettings, Wit
         $row[] = $record->id;
         $row[] = $record->ledger_define_id;
         $row[] = $record->updated_at;
-        $row[] = $record->modifire_id;
+        $row[] = $record->modifier_id;
         $row[] = $record->created_at;
         $row[] = $record->creator_id;
 

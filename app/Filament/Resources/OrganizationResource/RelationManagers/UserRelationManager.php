@@ -3,14 +3,21 @@
 namespace App\Filament\Resources\OrganizationResource\RelationManagers;
 
 use App\Models\User; // 追加
+use Filament\Actions\AttachAction;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction; // 追加
 use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Resources\RelationManagers\RelationManager; // 追加
+use Filament\Schemas\Schema;
 use Filament\Tables;
-use Filament\Tables\Columns\ToggleColumn; // 追加
+use Filament\Tables\Columns\ToggleColumn;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Model; // 追加
-use Illuminate\Support\Facades\DB; // 追加
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
+
+ // 追加
 
 class UserRelationManager extends RelationManager
 {
@@ -31,10 +38,10 @@ class UserRelationManager extends RelationManager
         return __('ledger.user');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
         // EditActionでは中間テーブルの情報(is_primary)のみを編集
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\Toggle::make('is_primary')
                     ->label(__('ledger.organizations.primary'))
@@ -79,9 +86,9 @@ class UserRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\AttachAction::make()
+                AttachAction::make()
                     ->preloadRecordSelect() // 検索パフォーマンス向上のため追加
-                    ->form(fn (Tables\Actions\AttachAction $action): array => [
+                    ->form(fn (AttachAction $action): array => [
                         $action->getRecordSelect()
                             ->multiple()
                             ->searchable(),
@@ -104,7 +111,7 @@ class UserRelationManager extends RelationManager
                     }),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                EditAction::make()
                     // ▼▼▼ afterコールバックを追加して排他制御 ▼▼▼
                     ->after(function (Model $record, array $data) {
                         if ($data['is_primary']) {
@@ -115,11 +122,11 @@ class UserRelationManager extends RelationManager
                                 ->update(['is_primary' => false]);
                         }
                     }),
-                Tables\Actions\DetachAction::make(),
+                DetachAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DetachBulkAction::make(),
+                BulkActionGroup::make([
+                    DetachBulkAction::make(),
                 ]),
             ]);
     }

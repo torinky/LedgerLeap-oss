@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Auth;
 use App\Enums\LoginLandingPage;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Auth\LoginRequest;
+use App\Models\Tenant;
 use App\Services\TenantAccessService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -47,7 +48,7 @@ class AuthenticatedSessionController extends Controller
             tenancy()->initialize($tenant);
         } else {
             // Test environments may expect a tenant to exist and be used as fallback; initialize first tenant if present
-            $fallbackTenant = \App\Models\Tenant::first();
+            $fallbackTenant = Tenant::first();
             if ($fallbackTenant) {
                 tenancy()->initialize($fallbackTenant);
                 $tenant = $fallbackTenant;

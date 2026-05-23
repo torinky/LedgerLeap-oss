@@ -4,6 +4,7 @@ namespace Tests\Unit\Casts;
 
 use App\Casts\AsColumnDefinesArrayJson;
 use App\Models\ColumnDefine;
+use Illuminate\Support\Collection;
 use PHPUnit\Framework\Attributes\Test;
 use stdClass;
 use Tests\TestCase;
@@ -42,7 +43,7 @@ class AsColumnDefinesArrayJsonTest extends TestCase
         $retrieved = $cast->get(new stdClass, $key, null, $result);
 
         // IDでキー化されたCollectionが返される
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $retrieved);
+        $this->assertInstanceOf(Collection::class, $retrieved);
         $this->assertEquals(2, $retrieved->count());
         $this->assertTrue($retrieved->has(123));
         $this->assertTrue($retrieved->has(124));
@@ -94,7 +95,7 @@ class AsColumnDefinesArrayJsonTest extends TestCase
 
         // getで空のCollectionが返される
         $retrieved = $cast->get(new stdClass, $key, null, $result);
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $retrieved);
+        $this->assertInstanceOf(Collection::class, $retrieved);
         $this->assertEquals(0, $retrieved->count());
     }
 
@@ -109,7 +110,7 @@ class AsColumnDefinesArrayJsonTest extends TestCase
         $result = $cast->get(new stdClass, 'attributes', null, ['attributes' => $jsonObject]);
 
         // Collectionが返される
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertGreaterThan(0, $result->count());
 
         // 各要素がColumnDefineインスタンス
@@ -146,7 +147,7 @@ class AsColumnDefinesArrayJsonTest extends TestCase
         $result = $cast->set(new stdClass, $key, $data, [$key => $data]);
         $retrieved = $cast->get(new stdClass, $key, null, $result);
 
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $retrieved);
+        $this->assertInstanceOf(Collection::class, $retrieved);
         $this->assertEquals(1, $retrieved->count());
         $this->assertTrue($retrieved->has(1));
         $this->assertInstanceOf(ColumnDefine::class, $retrieved->get(1));
@@ -237,7 +238,7 @@ class AsColumnDefinesArrayJsonTest extends TestCase
         $result = $cast->get(new stdClass, 'attributes', null, ['attributes' => $jsonObject]);
 
         // オブジェクト→配列変換後、Collectionが返される
-        $this->assertInstanceOf(\Illuminate\Support\Collection::class, $result);
+        $this->assertInstanceOf(Collection::class, $result);
         $this->assertGreaterThan(0, $result->count());
 
         // keyBy('id')によってIDでキー化されている

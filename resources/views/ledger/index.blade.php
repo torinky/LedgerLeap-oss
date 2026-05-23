@@ -13,10 +13,6 @@
             </h2>
         </x-slot>
     --}}
-    @push('stylesheets')
-        {{--        <link rel="stylesheet" href="{{ asset('css/ledgerIndex.css') }}">--}}
-        @vite(['resources/sass/ledgerIndex.scss'])
-    @endpush
 
     <x-slot name="drawer">
         <livewire:folder.tree/>

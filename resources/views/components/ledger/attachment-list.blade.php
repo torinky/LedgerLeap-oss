@@ -4,18 +4,20 @@
     'tenantId' => null,
     'search' => null,
     'columnId' => null, // カラムID
+    'selectedFileId' => null,
 ])
 
 @php
     use App\Helpers\MimeTypeHelper;
     use App\Helpers\SearchHelper;
     use Illuminate\Support\Number;
-    use Carbon\Carbon;
 
     $isCompact = $mode === 'compact';
     $isIconOnly = $mode === 'icon-only';
 
     $fileCount = count($files);
+    $searchKeywords = SearchHelper::extractKeywords($search);
+    $fileIdsSignature = collect($files)->pluck('id')->filter()->implode(',');
 
     // 表示件数リミット調整
     $displayLimit = match ($mode) {
@@ -25,7 +27,7 @@
     };
 
     $hiddenCount = max(0, $fileCount - $displayLimit);
-    $componentId = 'attachment-list-' . uniqid('', true);
+    $componentId = 'attachment-list-' . md5(($mode ?? '') . '|' . ($tenantId ?? '') . '|' . ($columnId ?? '') . '|' . $fileIdsSignature);
 @endphp
 
 {{-- Alpine.js data for enhanced interactivity --}}
@@ -35,15 +37,15 @@
     showAll: false,
     displayLimit: {{ $displayLimit }},
     totalCount: {{ $fileCount }},
-    search: {{ json_encode($search) }},
-    columnId: {{ json_encode($columnId) }},
+    columnId: @js($columnId),
     isIconOnly: {{ $isIconOnly ? 'true' : 'false' }},
     isCompact: {{ $isCompact ? 'true' : 'false' }},
-    handleFileClick(fileId, fileColumnId) {
+    handleFileClick(fileId, fileColumnId, event) {
+        const search = event?.currentTarget?.closest('[data-search]')?.dataset.search || '';
         this.$dispatch('open-file-inspector', {
             id: fileId,
             column_id: fileColumnId || this.columnId,
-            search: this.search
+            search
         });
     },
     handleDownload(event, fileId, url) {
@@ -82,7 +84,7 @@
             });
         }
     }
-}" class="not-prose w-full flex flex-col" id="{{ $componentId }}">
+}" class="not-prose w-full flex flex-col" id="{{ $componentId }}" data-search="{{ $search ?? '' }}">
 
     {{-- 高さ制限とフェードを実現するラッパー。ボタンをこの外に出すことで見切れを防止する --}}
     <div class="relative transition-all duration-500 ease-in-out overflow-hidden"
@@ -94,7 +96,7 @@
 
         <div x-ref="innerContainer"
             class="{{ $isCompact || $isIconOnly ? 'flex flex-wrap items-center gap-1' : 'grid grid-cols-[repeat(auto-fit,minmax(180px,1fr))] gap-4' }} pb-2"
-            role="list" aria-label="{{ __('ledger.file_list') }}">
+            aria-label="{{ __('ledger.file_list') }}">
 
             @forelse($files as $index => $file)
                 @php
@@ -117,6 +119,7 @@
                     $label = $file['filename'] ?? 'file';
                     $fileId = (int) ($file['id'] ?? 0);
                     $fileColumnId = $file['column_id'] ?? ($columnId ?? null);
+                    $isCurrentSelectedFile = $selectedFileId !== null && (int) $selectedFileId === $fileId;
                     $fileSize = $file['size'] ?? null;
 
                     // ファイルサイズフォーマット (Laravel 10+ Number::fileSize 対応)
@@ -188,7 +191,6 @@
                     $fullTooltip = $label . ($formattedSize ? " ($formattedSize)" : '') . $hitLabel;
 
                     // 検索キーワードの強調（全てのモードで使用）
-                    $searchKeywords = SearchHelper::extractKeywords($search);
                     $displayLabel = !empty($searchKeywords)
                         ? new \Illuminate\Support\HtmlString(
                             SearchHelper::highlight(
@@ -206,18 +208,24 @@
 
                 @if ($isIconOnly)
                     {{-- Icon Only モード: 一覧画面用極小表示 --}}
-                    <div class="relative group inline-flex items-center" role="listitem"
+                    <div class="relative group inline-flex items-center"
                         x-show="showAll || {{ $index }} < displayLimit"
-                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
-                        tabindex="0" aria-label="{{ $label }} ({{ $statusLabel }})">
+                        x-transition:enter="transition ease-out"
+                        x-transition:enter-start="opacity-0 scale-90"
+                        x-transition:enter-end="opacity-100 scale-100"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 scale-100"
+                        x-transition:leave-end="opacity-0 scale-90"
+                        :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 40 + 'ms' : ''"
+                        x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }}, $event)"
+                        :class="{ 'ring-2 ring-primary/60 bg-primary/5 rounded-md': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
                             aria-label="{{ __('ledger.download') }}: {{ $label }}" tabindex="-1" download></a>
 
                         <div class="tooltip tooltip-bottom" data-tip="{{ $fullTooltip }}">
                             <button type="button"
-                                class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border {{ $isHit ? 'border-success bg-success/10' : 'border-base-300 bg-base-100/30' }} hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm"
-                                aria-hidden="true">
+                                class="btn btn-ghost btn-xs btn-square h-8 w-8 min-h-0 p-0 flex items-center justify-center border {{ $isHit ? 'border-success bg-success/10' : 'border-base-300 bg-base-100/30' }} hover:bg-base-200 focus:ring-2 focus:ring-primary focus:outline-none transition-all duration-200 shadow-sm">
                                 <div class="indicator">
                                     @if ($isProcessing)
                                         <span class="indicator-item">
@@ -252,8 +260,16 @@
                     </div>
                 @elseif($isCompact)
                     {{-- Compact モード: 一覧画面詳細/編集画面リスト表示 --}}
-                    <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
-                        role="listitem" x-show="showAll || {{ $index }} < displayLimit">
+                    <div class="relative group inline-flex items-center p-1 rounded-md border {{ $isHit ? 'border-success bg-success/10 ring-1 ring-success/20 ml-1 mt-1' : 'border-transparent hover:border-base-300 hover:bg-base-100' }} transition-all duration-300"
+                        x-show="showAll || {{ $index }} < displayLimit"
+                        x-transition:enter="transition ease-out"
+                        x-transition:enter-start="opacity-0 translate-y-1"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-1"
+                        :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 40 + 'ms' : ''"
+                        :class="{ 'ring-2 ring-primary/60 bg-primary/5': {{ $isCurrentSelectedFile ? 'true' : 'false' }} }">
 
                         {{-- RPA用: 透過的ダウンロードリンク --}}
                         <a href="{{ $downloadUrl }}" class="direct-download-link sr-only"
@@ -268,8 +284,7 @@
                                 </span>
                             @endif
                             <button type="button" class="flex items-center gap-2 px-2 py-1 text-left max-w-[200px]"
-                                x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }})"
-                                aria-label="{{ $label }} ({{ $statusLabel }})" tabindex="0">
+                                x-on:click="handleFileClick({{ $fileId }}, {{ json_encode($fileColumnId) }}, $event)">
                                 {{-- ステータスインジケータ --}}
                                 <div class="indicator shrink-0">
                                     @if ($isProcessing)
@@ -320,8 +335,15 @@
                     </div>
                 @else
                     {{-- Full モード: 詳細画面用のカード表示 --}}
-                    <div x-show="showAll || {{ $index }} < displayLimit">
-                        <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" />
+                    <div x-show="showAll || {{ $index }} < displayLimit"
+                        x-transition:enter="transition ease-out"
+                        x-transition:enter-start="opacity-0 translate-y-2"
+                        x-transition:enter-end="opacity-100 translate-y-0"
+                        x-transition:leave="transition ease-in duration-150"
+                        x-transition:leave-start="opacity-100 translate-y-0"
+                        x-transition:leave-end="opacity-0 translate-y-2"
+                        :style="showAll && {{ $index }} >= displayLimit ? 'transition-delay: ' + ({{ $index }} - displayLimit) * 60 + 'ms' : ''">
+                        <x-ledger.attachment-card :file="$file" :index="$index" :displayLimit="$displayLimit" :search="$search" :selected-file-id="$selectedFileId" />
                     </div>
                 @endif
 

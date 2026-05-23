@@ -74,6 +74,21 @@ description: Execute a selected LedgerLeap bug fix with minimal changes, verific
 - 残リスク
 - 必要な follow-up
 
+### 6. 完了後の振り返りを切り出す
+
+次のどちらかに当てはまる場合は、実装報告とは別に振り返りを短く抽出する。
+
+- issue / sprint が完了した
+- ユーザーから明示的に「振り返りをしてください」と指示された
+
+振り返りでは、次を必ず確認する。
+
+- 今回の学びが再利用可能か
+- その学びは `docs/work/*` に残すべきか、それとも `.github` 資産へ昇格すべきか
+- 同じ手戻りを防ぐために、prompt / skill / runbook / template のどこへ同期するか
+
+再利用可能な学びがあれば、`/skill-maintenance` を実行して整理する。
+
 ## Deliverable Format
 
 ### 実装サマリ

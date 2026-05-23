@@ -5,6 +5,7 @@ namespace App\Livewire\Ledger;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\InitializesTenantContext;
 use App\Models\AttachedFile;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
 use Illuminate\Database\Eloquent\Collection;
@@ -30,6 +31,9 @@ class Show extends BaseLivewireComponent
     #[Url(as: 'tab')]
     public string $selectedTab = 'details';
 
+    /** @var array<int, string> */
+    public array $loadedTabs = [];
+
     #[Url(as: 'dl')]
     public int $displayLevel = 3;
 
@@ -52,6 +56,9 @@ class Show extends BaseLivewireComponent
     public int $relatedCount = 0;
 
     public ?LedgerDiff $comparisonTargetDiffModel = null;
+
+    /** @var array<int, Folder> */
+    public array $breadcrumbs = [];
 
     public function isComparingWithPrevious(): bool
     {
@@ -126,6 +133,20 @@ class Show extends BaseLivewireComponent
         } catch (\Throwable $e) {
             // 件数計算の失敗はサイレントに無視（タブバッジが空のまま → タブを開いたときに更新）
         }
+
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $this->breadcrumbs = [];
+        if ($this->ledgerRecord->define && $this->ledgerRecord->define->folder_id) {
+            $folder = Folder::with('ancestors')->find($this->ledgerRecord->define->folder_id);
+            if ($folder) {
+                $this->breadcrumbs = $folder->ancestors->all();
+                $this->breadcrumbs[] = $folder;
+            }
+        }
+
+        if (empty($this->loadedTabs)) {
+            $this->loadedTabs = [$this->selectedTab];
+        }
     }
 
     #[On('workflowUpdated')]
@@ -138,6 +159,7 @@ class Show extends BaseLivewireComponent
     public function navigateToTab(string $tab): void
     {
         $this->selectedTab = $tab;
+        $this->markTabLoaded($tab);
     }
 
     #[On('relatedCountUpdated')]
@@ -151,6 +173,15 @@ class Show extends BaseLivewireComponent
     {
         if ($this->displayLevel !== $displayLevel) {
             $this->displayLevel = $displayLevel;
+        }
+    }
+
+    #[On('relatedDisplayLevelRequested')]
+    public function syncRelatedDisplayLevel(int $displayLevel): void
+    {
+        if ($this->displayLevel !== $displayLevel) {
+            $this->displayLevel = $displayLevel;
+            $this->dispatch('displayLevelUpdated', displayLevel: $displayLevel);
         }
     }
 
@@ -229,6 +260,35 @@ class Show extends BaseLivewireComponent
     public function switchToHistoryTab(): void
     {
         $this->selectedTab = 'history';
+        $this->markTabLoaded('history');
+    }
+
+    public function updatedSelectedTab(string $tab): void
+    {
+        $this->markTabLoaded($tab);
+    }
+
+    /**
+     * Alpine.js のタブ切り替えから非同期で呼び出される。
+     * UI の切り替えは Alpine 側が先行済みのため、
+     * このメソッドは URL 同期と初回コンテンツ DOM 追加のみを担当する。
+     */
+    public function notifyTabChange(string $tab): void
+    {
+        $this->selectedTab = $tab;
+        $this->markTabLoaded($tab);
+    }
+
+    protected function markTabLoaded(string $tab): void
+    {
+        if (! in_array($tab, $this->loadedTabs, true)) {
+            $this->loadedTabs[] = $tab;
+        }
+    }
+
+    public function isTabLoaded(string $tab): bool
+    {
+        return in_array($tab, $this->loadedTabs, true);
     }
 
     #[On('retryProcessingEvent')]

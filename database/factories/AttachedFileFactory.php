@@ -3,10 +3,12 @@
 namespace Database\Factories;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -27,7 +29,7 @@ class AttachedFileFactory extends Factory
         if (tenancy()->initialized) {
             $tenant = tenancy()->tenant;
         } else {
-            $tenant = \App\Models\Tenant::factory()->create();
+            $tenant = Tenant::factory()->create();
             tenancy()->initialize($tenant);
         }
 
@@ -37,7 +39,7 @@ class AttachedFileFactory extends Factory
 
         $filename = $this->faker->word().'.pdf';
         $hashedbasename = Str::random(40).'.pdf';
-        $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($ledgerDefine->id, $hashedbasename);
+        $path = AttachedFilePathHelper::getAttachmentPath($ledgerDefine->id, $hashedbasename);
 
         return [
             'filename' => $filename,
@@ -64,7 +66,7 @@ class AttachedFileFactory extends Factory
         return $this->state(function (array $attributes) {
             $filename = $this->faker->word().'.jpg';
             $hashedbasename = Str::random(40).'.jpg';
-            $path = \App\Helpers\AttachedFilePathHelper::getAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
+            $path = AttachedFilePathHelper::getAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
                 'filename' => $filename,
@@ -81,7 +83,7 @@ class AttachedFileFactory extends Factory
             $originalFilename = $this->faker->word().'.png';
             $originalMimeType = 'image/png';
             $hashedbasename = Str::random(40).'.png';
-            $originalPath = \App\Helpers\AttachedFilePathHelper::getOriginalAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
+            $originalPath = AttachedFilePathHelper::getOriginalAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
                 'original_file_path' => $originalPath,

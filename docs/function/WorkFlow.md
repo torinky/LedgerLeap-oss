@@ -1,5 +1,10 @@
 # ワークフロー（承認フロー）機能
 
+## この文書の位置づけ
+
+この文書は **developer-facing の機能仕様** です。
+client-facing では `workflow-review` capability を `docs/work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md` で定義し、ここでは状態遷移・通知・内部データ保持などの実装詳細を扱います。
+
 ## 概要
 
 ワークフロー機能は、LedgerLeap における台帳レコードの新規登録や更新に対して、**段階的な確認・承認プロセス**
@@ -192,4 +197,3 @@
 * **マイグレーション:** `ledger_diffs`, `ledgers`, `ledger_defines` テーブルの修正。`notification_types` へのレコード追加。
 
 ---
-

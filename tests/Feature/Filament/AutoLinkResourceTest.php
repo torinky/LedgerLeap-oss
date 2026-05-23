@@ -13,6 +13,7 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 #[CoversClass(AutoLinkResource::class)]
@@ -35,10 +36,10 @@ class AutoLinkResourceTest extends TestCase
         tenancy()->initialize($this->tenant);
 
         foreach (self::PERMISSIONS as $perm) {
-            \Spatie\Permission\Models\Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
+            Permission::firstOrCreate(['name' => $perm, 'guard_name' => 'web']);
         }
         $adminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
-        $adminRole->givePermissionTo(\Spatie\Permission\Models\Permission::all());
+        $adminRole->givePermissionTo(Permission::all());
 
         $this->adminUser = User::factory()->create();
         $this->adminUser->assignRole($adminRole);

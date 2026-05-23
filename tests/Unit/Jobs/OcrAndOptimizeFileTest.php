@@ -14,6 +14,7 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Process;
 // use Mockery;
 use Illuminate\Support\Facades\Storage; // ★ use を変更
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class OcrAndOptimizeFileTest extends TestCase
@@ -48,7 +49,7 @@ class OcrAndOptimizeFileTest extends TestCase
             'column_id' => 1,
             'creator_id' => $user->id,
             'modifier_id' => $user->id,
-            'hashedbasename' => \Illuminate\Support\Str::random(40).'.jpeg',
+            'hashedbasename' => Str::random(40).'.jpeg',
             'optimized' => false,
             'original_file_path' => 'originals/test.jpeg',
         ]);

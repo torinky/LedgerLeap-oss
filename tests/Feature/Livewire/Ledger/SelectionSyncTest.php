@@ -6,6 +6,7 @@ use App\Livewire\Ledger\LedgerHistoryManager;
 use App\Livewire\Ledger\Show;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -18,7 +19,7 @@ class SelectionSyncTest extends TestCase
     public function test_it_syncs_selection_from_show_to_history_manager()
     {
         // テナント初期化
-        $tenant = \App\Models\Tenant::create(['id' => 'demo-tenant']);
+        $tenant = Tenant::create(['id' => 'demo-tenant']);
         tenancy()->initialize($tenant);
 
         $user = User::factory()->create();

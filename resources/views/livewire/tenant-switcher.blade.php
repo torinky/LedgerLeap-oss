@@ -1,10 +1,10 @@
 <div class="dropdown dropdown-end">
     <label tabindex="0" class="btn btn-ghost flex items-center">
         <x-mary-icon name="o-building-office-2" class="w-5 h-5" />
-        <span class="hidden sm:inline">{{ $currentTenant?->name ?? 'No Tenant' }}</span>
+        <span class="hidden sm:inline">{{ $currentTenant?->name ?? __('ledger.navigation.no_tenant') }}</span>
         <x-mary-icon name="o-chevron-down" class="w-4 h-4 ml-1" />
     </label>
-    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[10] p-2 shadow bg-base-100 rounded-box min-w-max overflow-y-auto">
+    <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-10 p-2 shadow bg-base-100 rounded-box min-w-max overflow-y-auto">
         <li class="menu-title"><span>{{ __('ledger.navigation.my_tenants') }}</span></li>
         @foreach($tenants->where('is_member', true) as $tenant)
             <li>

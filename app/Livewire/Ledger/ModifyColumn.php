@@ -53,7 +53,7 @@ class ModifyColumn extends CreateColumn
             // 既に別のテナントで初期化されている場合(管理者が別テナントのデータを編集する場合など)は
             // ここで明示的にコンテキストを切り替える必要がある。
             if ($ledgerRecord && $ledgerRecord->tenant_id !== tenancy()->tenant?->id) {
-                \Illuminate\Support\Facades\Log::info('ModifyColumn: Switching tenant', [
+                Log::info('ModifyColumn: Switching tenant', [
                     'from' => tenancy()->tenant?->id,
                     'to' => $ledgerRecord->tenant_id,
                 ]);
@@ -456,31 +456,44 @@ class ModifyColumn extends CreateColumn
                         );
                     }
 
-                    $fileExists = $storagePath && Storage::disk('public')->exists($storagePath);
-                    $posterUrl = '';
-                    $isIconFlag = false; // デフォルトはfalse（画像扱い）
-
-                    if ($fileExists) {
-                        // MIMEタイプを取得（AttachedFileレコードまたはストレージから）
-                        $mimeType = $currentAttachedFile?->mime ?? Storage::disk('public')->mimeType($storagePath);
-
-                        // サムネイルが存在するか、または画像ファイル（ImagePreviewプラグインが処理）であるかを確認
-                        $isImage = str_starts_with($mimeType, 'image/');
-                        $thumbnailPath = $currentAttachedFile ? AttachedFilePathHelper::getThumbnailStoragePath($currentAttachedFile->hashedbasename, $currentAttachedFile->tenant_id) : '';
-                        $hasThumbnail = $thumbnailPath && Storage::disk('public')->exists($thumbnailPath);
-
-                        if ($isImage || $hasThumbnail) {
-                            $posterUrl = route('file.download', [
-                                'tenant' => $this->tenantId,
-                                'attachedFile' => $attachmentId,
-                                'thumbnail' => true,
-                            ]);
-                            $isIconFlag = false;
-                        } else {
-                            // サムネイルがない非画像ファイルについては、アイコンURLを直接セットしてリダイレクトを避ける
-                            $posterUrl = route('api.fontawesome.icon.by_mime', ['type' => $mimeType]);
-                            $isIconFlag = true;
+                    $fileSize = $currentAttachedFile?->size;
+                    if (($fileSize === null || $fileSize <= 0) && ! empty($storagePath)) {
+                        $publicDisk = Storage::disk('public');
+                        if ($publicDisk->exists($storagePath)) {
+                            $fileSize = $publicDisk->size($storagePath);
                         }
+                    }
+
+                    $mimeType = $currentAttachedFile?->original_mime_type
+                        ?? $currentAttachedFile?->mime
+                        ?? 'application/octet-stream';
+                    $isIconFlag = ! str_starts_with($mimeType, 'image/');
+                    $posterUrl = $isIconFlag
+                        ? route('api.fontawesome.icon.by_mime', ['type' => $mimeType])
+                        : route('file.download', [
+                            'tenant' => $this->tenantId,
+                            'attachedFile' => $attachmentId,
+                            'thumbnail' => true,
+                        ]);
+
+                    $fileOptions = [
+                        'type' => 'local',
+                        'file' => [
+                            'name' => $originalFilename,
+                            'type' => $mimeType,
+                        ],
+                        'metadata' => [
+                            'filename' => $originalFilename,
+                            'hashedBasename' => $hashedBasename,
+                            'poster' => $posterUrl,
+                            'is_icon' => $isIconFlag,
+                            'isExisting' => true, // 既存ファイルフラグ
+                            'attachmentId' => $attachmentId, // ファイルID
+                        ],
+                    ];
+
+                    if ($fileSize !== null) {
+                        $fileOptions['file']['size'] = $fileSize;
                     }
 
                     $fileObject = [
@@ -488,24 +501,7 @@ class ModifyColumn extends CreateColumn
                             'tenant' => $this->tenantId,
                             'attachedFile' => $attachmentId,
                         ]),
-                        'options' => [
-                            'type' => 'local',
-                            'file' => [
-                                'name' => $originalFilename,
-                                'size' => $fileExists ? Storage::disk('public')->size($storagePath) : 0,
-                                'type' => $fileExists
-                                    ? Storage::disk('public')->mimeType($storagePath)
-                                    : 'application/octet-stream',
-                            ],
-                            'metadata' => [
-                                'filename' => $originalFilename,
-                                'hashedBasename' => $hashedBasename,
-                                'poster' => $posterUrl,
-                                'is_icon' => $isIconFlag,
-                                'isExisting' => true, // 既存ファイルフラグ
-                                'attachmentId' => $attachmentId, // ファイルID
-                            ],
-                        ],
+                        'options' => $fileOptions,
                     ];
                     $filesForColumn[] = $fileObject;
                 }

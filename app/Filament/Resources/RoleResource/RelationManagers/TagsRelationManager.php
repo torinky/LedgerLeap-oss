@@ -2,9 +2,16 @@
 
 namespace App\Filament\Resources\RoleResource\RelationManagers;
 
+use Filament\Actions\AttachAction;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\DetachAction;
+use Filament\Actions\DetachBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
@@ -13,15 +20,15 @@ class TagsRelationManager extends RelationManager
 {
     protected static string $relationship = 'tags';
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        /*        return $form
+        /*        return $schema
                     ->schema([
                         Forms\Components\TextInput::make('tag')
                             ->required()
                             ->maxLength(255),
                     ]);*/
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('name')
                     ->required()
@@ -40,15 +47,15 @@ class TagsRelationManager extends RelationManager
                         //
                     ])
                     ->headerActions([
-                        Tables\Actions\CreateAction::make(),
+                        \Filament\Actions\CreateAction::make(),
                     ])
                     ->actions([
-                        Tables\Actions\EditAction::make(),
-                        Tables\Actions\DeleteAction::make(),
+                        \Filament\Actions\EditAction::make(),
+                        \Filament\Actions\DeleteAction::make(),
                     ])
                     ->bulkActions([
-                        Tables\Actions\BulkActionGroup::make([
-                            Tables\Actions\DeleteBulkAction::make(),
+                        \Filament\Actions\BulkActionGroup::make([
+                            \Filament\Actions\DeleteBulkAction::make(),
                         ]),
                     ]);*/
         return $table
@@ -59,17 +66,17 @@ class TagsRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
-                Tables\Actions\AttachAction::make(),
+                CreateAction::make(),
+                AttachAction::make(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\DetachAction::make(),
-                Tables\Actions\DeleteAction::make(),
+                EditAction::make(),
+                DetachAction::make(),
+                DeleteAction::make(),
             ])
             ->bulkActions([
-                Tables\Actions\DetachBulkAction::make(),
-                Tables\Actions\DeleteBulkAction::make(),
+                DetachBulkAction::make(),
+                DeleteBulkAction::make(),
             ]);
     }
 

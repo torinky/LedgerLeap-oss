@@ -2,17 +2,23 @@
 
 namespace Tests\Feature\Ledger;
 
+use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\User;
 use App\Services\Scoring\ActivityScoreService;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
+use Vaites\ApacheTika\Client;
+use Vaites\ApacheTika\Metadata\MetadataInterface;
 
 class LedgerTimestampSuppressionTest extends TestCase
 {
@@ -98,7 +104,7 @@ class LedgerTimestampSuppressionTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -113,13 +119,13 @@ class LedgerTimestampSuppressionTest extends TestCase
             'column_id' => 0,
             'filename' => 'test.txt',
             'hashedbasename' => 'test.txt',
-            'status' => \App\Enums\AttachedFileStatus::UPLOADED,
+            'status' => AttachedFileStatus::UPLOADED,
             'tika_processed_at' => now()->subMinute(),
             'processing_finalized_at' => null,
             'vlm_markdown' => 'VLM Content',
             'vlm_processed_at' => now()->subMinute(),
             'ocr_processed_at' => now()->subMinute(),
-            'path' => \App\Helpers\AttachedFilePathHelper::getAttachmentPath($ledger->ledger_define_id, 'test.txt'),
+            'path' => AttachedFilePathHelper::getAttachmentPath($ledger->ledger_define_id, 'test.txt'),
             'creator_id' => $user->id,
             'modifier_id' => $user->id,
         ]);
@@ -142,7 +148,7 @@ class LedgerTimestampSuppressionTest extends TestCase
         // Assert
         $ledger->refresh();
         $this->assertEquals('VLM Content', $ledger->content_attached[0]['test.txt']['meta']['content']);
-        $this->assertEquals($originalUpdatedAt, \Illuminate\Support\Carbon::parse($ledger->refresh()->updated_at)->format('Y-m-d H:i:s'), 'updated_at was modified by ledger:finalize-processing command');
+        $this->assertEquals($originalUpdatedAt, Carbon::parse($ledger->refresh()->updated_at)->format('Y-m-d H:i:s'), 'updated_at was modified by ledger:finalize-processing command');
     }
 
     #[Test]
@@ -151,7 +157,7 @@ class LedgerTimestampSuppressionTest extends TestCase
         // Arrange
         $folder = Folder::factory()->create();
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
-        $user = \App\Models\User::factory()->create();
+        $user = User::factory()->create();
         $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'creator_id' => $user->id,
@@ -165,10 +171,10 @@ class LedgerTimestampSuppressionTest extends TestCase
             'tenant_id' => $ledger->tenant_id,
             'column_id' => 0,
             'mime' => 'text/plain',
-            'status' => \App\Enums\AttachedFileStatus::UPLOADED,
+            'status' => AttachedFileStatus::UPLOADED,
             'filename' => 'test.txt',
             'hashedbasename' => 'test.txt',
-            'path' => \App\Helpers\AttachedFilePathHelper::getAttachmentPath($ledger->ledger_define_id, 'test.txt'),
+            'path' => AttachedFilePathHelper::getAttachmentPath($ledger->ledger_define_id, 'test.txt'),
             'creator_id' => $user->id,
             'modifier_id' => $user->id,
         ]);
@@ -177,16 +183,16 @@ class LedgerTimestampSuppressionTest extends TestCase
         Storage::disk('public')->put($file->path, 'stub content');
 
         // Tikaクライアントをモック
-        $tikaClientMock = $this->mock(\Vaites\ApacheTika\Client::class, function ($mock) {
+        $tikaClientMock = $this->mock(Client::class, function ($mock) {
             $mock->shouldReceive('isAlive')->andReturn(true);
             $mock->shouldReceive('getText')->andReturn('Extracted Tika Content');
-            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class, \IteratorAggregate::class);
+            $metadataMock = \Mockery::mock(MetadataInterface::class, \IteratorAggregate::class);
             $metadataMock->shouldReceive('get')->with('mime')->andReturn('text/plain');
             $metadataMock->shouldReceive('getIterator')->andReturn(new \ArrayIterator(['mime' => 'text/plain']));
             $mock->shouldReceive('getMetadata')->andReturn($metadataMock);
             $mock->shouldReceive('setTimeout');
         });
-        $this->app->instance(\Vaites\ApacheTika\Client::class, $tikaClientMock);
+        $this->app->instance(Client::class, $tikaClientMock);
 
         $originalUpdatedAt = $ledger->updated_at->toDateTimeString();
 

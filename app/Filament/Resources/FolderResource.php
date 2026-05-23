@@ -5,21 +5,36 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
+use App\Models\Tenant;
+use App\Services\ConfidentialityLevelService;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Actions\Action;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
+use Filament\Actions\ForceDeleteAction;
+use Filament\Actions\ForceDeleteBulkAction;
+use Filament\Actions\RestoreAction;
+use Filament\Actions\RestoreBulkAction;
 use Filament\Forms;
-use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
-use Filament\Forms\Form;
+use Filament\Panel;
 use Filament\Resources\Pages\PageRegistration;
 use Filament\Resources\Resource;
+use Filament\Schemas\Components\Section;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Routing\Route as RouteAlias;
-use Illuminate\Support\Facades\Route; // 追加
+use Illuminate\Support\Facades\Route;
+use Kalnoy\Nestedset\QueryBuilder;
+use Stancl\Tenancy\Facades\Tenancy;
+
+// 追加
 
 class FolderResource extends Resource
 {
@@ -27,7 +42,7 @@ class FolderResource extends Resource
 
     protected static ?string $model = Folder::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-folder';
+    protected static \BackedEnum|string|null $navigationIcon = 'heroicon-o-folder';
 
     public static function getLabel(): string
     {
@@ -36,7 +51,7 @@ class FolderResource extends Resource
 
     public static function getModelLabel(): string
     {
-        return __('ledger.folders');
+        return __('ledger.folder.title');
     }
 
     public static function getPluralLabel(): string
@@ -58,9 +73,9 @@ class FolderResource extends Resource
         ];
     }
 
-    public static function form(Form $form): Form
+    public static function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Section::make(__('ledger.basic_information'))
                     ->schema([
@@ -68,22 +83,16 @@ class FolderResource extends Resource
                             ->label(__('ledger.folder.title'))
                             ->required()
                             ->maxLength(255),
-                        Forms\Components\Select::make('tenant_id')
+                        Select::make('tenant_id')
                             ->label(__('ledger.tenant'))
-                            ->options(
-                                \Stancl\Tenancy\Facades\Tenancy::central(function () {
-                                    return \App\Models\Tenant::all()->mapWithKeys(function ($tenant) {
-                                        return [$tenant->id => $tenant->name ?: $tenant->id];
-                                    });
-                                })
-                            )
+                            ->options(static::tenantOptions())
                             ->live()
                             ->afterStateUpdated(function (callable $set) {
                                 $set('parent_id', null); // Clear parent folder selection when tenant changes
                             })
                             ->required() // tenant_idを必須にする
                             ->disabledOn('edit') // 編集時は無効化
-                            ->default(fn () => session('filament_from_tenant_id')),
+                            ->default(fn () => static::resolveTenantId()),
                         Forms\Components\Hidden::make('creator_id')
                             ->default(fn () => auth()->id())
                             ->disabledOn('edit'), // 作成時のみ記録
@@ -95,7 +104,7 @@ class FolderResource extends Resource
                                 'parent', // name
                                 'title', // titleAttribute
                                 'parent_id', // parentAttribute
-                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => \Stancl\Tenancy\Facades\Tenancy::central(function () use ($query, $get) {
+                                modifyQueryUsing: fn (EloquentBuilder $query, callable $get) => Tenancy::central(function () use ($query, $get) {
                                     $selectedTenantId = $get('tenant_id');
                                     if ($selectedTenantId) {
                                         $query->where('tenant_id', $selectedTenantId);
@@ -108,6 +117,10 @@ class FolderResource extends Resource
                             ->defaultOpenLevel(1)
                             ->searchable(), // 親フォルダの検索を可能にする
                     ])->columns(2),
+
+                Section::make(__('ledger.confidentiality.level.label'))
+                    ->schema(static::confidentialityFormFields())
+                    ->columns(2),
 
                 Section::make(__('ledger.workflow.required_roles_setting'))
                     ->description(__('ledger.workflow.required_roles_setting_helper'))
@@ -155,6 +168,110 @@ class FolderResource extends Resource
             ]);
     }
 
+    public static function confidentialityFormFields(): array
+    {
+        return [
+            Select::make('confidentiality_level')
+                ->label(__('ledger.confidentiality.level.label'))
+                ->default('public')
+                ->required()
+                ->options(static::confidentialityLevelOptions()),
+            Select::make('confidentiality_scopes')
+                ->label(__('ledger.confidentiality.scope.label'))
+                ->multiple()
+                ->searchable()
+                ->preload()
+                ->default([])
+                ->options(static::confidentialityScopeOptions())
+                ->afterStateHydrated(function (Select $component, $state): void {
+                    $component->state(ConfidentialityLevelService::buildScopeChoices($state));
+                })
+                ->dehydrateStateUsing(function ($state): array {
+                    return ConfidentialityLevelService::parseScopeChoices($state ?? []);
+                }),
+        ];
+    }
+
+    protected static function confidentialityLevelOptions(): array
+    {
+        return collect(ConfidentialityLevelService::selectOptions())
+            ->mapWithKeys(fn (array $option) => [$option['id'] => $option['name']])
+            ->all();
+    }
+
+    protected static function confidentialityScopeOptions(): array
+    {
+        return collect(ConfidentialityLevelService::allScopes())
+            ->mapWithKeys(fn (array $option) => [$option['id'] => $option['name']])
+            ->all();
+    }
+
+    public static function tenantOptions(): array
+    {
+        return Tenancy::central(function () {
+            return Tenant::all()->mapWithKeys(function ($tenant) {
+                return [$tenant->id => $tenant->name ?: $tenant->id];
+            })->all();
+        });
+    }
+
+    public static function resolveTenantId(): ?string
+    {
+        $tenantId = request()->query('tenant');
+
+        if (filled($tenantId)) {
+            return (string) $tenantId;
+        }
+
+        $tenantId = session('filament_from_tenant_id');
+
+        if (filled($tenantId)) {
+            return (string) $tenantId;
+        }
+
+        return tenant()?->id
+            ? (string) tenant()->id
+            : null;
+    }
+
+    public static function tenantContextParameters(): array
+    {
+        return filled($tenantId = static::resolveTenantId())
+            ? ['tenant' => $tenantId]
+            : [];
+    }
+
+    public static function tenantScopedQuery(): QueryBuilder
+    {
+        /** @var QueryBuilder $query */
+        $query = Folder::query()->with('roles');
+
+        if ($tenantId = static::resolveTenantId()) {
+            $query->where('tenant_id', $tenantId);
+        }
+
+        return $query;
+    }
+
+    public static function tenantSwitchAction(string $page): Action
+    {
+        return Action::make('switchTenant')
+            ->label(__('ledger.tenant'))
+            ->icon('heroicon-o-building-office-2')
+            ->form([
+                Select::make('tenant_id')
+                    ->label(__('ledger.tenant'))
+                    ->options(static::tenantOptions())
+                    ->default(static::resolveTenantId())
+                    ->required()
+                    ->searchable()
+                    ->preload(),
+            ])
+            ->action(function (array $data) use ($page) {
+                return redirect()->to(static::getUrl($page, ['tenant' => $data['tenant_id']]));
+            });
+    }
+
     public static function table(Table $table): Table
     {
         return $table
@@ -180,18 +297,18 @@ class FolderResource extends Resource
                 Tables\Filters\TrashedFilter::make(),
             ])
             ->actions([
-                Tables\Actions\EditAction::make(),
-                Tables\Actions\RestoreAction::make()->visible(fn ($record) => $record->trashed()),
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
+                EditAction::make(),
+                RestoreAction::make()->visible(fn ($record) => $record->trashed()),
+                DeleteAction::make(),
+                ForceDeleteAction::make()->visible(fn ($record) => $record->trashed()),
             ])
             ->bulkActions([
-                Tables\Actions\DeleteBulkAction::make(),
-                Tables\Actions\RestoreBulkAction::make(),
-                Tables\Actions\ForceDeleteBulkAction::make(),
+                DeleteBulkAction::make(),
+                RestoreBulkAction::make(),
+                ForceDeleteBulkAction::make(),
             ])
             ->headerActions([
-                Tables\Actions\CreateAction::make(),
+                CreateAction::make(),
             ]);
 
     }
@@ -208,27 +325,40 @@ class FolderResource extends Resource
     public static function getPages(): array
     {
         return [
-            'index' => Pages\ListFolders::route('/'),
+            'index' => new PageRegistration(
+                Pages\ListFolders::class,
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/', Pages\ListFolders::class)
+                    ->middleware(Pages\ListFolders::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\ListFolders::getWithoutRouteMiddleware($panel))
+            ),
             'tree' => new PageRegistration(
                 Pages\ListFoldersTree::class,
-                fn (): RouteAlias => Route::get('/tree', Pages\ListFoldersTree::class)),
-            'create' => Pages\CreateFolder::route('/create'),
-            'edit' => Pages\EditFolder::route('/{record}/edit'),
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/tree', Pages\ListFoldersTree::class)
+                    ->middleware(Pages\ListFoldersTree::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\ListFoldersTree::getWithoutRouteMiddleware($panel))
+            ),
+            'create' => new PageRegistration(
+                Pages\CreateFolder::class,
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/create', Pages\CreateFolder::class)
+                    ->middleware(Pages\CreateFolder::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\CreateFolder::getWithoutRouteMiddleware($panel))
+            ),
+            'edit' => new PageRegistration(
+                Pages\EditFolder::class,
+                fn (Panel $panel): \Illuminate\Routing\Route => Route::get('/{record}/edit', Pages\EditFolder::class)
+                    ->middleware(Pages\EditFolder::getRouteMiddleware($panel))
+                    ->withoutMiddleware(Pages\EditFolder::getWithoutRouteMiddleware($panel))
+            ),
         ];
     }
 
     public static function getEloquentQuery(): Builder
     {
-        $query = parent::getEloquentQuery()
+        $query = static::tenantScopedQuery()
             ->withoutGlobalScopes([
                 SoftDeletingScope::class,
             ])
             ->with(['children', 'roles', 'ancestors.roles']);
-
-        // URLクエリから 'tenant' パラメータを取得
-        if ($tenantId = request()->query('tenant')) {
-            $query->where('tenant_id', $tenantId);
-        }
 
         return $query;
     }

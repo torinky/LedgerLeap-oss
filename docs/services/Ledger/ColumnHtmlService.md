@@ -164,6 +164,17 @@ public function setAttachmentContents(array $contents): static
 - **downloadUrlフィールド**: 旧実装との互換性のため、`primary_download.url`を保持
 - **RPA対応**: `direct-download-link`クラスを維持し、自動化ツールとの互換性を確保
 
+### 5.4. ログ方針
+- `column_html_show_ms` / `column_html_prepare_files_ms` / `column_html_blade_render_ms` / `textarea_cache_hit` は、`LogPerformance` による標準監視メトリクスとして残す
+- `AttachmentHtml` の詳細ログ（`[AttachmentHtml] getFileHtml` / `[AttachmentHtml] prepareFilesData`）は、通常運用では無効
+- 調査時のみ `ATTACHMENT_HTML_DEBUG_LOGS=1` を設定して一時的に有効化する
+- こうすることで、日常監視は軽量な性能メトリクスに寄せつつ、必要時のみ詳細ログを復元できる
+
+### 5.5. キャッシュ方針
+- キャッシュは `textarea` の専用経路と `getCachedColumnHtml()` に集約する
+- `mount()` 前の早期キャッシュは採用しない
+- 理由: 早期分岐は `updated_at` / `rawHtml` を含む後段のキャッシュキーと乖離しやすく、更新時の整合性と監視の一貫性を損ねるため
+
 ## 6. 関連ドキュメント
 
 - **[添付ファイル機能](../../function/Attachment.md)** - ユーザー向け機能説明

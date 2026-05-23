@@ -9,7 +9,82 @@
 ## 🐛 本番コードバグ修正 — Sprint X 発見分 (YYYY-MM-DD)
 ## 📊 カバレッジ評価タイトル (YYYY-MM-DD)
 ## 📝 ドキュメント更新 + 完了判定 (YYYY-MM-DD)
+## 🧭 イシュー起草 — 機能 / 改善 / 言語 / 調査 (YYYY-MM-DD)
 ```
+
+## Issue Drafting Entry Point
+
+通常の起票フォーマットは `/.github/ISSUE_TEMPLATE/issue_request.yml` に集約する。
+バグ / CI 失敗 / 回帰は `/.github/ISSUE_TEMPLATE/bug_report.yml` を使う。
+コメント側では sprint 計画・完了報告・証拠の書式だけを扱う。
+
+## Retrospective / 対応経緯メモ
+
+Issue の完了後に後続者が追えるよう、必要に応じて次の小節を追記する。
+
+```markdown
+## 対応経緯メモ（YYYY-MM-DD）
+
+### 問題
+（何が起きたかを一文で）
+
+### 原因
+（どこで止まったか / 何が不足していたか）
+
+### 修正
+（どのファイル・どのシンボル・どの振る舞いを変えたか）
+
+### 確認
+（実行したテスト / UI 確認 / 期待した遷移先）
+
+### 学び
+（次回に再利用できるルールや、廃棄した誤り）
+```
+
+- 表示確認だけでなく、クリック後の遷移先や `href` の実値も併記する。
+- tenant-aware な共有コンポーネントでは、親から受け取った tenant 情報を明示する。
+- コミット参照を残すと、後続の再調査で変更差分を辿りやすい。
+
+### 振り返り構造（深い調査・バグ修正後に推奨）
+
+技術的な根本原因と作業プロセスを分離して記録すると、skill-maintenance への昇格が容易になる。
+
+```markdown
+## 対応経緯メモ（YYYY-MM-DD）
+
+### 良かったこと
+#### 技術要素
+- ...
+
+#### 作業の進め方
+- ...
+
+### 悪かったこと
+#### 技術要素
+- ...
+
+#### 作業の進め方
+- ...
+
+### 上書き指示されたこと
+#### 技術要素
+- ...
+
+#### 作業の進め方
+- ...
+
+### 修正・エビデンス
+- コミット: `abc1234`
+- テスト: `tests/Feature/Components/ConfidentialityStampTest.php`
+
+### 学び（ reusable / local / retire ）
+- `reusable`: tenant-aware 共有 Blade コンポーネントは親から `tenantId` を渡す
+- `local`: ...
+```
+
+- `良かったこと` / `悪かったこと` / `上書き指示されたこと` は skill-maintenance の Retrospective Gate と同じ分類で記述する。
+- 各項目を `技術要素` と `作業の進め方` に分けると、後続者が「どちらのレベルで学ぶべきか」を判断しやすい。
+- 必ずコミット参照とテストファイルを記載し、証拠を辿れるようにする。
 
 ## Emoji Conventions
 
@@ -25,6 +100,7 @@
 | 📐 | plan / design |
 | 🔍 | investigation |
 | 🐛 | bug fix |
+| 🧭 | drafting / scoping |
 | 🎉 | milestone achieved |
 | 🏁 | final completion |
 

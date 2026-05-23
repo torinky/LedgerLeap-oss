@@ -2,10 +2,12 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
-use App\Livewire\Ledger\IndexManager; // RecordsTable から変更
+use App\Enums\FolderPermissionType; // RecordsTable から変更
+use App\Livewire\Ledger\IndexManager;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\LedgerDefine;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
@@ -46,12 +48,15 @@ class SortingOptionLabelTest extends TestCase
             'modifier_id' => $this->user->id,
         ]);
 
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'modifier_id' => $this->user->id,
         ]);
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
     }
 
     #[Test]

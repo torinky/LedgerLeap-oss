@@ -2,10 +2,16 @@
 
 namespace Tests\Feature;
 
+use App\Enums\FolderPermissionType;
+use App\Models\Folder;
 use App\Models\Organization;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
+use App\Services\TenantAccessService;
 use App\Services\UserService;
+use Illuminate\Support\Facades\Cache;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
@@ -26,7 +32,7 @@ class PermissionCacheConsistencyTest extends TestCase
         parent::setUp();
         $this->setUpRefreshDatabaseWithTenant();
 
-        $this->tenant = \App\Models\Tenant::firstOrCreate(['id' => 'test-tenant']);
+        $this->tenant = Tenant::firstOrCreate(['id' => 'test-tenant']);
         tenancy()->initialize($this->tenant);
 
         $this->userService = app(UserService::class);
@@ -99,16 +105,16 @@ class PermissionCacheConsistencyTest extends TestCase
         $superAdminRole = Role::firstOrCreate(['name' => Role::SUPER_ADMIN, 'guard_name' => 'web']);
         $user->assignRole($superAdminRole);
 
-        $folder = \App\Models\Folder::create(['title' => 'Private Folder', 'creator_id' => $user->id, 'modifier_id' => $user->id]);
+        $folder = Folder::create(['title' => 'Private Folder', 'creator_id' => $user->id, 'modifier_id' => $user->id]);
 
         // Super Admin であっても、このフォルダへの RoleFolderPermission がなければ False
         expect($this->userService->isWritableFolderForUser($user, $folder))->toBeFalse();
 
         // 権限を付与
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $superAdminRole->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::ADMIN,
+            'permission' => FolderPermissionType::ADMIN,
         ]);
 
         expect($this->userService->isWritableFolderForUser($user, $folder))->toBeTrue();
@@ -117,19 +123,19 @@ class PermissionCacheConsistencyTest extends TestCase
     #[Test]
     public function it_clears_accessible_tenants_cache_when_user_is_updated()
     {
-        $tenantAccessService = app(\App\Services\TenantAccessService::class);
+        $tenantAccessService = app(TenantAccessService::class);
         $user = User::factory()->create();
 
         // サービスにアクセスしてキャッシュを生成
         $tenantAccessService->getAccessibleTenants($user);
 
         $cacheKey = "user.{$user->id}.accessible_tenants";
-        expect(\Illuminate\Support\Facades\Cache::tags(['tenant_access'])->has($cacheKey))->toBeTrue();
+        expect(Cache::tags(['tenant_access'])->has($cacheKey))->toBeTrue();
 
         // ユーザーを更新（Observer経由でキャッシュクリアされるはず）
         $user->update(['name' => 'Updated Name']);
 
         // キャッシュが消えていることを確認
-        expect(\Illuminate\Support\Facades\Cache::tags(['tenant_access'])->has($cacheKey))->toBeFalse();
+        expect(Cache::tags(['tenant_access'])->has($cacheKey))->toBeFalse();
     }
 }

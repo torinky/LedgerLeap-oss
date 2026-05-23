@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ledger;
 
 use App\Http\Controllers\Controller;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use Illuminate\Auth\Access\AuthorizationException;
@@ -43,10 +44,21 @@ class DuplicateController extends Controller
         // 複製元のcontentからprefillパラメータを構成
         $prefillParams = $this->buildPrefillParamsFromLedger($sourceLedger, $ledgerDefine);
 
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerDefine->folder_id) {
+            $folder = Folder::with('ancestors')->find($ledgerDefine->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+
         // 既存のCreateController::create()と同じビューを返す
         return View::make('ledger.create', [
             'ledgerDefineRecord' => $ledgerDefine,
             'prefillParams' => $prefillParams,
+            'breadcrumbs' => $breadcrumbs,
             'sourceLedgerId' => $sourceLedgerId, // 監査ログ用（オプション）
         ]);
     }
@@ -70,6 +82,18 @@ class DuplicateController extends Controller
 
             // カラム定義が存在しない、または除外タイプの場合はスキップ
             if (! $column || in_array($column->type, $excludedTypes)) {
+                continue;
+            }
+
+            if ($column->type === 'chk') {
+                $value = $this->normalizeCheckboxPrefillValue($value, $column->options ?? []);
+
+                if ($value === []) {
+                    continue;
+                }
+
+                $prefillParams[$columnId] = $value;
+
                 continue;
             }
 
@@ -107,5 +131,90 @@ class DuplicateController extends Controller
         }
 
         return $prefillParams;
+    }
+
+    private function normalizeCheckboxPrefillValue(mixed $value, array $options): array
+    {
+        $normalized = [];
+
+        if (is_string($value)) {
+            $sanitizedOption = $this->sanitizeCheckboxOption($value);
+
+            if ($sanitizedOption !== null && ($options === [] || in_array($sanitizedOption, $options, true))) {
+                $normalized[$sanitizedOption] = true;
+            }
+
+            return $normalized;
+        }
+
+        if (! is_array($value)) {
+            return $normalized;
+        }
+
+        if (array_is_list($value)) {
+            foreach ($value as $option) {
+                $sanitizedOption = $this->sanitizeCheckboxOption($option);
+
+                if ($sanitizedOption === null) {
+                    continue;
+                }
+
+                if ($options !== [] && ! in_array($sanitizedOption, $options, true)) {
+                    continue;
+                }
+
+                $normalized[$sanitizedOption] = true;
+            }
+
+            return $normalized;
+        }
+
+        foreach ($value as $option => $selected) {
+            $sanitizedOption = $this->sanitizeCheckboxOption($option);
+
+            if ($sanitizedOption === null) {
+                continue;
+            }
+
+            if ($options !== [] && ! in_array($sanitizedOption, $options, true)) {
+                continue;
+            }
+
+            if (! $this->isTruthyCheckboxSelection($selected)) {
+                continue;
+            }
+
+            $normalized[$sanitizedOption] = true;
+        }
+
+        return $normalized;
+    }
+
+    private function sanitizeCheckboxOption(mixed $option): ?string
+    {
+        if (! is_string($option)) {
+            return null;
+        }
+
+        $sanitizedOption = trim(strip_tags(mb_substr($option, 0, 255)));
+
+        return $sanitizedOption === '' ? null : $sanitizedOption;
+    }
+
+    private function isTruthyCheckboxSelection(mixed $selected): bool
+    {
+        if (is_bool($selected)) {
+            return $selected;
+        }
+
+        if (is_int($selected) || is_float($selected)) {
+            return (int) $selected === 1;
+        }
+
+        if (! is_string($selected)) {
+            return false;
+        }
+
+        return in_array(strtolower(trim($selected)), ['1', 'true', 'on', 'yes'], true);
     }
 }

@@ -1,19 +1,75 @@
 {{-- Content Tab --}}
-<div class="space-y-4 relative" x-data="{
+<div class="space-y-4 relative min-w-0 max-w-full overflow-x-hidden" x-data="{
     viewMode: 'rendered', // 'rendered' or 'raw' (only relevant for VLM)
+    rawPreviewText: null,
+    rawPreviewLoading: false,
     switchTab(source, mode = 'rendered') {
         $wire.switchSource(source);
         this.viewMode = mode;
+        if (source === 'vlm' && mode === 'raw' && this.rawPreviewText === null) {
+            this.rawPreviewLoading = true;
+            $wire.requestPreviewText('raw');
+        }
+    },
+    handlePreviewTextReady(event) {
+        const { purpose, text } = event.detail || {};
+        if (purpose === 'raw') {
+            this.rawPreviewText = text || '';
+            this.rawPreviewLoading = false;
+            this.viewMode = 'raw';
+            return;
+        }
+
+        if (purpose === 'copy') {
+            this.copyToClipboard(text || '');
+            this.rawPreviewLoading = false;
+            return;
+        }
+
+        if (purpose && purpose.startsWith('download:')) {
+            const type = purpose.split(':', 2)[1] || 'text';
+            this.downloadText(text || '', type);
+            this.rawPreviewLoading = false;
+        }
+    },
+    async copyToClipboard(text) {
+        if (!text) return;
+        if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+            return;
+        }
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.opacity = '0';
+        document.body.appendChild(ta);
+        ta.select();
+        document.execCommand('copy');
+        document.body.removeChild(ta);
+    },
+    downloadText(text, type = 'text') {
+        if (!text) return;
+        const blob = new Blob([text], { type: type === 'json' ? 'application/json' : 'text/plain' });
+        const url = window.URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = '{{ $file?->original_filename ?? 'extracted' }}' + (type === 'json' ? '.json' : (type === 'markdown' ? '.md' : '.txt'));
+        a.click();
+        window.URL.revokeObjectURL(url);
     }
-}">
+}" @preview-text-ready.window="handlePreviewTextReady($event)">
+    @php
+        $tenantId = $this->resolveTenantId($file?->tenant_id);
+    @endphp
+
     {{-- Tier 2: Loading overlay for search --}}
     <x-element.loading-overlay tier="2" target="searchKeyword" />
 
     @php
+            $file = $this->file;
         $previewText = $this->getPreviewText();
-        // プレーンテキスト（ハイライトなし）を確実に取得
-        $previewTextRaw = $this->getPreviewText(false);
-        $hasPreviewText = $file && !empty($previewTextRaw);
+        $previewTextRaw = null;
+        $hasPreviewText = $file && !empty($previewText);
 
         // 信頼度バッジ情報の取得
         $badge = $file?->getConfidenceBadgeInfo();
@@ -34,14 +90,29 @@
         $isUnknownMime = $this->isUnknownMimeType();
 
         $limit = 10000;
-        $canExpand = mb_strlen($previewTextRaw) > $limit;
+        $canExpand = mb_strlen(strip_tags($previewText ?? '')) > $limit;
 
         // メインコンテンツエリアのID
-        $contentAreaId = 'file-inspector-content-' . uniqid();
+        $contentAreaId = 'file-inspector-content-' . uniqid('', true);
+
+        $badgeIconClass = null;
+        if ($badge) {
+            $badgeIconClass = match ($badge['color']) {
+                'success' => 'fa-check-circle text-success',
+                'warning' => 'fa-shield-halved text-warning',
+                default => 'fa-exclamation-circle text-error',
+            };
+        }
+
+        $downloadType = match ($activeSource) {
+            'vlm' => 'markdown',
+            'structured' => 'json',
+            default => 'text',
+        };
     @endphp
 
     {{-- HEADER: Search & Source Selector (Tabs) --}}
-    <div class="sticky top-0 z-20 bg-base-100/95 backdrop-blur-xs py-2 border-b border-base-200">
+    <div class="sticky top-0 z-20 bg-base-100/95 backdrop-blur-xs py-2 border-b border-base-200 min-w-0 max-w-full overflow-x-hidden">
         <div class="flex flex-col gap-3">
             {{-- Search Box --}}
             <div class="flex items-center gap-2">
@@ -70,9 +141,9 @@
             </div>
 
             {{-- Source Selector (Explicit Tabs) --}}
-            <div class="flex flex-wrap items-center justify-between gap-y-2 tooltip"
+            <div class="flex flex-wrap items-center justify-between gap-y-2 tooltip min-w-0 max-w-full"
                 data-tip="{{ __('ledger.file_inspector.source.tooltip') }}">
-                <div class="join bg-base-200 rounded-lg overflow-x-auto max-w-full">
+                <div class="join bg-base-200 rounded-lg overflow-x-auto max-w-full min-w-0">
                     {{-- 1. AI Analysis (VLM Rendered) --}}
                     @php
                         $vlmStatus = $this->getSourceStatus('vlm');
@@ -150,7 +221,7 @@
                     <div class="flex items-center gap-1.5 text-xs bg-base-100 border border-base-200 px-2 py-1 rounded-full shadow-xs tooltip tooltip-left cursor-help ml-auto"
                         data-tip="{{ $badge['tooltip'] }}">
                         <i
-                            class="fa-solid {{ $badge['color'] === 'success' ? 'fa-check-circle text-success' : ($badge['color'] === 'warning' ? 'fa-shield-halved text-warning' : 'fa-exclamation-circle text-error') }}"></i>
+                            class="fa-solid {{ $badgeIconClass }}"></i>
                         <span class="font-medium opacity-80">{{ $badge['label'] }}</span>
                         @if ($badge['score'])
                             <span class="opacity-60 font-mono text-[10px] ml-0.5">{{ $badge['score'] }}</span>
@@ -168,7 +239,7 @@
                 <div>
                     <h3 class="font-bold text-sm">{{ __('ledger.file_inspector.status.unsupported_format') }}</h3>
                     <p class="text-xs mt-1">{{ __('ledger.file_inspector.status.unsupported_format_message') }}</p>
-                    <a href="{{ route('file.download', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                    <a href="{{ route('file.download', ['tenant' => $tenantId, 'attachedFile' => $file->id]) }}"
                         class="btn btn-xs btn-primary mt-2" download>
                         {{ __('ledger.file_inspector.actions.download') }}
                     </a>
@@ -228,7 +299,7 @@
                             class="text-xs font-medium">{{ __('ledger.file_inspector.status.ocr_pdf_notice') }}</span>
                         {{-- OCR Optimized Download (Only if exists) --}}
                         @if ($file->ocr_pdf_path ?? false)
-                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => $tenantId, 'attachedFile' => $file->id]) }}"
                                 class="btn btn-xs btn-ghost gap-1 self-start" download>
                                 <i class="fa-solid fa-file-pdf text-error"></i>
                                 {{ __('ledger.file_inspector.actions.download_optimized_pdf') }}
@@ -248,18 +319,18 @@
                     copy: { loading: false, success: false },
                     download: { loading: false, success: false }
                 },
-            
+
                 async performAction(type, actionFn) {
                     if (this.actionState[type].loading) return;
-            
+
                     this.actionState[type].loading = true;
                     this.actionState[type].success = false;
-            
+
                     try {
                         // Simulate interaction delay for UI feedback consistency
                         await new Promise(r => setTimeout(r, 600));
                         await actionFn();
-            
+
                         this.actionState[type].success = true;
                         // Unified toast message
                         this.notify(
@@ -267,31 +338,23 @@
                             '{{ __('ledger.vlm.copied_short') }}' :
                             '{{ __('ledger.file_inspector.actions.download_complete') }}'
                         );
-            
+
                         setTimeout(() => {
                             this.actionState[type].success = false;
                         }, 2000);
-            
+
                     } catch (e) {
                         this.notify('Error', 'error');
                     } finally {
                         this.actionState[type].loading = false;
                     }
                 },
-            
+
                 copyText(targetId) {
-                    this.performAction('copy', async () => {
-                        const text = $refs.rawContent.textContent;
-                        if (!text) throw new Error('No text');
-            
-                        if (navigator.clipboard) {
-                            await navigator.clipboard.writeText(text);
-                        } else {
-                            this.fallbackCopy(text);
-                        }
-                    });
+                                this.rawPreviewLoading = true;
+                                $wire.requestPreviewText('copy');
                 },
-            
+
                 fallbackCopy(text) {
                     const ta = document.createElement('textarea');
                     ta.value = text;
@@ -302,30 +365,16 @@
                     document.execCommand('copy');
                     document.body.removeChild(ta);
                 },
-            
+
                 downloadFile(type) {
-                    this.performAction('download', async () => {
-                        const text = $refs.rawContent.textContent;
-                        if (!text) throw new Error('No text');
-            
-                        const blob = new Blob([text], { type: type === 'json' ? 'application/json' : 'text/plain' });
-                        const url = window.URL.createObjectURL(blob);
-                        const a = document.createElement('a');
-                        a.href = url;
-                        a.download = '{{ $file?->original_filename ?? 'extracted' }}' + (type === 'json' ? '.json' : (type === 'markdown' ? '.md' : '.txt'));
-                        a.click();
-                        window.URL.revokeObjectURL(url);
-                    });
+                                this.rawPreviewLoading = true;
+                                $wire.requestPreviewText('download:' + type);
                 }
             }">
             {{-- Content Body --}}
-            <div class="overflow-y-auto min-h-[300px] p-4 text-sm leading-relaxed relative transition-all duration-700 ease-in-out"
-                :class="[$wire.isExpanded ? 'max-h-[5000px]' : 'max-h-[500px]']"
+            <div class="overflow-y-auto p-4 text-sm leading-relaxed relative transition-all duration-700 ease-in-out max-h-[450px] "
+                :class="[$wire.isExpanded ? '' : 'overflow-y-hidden']"
                 style="scrollbar-width: thin;" id="{{ $contentAreaId }}">
-
-                {{-- Raw Text Holder for Copy (Hidden) --}}
-                <div x-ref="rawContent" class="hidden" wire:key="raw-content-{{ $activeSource }}-{{ $this->fileId }}">
-                    {{ $previewTextRaw }}</div>
 
                 @if ($activeSource === 'structured')
                     <pre class="bg-base-100 p-4 rounded-lg border border-base-200 overflow-x-auto"><code class="language-json text-xs font-mono">{!! $previewText !!}</code></pre>
@@ -337,9 +386,15 @@
                             {!! Str::markdown($previewText) !!}
                         </div>
                         {{-- Raw Markdown View --}}
-                        <div x-show="viewMode === 'raw'" x-cloak>
-                            <pre
-                                class="font-mono whitespace-pre-wrap break-words text-base-content/80 text-xs bg-base-100 p-4 rounded border border-base-300">{!! $previewText !!}</pre>
+                                <div x-show="viewMode === 'raw'" x-cloak class="relative">
+                                    <template x-if="rawPreviewLoading && rawPreviewText === null">
+                                        <div class="py-10 flex justify-center">
+                                            <span class="loading loading-spinner loading-md"></span>
+                                        </div>
+                                    </template>
+                                    <pre x-show="!rawPreviewLoading || rawPreviewText !== null"
+                                        x-text="rawPreviewText"
+                                        class="font-mono whitespace-pre-wrap break-words text-base-content/80 text-xs bg-base-100 p-4 rounded border border-base-300"></pre>
                         </div>
                     @else
                         <div class="text-base-content/50 italic text-center py-10">
@@ -390,7 +445,7 @@
 
                     {{-- Download --}}
                     <button
-                        @click="downloadFile('{{ $activeSource === 'vlm' ? 'markdown' : ($activeSource === 'structured' ? 'json' : 'text') }}')"
+                        @click="downloadFile('{{ $downloadType }}')"
                         class="btn btn-sm btn-ghost hover:btn-primary gap-2 min-w-[100px]"
                         :disabled="actionState.download.loading || actionState.copy.loading">
 

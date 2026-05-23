@@ -13,6 +13,7 @@ use Illuminate\Console\Command;
 use Illuminate\Console\OutputStyle;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Activitylog\Models\Activity;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Output\BufferedOutput;
 use Tests\TestCase;
@@ -179,7 +180,7 @@ class CalculateScoresCommandTest extends TestCase
         // 初期のアクティビティログ件数を記録
         $initialActivityCount = null;
         $tenant->run(function () use ($ledger, &$initialActivityCount) {
-            $initialActivityCount = \Spatie\Activitylog\Models\Activity::query()
+            $initialActivityCount = Activity::query()
                 ->where('subject_type', Ledger::class)
                 ->where('subject_id', $ledger->id)
                 ->count();
@@ -193,7 +194,7 @@ class CalculateScoresCommandTest extends TestCase
 
         // 検証 (Assert) - スコア更新がアクティビティログに記録されていないことを確認
         $tenant->run(function () use ($ledger, $initialActivityCount) {
-            $afterCalculationActivityCount = \Spatie\Activitylog\Models\Activity::query()
+            $afterCalculationActivityCount = Activity::query()
                 ->where('subject_type', Ledger::class)
                 ->where('subject_id', $ledger->id)
                 ->count();

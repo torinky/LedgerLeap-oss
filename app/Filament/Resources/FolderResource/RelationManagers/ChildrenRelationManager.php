@@ -5,9 +5,14 @@ namespace App\Filament\Resources\FolderResource\RelationManagers;
 use App\Filament\Resources\FolderResource;
 use App\Models\Folder;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
+use Filament\Actions\Action;
+use Filament\Actions\BulkActionGroup;
+use Filament\Actions\CreateAction;
+use Filament\Actions\DeleteBulkAction;
+use Filament\Actions\EditAction;
 use Filament\Forms;
-use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
+use Filament\Schemas\Schema;
 use Filament\Tables;
 use Filament\Tables\Table;
 
@@ -32,14 +37,15 @@ class ChildrenRelationManager extends RelationManager
         return __('ledger.folders');
     }
 
-    public function form(Form $form): Form
+    public function form(Schema $schema): Schema
     {
-        return $form
+        return $schema
             ->schema([
                 Forms\Components\TextInput::make('title')
                     ->label(__('ledger.folder.title'))
                     ->required()
                     ->maxLength(255),
+                ...FolderResource::confidentialityFormFields(),
             ]);
     }
 
@@ -62,7 +68,7 @@ class ChildrenRelationManager extends RelationManager
                 //
             ])
             ->headerActions([
-                Tables\Actions\Action::make('attach_children')
+                Action::make('attach_children')
                     ->label(__('ledger.attach_existing_folder'))
                     ->icon('heroicon-o-paper-clip')
                     ->form([
@@ -89,13 +95,13 @@ class ChildrenRelationManager extends RelationManager
                             ->update(['parent_id' => $ownerRecord->id]);
                     })
                     ->modalWidth('3xl'),
-                Tables\Actions\CreateAction::make()
+                CreateAction::make()
                     ->icon('heroicon-o-plus'),
             ])
             ->actions([
-                Tables\Actions\EditAction::make()
+                EditAction::make()
                     ->url(fn (Folder $record): string => FolderResource::getUrl('edit', ['record' => $record])),
-                Tables\Actions\Action::make('detach_child')
+                Action::make('detach_child')
                     ->label(__('ledger.detach'))
                     ->icon('heroicon-o-x-mark')
                     ->color('danger')
@@ -105,8 +111,8 @@ class ChildrenRelationManager extends RelationManager
                     ->action(fn (Folder $record) => $record->update(['parent_id' => null])),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
+                BulkActionGroup::make([
+                    DeleteBulkAction::make(),
                 ]),
             ]);
     }

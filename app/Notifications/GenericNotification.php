@@ -258,8 +258,8 @@ class GenericNotification extends Notification implements ShouldQueue
             'causer_name' => $this->causer?->name,
             'event' => $this->eventName, // コンストラクタで受け取ったイベント名
             'comments' => $this->comment, // コンストラクタで受け取ったコメント
-            'ledger_name' => ($this->subject instanceof \App\Models\Ledger) ? $this->subject->define?->title : null,
-            'ledger_version' => ($this->subject instanceof \App\Models\Ledger) ? $this->subject->version : null,
+            'ledger_name' => ($this->subject instanceof Ledger) ? $this->subject->define?->title : null,
+            'ledger_version' => ($this->subject instanceof Ledger) ? $this->subject->version : null,
         ];
 
         // もし Activity Log オブジェクトがあれば、追加情報をマージする (オプション)

@@ -96,19 +96,25 @@ class RagSearchService
      * @param  string  $query  Search query text
      * @param  int  $limit  Maximum number of results
      * @param  array  $filters  Additional filters (folder_id, ledger_define_id, ledger_ids, user)
+     * @param  string  $embeddingType  Embedding prefix type ('query' or 'passage')
      * @return array Array of ledger scores
      */
-    public function searchLedgers(string $query, int $limit = 20, array $filters = []): array
-    {
+    public function searchLedgers(
+        string $query,
+        int $limit = 20,
+        array $filters = [],
+        string $embeddingType = 'query',
+    ): array {
         $logChannel = config('rag.log_channel', 'stack');
         Log::channel($logChannel)->info('RAG search initiated', [
             'query' => $query,
             'limit' => $limit,
+            'embedding_type' => $embeddingType,
             'filters' => $filters,
         ]);
 
         // 1. Generate embedding for the query
-        $queryEmbedding = $this->embeddingService->embed($query, 'query');
+        $queryEmbedding = $this->embeddingService->embed($query, $embeddingType);
 
         // 2. Apply permission-based filtering if user is provided
         if (isset($filters['user'])) {
@@ -157,7 +163,7 @@ class RagSearchService
     /**
      * Search ledgers for API responses (with full model data)
      *
-     * @param  \App\Models\User  $user  User for permission filtering
+     * @param  User  $user  User for permission filtering
      * @param  array  $params  Search parameters (query, limit, filters)
      * @return array Array of ledger models with metadata
      */

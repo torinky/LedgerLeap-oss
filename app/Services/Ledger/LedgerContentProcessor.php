@@ -5,6 +5,7 @@ namespace App\Services\Ledger;
 use App\Models\ColumnDefine;
 use App\Models\Ledger;
 use App\Models\LedgerDiff;
+use Illuminate\Support\Collection;
 
 class LedgerContentProcessor
 {
@@ -28,7 +29,7 @@ class LedgerContentProcessor
         Ledger $ledgerRecord,
         ?LedgerDiff $comparisonTargetDiff,
         int $displayLevel,
-        \Illuminate\Support\Collection $allAttachments,
+        Collection $allAttachments,
         ?string $highlight = null,
         ?int $baseDiffId = null,
         bool $showChanges = false
@@ -48,8 +49,8 @@ class LedgerContentProcessor
         $allColumns = collect(optional($ledgerRecord->define)->column_define ?? []);
 
         // Mock Attachment Column Injection
-        if (\App\Services\Ledger\MockAttachmentService::isEnabled()) {
-            $allColumns->push(\App\Services\Ledger\MockAttachmentService::getMockColumnDefine());
+        if (MockAttachmentService::isEnabled()) {
+            $allColumns->push(MockAttachmentService::getMockColumnDefine());
         }
 
         // 4. カラムのグルーピングとソート
@@ -138,6 +139,7 @@ class LedgerContentProcessor
                         $currentValueHtml = (string) $this->columnHtmlService
                             ->setAttachmentCollection($allAttachments)
                             ->setAttachmentContents($attachedMetaData)
+                            ->setSource('ledger-content-processor')
                             ->show($columnDefine, $change['current_value'], true, [], '', false, $ledgerRecord, $highlight);
                     }
 
@@ -150,6 +152,7 @@ class LedgerContentProcessor
                         $oldValueHtml = (string) $this->columnHtmlService
                             ->setAttachmentCollection($allAttachments)
                             ->setAttachmentContents([]) // 過去の個別指定はクリア
+                            ->setSource('ledger-content-processor')
                             ->show($columnDefine, $change['old_value'], true, [], '', false, $ledgerRecord, $highlight);
                     }
 

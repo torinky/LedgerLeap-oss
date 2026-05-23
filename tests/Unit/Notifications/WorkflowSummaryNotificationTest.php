@@ -113,8 +113,8 @@ class WorkflowSummaryNotificationTest extends TestCase
 
     // -------------------------------------------------------
     // toDatabase テスト
-    // toDatabase 内で route('notifications.index') がテナントパラメータを要求するため
-    // テナントコンテキストなしでは呼び出し不可。プロパティを直接検証する。
+    // route('notifications.index') は global ルートになったため、
+    // ここでは通知本文の値だけを直接検証する。
     // -------------------------------------------------------
 
     #[Test]

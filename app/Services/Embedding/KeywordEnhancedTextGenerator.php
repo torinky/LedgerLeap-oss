@@ -18,7 +18,9 @@ class KeywordEnhancedTextGenerator
 
     public function __construct()
     {
-        $this->tagger = new Tagger;
+        $this->tagger = new Tagger([
+            'dict_dir' => base_path('vendor/logue/igo-php/ipadic'),
+        ]);
     }
 
     public function generateEnhancedText(string $ocrText, array $options = []): string
@@ -140,8 +142,13 @@ class KeywordEnhancedTextGenerator
     /**
      * キーワードを品詞別に分類して追加
      */
-    private function addKeyword(string $keyword, string $posDetail, array &$properNouns, array &$commonNouns, array $stopwords): void
-    {
+    private function addKeyword(
+        string $keyword,
+        string $posDetail,
+        array &$properNouns,
+        array &$commonNouns,
+        array $stopwords
+    ): void {
         $keyword = trim($keyword);
         if (empty($keyword)) {
             return;

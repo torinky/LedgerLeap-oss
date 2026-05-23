@@ -5,6 +5,7 @@ namespace Tests\Feature\Services\Scoring;
 use App\Models\Ledger;
 use App\Models\User;
 use App\Services\Scoring\PopularityScoreService;
+use Carbon\Carbon;
 use PHPUnit\Framework\Attributes\CoversClass;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Activitylog\Models\Activity;
@@ -31,7 +32,7 @@ class PopularityScoreServiceTest extends TestCase
     }
 
     /** viewed アクティビティを直接作成するヘルパー */
-    private function createViewActivity(Ledger $ledger, User $user, \Carbon\Carbon $createdAt): void
+    private function createViewActivity(Ledger $ledger, User $user, Carbon $createdAt): void
     {
         Activity::create([
             'log_name' => 'default',

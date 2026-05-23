@@ -9,7 +9,9 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Lang;
+use Illuminate\Support\Facades\Log;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Traits\LogsActivity;
 use Spatie\Permission\Models\Role as SpatieRole;
@@ -24,24 +26,29 @@ class Role extends SpatieRole
     protected $fillable = [
         'name', 'guard_name',
         'description',
+        'abbreviation',
     ];
 
     protected static function booted()
     {
-        static::updated(function ($role) {
-            \Illuminate\Support\Facades\Log::info('App\\Models\\Role::booted updated closure fired for Role ID: '.$role->id);
+        static::saved(function ($role) {
+            Log::info('App\\Models\\Role::booted saved closure fired for Role ID: '.$role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
             });
+            // 秘密区分関連キャッシュをクリア
+            Cache::tags(['confidentiality'])->flush();
         });
 
         static::deleted(function ($role) {
-            \Illuminate\Support\Facades\Log::info('App\\Models\\Role::booted deleted closure fired for Role ID: '.$role->id);
+            Log::info('App\\Models\\Role::booted deleted closure fired for Role ID: '.$role->id);
             // ユーザーに関連するキャッシュをクリア
             $role->users()->each(function ($user) {
                 app(WritableFolderRepository::class)->clearAllCache($user);
             });
+            // 秘密区分関連キャッシュをクリア
+            Cache::tags(['confidentiality'])->flush();
         });
     }
 

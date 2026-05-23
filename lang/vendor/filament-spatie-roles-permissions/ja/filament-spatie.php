@@ -7,13 +7,13 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'field.guard_name' => 'Guard Name',
-    'field.permissions_count' => 'Permissions Count',
-    'field.name' => 'Name',
-    'field.permissions' => 'Permissions',
-    'field.roles' => 'Roles',
-    'field.role' => 'Role',
-    'field.team' => 'Team',
+    'field.guard_name' => 'ガード名',
+    'field.permissions_count' => '権限数',
+    'field.name' => '名称',
+    'field.permissions' => '権限',
+    'field.roles' => 'ロール',
+    'field.role' => 'ロール',
+    'field.team' => 'チーム',
 
     /*
     |--------------------------------------------------------------------------
@@ -21,12 +21,12 @@ return [
     |--------------------------------------------------------------------------
     */
 
-    'section.permission' => 'Permission',
-    'section.permissions' => 'Permissions',
-    'section.role' => 'Role',
-    'section.roles' => 'Roles',
-    'section.roles_and_permissions' => 'Roles and Permissions',
-    'select-team' => 'Select a Team',
-    'select-team-hint' => 'Leave blank for a global role',
-    'section.users' => 'Users',
+    'section.permission' => '権限',
+    'section.permissions' => '権限',
+    'section.role' => 'ロール',
+    'section.roles' => 'ロール',
+    'section.roles_and_permissions' => 'ロールと権限',
+    'select-team' => 'チームを選択',
+    'select-team-hint' => '空欄の場合はグローバルロールになります',
+    'section.users' => 'ユーザー',
 ];

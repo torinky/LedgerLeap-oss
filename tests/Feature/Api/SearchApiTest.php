@@ -12,6 +12,7 @@ use App\Models\User;
 use PHPUnit\Framework\Attributes\Group;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\DatabaseMigrationsOnce;
 
@@ -97,7 +98,7 @@ class SearchApiTest extends TestCase
      */
     private function createSharedData(): void
     {
-        $permissionRegistrar = $this->app->make(\Spatie\Permission\PermissionRegistrar::class);
+        $permissionRegistrar = $this->app->make(PermissionRegistrar::class);
         $permissionRegistrar->forgetCachedPermissions();
 
         $permission = Permission::firstOrCreate(['name' => 'view_ledgers', 'guard_name' => 'web']);
@@ -177,7 +178,7 @@ class SearchApiTest extends TestCase
         // テナントコンテキストを確実に初期化
         tenancy()->initialize(static::$sharedTenantForMigrationsOnce);
 
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         $this->actingAs(self::$adminUser, 'sanctum')
             ->getJson('/api/v1/search') // キーワード検索を外してテスト

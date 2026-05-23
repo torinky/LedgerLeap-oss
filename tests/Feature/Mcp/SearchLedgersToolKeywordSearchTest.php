@@ -2,14 +2,18 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Tools\SearchLedgersTool;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use App\Services\LedgerService;
+use App\Services\SynonymService;
 use Laravel\Mcp\Request;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -48,12 +52,12 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
         $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
 
         // Grant permission to the user for the created folder
-        $role = \Spatie\Permission\Models\Role::create(['name' => 'Tester']);
+        $role = Role::create(['name' => 'Tester']);
         $this->user->assignRole($role);
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
@@ -72,6 +76,7 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
 
         $request = new Request([
             'q' => 'keyword',
+            'include_content' => true,
         ]);
 
         // Act
@@ -85,6 +90,71 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
         $this->assertCount(1, $responseData['ledgers']);
         $this->assertEquals(1, $responseData['total']);
         $this->assertStringContainsString('test keyword for search', json_encode($responseData['ledgers'][0]['content']));
+    }
+
+    #[Test]
+    public function test_synonym_expansion_searches_invoice_content()
+    {
+        // Arrange
+        $folder = Folder::factory()->create(['title' => 'Finance Folder']);
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+
+        $role = Role::create(['name' => 'Finance Reader']);
+        $this->user->assignRole($role);
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::READ,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'content' => ['インボイス対応済み'],
+        ]);
+
+        app()->instance(SynonymService::class, new class extends SynonymService
+        {
+            public function getSynonymsFromWord($word, array $options = [])
+            {
+                return $word === '請求' ? ['インボイス'] : [];
+            }
+
+            public function getSearchTermsFromWord($word, array $options = []): array
+            {
+                if ($word === '請求') {
+                    return [
+                        ['term' => '請求', 'kind' => 'original'],
+                        ['term' => 'インボイス', 'kind' => 'synonym'],
+                    ];
+                }
+
+                return [
+                    ['term' => (string) $word, 'kind' => 'original'],
+                ];
+            }
+        });
+
+        $ledgerService = app(LedgerService::class);
+        $tool = new SearchLedgersTool($ledgerService);
+
+        $request = new Request([
+            'q' => '請求',
+            'include_content' => true,
+        ]);
+
+        // Act
+        $response = $tool->handle($request);
+
+        // Assert
+        $this->assertFalse($response->isError());
+        $responseData = json_decode($response->content(), true);
+
+        $this->assertArrayHasKey('ledgers', $responseData);
+        $this->assertCount(1, $responseData['ledgers']);
+        $this->assertEquals(1, $responseData['total']);
+        $this->assertSame(['インボイス対応済み'], $responseData['ledgers'][0]['content']);
     }
 
     #[Test]
@@ -107,12 +177,12 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
         ]);
 
         // 権限を持つユーザーを作成
-        $role = \Spatie\Permission\Models\Role::create(['name' => 'Reader']);
+        $role = Role::create(['name' => 'Reader']);
         $this->user->assignRole($role);
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $readableFolder->id,
-            'permission' => \App\Enums\FolderPermissionType::READ,
+            'permission' => FolderPermissionType::READ,
             'creator_id' => $this->user->id,
             'modifier_id' => $this->user->id,
         ]);
@@ -122,6 +192,7 @@ class SearchLedgersToolKeywordSearchTest extends TestCase
 
         $request = new Request([
             'q' => 'keyword',
+            'include_content' => true,
         ]);
 
         // Act

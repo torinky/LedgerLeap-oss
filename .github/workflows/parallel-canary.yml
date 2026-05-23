@@ -1,24 +1,13 @@
-name: Parallel Tests Canary (Sprint 4)
+name: Parallel Tests Canary (Sprint 7)
 
-# Sprint 4 カナリア: 並列実行の安定性を既存直列ジョブと並走して検証する
+# Sprint 7 カナリア: parallel 標準の安定性を手動で検証する
 # 成功基準: 10 連続成功 & フレーク率 < 1%
 # ロールバック基準: P95 が 3 連続で 10% 以上悪化、またはフレーク率 > 1%
 #
 # 対象: parallel-safe な Unit / Feature テスト（database-migrations / external を除く）
-# 直列ジョブ（phpunit.yml）と独立して実行し、CI全体を壊さない設計
+# 標準 CI（phpunit.yml）とは重複させず、必要時のみ手動で実行する
 
 on:
-  push:
-    branches:
-      - 'main'
-      - 'develop'
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
-  pull_request:
-    paths-ignore:
-      - 'docs/**'
-      - '**/*.md'
   workflow_dispatch:
 
 concurrency:
@@ -26,6 +15,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
+  GITHUB_ACTIONS: true
   DB_USERNAME: sail
   DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
   DB_HOST: 127.0.0.1

@@ -164,7 +164,7 @@ class AsColumnArrayJson extends AsJson
                         return [$key => $trimmed];
                     }
                     // 数値や文字列単体が返る場合は通常の処理にフォールスルー
-                } catch (\JsonException $e) {
+                } catch (JsonException $e) {
                     // 無効な JSON であれば通常の処理に進む（ログに警告を残す）
                     Log::warning('AsColumnArrayJson: set: Input value appears to be invalid JSON despite starting with [ or {');
                     Log::warning('AsColumnArrayJson: set: Input value: '.Str::limit($content, 200));
@@ -228,7 +228,7 @@ class AsColumnArrayJson extends AsJson
             JSON_THROW_ON_ERROR | JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE
         );
 
-        Log::info('AsColumnArrayJson: set: Final JSON string to be saved: '.Str::limit($jsonString, 500));
+        //        Log::info('AsColumnArrayJson: set: Final JSON string to be saved: '.Str::limit($jsonString, 500));
 
         return [$key => $jsonString];
     }

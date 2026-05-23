@@ -1,0 +1,47 @@
+id: analytics-report
+version: 1
+status: active
+summary: 件数・進捗・利用状況を集計し、台帳運用の傾向を把握する能力
+primary_user_goals:
+  - 期間ごとの件数や進捗を見たい
+  - 利用者や保存先ごとの傾向を把握したい
+  - 滞留や偏りを見つけたい
+when_to_use:
+  - ユーザーが運用状況を集計したいとき
+  - 管理者が件数や進捗の傾向を確認したいとき
+recommended_flow:
+  - step: choose-report-scope
+    description: 期間・対象台帳・利用者・保存先などの集計範囲を決める
+  - step: fetch-ledger-stats
+    description: GetLedgerStatsTool で台帳件数や状態別傾向を確認する
+  - step: fetch-user-stats
+    description: 必要なら GetUserActivityStatsTool で利用者の活動傾向を確認する
+  - step: fetch-folder-stats
+    description: 必要なら GetFolderStatsTool で保存先ごとの状況を確認する
+required_mcp_tools:
+  - GetLedgerStatsTool
+supporting_mcp_tools:
+  - GetUserActivityStatsTool
+  - GetFolderStatsTool
+required_guides:
+  - ledgerleap://guides/analytics-report-strategy
+  - ledgerleap://guides/common-usage-basics
+proposed_inputs:
+  - period
+  - ledger_define_id
+  - status
+  - creator_id
+success_criteria:
+  - 集計期間に対する件数や傾向を返せる
+  - 必要に応じて利用者別・保存先別の内訳へ掘り下げられる
+  - 利用者に次に見るべき対象を短く案内できる
+ledgerleap_constraints:
+  - client-facing では内部集計クエリや DB 構造を説明しない
+  - まず概要値を返し、必要時だけ drill-down する
+  - local model 向けに短い要約と最小限の項目を優先する
+examples:
+  - user: 今月の申請件数と承認待ち件数を見せて
+    intent: 期間集計と状態別件数の確認
+  - user: 保存先ごとの最近の動きを知りたい
+    intent: フォルダ別の集計確認
+

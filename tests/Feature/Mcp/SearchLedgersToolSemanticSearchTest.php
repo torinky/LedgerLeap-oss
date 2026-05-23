@@ -2,14 +2,22 @@
 
 namespace Tests\Feature\Mcp;
 
+use App\Enums\FolderPermissionType;
 use App\Jobs\ProcessLedgerForRagJob;
 use App\Mcp\Tools\SearchLedgersTool;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerChunk;
+use App\Models\LedgerDefine;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
+use App\Services\EmbeddingService;
 use App\Services\LedgerService;
 use Laravel\Mcp\Request;
 use Mockery;
 use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Role;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
@@ -30,6 +38,25 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->user = User::factory()->create([
             'email' => 'test@example.com',
             'name' => 'Test User',
+        ]);
+
+        $folder = Folder::factory()->create([
+            'title' => 'Semantic Search Folder',
+        ]);
+
+        $role = Role::create([
+            'name' => 'Semantic Search Reader',
+            'guard_name' => 'web',
+        ]);
+
+        $this->user->assignRole($role);
+
+        RoleFolderPermission::create([
+            'role_id' => $role->id,
+            'folder_id' => $folder->id,
+            'permission' => FolderPermissionType::READ,
+            'creator_id' => $this->user->id,
+            'modifier_id' => $this->user->id,
         ]);
 
         $token = $this->user->createToken('test-token')->plainTextToken;
@@ -139,7 +166,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
     {
         // 1. EmbeddingServiceのモック化 (外部API呼び出しを回避)
         // これによりテストの高速化と安定化を図る
-        $embeddingServiceMock = Mockery::mock(\App\Services\EmbeddingService::class);
+        $embeddingServiceMock = Mockery::mock(EmbeddingService::class);
         // 1536次元のダミーベクトル (全て0.1)
         $dummyVector = array_fill(0, 1536, 0.1);
 
@@ -154,7 +181,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
                 return array_fill(0, count($texts), $dummyVector);
             });
 
-        $this->app->instance(\App\Services\EmbeddingService::class, $embeddingServiceMock);
+        $this->app->instance(EmbeddingService::class, $embeddingServiceMock);
 
         // 2. テストデータの作成 (Seederを使わずFactoryで作成)
         // Adminユーザー
@@ -164,16 +191,16 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         $this->actingAs($adminUser);
 
         // フォルダー
-        $folder = \App\Models\Folder::factory()->create(['title' => '日報']);
+        $folder = Folder::factory()->create(['title' => '日報']);
 
         // 権限設定: ユーザーが検索できるようにフォルダへのアクセス権を付与
-        $role = \Spatie\Permission\Models\Role::create(['name' => 'test-admin', 'guard_name' => 'web']);
+        $role = Role::create(['name' => 'test-admin', 'guard_name' => 'web']);
         $adminUser->assignRole($role);
 
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $folder->id,
-            'permission' => \App\Enums\FolderPermissionType::ADMIN,
+            'permission' => FolderPermissionType::ADMIN,
             'creator_id' => $adminUser->id,
             'modifier_id' => $adminUser->id,
         ]);
@@ -191,7 +218,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
             ['id' => 8, 'name' => '次回アクション', 'type' => 'textarea', 'key' => 'next_action', 'display_level' => 3, 'group' => '内容', 'order' => 8],
         ];
 
-        $ledgerDefine = \App\Models\LedgerDefine::factory()->create([
+        $ledgerDefine = LedgerDefine::factory()->create([
             'title' => '[TEST] 営業日報',
             'folder_id' => $folder->id,
             'column_define' => $columns,
@@ -210,7 +237,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
             8 => '経費削減案の資料を作成する。',
         ];
 
-        $ledger = \App\Models\Ledger::factory()->create([
+        $ledger = Ledger::factory()->create([
             'ledger_define_id' => $ledgerDefine->id,
             'content' => $content,
             'creator_id' => $adminUser->id,
@@ -233,7 +260,7 @@ class SearchLedgersToolSemanticSearchTest extends TestCase
         tenancy()->initialize($this->getTenant());
 
         // チャンクが作成されたことを確認
-        $chunkCount = \App\Models\LedgerChunk::where('ledger_id', $ledger->id)->count();
+        $chunkCount = LedgerChunk::where('ledger_id', $ledger->id)->count();
         $this->assertGreaterThan(0, $chunkCount,
             "No chunks were created for ledger {$ledger->id}. RAG processing may have failed.");
 

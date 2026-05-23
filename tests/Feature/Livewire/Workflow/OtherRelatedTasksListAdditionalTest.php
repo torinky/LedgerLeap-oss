@@ -113,6 +113,36 @@ class OtherRelatedTasksListAdditionalTest extends TestCase
             ->assertSet('showClaimCommentModal', false);
     }
 
+    #[Test]
+    public function render_uses_task_tenant_id_for_ledger_links(): void
+    {
+        $tenantId = $this->getTenant()->id;
+
+        $task = [
+            'ledger_id' => 999,
+            'tenant_id' => $tenantId,
+            'ledger_title' => 'テスト台帳',
+            'status_value' => WorkflowStatus::PENDING_INSPECTION->value,
+            'status_label' => WorkflowStatus::PENDING_INSPECTION->label(),
+            'status_color_class' => WorkflowStatus::PENDING_INSPECTION->colorClass(),
+            'current_inspector_name' => null,
+            'current_approver_name' => null,
+            'applicant_name' => null,
+            'ledger_updated_at' => now(),
+            'ledger_created_at' => now(),
+            'task_type' => 'claimable',
+            'is_locked' => false,
+            'required_roles_progress_summary' => null,
+        ];
+
+        Livewire::test(OtherRelatedTasksList::class)
+            ->set('tasksData', collect([$task]))
+            ->assertSeeHtml(route('ledger.show', [
+                'tenant' => $tenantId,
+                'ledgerId' => 999,
+            ]));
+    }
+
     // ================================================================
     // canUserClaimTask — 各条件の検証（protected メソッドを直接テスト）
     // ================================================================

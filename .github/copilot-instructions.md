@@ -11,22 +11,27 @@
 - **Tailwind JIT**: After adding new utility classes, run `sail npm run build`.
 - **Model events in Sail**: Use `$model->update([...])` not `touch()` in event-driven tests.
 - **Permission cache**: Role/Org/User change requires both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`.
+- **Translation Keys**: ALWAYS use translation keys (`__('ledger.xxx')`) for UI text. NEVER hardcode natural language strings. Manage via `lang/ja/ledger/` and sync with `artisan translations:compare --force`.
+- **Remote MCP tenant security**: `mcp:*` token ability alone is insufficient. Web MCP routes must also enforce current-tenant access (for example `EnsureAuthenticatedUserHasCurrentTenantAccess`), and path-based tenant MCP URLs should stay aligned with the app’s normal tenant URL style.
+- **Tests run in Sail**: Run tests via `./vendor/bin/sail test` / `./vendor/bin/sail pest`. Host-side `php artisan test` / `./vendor/bin/pest` is unsupported.
 - **FTS tests**: Use `DatabaseMigrationsOnce`, not `RefreshDatabase`.
 - **Git after Sail**: Always use `bash -c "cd /path && git ..."`.
-- **`#[Lazy]` + tenant**: In `render()`, fall back to `$model->tenant_id` — never rely only on `tenant()?->id`.
+- **`#[Lazy]` + tenant**: Use the shared Livewire tenant resolver and fall back to `$model->tenant_id`; never rely only on `tenant()?->id`.
 ## Architecture Patterns
 - Business logic: `App\Services`
 - Interactive UI: Livewire with single-source-of-truth state array
 - ACL: `Spatie\Permission` + `WritableFolderRepository` (folder-level)
 - Data access: verify live data via MCP tools before reasoning from static files
+- LLM docs audience split: client-facing docs must use WebUI-observable concepts and business workflows only; DB/Mroonga/Laravel details belong in developer-facing docs
 ## Prompt Shortcuts
 - `/git-commit`, `/github-issue-workflow`, `/ci-failure-investigation`, `/rag-vector-search`, `/bug-investigation`, `/bug-execution`, `/skill-maintenance`
 ## Auto Context
-- Path rules: `.github/instructions/livewire.instructions.md`, `.github/instructions/php-laravel.instructions.md`, `.github/instructions/tests.instructions.md`, `.github/instructions/ai-assets.instructions.md`
-- Reusable deep knowledge: `.github/skills/*/SKILL.md`
+- Path rules: `.github/instructions/livewire.instructions.md`, `.github/instructions/php-laravel.instructions.md`, `.github/instructions/tests.instructions.md`, `.github/instructions/ai-assets.instructions.md`, `.github/instructions/design.instructions.md`
+- Reusable deep knowledge: `.github/skills/*/SKILL.md` (keep each ≤ 120 lines; detail goes to `references/*.md`)
 - Agent-wide routing/meta: `AGENTS.md`
 ## Workflow
-- `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → `./vendor/bin/sail test` → `/git-commit` → `/skill-maintenance`
+- `./vendor/bin/sail pint` → error check (`last-error` / `browser-logs`) → **Identify and run affected tests** (`./vendor/bin/sail test <path>`) → `/git-commit` → `/skill-maintenance`
+- **MANDATORY**: View changes (Blade) MUST be verified via rendering tests or browser interaction to detect broken `route()` calls or variable scope issues.
 ## Bug Response Principles
 - Investigate before changing code: define expected vs actual behavior, reproduction, impact scope, and rollback constraints.
 - Evidence order: logs / stack traces → related code / tests / recent changes → repo docs / skills → external sources.

@@ -20,12 +20,21 @@ use Studio15\FilamentTree\Concerns\InteractsWithTree;
 
 // use CubeAgency\FilamentTreeView\Traits\HasTreeView;
 
+/**
+ * @property int|null $parent_id
+ */
 class Folder extends Model
 {
     use HasFactory, InteractsWithTree, LogsActivity, NodeTrait, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
 
     protected $fillable = [
         'title', 'modifier_id', 'creator_id', 'parent_id', 'tenant_id',
+        'confidentiality_level',
+        'confidentiality_scopes',
+    ];
+
+    protected $casts = [
+        'confidentiality_scopes' => 'array',
     ];
 
     /**
@@ -85,6 +94,7 @@ class Folder extends Model
 
         static::updated(function ($folder) {
             Cache::forget('folder_tree_list_');
+            Cache::forget("confidentiality:{$folder->tenant_id}:scopes");
             foreach (Role::all() as $role) {
                 Cache::forget('folder_permissions_'.$folder->id.'_'.$role->id);
                 Cache::forget('role_writable_folders_'.$role->id);
@@ -93,6 +103,7 @@ class Folder extends Model
 
         static::deleted(function ($folder) {
             Cache::forget('folder_tree_list_');
+            Cache::forget("confidentiality:{$folder->tenant_id}:scopes");
             foreach (Role::all() as $role) {
                 Cache::forget('folder_permissions_'.$folder->id.'_'.$role->id);
                 Cache::forget('role_writable_folders_'.$role->id);

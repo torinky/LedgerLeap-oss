@@ -141,14 +141,14 @@ class LedgerLookupControllerTest extends TestCase
         $response = $this->actingAs($this->user)->get("/ledgers/lookup/{$query}");
 
         $response->assertOk();
-        $response->assertViewHas('results', function ($results) use ($baseUrl) {
+        $response->assertViewHas('results', function ($results) use ($baseUrl, $query) {
             foreach ($results as $result) {
                 // 各結果のURLが正しい形式であることを確認
                 if (! str_starts_with($result['url'], $baseUrl)) {
                     return false;
                 }
                 // 誤ったパターンではないことを確認
-                if (str_contains($result['url'], '://tenant1/') || str_contains($result['url'], '://tenant2/')) {
+                if (! str_contains($result['url'], 'highlight='.$query) || str_contains($result['url'], '://tenant1/') || str_contains($result['url'], '://tenant2/')) {
                     return false;
                 }
             }
@@ -190,5 +190,6 @@ class LedgerLookupControllerTest extends TestCase
 
         // カスタムベースURLが使用されていることを確認
         $this->assertStringStartsWith('http://test-base-url.example.com', $redirectUrl, 'URL should use configured base URL');
+        $this->assertStringContainsString('highlight='.$query, $redirectUrl, 'URL should contain highlight parameter');
     }
 }

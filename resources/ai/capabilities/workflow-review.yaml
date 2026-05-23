@@ -1,0 +1,47 @@
+id: workflow-review
+version: 1
+status: active
+summary: 未処理の点検・承認タスクを確認し、内容を見て承認または差し戻しを進める能力
+primary_user_goals:
+  - 自分に割り当てられた確認タスクを処理したい
+  - 承認前に対象レコードの内容と履歴を確認したい
+  - 差し戻し時に必要なコメントを残したい
+when_to_use:
+  - ユーザーが未処理の点検依頼や承認依頼を確認したいとき
+  - 対象レコードを読んだうえで承認または差し戻しを行いたいとき
+recommended_flow:
+  - step: list-pending-tasks
+    description: GetPendingApprovalsTool で自分の未処理タスクを確認する
+  - step: inspect-history
+    description: 必要に応じて GetWorkflowHistoryTool で経緯やコメントを確認し、最新版と前版または任意の2版を比較する
+  - step: claim-task
+    description: 代理処理が必要なら ClaimWorkflowTaskTool で担当を引き取る
+  - step: execute-decision
+    description: ExecuteApprovalTool で承認・点検完了・差し戻しを実行する
+required_mcp_tools:
+  - GetPendingApprovalsTool
+  - ExecuteApprovalTool
+supporting_mcp_tools:
+  - GetWorkflowHistoryTool
+  - ClaimWorkflowTaskTool
+required_guides:
+  - ledgerleap://guides/workflow-review-strategy
+  - ledgerleap://guides/common-usage-basics
+proposed_inputs:
+  - task_id
+  - decision
+  - comment
+success_criteria:
+  - 自分の未処理タスクを一覧できる
+  - 対象レコードの確認後に承認または差し戻しを実行できる
+  - 承認前に何が変わったか、いつか、誰かを短く確認できる
+  - 実行結果の状態変化を利用者へ説明できる
+ledgerleap_constraints:
+  - client-facing では内部ワークフロー実装名ではなく、未処理タスク・承認・差し戻しの業務語彙で扱う
+  - 対象レコードの可視性と担当状況を確認せずに承認を進めない
+  - コメントは短く次アクションが分かる粒度で返す
+examples:
+  - user: 今日の未処理承認を見せて
+    intent: 承認待ちタスクの一覧確認
+  - user: この申請を差し戻してコメントを残して
+    intent: 対象確認後の差し戻し

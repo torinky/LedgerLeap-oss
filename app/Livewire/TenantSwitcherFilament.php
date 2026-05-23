@@ -16,7 +16,7 @@ class TenantSwitcherFilament extends BaseLivewireComponent
 
     public Collection $tenants;
 
-    public ?\App\Models\Tenant $currentTenant;
+    public ?Tenant $currentTenant;
 
     public ?int $currentFolderId = null;
 

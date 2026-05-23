@@ -1,5 +1,5 @@
 ---
-description: Maintain LedgerLeap AI operating assets after every bug fix, sprint, or investigation. Sync prompts, skills, instructions, AGENTS, issue templates, and runbooks from newly proven learnings.
+description: Maintain LedgerLeap AI operating assets after every bug fix, sprint, investigation, or user-requested retrospective. Sync prompts, skills, instructions, AGENTS, issue templates, and runbooks from newly proven learnings.
 ---
 
 # skill-maintenance
@@ -14,16 +14,20 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 - [AI Asset Maintenance Playbook](../../docs/runbooks/ai-asset-maintenance-playbook.md)
 - [Routing Matrix](../skills/skill-maintenance/references/routing.md)
 - [Workflow & Quality Gate](../skills/skill-maintenance/references/workflow.md)
+- [Evidence & Freshness](../skills/skill-maintenance/references/evidence-freshness.md)
 - [JetBrains / Copilot Support Notes](../skills/skill-maintenance/references/jetbrains-copilot-support.md)
 - [Skill Inventory](../skills/skill-maintenance/references/skill-inventory.md)
 
 ## When to Run
 
-- バグ修正で再利用可能な原因・回避策・実装パターンが確定したとき
+- すべての作業（不具合対応、機能検討、調査、実装、スプリント、ドキュメント更新）が完了したとき
+- issue / sprint 完了後に、学びを整理して残したいとき
+- ユーザーから明示的に「振り返りをしてください」と指示されたとき
 - 既存 instruction / prompt / skill が誤っていたと分かったとき
 - 新しい recurring workflow が 2 回以上出現したとき
 - issue template / runbook / AGENTS の不足が判明したとき
 - 同じ CI 調査コマンドや shell 手順で 2 回以上詰まったとき
+- MCP / API tool description から process guidance を capability / docs 側へ移し、受け皿の確認が必要になったとき
 
 ## Routing Matrix
 
@@ -40,12 +44,18 @@ description: Maintain LedgerLeap AI operating assets after every bug fix, sprint
 
 ## Maintenance Loop
 
-1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、ワークフローを列挙する
-2. **Classify**: 上の routing matrix で primary destination を決める
-3. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
-4. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
-5. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint を確認する
-6. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
+1. **Collect**: 今回新しく確定した事実、失敗パターン、回避策、失敗した操作、採用しなかった案、ワークフローを列挙する。issue / sprint 完了後や retrospective 指示時は、実装結果とは別に「学び」だけを取り出す
+   - 作業開始前に `pwd` と `git rev-parse --show-toplevel` を実行し、現在地と Git ルートを確定する。WSL / Mac でパスが違う前提なので、ここで食い違ったら作業を止める
+2. **Two-layer review**: 学びは必ず 2 層で整理する
+   - 進め方の改善: 対象レイヤーの固定、証拠順序、仮説比較、検証ゲート、手戻りの防止
+   - 個別具体の手法改善: 使ったコマンド、設定、UI 変更、テンプレート、文言、実装パターン
+3. **Classify**: 上の routing matrix で primary destination を決める
+4. **Sync neighbors**: skill を変えたら prompt / instructions / `copilot-instructions.md` / `AGENTS.md` への反映要否も確認する
+5. **Consolidate**: 重複するルールは 1 か所へ寄せ、他はリンクに置き換える
+6. **Evidence**: durable claim ごとに、repo 証拠または official source への到達点を記録する
+7. **Validate**: 行数制約、リンク、description、発見性、slash entrypoint、evidence reachability に加えて、`tool = contract` / `capability = flow` / `docs = rationale` の分離を確認する
+8. **Operationalize**: 同じところで詰まった CI / shell / `gh` 手順は、安定コマンド集として skill reference / prompt / runbook に同期する
+9. **Recheck**: doc-sensitive guidance には `last_confirmed_at` と `recheck_after` を付け、期限超過または同領域変更時に再確認する
 
 ## JetBrains / Copilot Rule
 
@@ -56,6 +66,9 @@ JetBrains では **prompt files と instructions が主導線**。skills は reu
 - 今回の学び一覧
 - 変更すべき `.github` / `docs` ファイル一覧
 - 追加 / 更新 / 削除の理由
+- 学びごとの evidence link / evidence location
+- doc-sensitive guidance の `last_confirmed_at` / `recheck_after` / `status`
+- tool description を削る場合の移送先と、受け皿確認結果
 - 同期漏れチェック結果
 - follow-up 候補
 
@@ -66,3 +79,6 @@ JetBrains では **prompt files と instructions が主導線**。skills は reu
 - [ ] prompt / skill / instructions / AGENTS の重複を減らした
 - [ ] `copilot-instructions.md` は短く保った
 - [ ] 新規 recurring workflow は skill 化または prompt 化した
+- [ ] tool description を slim 化した場合、capability / discovery 側に同等の client-facing 情報が残っている
+- [ ] durable claim に evidence があり、次の担当者が辿れる
+- [ ] doc-sensitive guidance に `last_confirmed_at` / `recheck_after` がある

@@ -15,6 +15,7 @@ use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 use Vaites\ApacheTika\Client as TikaClient;
+use Vaites\ApacheTika\Metadata\MetadataInterface;
 
 class VlmIntegrationTest extends TestCase
 {
@@ -55,7 +56,7 @@ class VlmIntegrationTest extends TestCase
             $mock->shouldReceive('getText')->once()->andReturn('Some extracted text from Tika');
             $mock->shouldReceive('setTimeout')->once();
 
-            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class);
+            $metadataMock = \Mockery::mock(MetadataInterface::class);
             $metadataMock->shouldReceive('get')->with('mime')->andReturn('image/png');
             $mock->shouldReceive('getMetadata')->once()->andReturn($metadataMock);
         });
@@ -105,7 +106,7 @@ class VlmIntegrationTest extends TestCase
             $mock->shouldReceive('getText')->once()->andReturn(''); // 空のテキスト
             $mock->shouldReceive('setTimeout')->once();
 
-            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class);
+            $metadataMock = \Mockery::mock(MetadataInterface::class);
             $metadataMock->shouldReceive('get')->with('mime')->andReturn('image/jpeg');
             $mock->shouldReceive('getMetadata')->once()->andReturn($metadataMock);
         });
@@ -142,7 +143,7 @@ class VlmIntegrationTest extends TestCase
             $mock->shouldReceive('getText')->once()->andReturn('Zip file content');
             $mock->shouldReceive('setTimeout')->once();
 
-            $metadataMock = \Mockery::mock(\Vaites\ApacheTika\Metadata\MetadataInterface::class);
+            $metadataMock = \Mockery::mock(MetadataInterface::class);
             $metadataMock->shouldReceive('get')->with('mime')->andReturn('application/zip');
             $mock->shouldReceive('getMetadata')->once()->andReturn($metadataMock);
         });

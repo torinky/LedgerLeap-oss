@@ -2,10 +2,15 @@
 
 namespace Tests\Feature\Models;
 
+use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\Tag;
 use App\Models\User;
+use App\Rules\RequiredCheckbox;
+use App\Rules\UniqueColumnValue;
+use Illuminate\Validation\Rules\RequiredIf;
 use PHPUnit\Framework\Attributes\CoversClass;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
@@ -157,7 +162,7 @@ class LedgerDefineModelTest extends TestCase
 
     public function test_get_validation_rules_chk_required_adds_required_checkbox_rule(): void
     {
-        $chkColumn = new \App\Models\ColumnDefine(
+        $chkColumn = new ColumnDefine(
             1,
             'chk_field',
             'chk',
@@ -180,15 +185,15 @@ class LedgerDefineModelTest extends TestCase
 
         // chk 型の必須は Rule::array() + RequiredCheckbox
         $this->assertTrue(collect($ruleList)->contains(
-            fn ($r) => $r instanceof \Illuminate\Validation\Rules\RequiredIf
-                || $r instanceof \App\Rules\RequiredCheckbox
+            fn ($r) => $r instanceof RequiredIf
+                || $r instanceof RequiredCheckbox
                 || (is_string($r) && str_contains($r, 'array'))
         ));
     }
 
     public function test_get_validation_rules_chk_not_required_has_array_rule(): void
     {
-        $chkColumn = new \App\Models\ColumnDefine(
+        $chkColumn = new ColumnDefine(
             2,
             'chk_field_opt',
             'chk',
@@ -214,7 +219,7 @@ class LedgerDefineModelTest extends TestCase
 
     public function test_get_validation_rules_required_text_adds_required(): void
     {
-        $textColumn = new \App\Models\ColumnDefine(
+        $textColumn = new ColumnDefine(
             3,
             'required_text',
             'text',
@@ -238,7 +243,7 @@ class LedgerDefineModelTest extends TestCase
 
     public function test_get_validation_rules_unique_text_adds_unique_rule(): void
     {
-        $uniqueColumn = new \App\Models\ColumnDefine(
+        $uniqueColumn = new ColumnDefine(
             4,
             'unique_text',
             'text',
@@ -260,7 +265,7 @@ class LedgerDefineModelTest extends TestCase
         $ruleList = $rules['content.4'];
         // UniqueColumnValue ルールが含まれる
         $this->assertTrue(collect($ruleList)->contains(
-            fn ($r) => $r instanceof \App\Rules\UniqueColumnValue
+            fn ($r) => $r instanceof UniqueColumnValue
         ));
     }
 
@@ -278,7 +283,7 @@ class LedgerDefineModelTest extends TestCase
     public function test_scope_search_tags_filters_by_keyword(): void
     {
         // タグを持つ LedgerDefine を作成
-        $tag = \App\Models\Tag::factory()->create([
+        Tag::factory()->create([
             'ledger_define_id' => $this->ledgerDefine->id,
             'name' => 'sprint3-unique-tag',
         ]);
@@ -288,5 +293,22 @@ class LedgerDefineModelTest extends TestCase
 
         $noResult = LedgerDefine::searchTags(['XXXXNOTEXIST'])->get();
         $this->assertFalse($noResult->contains('id', $this->ledgerDefine->id));
+    }
+
+    public function test_scope_search_tags_matches_multiple_partial_tags_across_distinct_rows(): void
+    {
+        Tag::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'name' => '営業活動',
+        ]);
+
+        Tag::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'name' => '日次報告',
+        ]);
+
+        $result = LedgerDefine::searchTags(['日次', '営業'])->get();
+
+        $this->assertTrue($result->contains('id', $this->ledgerDefine->id));
     }
 }

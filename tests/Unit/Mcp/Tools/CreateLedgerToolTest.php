@@ -2,8 +2,10 @@
 
 namespace Tests\Unit\Mcp\Tools;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Tools\CreateLedgerTool;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
@@ -101,11 +103,11 @@ class CreateLedgerToolTest extends TestCase
 
         // 権限ありのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
-            ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+            ->with(Mockery::type(User::class), FolderPermissionType::WRITE)
             ->andReturn([$folder->id]);
 
         // LedgerServiceのモック - 正しいLedgerモデルを返す
-        $mockLedger = new \App\Models\Ledger([
+        $mockLedger = new Ledger([
             'id' => 123,
             'content' => ['title' => 'Test Ledger', 'amount' => 1000],
             'created_at' => now(),
@@ -148,10 +150,10 @@ class CreateLedgerToolTest extends TestCase
 
         // 権限ありのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
-            ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+            ->with(Mockery::type(User::class), FolderPermissionType::WRITE)
             ->andReturn([$folder->id]);
 
-        $mockLedger = new \App\Models\Ledger([
+        $mockLedger = new Ledger([
             'id' => 123,
             'content' => ['title' => 'Test'],
             'created_at' => now(),
@@ -187,7 +189,7 @@ class CreateLedgerToolTest extends TestCase
 
         // 権限ありのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
-            ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+            ->with(Mockery::type(User::class), FolderPermissionType::WRITE)
             ->andReturn([$folder->id]);
 
         // LedgerServiceが例外を投げる
@@ -214,7 +216,7 @@ class CreateLedgerToolTest extends TestCase
 
         // 権限ありのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
-            ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+            ->with(Mockery::type(User::class), FolderPermissionType::WRITE)
             ->andReturn([$folder->id]);
 
         // LedgerServiceが例外を投げる（json_decode失敗によるnull渡し）
@@ -242,7 +244,7 @@ class CreateLedgerToolTest extends TestCase
 
         // 権限なしのモック設定
         $this->folderRepository->shouldReceive('getAccessibleFolderIds')
-            ->with(Mockery::type(User::class), \App\Enums\FolderPermissionType::WRITE)
+            ->with(Mockery::type(User::class), FolderPermissionType::WRITE)
             ->andReturn([]); // 空の配列を返し、書き込み権限がないことを示す
 
         $this->ledgerService->shouldNotReceive('createLedger');

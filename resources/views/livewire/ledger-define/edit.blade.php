@@ -1,4 +1,4 @@
-<div class="space-y-4">
+<div class="space-y-4 pb-32">
     <x-mary-form wire:submit="store" class="space-y-4">
         {{-- 基本設定セクション --}}
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -21,6 +21,28 @@
                             icon="o-folder" :options="$folderIdNameMap"
                             wire:model="parentFolderId" required
                             class="select-bordered focus:select-primary"
+                    />
+
+                    <hr class="border-base-200">
+
+                    {{-- 秘密区分・公開範囲 --}}
+                    <x-mary-select
+                            label="{{ __('ledger.confidentiality.level.label') }}"
+                            wire:model="confidentialityLevel"
+                            :options="$confidentialityLevelOptions"
+                            placeholder="{{ __('ledger.folder.form.placeholder.select_roles') }}"
+                            allow-clear
+                            class="select-bordered focus:select-primary"
+                    />
+
+                    <x-mary-choices-offline
+                            label="{{ __('ledger.confidentiality.scope.label') }}"
+                            wire:model="confidentialityScopes"
+                            :options="$confidentialityScopeOptions"
+                            multiple
+                            searchable
+                            placeholder="{{ __('ledger.confidentiality.scope.placeholder') }}"
+                            no-result-text="{{ __('messages.info.no_results_found') }}"
                     />
                 </div>
             </div>
@@ -103,13 +125,22 @@
             </div>
         </div>
 
-        <div class="flex justify-end gap-3 mt-4">
-            <x-ledger.close-window-button />
-            <x-mary-button label="{{__('ledger.save')}}"
-                           icon="o-check"
-                           class="btn-primary btn-sm px-6 shadow-md"
-                           type="submit"
-                           spinner="store"/>
-        </div>
+        <x-ledger.sticky-action-bar>
+            <x-slot:left>
+                <x-ledger.close-window-button />
+                @if ($ledgerDefineRecord?->id)
+                    <x-mary-button label="{{ __('ledger.go_to') }}" icon="o-arrow-right-circle"
+                        class="btn-outline btn-neutral h-12"
+                        link="{{ route('ledgersByDefineId', ['tenant' => tenant()?->id, 'defineId' => $ledgerDefineRecord->id]) }}" />
+                @endif
+                <x-mary-button label="{{ __('ledger.define.remove') }}" icon="o-trash"
+                               class="btn-outline btn-error font-medium h-12"
+                               onclick="document.getElementById('delete-modal').showModal()" />
+            </x-slot:left>
+            <x-slot:right>
+                <x-mary-button label="{{ __('ledger.save') }}" icon="o-check"
+                    class="btn-primary btn-lg px-8 tracking-wide shadow-md" type="submit" spinner="store" />
+            </x-slot:right>
+        </x-ledger.sticky-action-bar>
     </x-mary-form>
 </div>

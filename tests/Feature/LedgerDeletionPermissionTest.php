@@ -7,11 +7,13 @@ use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
+use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 
 class LedgerDeletionPermissionTest extends TestCase
@@ -90,7 +92,7 @@ class LedgerDeletionPermissionTest extends TestCase
     {
         // 準備: 基本権限を剥奪
         $this->adminUser->removeRole($this->adminRole);
-        $this->app->make(\Spatie\Permission\PermissionRegistrar::class)->forgetCachedPermissions();
+        $this->app->make(PermissionRegistrar::class)->forgetCachedPermissions();
 
         // 実行
         $response = $this->actingAs($this->adminUser)
@@ -105,7 +107,7 @@ class LedgerDeletionPermissionTest extends TestCase
     public function user_cannot_delete_ledger_in_another_tenant(): void
     {
         // 準備: 別のテナントを作成し、そこに台帳を作成
-        $anotherTenant = \App\Models\Tenant::create(['id' => 'another-tenant']);
+        $anotherTenant = Tenant::create(['id' => 'another-tenant']);
         $anotherLedger = $anotherTenant->run(function () {
             $folder = Folder::factory()->create();
             $define = LedgerDefine::factory()->create(['folder_id' => $folder->id]);

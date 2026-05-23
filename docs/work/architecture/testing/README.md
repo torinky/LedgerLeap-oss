@@ -4,17 +4,23 @@
 
 ---
 
-### ✅ 現状サマリー (2025-10-11)
+### ✅ 現状サマリー (2026-04-05)
 
-このカテゴリのドキュメントは、主にMCP（Managed Code Platform）連携機能のテストスイートを最適化し、実行時間を大幅に短縮した際の記録です。
+このカテゴリのドキュメントは、主に MCP（Managed Code Platform）連携機能のテストスイートを最適化し、実行時間を大幅に短縮した際の記録です。
 
 主要な成果として、**`RefreshDatabaseWithTenant`** トレイトが開発・導入されました。これは、テストクラスごとにデータベースのマイグレーションを一度だけ実行し、各テストはトランケートによって高速にクリーンアップする仕組みです。これにより、**テスト実行時間が最大で70-88%削減**されるなど、開発効率の大幅な向上が達成されています。
 
-この最適化アプローチは、MCP関連のテストに適用され、その有効性が確認されています。ドキュメントに記載された計画と成果は、現在のコードベースに正しく反映されています。
+この最適化アプローチは、MCP関連のテストに適用され、その有効性が確認されています。現在は `parallel + serial` の標準 CI を前提に、`phpunit.xml` / `phpunit.parallel.xml` / Composer scripts / PhpStorm Run Configuration の整合を保つ運用へ移行しています。
 
 ---
 
 ## 📚 ドキュメント一覧
+
+- **[テスト実行ガイド（並列導入後の標準手順）](./2026-03-06_Parallel_Testing_Developer_Guide.md)**
+  - `composer test:ci` を中心に、serial / parallel / external の標準コマンドをまとめた運用ガイド。
+
+- **[Parallel Canary Tracking Template](./2026-03-08_Parallel_Canary_Tracking_Template.md)**
+  - `parallel-canary.yml` の実績を記録し、Sprint 7 の完了判定に使うテンプレート。
 
 - **[RefreshDatabaseWithTenant トレイト成功報告書](./2025-10-04_RefreshDatabaseWithTenant_Success_Report.md)**
   - テスト実行時間を最大88%削減した `RefreshDatabaseWithTenant` トレイトの開発と成果に関する詳細なレポート。

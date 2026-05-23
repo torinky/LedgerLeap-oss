@@ -1,11 +1,11 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="Pest: Full (phpunit.xml)" type="PestRunConfigurationType">
+  <configuration default="false" name="Pest: Main (phpunit.serial.xml)" type="PestRunConfigurationType">
     <CommandLine>
       <PhpTestInterpreterSettings>
         <option name="interpreterName" value="Laravel Sail" />
       </PhpTestInterpreterSettings>
     </CommandLine>
-    <PestRunner configuration_file="$PROJECT_DIR$/phpunit.xml" directory="$PROJECT_DIR$/tests" method="" scope="ConfigurationFile" use_alternative_configuration_file="true" />
+    <PestRunner configuration_file="$PROJECT_DIR$/phpunit.serial.xml" directory="$PROJECT_DIR$/tests" method="" scope="ConfigurationFile" use_alternative_configuration_file="true" />
     <method v="2" />
   </configuration>
 </component>

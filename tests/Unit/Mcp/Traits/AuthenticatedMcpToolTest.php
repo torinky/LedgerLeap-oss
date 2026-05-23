@@ -2,15 +2,20 @@
 
 namespace Tests\Unit\Mcp\Traits;
 
+use App\Enums\FolderPermissionType;
 use App\Mcp\Traits\AuthenticatedMcpTool;
 use App\Models\Folder;
+use App\Models\Tenant;
 use App\Models\User;
 use App\Repositories\WritableFolderRepository;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Mcp\Response;
+use Laravel\Sanctum\Sanctum;
 use Mockery;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
+
+// phpcs:disable PSR1.Methods.CamelCapsMethodName.NotCamelCaps
 
 /**
  * AuthenticatedMcpTraitの詳細テスト
@@ -34,7 +39,7 @@ class AuthenticatedMcpToolTest extends TestCase
         parent::setUp();
 
         // テナント作成・初期化
-        $tenant = \App\Models\Tenant::factory()->create();
+        $tenant = Tenant::factory()->create();
         tenancy()->initialize($tenant);
 
         // ユーザー作成とトークン生成
@@ -91,6 +96,30 @@ class AuthenticatedMcpToolTest extends TestCase
     }
 
     #[Test]
+    public function authenticate_user_prefers_authenticated_guard_user_over_env_token(): void
+    {
+        putenv('MCP_AUTH_TOKEN=invalid-token-12345');
+        $this->actingAs($this->user);
+
+        $user = $this->testClass->callAuthenticateUser();
+
+        $this->assertInstanceOf(User::class, $user);
+        $this->assertEquals($this->user->id, $user->id);
+    }
+
+    #[Test]
+    public function authenticate_user_rejects_authenticated_token_without_mcp_ability(): void
+    {
+        putenv("MCP_AUTH_TOKEN={$this->validToken}");
+        Sanctum::actingAs($this->user, ['read-only']);
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage('The authenticated token does not have MCP access permissions');
+
+        $this->testClass->callAuthenticateUser();
+    }
+
+    #[Test]
     public function authenticate_user_throws_exception_with_missing_token(): void
     {
         putenv('MCP_AUTH_TOKEN=');
@@ -119,8 +148,8 @@ class AuthenticatedMcpToolTest extends TestCase
 
         // WritableFolderRepositoryをモック（権限あり）
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
-            ->with($this->user, \App\Enums\FolderPermissionType::READ)
+        $mockRepository->expects('getAccessibleFolderIds')
+            ->with($this->user, FolderPermissionType::READ)
             ->andReturn([$folder->id]);
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
@@ -137,8 +166,8 @@ class AuthenticatedMcpToolTest extends TestCase
 
         // WritableFolderRepositoryをモック（権限なし）
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
-            ->with($this->user, \App\Enums\FolderPermissionType::WRITE)
+        $mockRepository->expects('getAccessibleFolderIds')
+            ->with($this->user, FolderPermissionType::WRITE)
             ->andReturn([]); // 空の配列 = 権限なし
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
@@ -154,8 +183,8 @@ class AuthenticatedMcpToolTest extends TestCase
         $folder = Folder::factory()->create();
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
-            ->with($this->user, \App\Enums\FolderPermissionType::ADMIN)
+        $mockRepository->expects('getAccessibleFolderIds')
+            ->with($this->user, FolderPermissionType::ADMIN)
             ->andReturn([$folder->id]);
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
@@ -205,8 +234,8 @@ class AuthenticatedMcpToolTest extends TestCase
         $folder = Folder::factory()->create(['title' => 'Test Folder']);
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
-            ->with($this->user, \App\Enums\FolderPermissionType::READ)
+        $mockRepository->expects('getAccessibleFolderIds')
+            ->with($this->user, FolderPermissionType::READ)
             ->andReturn([$folder->id]);
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
@@ -222,8 +251,8 @@ class AuthenticatedMcpToolTest extends TestCase
         $folder = Folder::factory()->create(['title' => 'Test Folder']);
 
         $mockRepository = Mockery::mock(WritableFolderRepository::class);
-        $mockRepository->shouldReceive('getAccessibleFolderIds')
-            ->with($this->user, \App\Enums\FolderPermissionType::WRITE)
+        $mockRepository->expects('getAccessibleFolderIds')
+            ->with($this->user, FolderPermissionType::WRITE)
             ->andReturn([]);
 
         $this->app->instance(WritableFolderRepository::class, $mockRepository);
@@ -232,7 +261,10 @@ class AuthenticatedMcpToolTest extends TestCase
 
         $this->assertInstanceOf(Response::class, $result);
         $this->assertTrue($result->isError());
-        $this->assertStringContainsString('Insufficient permission (WRITE) for folder: Test Folder', $result->content());
+        $this->assertStringContainsString(
+            'Insufficient permission (WRITE) for folder: Test Folder',
+            $result->content()
+        );
     }
 
     #[Test]

@@ -23,6 +23,7 @@ use App\Services\WorkflowService;
 use Exception;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
@@ -163,7 +164,7 @@ class CreateColumn extends BaseLivewireComponent
         ]);
     }
 
-    protected function getGroupedColumns(): \Illuminate\Support\Collection
+    protected function getGroupedColumns(): Collection
     {
         return collect($this->ledgerDefineRecord->column_define)
             ->reject(fn ($column) => $column->isHidden())
@@ -343,6 +344,7 @@ class CreateColumn extends BaseLivewireComponent
             'hashedbasename' => $hashedBasename,
             'path' => $fullPath,
             'mime' => $mimeType,
+            'size' => Storage::disk('public')->size($fullPath),
             //            'file_type' => $result->meta->mime ?? $file->getClientMimeType(),
             'status' => AttachedFileStatus::UPLOADED->value,
             //            'contain_content' => ! empty($result->meta->content),
@@ -449,7 +451,7 @@ class CreateColumn extends BaseLivewireComponent
             if (app()->runningUnitTests()) {
                 $this->dispatch('mary-toast', type: 'success', title: __('ledger.draft_saved'));
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Draft save failed: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
 
@@ -479,7 +481,7 @@ class CreateColumn extends BaseLivewireComponent
             $this->ledgerId = $result['ledger']->id;
             $this->ledgerRecord = $result['ledger'];
             $this->addAttachedFileRecordIfNecessary(); // ファイルレコード追加は呼び出し元で行う
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Draft save internal failed: '.$e->getMessage());
             // エラーは呼び出し元に伝播させる
             throw $e;
@@ -737,7 +739,7 @@ class CreateColumn extends BaseLivewireComponent
                     title: __('ledger.workflow.inspection_requested_message')
                 );
             }
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Inspection request with comment failed: '.$e->getMessage());
             $this->error(__('ledger.workflow.inspection_request_failed')); // 点検依頼失敗のエラーメッセージ
 
@@ -785,7 +787,7 @@ class CreateColumn extends BaseLivewireComponent
 
             // 3. 下書き保存成功後に担当者選択モーダルを開く
             $this->openAssigneeModal('inspector');
-        } catch (\Exception $e) {
+        } catch (Exception $e) {
             Log::error('Draft save failed before inspection request: '.$e->getMessage());
             $this->error(__('messages.error.generic'));
         }

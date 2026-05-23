@@ -1,10 +1,9 @@
 <x-app-layout title="{{__('ledger.folder.edit')}}">
     <x-slot name="header">
-        <h2 class="font-semibold text-xl text-info leading-tight">
-            <span class="fa-layers fa-fw mr-2">
-                <i class="fa-solid fa-folder text-3xl" data-fa-transform="left-5 "></i>
-                <i class="fa-solid  fa-pencil text-2xl text-primary/70"
-                   data-fa-transform=" right-5 up-3"></i>
+        <h2 class="font-semibold text-xl text-info leading-tight flex items-center">
+            <span class="relative inline-flex items-center justify-center w-10 h-10 mr-2">
+                <i class="fa-solid fa-folder text-3xl"></i>
+                <i class="fa-solid fa-pencil text-xl text-primary drop-shadow-md absolute -top-1 -right-1"></i>
             </span>
             {{ __('ledger.folder.edit') }}
         </h2>

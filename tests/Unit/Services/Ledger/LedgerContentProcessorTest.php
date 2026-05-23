@@ -2,7 +2,9 @@
 
 namespace Tests\Unit\Services\Ledger;
 
+use App\Models\AttachedFile;
 use App\Models\AutoLink;
+use App\Models\AutoLinkScope;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
@@ -12,6 +14,7 @@ use App\Services\Ledger\ColumnHtmlService;
 use App\Services\Ledger\LedgerContentProcessor;
 use App\Services\Ledger\LedgerDiffProcessor;
 use App\Services\Util\HtmlProcessorService;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\HtmlString;
@@ -48,6 +51,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
+        $columnHtmlServiceMock->shouldReceive('setSource')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn ($def, $val) => new HtmlString(strval($val)));
 
         $ledgerDiffProcessorMock = Mockery::mock(LedgerDiffProcessor::class);
@@ -81,7 +85,7 @@ class LedgerContentProcessorTest extends TestCase
         ]);
 
         // 2. Act: サービスを実行 (displayLevel = 2)
-        $result = $processor->processContentForDisplay($ledger, null, 2, new \Illuminate\Database\Eloquent\Collection);
+        $result = $processor->processContentForDisplay($ledger, null, 2, new Collection);
         $displayData = $result['displayData'];
 
         // 3. Assert: 結果を検証
@@ -115,6 +119,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
+        $columnHtmlServiceMock->shouldReceive('setSource')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')->andReturnUsing(fn ($def, $val) => new HtmlString(strval($val)));
 
         // ★このテストの核心：LedgerDiffProcessorが返す値をコントロールする★
@@ -145,7 +150,7 @@ class LedgerContentProcessorTest extends TestCase
         $diff = LedgerDiff::factory()->for($ledger)->create(); // 比較対象のDiff（内容はモックで上書きされる）
 
         // 2. Act
-        $result = $processor->processContentForDisplay($ledger, $diff, 3, new \Illuminate\Database\Eloquent\Collection);
+        $result = $processor->processContentForDisplay($ledger, $diff, 3, new Collection);
         $columns = $result['displayData'][0]['columns'];
 
         // 3. Assert
@@ -171,6 +176,7 @@ class LedgerContentProcessorTest extends TestCase
         $columnHtmlServiceMock = Mockery::mock(ColumnHtmlService::class);
         $columnHtmlServiceMock->shouldReceive('setAttachmentCollection')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('setAttachmentContents')->andReturnSelf();
+        $columnHtmlServiceMock->shouldReceive('setSource')->andReturnSelf();
         $columnHtmlServiceMock->shouldReceive('show')
             ->twice()
             ->andReturn(new HtmlString($expectedHtml));
@@ -194,8 +200,8 @@ class LedgerContentProcessorTest extends TestCase
         ]);
 
         // 添付ファイルレコードを作成
-        $attachment = \App\Models\AttachedFile::factory()->create(['hashedbasename' => $fileHash, 'filename' => $fileName]);
-        $attachments = new \Illuminate\Database\Eloquent\Collection([$attachment]);
+        $attachment = AttachedFile::factory()->create(['hashedbasename' => $fileHash, 'filename' => $fileName]);
+        $attachments = new Collection([$attachment]);
 
         // 2. Act
         $result = $processor->processContentForDisplay($ledger, null, 1, $attachments);
@@ -247,7 +253,7 @@ class LedgerContentProcessorTest extends TestCase
         ]);
 
         // 2. Act
-        $result = $processor->processContentForDisplay($ledger, null, 1, new \Illuminate\Database\Eloquent\Collection, $keyword);
+        $result = $processor->processContentForDisplay($ledger, null, 1, new Collection, $keyword);
         $html = $result['displayData'][0]['columns'][0]['current_value_html'];
 
         // 3. Assert
@@ -272,7 +278,7 @@ class LedgerContentProcessorTest extends TestCase
             'is_enabled' => true,
         ]);
         // AutoLinkScope を直接作成し、AutoLink と Folder を関連付ける
-        \App\Models\AutoLinkScope::create([
+        AutoLinkScope::create([
             'auto_link_id' => $autoLink->id,
             'scopeable_type' => (new Folder)->getMorphClass(),
             'scopeable_id' => $ledger->define->folder->id,
@@ -305,7 +311,7 @@ class LedgerContentProcessorTest extends TestCase
         $processor = new LedgerContentProcessor($columnHtmlService, $ledgerDiffProcessorMock);
 
         // 2. Act
-        $result = $processor->processContentForDisplay($ledger, null, 1, new \Illuminate\Database\Eloquent\Collection);
+        $result = $processor->processContentForDisplay($ledger, null, 1, new Collection);
         $html = $result['displayData'][0]['columns'][0]['current_value_html'];
 
         // 3. Assert

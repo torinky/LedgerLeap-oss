@@ -1,0 +1,62 @@
+{
+    "name": "15web/filament-tree",
+    "description": "Tree builder for Eloquent models",
+    "license": "MIT",
+    "keywords": [
+        "laravel",
+        "filament",
+        "tree"
+    ],
+    "authors": [
+        {
+            "name": "15web",
+            "email": "info@15web.ru",
+            "homepage": "https://www.15web.ru"
+        }
+    ],
+    "homepage": "https://github.com/15web/filament-tree",
+    "version": "1.0.3",
+    "require": {
+        "php": "^8.2",
+        "filament/support": "^5.0",
+        "illuminate/contracts": "^11.0 || ^12.0 || ^13.0",
+        "kalnoy/nestedset": "^7.0",
+        "spatie/laravel-package-tools": "^1.14.0"
+    },
+    "require-dev": {
+        "driftingly/rector-laravel": "^2.0",
+        "ergebnis/composer-normalize": "^2.47",
+        "friendsofphp/php-cs-fixer": "^3.73",
+        "orchestra/testbench": "^9.0 || ^10.0",
+        "rector/rector": "^2.0",
+        "webmozart/assert": "^1.11"
+    },
+    "minimum-stability": "stable",
+    "prefer-stable": true,
+    "autoload": {
+        "psr-4": {
+            "Studio15\\FilamentTree\\": "src/"
+        }
+    },
+    "config": {
+        "allow-plugins": {
+            "ergebnis/composer-normalize": true
+        },
+        "sort-packages": true
+    },
+    "extra": {
+        "laravel": {
+            "providers": [
+                "Studio15\\FilamentTree\\FilamentTreeServiceProvider"
+            ]
+        }
+    },
+    "scripts": {
+        "phpcsfixer": "vendor/bin/php-cs-fixer --config=php-cs-fixer.php fix --dry-run --diff --ansi -v",
+        "rector": "vendor/bin/rector process --config=rector.config.php --dry-run --ansi",
+        "test": [
+            "@phpcsfixer",
+            "@rector"
+        ]
+    }
+}

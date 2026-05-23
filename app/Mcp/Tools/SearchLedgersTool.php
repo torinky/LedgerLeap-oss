@@ -3,156 +3,86 @@
 namespace App\Mcp\Tools;
 
 use App\Mcp\Traits\AuthenticatedMcpTool;
+use App\Mcp\Traits\TruncatableResponse;
+use App\Models\AttachedFile;
+use App\Models\ColumnDefine;
+use App\Models\Ledger;
+use App\Services\Ledger\LedgerAttachmentResourceService;
 use App\Services\LedgerService;
 use Carbon\Carbon;
+use Exception;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
 use Laravel\Mcp\Request;
 use Laravel\Mcp\Response;
 use Laravel\Mcp\Server\Tool;
+use Log;
 
 class SearchLedgersTool extends Tool
 {
     use AuthenticatedMcpTool;
+    use TruncatableResponse;
+
+    private const ATTACHMENT_TEXT_PREVIEW_LIMIT = 500;
+
+    private const ATTACHMENT_LINE_PREVIEW_LIMIT = 10;
+
+    private LedgerAttachmentResourceService $attachmentResourceService;
 
     /**
      * The tool's description.
      */
     protected string $description = <<<'MARKDOWN'
-        Search for ledgers based on various criteria. 
-        
-        **Important for Japanese/Multi-byte Keywords:**
-        - The 'q', 'tags', 'exclude_q', and 'exclude_tags' parameters support Japanese and other multi-byte characters
-        - When using these parameters, ensure they are properly passed as-is (the MCP protocol handles encoding automatically)
-        - Examples of valid Japanese keywords: "株式会社", "営業日報", "重要案件"
-        
-        **Response Format:**
-        The 'format' parameter determines the response structure:
-        - 'summary' (default): Returns a rich structure with processed fields for display (__display_fields__, __summary__) and normalized data (meta). Each ledger in the summary format will also include a 'link' field in its '__display_fields__' pointing to the ledger's detail page.
-        - 'raw': Returns only the normalized data (ledgers, meta, total) for machine processing
-        
-        **Search Parameters:**
-        - 'q': Full-text search keyword (supports Japanese)
-        - 'tags': Comma-separated tag names (AND condition, supports Japanese)
-        - 'folder_id': Search within specific folder (recursive)
-        - 'ledger_define_id': Filter by ledger type
-        - 'exclude_q': Exclude results containing these keywords
-        - 'exclude_tags': Exclude results with these tags
-        - 'creator_id': Filter by creator user ID
-        - 'created_from' / 'created_to': Date range filter (YYYY-MM-DD)
-        - 'mode': 'search' (default) returns full data, 'count' returns only the number of matching ledgers (faster)
-        - 'limit' / 'offset': Pagination
-        - 'include_content': Set to false to get metadata only (useful for quick browsing)
-        - 'content_preview_length': Characters to preview from long text fields (default: 200)
+        Search for ledgers by keyword, tags, date range, creator, folder, ledger type, or semantic relevance.
+        `q` is synonym-aware, so natural-language search terms can be expanded when synonym data is available.
 
-        **Strategic Usage (戦略的利用法):**
-        This tool is not just for single searches; it can be combined with other tools to answer more complex questions.
+        Important for Japanese / multi-byte keywords:
+        - `q`, `tags`, `exclude_q`, and `exclude_tags` accept Japanese and other multi-byte characters
+        - `q` can be expanded with synonyms for business terms when synonym data is available
+        - tag / folder / ledger definition fragments should be resolved first with lookup tools
+          before calling this search tool
 
-        - **The Golden Rule of Search: Keyword -> Semantic -> Other Tools**
-          **最重要検索ルール: まずキーワード検索、次に意味検索、それでも見つからなければ他のツール**
+        Response format:
+        - `summary` (default): display-oriented records with `__display_fields__`, `__summary__`,
+          normalized `meta`, and a detail `link` when available
+        - summary records also include `attachment_count` and per-attachment `attachment_id` /
+          `filename` / `role` / `order` / `source` / `mime_type` / `delivery_mode` /
+          `available_formats` / `resource_template` / `resource_uri` / `access_guide` /
+          `routes` / `payloads`
+        - `delivery_mode` is text-first for the initial envelope; `available_formats`
+          advertises additional follow-up formats such as markdown / json / structured / visual
+          when available
+        - `routes.download` / `routes.inspector` provide tenant-safe download and drawer-open
+          links for every resolved attachment
+        - `payloads.text` / `payloads.structured` / `payloads.visual` keep a stable mode contract
+          so clients can follow the same envelope for each attachment
+        - `raw`: normalized `ledgers`, `meta`, and `total` for machine processing
 
-          This tool offers two primary search modes. Following this workflow is CRITICAL for efficient and accurate information retrieval.
-          このツールは2つの主要な検索モードを提供します。効率的で正確な情報検索のために、以下のワークフローに従うことが**非常に重要**です。
+        Key parameters:
+        - `q`, `tags`, `exclude_q`, `exclude_tags`
+        - `folder_id`, `ledger_define_id`, `creator_id`
+        - `folder_id` / `ledger_define_id` accept lookup-first candidate ID arrays resolved by the
+          folder / ledger lookup tools
+        - `tags` remains exact in the search body; resolve tag fragments with the tag lookup tool first
+        - `created_from`, `created_to`
+        - `order_by`, including `semantic_score` for meaning-based ranking
+        - `mode`, `limit`, `offset`, `include_content`, `content_preview_length`
 
-          1.  **Step 1: Keyword Search (キーワード検索)**
-              - **What it is:** A direct, full-text search for specific terms.
-              - **When to use:** When you know the exact keywords, company names, product codes, or specific phrases.
-              - **How to use:** Simply provide the keyword in the `q` parameter.
-              - **Example:** `search_ledgers(q='株式会社A商事')`
-
-          2.  **Step 2: Semantic Search (意味検索) - **MANDATORY if Step 1 fails**
-              - **What it is:** An AI-powered search that finds documents based on conceptual meaning, not just exact words.
-              - **When to use:** **ALWAYS** use this if the Keyword Search returns no results or irrelevant results. It's excellent for finding related information when you don't know the exact terms.
-              - **How to use:** Set `order_by='semantic_score'` and phrase your query `q` as a natural question or sentence.
-              - **Example:** `search_ledgers(q='A社との価格交渉に関する過去の議事録', order_by='semantic_score')`
-
-          3.  **Step 3: Use Other Tools (他のツールの利用)**
-              - **When to use:** **ONLY** after both Keyword Search and Semantic Search have failed to find the desired information.
-              - **What to do:** If you still can't find the ledger, use a tool like `get_activity_log_tool` to find clues (like a specific phrase from a log entry). Then, return to Step 1 with this new, more specific clue.
-              - **Example Workflow:**
-                1. `search_ledgers(q='Project X')` -> No results.
-                2. `search_ledgers(q='Project Xに関する資料', order_by='semantic_score')` -> Still no relevant results.
-                3. `get_activity_log_tool()` -> Finds a log: "Submitted the final report for Project X".
-                4. `search_ledgers(q='"Submitted the final report for Project X"')` -> Success!
-
-        - **Leveraging Metadata (メタデータの活用):**
-          When a search is successful, the `meta` field in the response is automatically populated with complete information about related entities:
-          - meta.users: Full user information for creators and modifiers (including id, name)
-          - meta.folders: Folder information with paths
-          - meta.ledger_defines: Ledger definition details
-          
-          **Best Practice for Identifying Responsible Persons:**
-          To find who is in charge of something, search for the relevant ledger first, then check meta.users using the creator_id.
-          Example: "Who is in charge of Company A?" → search_ledgers(q='Company A') → Check ledger.creator_id in meta.users
-
-        **Common Search Patterns (よく使う検索パターン):**
-        
-        1. Find all records for a specific company:
-           search_ledgers(q='株式会社A商事', limit=50)
-        
-        2. Get this week's activity records:
-           search_ledgers(created_from='2025-10-01', created_to='2025-10-07')
-        
-        3. Find important pending items:
-           search_ledgers(tags='重要', exclude_tags='完了,見送り')
-        
-        4. Check a user's activity history:
-           search_ledgers(creator_id=3, limit=20)
-        
-        5. Search within a specific folder:
-           search_ledgers(folder_id=18, q='トラブル')
-        
-        6. Quick count without loading data:
-           search_ledgers(mode='count', tags='重要')
-        
-        7. Get metadata only for quick browsing:
-           search_ledgers(q='商談', include_content=false, limit=100)
-
-        **Japanese Keyword Handling (日本語キーワードの扱い):**
-        - Exact match: q='"株式会社A商事"' (use quotes)
-        - Partial match: q='A商事' (no quotes)
-        - Multiple keywords (AND): q='商事 提案' (space-separated)
-        - Note: Mroonga uses morphological analysis, so searches are word-based
-
-        **Handling "Important" Items (「重要」な案件の扱い):**
-        The term "important" (重要) can be interpreted in two ways:
-        1.  **By Tag:** Some ledgers might have a "重要" (Important) tag. Use `tags='重要'` to find these. This is a direct, explicit search.
-        2.  **By Score:** The system calculates a `composite_score` for each ledger based on activity, freshness, and status. To find items that are algorithmically determined to be important, sort by this score using `order_by='composite_score'`. This is useful for finding items that need attention, even if they are not explicitly tagged.
-        **Recommendation:** For a comprehensive search for "important" items, consider both approaches. Start with a score-based search (`order_by='composite_score'`) and supplement with a tag-based search if needed.
-
-        **Sorting (ソート機能):**
-        - 'order_by': Field to sort by (default: composite_score)
-          - 'composite_score': Overall importance combining activity, freshness, and workflow status
-          - 'activity_score': Recent activity frequency (useful for "What's hot?" queries)
-          - 'created_at': Creation date (useful for "Show recent entries")
-          - 'semantic_score': Semantic relevance to search query (requires 'q' parameter). Finds records based on meaning, not just keywords. This enables **Semantic Search**.
-            - **Important:** When using `semantic_score`, the `q` parameter should be a natural language sentence or question to provide context for the AI model (e.g., "先月のA社との打ち合わせでの決定事項"). Simple keywords are less effective.
-        - 'order_direction': Sort direction ('asc' or 'desc', default: 'desc')
-        
-        **Sorting Examples:**
-        - "Show me the most important ledgers" → order_by='composite_score' (default)
-        - "What are people working on recently?" → order_by='activity_score'
-        - "Show oldest pending items" → order_by='created_at', order_direction='asc'
-        - "What needs attention?" → order_by='composite_score' (high score = important)
-
-        **Performance Tips (パフォーマンスのヒント):**
-        - Broad searches without filters may be slow with large datasets
-        - Use 'ledger_define_id' or 'folder_id' to narrow down the search scope
-        - Use date ranges (created_from/created_to) to limit results
-        - Use mode='count' when you only need to check if matching records exist
-
-        **Workflow Example (ワークフロー例):**
-        1. User asks: "Who is in charge of Project X?"
-        2. `search_ledgers_tool(q='Project X')` returns 0 results.
-        3. `get_activity_log_tool()` reveals an activity: "Submitted the final report for Project X".
-        4. `search_ledgers_tool(q='"Submitted the final report for Project X"')` is executed.
-        5. The response now contains the target ledger and the creator's (the person in charge) information in `meta.users`, allowing for a direct answer.
+        Contract notes:
+        - `semantic_score` works best when `q` is a natural language sentence or question
+        - `meta` includes related users, folders, and ledger definitions for interpreting search results
+        - Use `include_content=false` or `mode='count'` when you need a lighter response
 MARKDOWN;
 
     protected LedgerService $ledgerService;
 
-    public function __construct(LedgerService $ledgerService)
-    {
+    public function __construct(
+        LedgerService $ledgerService,
+        ?LedgerAttachmentResourceService $attachmentResourceService = null,
+    ) {
         $this->ledgerService = $ledgerService;
+        $this->attachmentResourceService = $attachmentResourceService ?? app(LedgerAttachmentResourceService::class);
     }
 
     public function handle(Request $request): Response
@@ -177,8 +107,8 @@ MARKDOWN;
                 user: $user, // 認証済みユーザーを直接渡す
                 params: $parameters,
             );
-            \Log::info('[MCP Search Debug] searchLedgersForApi result: '.json_encode($results, JSON_UNESCAPED_UNICODE));
-        } catch (\Exception $e) {
+            Log::info('[MCP Search Debug] searchLedgersForApi result: '.json_encode($results, JSON_UNESCAPED_UNICODE));
+        } catch (Exception $e) {
             return Response::error("Search failed: {$e->getMessage()}");
         }
 
@@ -189,79 +119,99 @@ MARKDOWN;
             return Response::json($results);
         }
 
+        $ledgers = $results['ledgers'];
+        if ($ledgers instanceof Collection) {
+            foreach ($ledgers as $ledger) {
+                if ($ledger instanceof Model) {
+                    $ledger->loadMissing([
+                        'attachedFiles' => fn ($query) => $query->orderBy('column_id')->orderBy('id'),
+                    ]);
+                }
+            }
+        }
+
         // summary フォーマットの場合、表示用の加工を行う
-        $includeContent = $parameters['include_content'] ?? true;
+        $includeContent = $parameters['include_content'] ?? false;
+        $includeMeta = $parameters['include_meta'] ?? false;
+        $includeAttachmentPayloads = $parameters['include_attachment_payloads'] ?? false;
+        $includeTrace = $parameters['include_trace'] ?? false;
         $contentPreviewLength = $parameters['content_preview_length'] ?? 200;
 
-        $ledgers = collect($results['ledgers'])->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength) {
-            $meta = $results['meta'];
-            $ledger = (object) $ledger; // 配列をオブジェクトに変換
+        $ledgers = collect($results['ledgers'])
+            ->map(function ($ledger) use ($results, $includeContent, $contentPreviewLength, $includeAttachmentPayloads) {
+                $meta = $results['meta'];
+                $attachedFiles = $ledger instanceof Model ? ($ledger->getRelation('attachedFiles') ?? []) : [];
+                $ledgerModel = $ledger instanceof Ledger ? $ledger : null;
+                $ledger = (object) $ledger;
 
-            // 台帳定義とフォルダ情報を取得
-            $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
+                $define = $meta['ledger_defines'][$ledger->ledger_define_id] ?? null;
 
-            // フォルダパスの取得
-            $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
-                ? $meta['folders'][$define['folder_id']]['path']
-                : trans('common.root_folder', [], 'ja');
+                $folderPath = ($define && isset($meta['folders'][$define['folder_id']]))
+                    ? $meta['folders'][$define['folder_id']]['path']
+                    : trans('common.root_folder', [], 'ja');
 
-            // ステータスの翻訳
-            $statusValue = is_object($ledger->status) ? $ledger->status->value : $ledger->status;
-            $statusDisplay = trans('ledger.workflow.status.'.$statusValue, [], 'ja');
+                $statusValue = is_object($ledger->status) ? $ledger->status->value : $ledger->status;
+                $statusDisplay = trans('ledger.workflow.status.'.$statusValue, [], 'ja');
 
-            // 日付のフォーマット
-            $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
+                $updatedAtFormatted = Carbon::parse($ledger->updated_at)->format('Y年m月d日 H:i');
 
-            // __display_fields__ を構築（キーは英語固定）
-            $displayFields = [
-                'title' => $define['name'] ?? trans('common.unknown', [], 'ja'),
-                'folder' => $folderPath,
-                'creator' => $meta['users'][$ledger->creator_id]['name'] ?? trans('common.unknown', [], 'ja'),
-                'workflow_status' => $statusDisplay,
-                'updated_at' => $updatedAtFormatted,
-            ];
+                $displayFields = [
+                    'title' => $define['name'] ?? trans('common.unknown', [], 'ja'),
+                    'folder' => $folderPath,
+                    'creator' => $meta['users'][$ledger->creator_id]['name'] ?? trans('common.unknown', [], 'ja'),
+                    'workflow_status' => $statusDisplay,
+                    'updated_at' => $updatedAtFormatted,
+                ];
 
-            if (isset($ledger->tenant_id) && isset($ledger->id)) {
-                //                $baseUrl = rtrim(config('app.url'), '/');
-                $baseUrl = rtrim(config('ledgerleap.auto_links.base_url'), '/');
-                $displayFields['link'] = "{$baseUrl}/{$ledger->tenant_id}/ledger/{$ledger->id}";
-            }
+                if (isset($ledger->tenant_id) && isset($ledger->id)) {
+                    $baseUrl = rtrim(config('ledgerleap.auto_links.base_url'), '/');
+                    $displayFields['link'] = "{$baseUrl}/{$ledger->tenant_id}/ledger/{$ledger->id}";
+                }
 
-            // contentの処理
-            if (! $includeContent) {
-                // プレビューを生成
-                $displayFields['content_preview'] = $this->generateContentPreview(
-                    $ledger->content ?? [],
-                    $define['column_define'] ?? [],
-                    $contentPreviewLength
+                if (! $includeContent) {
+                    $displayFields['content_preview'] = $this->generateContentPreview(
+                        $ledger->content ?? [],
+                        $define['column_define'] ?? [],
+                        $contentPreviewLength
+                    );
+                    unset($ledger->content);
+                }
+
+                $ledger->__display_fields__ = $displayFields;
+
+                $contentAttached = $ledger->content_attached ?? [];
+                $ledger->attachments = $this->formatAttachments($contentAttached, $attachedFiles, $ledgerModel, $includeAttachmentPayloads);
+                $displayFields['attachment_count'] = count($ledger->attachments);
+                $displayFields['attachment_summary'] = $this->describeAttachmentCount(
+                    $displayFields['attachment_count']
                 );
-            }
+                $ledger->__display_fields__ = $displayFields;
 
-            // __display_fields__をセット
-            $ledger->__display_fields__ = $displayFields;
-
-            // 添付ファイル情報の追加
-            if (! empty($ledger->content_attached)) {
-                // content_attachedをJSON経由で配列に変換（AsColumnArrayJsonがobjectを返すため）
-                // これにより数値キーが正しく保持される
-                $contentAttached = json_decode(json_encode($ledger->content_attached), true);
-                $ledger->attachments = $this->formatAttachments($contentAttached);
-            }
-
-            return $ledger;
-        });
+                return $ledger;
+            });
 
         $summary = trans_choice('messages.found_ledgers', $results['total'], ['count' => $results['total']], 'ja');
 
-        return Response::json([
+        $responseData = [
             'ledgers' => $ledgers,
             'total' => $results['total'],
-            'meta' => $results['meta'], // meta情報も返す
             '__summary__' => $summary,
-        ]);
+        ];
+
+        if ($includeMeta) {
+            $responseData['meta'] = $results['meta'];
+        }
+
+        if ($includeTrace) {
+            $responseData['search_trace'] = $results['search_trace'] ?? [];
+        }
+
+        $responseData = $this->truncateIfNeeded($responseData);
+
+        return Response::json($responseData);
     }
 
-    private function generateContentPreview(array $content, array $columnDefine, int $maxLength = 200): string
+    private function generateContentPreview(array $content, array|Collection $columnDefine, int $maxLength = 200): string
     {
         $preview = [];
         $totalLength = 0;
@@ -272,7 +222,7 @@ MARKDOWN;
             }
 
             // ColumnDefineオブジェクトまたは配列に対応
-            if ($column instanceof \App\Models\ColumnDefine) {
+            if ($column instanceof ColumnDefine) {
                 $columnId = $column->id;
                 $columnName = $column->name;
             } else {
@@ -310,26 +260,76 @@ MARKDOWN;
     /**
      * Format content_attached data into a user-friendly structure.
      *
-     * @param  array  $contentAttached  The content_attached array from the ledger
+     * @param  array|object  $contentAttached  The content_attached data from the ledger
+     * @param  iterable<int, AttachedFile>  $attachedFiles  Related attached file models
      * @return array Array of attachment information
      */
-    private function formatAttachments(array $contentAttached): array
+    private function formatAttachments(
+        array|object $contentAttached,
+        iterable $attachedFiles = [],
+        ?Ledger $ledger = null,
+        bool $includePayloads = false,
+    ): array {
+        $normalizedEntries = $this->normalizeAttachmentEntries($contentAttached);
+        $lookup = collect($normalizedEntries)
+            ->keyBy(fn (array $entry): string => $this->attachmentLookupKey($entry['column_id'], $entry['hash']));
+        $orderedEntries = [];
+
+        foreach ($attachedFiles as $attachedFile) {
+            if (! $attachedFile instanceof AttachedFile) {
+                continue;
+            }
+
+            $key = $this->attachmentLookupKey($attachedFile->column_id, $attachedFile->hashedbasename);
+            if ($lookup->has($key)) {
+                $orderedEntries[] = [
+                    'entry' => $lookup->get($key),
+                    'attached_file' => $attachedFile,
+                    'ledger' => $ledger,
+                ];
+                $lookup = $lookup->except([$key]);
+            }
+        }
+
+        foreach ($lookup as $entry) {
+            $orderedEntries[] = [
+                'entry' => $entry,
+                'attached_file' => null,
+                'ledger' => $ledger,
+            ];
+        }
+
+        $total = count($orderedEntries);
+        $attachments = [];
+        foreach ($orderedEntries as $index => $orderedEntry) {
+            $attachments[] = $this->buildAttachmentRecord(
+                entry: $orderedEntry['entry'],
+                attachedFile: $orderedEntry['attached_file'],
+                ledger: $orderedEntry['ledger'],
+                order: $index + 1,
+                total: $total,
+                includePayloads: $includePayloads,
+            );
+        }
+
+        return $attachments;
+    }
+
+    /**
+     * content_attached を添付レコードとして列挙しやすい形に正規化する。
+     *
+     * @return array<int, array{column_id:int|string, hash:string, file_info:array}>
+     */
+    private function normalizeAttachmentEntries(array|object $contentAttached): array
     {
         $attachments = [];
 
         foreach ($contentAttached as $columnId => $files) {
-            // 空の配列はスキップ
             if (empty($files) || ! is_array($files)) {
                 continue;
             }
 
-            // filesを配列に変換（オブジェクトの場合に対応）
-            if (is_object($files)) {
-                $files = (array) $files;
-            }
-
             foreach ($files as $hash => $fileInfo) {
-                // fileInfoが配列であることを確認
                 if (! is_array($fileInfo)) {
                     if (is_object($fileInfo)) {
                         $fileInfo = (array) $fileInfo;
@@ -339,17 +339,363 @@ MARKDOWN;
                 }
 
                 $attachments[] = [
-                    'name' => $fileInfo['name'] ?? trans('common.unknown', [], 'ja'),
-                    'size' => $fileInfo['size'] ?? 0,
-                    'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
-                    'mime' => $fileInfo['mime'] ?? 'application/octet-stream',
                     'column_id' => $columnId,
-                    'hash' => $hash,
+                    'hash' => (string) $hash,
+                    'file_info' => $fileInfo,
                 ];
             }
         }
 
         return $attachments;
+    }
+
+    /**
+     * 添付 1 件分の表示データを構築する。
+     */
+    private function buildAttachmentRecord(
+        array $entry,
+        ?AttachedFile $attachedFile,
+        ?Ledger $ledger,
+        int $order,
+        int $total,
+        bool $includePayloads = false,
+    ): array {
+        $fileInfo = $entry['file_info'];
+        $resolvedName = $attachedFile?->filename
+            ?? $fileInfo['name']
+            ?? $fileInfo['filename']
+            ?? trans('common.unknown', [], 'ja');
+
+        $mimeType = $this->resolveAttachmentMimeType($fileInfo, $attachedFile);
+
+        $source = $attachedFile?->finalized_source
+            ?? $fileInfo['source']
+            ?? $fileInfo['meta']['source']
+            ?? 'unknown';
+
+        $record = [
+            'attachment_id' => $attachedFile?->id,
+            'filename' => $resolvedName,
+            'name' => $resolvedName,
+            'role' => $order === 1 ? 'primary' : 'supporting',
+            'order' => $order,
+            'source' => $source,
+            'mime_type' => $mimeType,
+            'size' => $fileInfo['size'] ?? 0,
+            'size_formatted' => $this->formatFileSize($fileInfo['size'] ?? 0),
+            'mime' => $mimeType,
+            'column_id' => $entry['column_id'],
+            'hash' => $entry['hash'],
+            'total_attachments' => $total,
+        ];
+
+        if ($includePayloads) {
+            $availableFormats = $this->resolveAttachmentAvailableFormats($fileInfo, $attachedFile, $mimeType);
+            $deliveryMode = $this->resolveAttachmentDeliveryMode($availableFormats);
+
+            $record['resource_template'] = $attachedFile ? 'ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}' : null;
+            $record['resource_uri'] = $attachedFile && $ledger instanceof Model
+                ? $this->attachmentResourceService->buildResourceUri($ledger, $attachedFile)
+                : null;
+            $record['access_guide'] = $attachedFile && $ledger instanceof Model
+                ? $this->attachmentResourceService->buildAttachmentAccessGuide($ledger, $attachedFile)
+                : null;
+            $record['delivery_mode'] = $deliveryMode;
+            $record['available_formats'] = $availableFormats;
+            $record['routes'] = $this->buildAttachmentRoutes($ledger, $attachedFile);
+            $record['payloads'] = $this->buildAttachmentPayloads($fileInfo, $attachedFile, $ledger, $mimeType, $availableFormats);
+        }
+
+        return $record;
+    }
+
+    private function resolveAttachmentMimeType(array $fileInfo, ?AttachedFile $attachedFile): string
+    {
+        return $attachedFile?->original_mime_type
+            ?? $attachedFile?->mime
+            ?? $fileInfo['mime_type']
+            ?? $fileInfo['mime']
+            ?? 'application/octet-stream';
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function resolveAttachmentAvailableFormats(
+        array $fileInfo,
+        ?AttachedFile $attachedFile,
+        string $mimeType
+    ): array {
+        $formats = ['text'];
+
+        if ($attachedFile?->hasVlmResult()) {
+            $formats[] = 'markdown';
+        }
+
+        if ($this->isStructuredMimeType($mimeType)
+            || ! empty($attachedFile?->vlm_structured_data)
+            || ! empty($fileInfo['pages'])
+            || ! empty($fileInfo['text_blocks'])
+            || ! empty($fileInfo['key_value_pairs'])) {
+            $formats[] = 'structured';
+            $formats[] = 'json';
+        }
+
+        if ($this->isVisualMimeType($mimeType)) {
+            $formats[] = 'visual';
+        }
+
+        return array_values(array_unique($formats));
+    }
+
+    private function resolveAttachmentDeliveryMode(array $availableFormats): string
+    {
+        return $availableFormats[0] ?? 'text';
+    }
+
+    /**
+     * @param  array<int, string>  $availableFormats
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildAttachmentPayloads(
+        array $fileInfo,
+        ?AttachedFile $attachedFile,
+        ?Ledger $ledger,
+        string $mimeType,
+        array $availableFormats
+    ): array {
+        return [
+            'text' => $this->buildTextPayload($fileInfo, $attachedFile),
+            'structured' => $this->buildStructuredPayload(
+                $fileInfo,
+                $attachedFile,
+                in_array('structured', $availableFormats, true)
+            ),
+            'visual' => $this->buildVisualPayload(
+                $ledger,
+                $attachedFile,
+                $mimeType,
+                in_array('visual', $availableFormats, true)
+            ),
+        ];
+    }
+
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function buildAttachmentRoutes(?Ledger $ledger, ?AttachedFile $attachedFile): array
+    {
+        $context = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
+        $canBuildDownload = $context['tenant_id'] !== null && $context['attachment_id'] !== null;
+        $canBuildInspector = $canBuildDownload && $context['ledger_id'] !== null;
+
+        return [
+            'download' => [
+                'available' => $canBuildDownload,
+                'url' => $canBuildDownload
+                    ? route('file.download', [
+                        'tenant' => $context['tenant_id'],
+                        'attachedFile' => $context['attachment_id'],
+                        'original' => true,
+                    ])
+                    : null,
+            ],
+            'inspector' => [
+                'available' => $canBuildInspector,
+                'url' => $canBuildInspector
+                    ? route('ledger.show', [
+                        'tenant' => $context['tenant_id'],
+                        'ledgerId' => $context['ledger_id'],
+                        'file' => $context['attachment_id'],
+                    ])
+                    : null,
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildTextPayload(array $fileInfo, ?AttachedFile $attachedFile): array
+    {
+        $rawText = $attachedFile?->vlm_markdown
+            ?? $fileInfo['meta']['content']
+            ?? $fileInfo['content']
+            ?? null;
+
+        if (! is_string($rawText) || trim($rawText) === '') {
+            return [
+                'available' => true,
+                'text' => null,
+                'lines' => [],
+                'truncated' => false,
+            ];
+        }
+
+        $normalizedText = trim($rawText);
+        $truncated = mb_strlen($normalizedText) > self::ATTACHMENT_TEXT_PREVIEW_LIMIT;
+        $previewText = mb_substr($normalizedText, 0, self::ATTACHMENT_TEXT_PREVIEW_LIMIT);
+        $previewLines = preg_split('/\R/u', $previewText) ?: [];
+        $lineLimited = count($previewLines) > self::ATTACHMENT_LINE_PREVIEW_LIMIT;
+        $previewLines = array_slice($previewLines, 0, self::ATTACHMENT_LINE_PREVIEW_LIMIT);
+
+        return [
+            'available' => true,
+            'text' => $previewText,
+            'lines' => array_map(
+                static fn (string $line, int $index): array => [
+                    'line_number' => $index + 1,
+                    'text' => $line,
+                ],
+                $previewLines,
+                array_keys($previewLines)
+            ),
+            'truncated' => $truncated || $lineLimited,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildStructuredPayload(array $fileInfo, ?AttachedFile $attachedFile, bool $available): array
+    {
+        $structuredData = is_array($attachedFile?->vlm_structured_data) ? $attachedFile->vlm_structured_data : [];
+
+        $pages = $this->normalizeStructuredPayloadSection(
+            $structuredData['pages'] ?? $fileInfo['pages'] ?? []
+        );
+        $textBlocks = $this->normalizeStructuredPayloadSection(
+            $structuredData['text_blocks'] ?? $fileInfo['text_blocks'] ?? []
+        );
+        $keyValuePairs = $this->normalizeStructuredPayloadSection(
+            $structuredData['key_value_pairs'] ?? $fileInfo['key_value_pairs'] ?? []
+        );
+
+        return [
+            'available' => $available,
+            'pages' => $pages,
+            'text_blocks' => $textBlocks,
+            'key_value_pairs' => $keyValuePairs,
+            'confidence' => $attachedFile?->vlm_confidence,
+            'optional_fields' => [
+                'page_index' => $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'page_index'),
+                'bbox' => $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'bbox'),
+                'source_span' => $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'source_span'),
+                'confidence' => $attachedFile?->vlm_confidence !== null
+                    || $this->sectionContainsField([$pages, $textBlocks, $keyValuePairs], 'confidence'),
+            ],
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildVisualPayload(
+        ?Ledger $ledger,
+        ?AttachedFile $attachedFile,
+        string $mimeType,
+        bool $available
+    ): array {
+        $context = $this->resolveAttachmentRouteContext($ledger, $attachedFile);
+        $canBuildVisual = $available
+            && $context['tenant_id'] !== null
+            && $context['attachment_id'] !== null;
+
+        return [
+            'available' => $canBuildVisual,
+            'mime_type' => $mimeType,
+            'signed_url' => $canBuildVisual
+                ? route('file.download', [
+                    'tenant' => $context['tenant_id'],
+                    'attachedFile' => $context['attachment_id'],
+                ])
+                : null,
+            'base64' => null,
+            'expires_at' => null,
+            'auth_required' => true,
+        ];
+    }
+
+    /**
+     * @return array{tenant_id:int|string|null, ledger_id:int|string|null, attachment_id:int|string|null}
+     */
+    private function resolveAttachmentRouteContext(?Ledger $ledger, ?AttachedFile $attachedFile): array
+    {
+        return [
+            'tenant_id' => $ledger?->tenant_id ?? $attachedFile?->tenant_id,
+            'ledger_id' => $ledger?->id ?? $attachedFile?->ledger_id,
+            'attachment_id' => $attachedFile?->id,
+        ];
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function normalizeStructuredPayloadSection(mixed $section): array
+    {
+        if (! is_array($section)) {
+            return [];
+        }
+
+        return array_values(array_map(
+            static fn ($item): array => is_array($item) ? $item : (array) $item,
+            array_filter($section, static fn ($item): bool => is_array($item) || is_object($item))
+        ));
+    }
+
+    /**
+     * @param  array<int, array<int, array<string, mixed>>>  $sections
+     */
+    private function sectionContainsField(array $sections, string $field): bool
+    {
+        foreach ($sections as $section) {
+            foreach ($section as $item) {
+                if ($this->arrayContainsField($item, $field)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    private function arrayContainsField(array $payload, string $field): bool
+    {
+        if (array_key_exists($field, $payload)) {
+            return true;
+        }
+
+        foreach ($payload as $value) {
+            if (is_array($value) && $this->arrayContainsField($value, $field)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private function isVisualMimeType(string $mimeType): bool
+    {
+        return str_starts_with($mimeType, 'image/') || $mimeType === 'application/pdf';
+    }
+
+    private function isStructuredMimeType(string $mimeType): bool
+    {
+        return $mimeType === 'application/json';
+    }
+
+    private function attachmentLookupKey(int|string $columnId, string $hash): string
+    {
+        return $columnId.'|'.$hash;
+    }
+
+    private function describeAttachmentCount(int $count): string
+    {
+        return match (true) {
+            $count <= 0 => '添付なし',
+            $count === 1 => '1件の添付',
+            default => $count.'件の添付',
+        };
     }
 
     /**
@@ -368,7 +714,7 @@ MARKDOWN;
         $exp = floor(log($bytes) / log(1024));
         $exp = min($exp, count($units) - 1);
 
-        $size = $bytes / pow(1024, $exp);
+        $size = $bytes / (1024 ** $exp);
 
         return round($size, 2).' '.$units[$exp];
     }
@@ -377,21 +723,32 @@ MARKDOWN;
     {
         return [
             'q' => $schema->string('Full-text search keyword. Supports Japanese and multi-byte characters. Examples: "株式会社A商事", "営業日報", "検索機能". Use quotes for exact match: "株式会社A商事". Space-separated for AND: "商事 提案".'),
-            'tags' => $schema->string('Comma-separated tag names to filter by (AND condition). Supports Japanese. Example: "重要,新規" will find ledgers with BOTH tags.'),
-            'folder_id' => $schema->integer('The folder ID to recursively search within. Useful for limiting search scope to a specific department or project folder.'),
-            'ledger_define_id' => $schema->integer('The ledger definition ID to filter by. Use this to search only within a specific type of ledger (e.g., only sales reports).'),
+            'tags' => $schema->string('Comma-separated exact tag names to filter by (AND condition). Resolve tag fragments with the tag lookup tool first. Example: "重要,新規" will find ledgers with BOTH tags.'),
+            'folder_id' => $schema->array(
+                'One or more folder candidate IDs resolved from folder-name fragments. Array-preserving lookup-first input is supported.'
+            )->items($schema->integer()),
+            'ledger_define_id' => $schema->array(
+                'One or more ledger definition candidate IDs resolved from title fragments. Array-preserving lookup-first input is supported.'
+            )->items($schema->integer()),
             'exclude_q' => $schema->string('Keywords to exclude from the results. Supports Japanese. Example: "見送り" will exclude ledgers containing this word.'),
             'exclude_tags' => $schema->string('Comma-separated tag names to exclude. Supports Japanese. Example: "完了,見送り" will exclude ledgers with these tags.'),
-            'mode' => $schema->string('The search mode. "search" (default) returns full ledger data. "count" returns only the total number of matching ledgers (much faster for existence checks or statistics).')->enum(['search', 'count'])->default('search'),
+            'mode' => $schema->string('The search mode. "search" (default) returns full ledger data. "count" returns only the total number of matching ledgers (much faster for existence checks or statistics).')
+                ->enum(['search', 'count'])
+                ->default('search'),
             'limit' => $schema->integer('The maximum number of items to return. Use smaller values (10-20) for quick checks, larger values (50-100) for comprehensive searches.'),
             'offset' => $schema->integer('The number of items to skip for pagination. Use with limit to implement pagination (e.g., offset=20, limit=20 for page 2).'),
             'creator_id' => $schema->integer('The ID of the user who created the ledger. Use this to find all work by a specific person. You can get user IDs from meta.users in previous search results.'),
             'created_from' => $schema->string('The start date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-01" for records from October 1st onwards.'),
             'created_to' => $schema->string('The end date for filtering ledgers by creation date (YYYY-MM-DD). Example: "2025-10-07" for records up to October 7th. Use with created_from for date range filtering.'),
-            'order_by' => $schema->string('The field to sort results by. "composite_score" (default) sorts by overall importance (activity + freshness + workflow status). "activity_score" shows recently active items. "created_at" shows newest first. "updated_at" shows recently modified.')->enum(['composite_score', 'activity_score', 'created_at', 'updated_at', 'semantic_score'])->default('composite_score'),
+            'order_by' => $schema->string('The field to sort results by. "composite_score" (default) sorts by overall importance (activity + freshness + workflow status). "activity_score" shows recently active items. "created_at" shows newest first. "updated_at" shows recently modified.')
+                ->enum(['composite_score', 'activity_score', 'created_at', 'updated_at', 'semantic_score'])
+                ->default('composite_score'),
             'order_direction' => $schema->string('The sort direction. "desc" (default) shows highest/newest first. "asc" shows lowest/oldest first. Useful with composite_score asc to find neglected items.')->enum(['asc', 'desc'])->default('desc'),
             'format' => $schema->string('The format of the response. "summary" (default) includes display-friendly fields like __display_fields__ and __summary__ with translations. "raw" returns only the normalized data without formatting (faster, use for machine processing).')->enum(['raw', 'summary'])->default('summary'),
-            'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to false for quick browsing of many ledgers (only metadata and preview shown). Default: true.')->default(true),
+            'include_content' => $schema->boolean('Whether to include full ledger content in summary format. Set to true for detailed data. Default: false (only content preview shown). For local/limited-context models, always keep this false and use GetLedgerDetailTool for full content.')->default(false),
+            'include_meta' => $schema->boolean('Whether to include the meta dictionary (ledger_defines, folders, users) in the response. Default: false. Set to true when you need to resolve folder paths, user names, or ledger definition details.')->default(false),
+            'include_attachment_payloads' => $schema->boolean('Whether to include attachment payloads (text/structured/visual content, routes, resource URIs, access guides) in the response. Default: false. Set to true when you need to inspect attachment contents or generate download links.')->default(false),
+            'include_trace' => $schema->boolean('Whether to include the search_trace (synonym expansion log) in the response. Default: false. Set to true for debugging search term expansion.')->default(false),
             'content_preview_length' => $schema->integer('The maximum length of content preview when include_content is false. Default: 200 characters. Increase for longer previews, decrease for quicker overview.')->default(200),
         ];
     }

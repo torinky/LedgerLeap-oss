@@ -3,16 +3,21 @@
 namespace App\Services;
 
 use App\Enums\WorkflowStatus;
+use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\LedgerDiff;
 use App\Models\Tag;
+use App\Models\User;
 use App\Repositories\WritableFolderRepository;
+use App\Services\Ledger\SearchContext;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Validation\ValidationException;
 use Spatie\QueryBuilder\AllowedFilter;
 use Spatie\QueryBuilder\QueryBuilder;
 
@@ -20,9 +25,12 @@ class LedgerService
 {
     protected WritableFolderRepository $writableFolderRepository;
 
-    public function __construct(WritableFolderRepository $writableFolderRepository)
+    protected WorkflowService $workflowService;
+
+    public function __construct(WritableFolderRepository $writableFolderRepository, WorkflowService $workflowService)
     {
         $this->writableFolderRepository = $writableFolderRepository;
+        $this->workflowService = $workflowService;
     }
 
     /**
@@ -36,8 +44,13 @@ class LedgerService
      *
      * @throws \Throwable
      */
-    public function saveDirectly(?int $ledgerId, int $ledgerDefineId, array $content, array $contentAttached, int $userId): Ledger
-    {
+    public function saveDirectly(
+        ?int $ledgerId,
+        int $ledgerDefineId,
+        array $content,
+        array $contentAttached,
+        int $userId
+    ): Ledger {
         $ledgerDefine = LedgerDefine::findOrFail($ledgerDefineId);
 
         return \DB::transaction(function () use ($ledgerId, $ledgerDefine, $content, $contentAttached, $userId) {
@@ -95,29 +108,142 @@ class LedgerService
     /**
      * @return Builder[]|Collection
      */
-    public function getLedgers()
+    public function getLedgers(): Collection
     {
-        return Ledger::orderBy('created_at', 'DESC')->get();
+        return Ledger::query()->orderByDesc('created_at')->get();
+    }
+
+    public function getLedgerForApi(Ledger $ledger): Ledger
+    {
+        return $ledger->load([
+            'define',
+            'define.folder',
+            'define.folder.ancestors',
+            'define.tags',
+            'creator:id,name',
+            'modifier:id,name',
+            'latestDiff',
+        ]);
+    }
+
+    public function updateLedgerForApi(User $user, Ledger $ledger, array $data): Ledger
+    {
+        $ledger = $this->getLedgerForApi($ledger);
+
+        $contentPatch = (array) Arr::get($data, 'content_patch', []);
+        $comment = Arr::get($data, 'comment');
+
+        $this->validatePatchColumns($ledger, $contentPatch);
+
+        $newContent = $this->applyContentPatch($ledger, $contentPatch);
+
+        if ($ledger->define?->workflow_enabled) {
+            $result = match ($ledger->status) {
+                WorkflowStatus::PENDING_INSPECTION,
+                WorkflowStatus::PENDING_APPROVAL => $this->workflowService->saveEditedRecord(
+                    $ledger,
+                    $newContent,
+                    is_array($ledger->content_attached) ? $ledger->content_attached : [],
+                    $user->id,
+                    $comment,
+                ),
+                default => $this->workflowService->saveDraft(
+                    $ledger->id,
+                    $ledger->ledger_define_id,
+                    $newContent,
+                    is_array($ledger->content_attached) ? $ledger->content_attached : [],
+                    $user->id,
+                ),
+            };
+
+            return $this->getLedgerForApi($result['ledger']);
+        }
+
+        $updatedLedger = $this->saveDirectly(
+            $ledger->id,
+            $ledger->ledger_define_id,
+            $newContent,
+            is_array($ledger->content_attached) ? $ledger->content_attached : [],
+            $user->id,
+        );
+
+        return $this->getLedgerForApi($updatedLedger);
+    }
+
+    /**
+     * @param  array<string, mixed>  $data
+     * @return array{
+     *     ledger: Ledger,
+     *     content_patch: array<string|int, mixed>,
+     *     comment: mixed,
+     *     new_content: array<string|int, mixed>,
+     *     changed_columns: array<int, array{column_id:int, column_name:string, before:mixed, after:mixed}>,
+     *     previous_status: string|null,
+     *     returns_to_draft_on_save: bool
+     * }
+     */
+    public function previewLedgerUpdateForApi(Ledger $ledger, array $data): array
+    {
+        $ledger = $this->getLedgerForApi($ledger);
+
+        $contentPatch = (array) Arr::get($data, 'content_patch', []);
+        $comment = Arr::get($data, 'comment');
+
+        $this->validatePatchColumns($ledger, $contentPatch);
+
+        $newContent = $this->applyContentPatch($ledger, $contentPatch);
+
+        return [
+            'ledger' => $ledger,
+            'content_patch' => $contentPatch,
+            'comment' => $comment,
+            'new_content' => $newContent,
+            'changed_columns' => $this->buildChangedColumns($ledger, $newContent),
+            'previous_status' => $ledger->status?->value,
+            'returns_to_draft_on_save' => in_array($ledger->status, [
+                WorkflowStatus::PENDING_INSPECTION,
+                WorkflowStatus::PENDING_APPROVAL,
+            ], true),
+        ];
     }
 
     /**
      * @return Builder[]|Collection
      */
-    public function searchLedgers(string $keyword)
+    public function searchLedgers(string $keyword): Collection
     {
         //        return Ledger::freeword($keyword)->orderBy('created_at', 'DESC')->get();
-        $result = Ledger::search($keyword)->orderBy('created_at', 'DESC')->get();
-
         //        var_dump(DB::getQueryLog());
-        return $result;
-
+        return Ledger::search($keyword)->get()->sortByDesc('created_at')->values();
     }
 
-    public function searchLedgersForApi(\App\Models\User $user, array $params)
+    public function searchLedgersForApi(User $user, array $params)
     {
         \Log::info('[MCP Search Debug] === Start searchLedgersForApi ===');
         \Log::info('[MCP Search Debug] User ID: '.$user->id);
         \Log::info('[MCP Search Debug] Input params: '.json_encode($params, JSON_UNESCAPED_UNICODE));
+
+        $searchContext = null;
+        $searchTrace = $this->buildEmptySearchTrace();
+        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
+
+        if (! empty($params['q'])) {
+            $searchContext = $this->buildSynonymAwareSearchContext((string) $params['q']);
+            $searchTrace = $searchContext->getTrace();
+        }
+
+        if (empty($readableFolderIds)) {
+            return [
+                'ledgers' => new Collection,
+                'meta' => $this->buildMetaData(new Collection),
+                'total' => 0,
+                'search_trace' => $searchTrace,
+            ];
+        }
+
+        $ledgerDefineIds = $this->normalizeIdList($params['ledger_define_id'] ?? null);
+        $requestedFolderIds = $this->normalizeIdList($params['folder_id'] ?? null);
+        $resolvedFolderIds = $this->resolveFolderHierarchyIds($requestedFolderIds, $readableFolderIds);
 
         // ▼▼▼ ここから追加 ▼▼▼
         // セマンティック検索の分岐
@@ -131,14 +257,17 @@ class LedgerService
             \Log::info('[MCP Search Debug] Semantic search triggered. Delegating to RagSearchService.');
 
             // RagSearchServiceを呼び出し、結果をAPI形式に整形して返す
-            $ragResults = app(\App\Services\RagSearchService::class)->searchForApi(
+            $ragResults = app(RagSearchService::class)->searchForApi(
                 $user,
                 [
                     'query' => $params['q'],
                     'limit' => $params['limit'] ?? 20,
                     'filters' => [
-                        'ledger_define_id' => $params['ledger_define_id'] ?? null,
-                        'folder_id' => $params['folder_id'] ?? null,
+                        'ledger_define_id' => count($ledgerDefineIds) === 1 ? $ledgerDefineIds[0] : null,
+                        'ledger_define_ids' => ! empty($ledgerDefineIds) ? $ledgerDefineIds : null,
+                        'folder_id' => count($resolvedFolderIds) === 1 ? $resolvedFolderIds[0] : null,
+                        'folder_ids' => ! empty($resolvedFolderIds) ? $resolvedFolderIds : null,
+                        'readable_folder_ids' => $readableFolderIds,
                     ],
                 ]
             );
@@ -165,23 +294,19 @@ class LedgerService
                 'ledgers' => $ledgers,
                 'meta' => $meta,
                 'total' => $total,
+                'search_trace' => $searchTrace,
             ];
         }
         // ▲▲▲ ここまで追加 ▲▲▲
 
-        // ユーザーが読み取り可能なフォルダIDのリストを取得
-        $startTime = microtime(true);
-        $readableFolderIds = $this->writableFolderRepository->getReadableFolderIds($user);
-        $folderIdsTime = microtime(true) - $startTime;
         \Log::info('[MCP Search Debug] Readable folder IDs: '.json_encode($readableFolderIds));
-        \Log::info('[MCP Search Debug] Time to get folder IDs: '.round($folderIdsTime * 1000, 2).'ms');
 
         // QueryBuilderが期待する形式にパラメータを変換
         $queryParams = [];
         if (isset($params['creator_id'])) {
             $queryParams['filter']['creator_id'] = $params['creator_id'];
         }
-        if (isset($params['ledger_define_id'])) {
+        if (isset($params['ledger_define_id']) && $params['ledger_define_id'] !== '') {
             $queryParams['filter']['ledger_define_id'] = $params['ledger_define_id'];
         }
         if (isset($params['tags'])) {
@@ -190,7 +315,7 @@ class LedgerService
         if (isset($params['exclude_tags'])) {
             $queryParams['filter']['without_tags'] = $params['exclude_tags'];
         }
-        if (isset($params['folder_id'])) {
+        if (isset($params['folder_id']) && $params['folder_id'] !== '') {
             $queryParams['filter']['folder_hierarchy'] = $params['folder_id'];
         }
         if (isset($params['q'])) {
@@ -219,7 +344,17 @@ class LedgerService
             ->allowedFilters([
                 // 完全一致フィルタ
                 AllowedFilter::exact('creator_id'),
-                AllowedFilter::exact('ledger_define_id'),
+                AllowedFilter::callback('ledger_define_id', function ($query, $value) {
+                    $ids = $this->normalizeIdList($value);
+
+                    if (empty($ids)) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->whereIn('ledger_define_id', $ids);
+                }),
 
                 // スコープベースフィルタ
                 AllowedFilter::scope('created_between'),
@@ -229,33 +364,65 @@ class LedgerService
                     // カンマ区切り文字列または配列を処理
                     $tagNames = is_string($value) ? array_filter(explode(',', $value)) : $value;
                     if (! empty($tagNames)) {
-                        $query->whereHas('define.tags', function (\Illuminate\Database\Eloquent\Builder $q) use ($tagNames) {
-                            $q->whereIn('name', $tagNames);
-                        }, '=', count($tagNames));
+                        $query->whereHas(
+                            'define.tags',
+                            function (Builder $q) use ($tagNames) {
+                                $q->whereIn('name', $tagNames);
+                            },
+                            '=',
+                            count($tagNames)
+                        );
                     }
                 }),
                 AllowedFilter::scope('without_tags'),
-                AllowedFilter::scope('folder_hierarchy'),
+                AllowedFilter::callback('folder_hierarchy', function ($query, $value) use ($readableFolderIds) {
+                    $requestedFolderIds = $this->normalizeIdList($value);
+                    $folderIds = $this->resolveFolderHierarchyIds($requestedFolderIds, $readableFolderIds);
+
+                    if (empty($requestedFolderIds) && ! empty($value)) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    if (empty($folderIds)) {
+                        $query->whereRaw('1 = 0');
+
+                        return;
+                    }
+
+                    $query->whereHas('define.folder', function (
+                        Builder $folderQuery
+                    ) use ($folderIds) {
+                        $folderQuery->whereIn('id', $folderIds);
+                    });
+                }),
 
                 // カスタムコールバックフィルタ
-                AllowedFilter::callback('q', function ($query, $value) {
+                AllowedFilter::callback('q', function ($query, $value) use ($searchContext) {
+                    $expandedValue = $searchContext !== null
+                        ? (string) $searchContext
+                        : $this->buildSynonymAwareSearchQuery((string) $value);
                     \Log::info('[MCP Search Debug] Applying full-text search filter with keyword: '.$value);
+                    if ($expandedValue !== (string) $value) {
+                        \Log::info('[MCP Search Debug] Expanded synonym-aware search keyword: '.$expandedValue);
+                    }
                     $searchStartTime = microtime(true);
-                    $query->search($value);
+                    $query->search($expandedValue);
                     $searchTime = microtime(true) - $searchStartTime;
                     \Log::info('[MCP Search Debug] Search scope applied in: '.round($searchTime * 1000, 2).'ms');
                 }),
                 AllowedFilter::callback('exclude_q', function ($query, $value) {
                     \Log::info('[MCP Search Debug] Applying exclude_q filter: '.$value);
                     // 除外キーワードを含まない結果のみを返すように修正
-                    $query->where(function (\Illuminate\Database\Eloquent\Builder $q) use ($value) {
+                    $query->where(function (Builder $q) use ($value) {
                         $q->whereRaw('not match(`content`) against (? IN BOOLEAN MODE)', [$value])
                             ->whereRaw('not match(`content_attached`) against (? IN BOOLEAN MODE)', [$value]);
                     });
                 }),
             ])
             ->allowedSorts(['composite_score', 'activity_score', 'created_at', 'updated_at', 'id', 'semantic_score'])
-            ->whereHas('define.folder', function (\Illuminate\Database\Eloquent\Builder $q) use ($readableFolderIds) {
+            ->whereHas('define.folder', function (Builder $q) use ($readableFolderIds) {
                 $q->whereIn('id', $readableFolderIds);
             });
 
@@ -299,7 +466,12 @@ class LedgerService
         $mainQueryStartTime = microtime(true);
         $ledgers = $query->offset($offset)->limit($limit)->get();
         $mainQueryTime = microtime(true) - $mainQueryStartTime;
-        \Log::info('[MCP Search Debug] Main query result: '.$ledgers->count().' items (took '.round($mainQueryTime * 1000, 2).'ms)');
+        $mainQuerySummary = '[MCP Search Debug] Main query result: '
+            .$ledgers->count()
+            .' items (took '
+            .round($mainQueryTime * 1000, 2)
+            .'ms)';
+        \Log::info($mainQuerySummary);
 
         // Eager Loading を追加（N+1問題回避）
         \Log::info('[MCP Search Debug] Loading relationships...');
@@ -328,6 +500,106 @@ class LedgerService
             'ledgers' => $ledgers,
             'meta' => $meta,
             'total' => $total,
+            'search_trace' => $searchTrace,
+        ];
+    }
+
+    private function buildSynonymAwareSearchQuery(string $search): string
+    {
+        return (string) $this->buildSynonymAwareSearchContext($search);
+    }
+
+    private function buildSynonymAwareSearchContext(string $search): SearchContext
+    {
+        $searchContext = new SearchContext(app(SynonymService::class));
+        $searchContext->setSearch(trim($search));
+
+        return $searchContext;
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function normalizeIdList(mixed $value): array
+    {
+        if ($value === null || $value === '') {
+            return [];
+        }
+
+        $items = is_array($value)
+            ? $value
+            : preg_split('/[\s,]+/u', trim((string) $value), -1, PREG_SPLIT_NO_EMPTY);
+
+        return collect($items ?? [])
+            ->flatten()
+            ->map(function ($item): ?int {
+                if (is_int($item)) {
+                    return $item > 0 ? $item : null;
+                }
+
+                $item = trim((string) $item);
+                if ($item === '' || ! is_numeric($item)) {
+                    return null;
+                }
+
+                $id = (int) $item;
+
+                return $id > 0 ? $id : null;
+            })
+            ->filter(fn (?int $id): bool => $id !== null)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @param  array<int, int>  $requestedFolderIds
+     * @param  array<int, int>  $readableFolderIds
+     * @return array<int, int>
+     */
+    private function resolveFolderHierarchyIds(array $requestedFolderIds, array $readableFolderIds): array
+    {
+        $requestedFolderIds = collect($requestedFolderIds)
+            ->map(fn ($folderId): int => (int) $folderId)
+            ->filter(fn (int $folderId): bool => $folderId > 0)
+            ->unique()
+            ->values()
+            ->all();
+
+        if (empty($requestedFolderIds)) {
+            return [];
+        }
+
+        $readableFolderIdLookup = collect($readableFolderIds)
+            ->map(fn ($folderId): int => (int) $folderId)
+            ->filter(fn (int $folderId): bool => $folderId > 0)
+            ->unique()
+            ->flip();
+
+        return collect($requestedFolderIds)
+            ->flatMap(function (int $folderId) {
+                return Folder::descendantsAndSelf($folderId)->pluck('id')->all();
+            })
+            ->map(fn ($folderId): int => (int) $folderId)
+            ->filter(fn (int $folderId): bool => $folderId > 0)
+            ->unique()
+            ->filter(fn (int $folderId): bool => $readableFolderIdLookup->has($folderId))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function buildEmptySearchTrace(): array
+    {
+        return [
+            'original_q' => '',
+            'normalized_q' => '',
+            'keywords' => [],
+            'tags' => [],
+            'selected_terms' => [],
+            'excluded_terms' => [],
         ];
     }
 
@@ -359,7 +631,77 @@ class LedgerService
         });
     }
 
-    private function buildMetaData(\Illuminate\Database\Eloquent\Collection $ledgers): array
+    /**
+     * @param  array<string|int, mixed>  $contentPatch
+     */
+    private function validatePatchColumns(Ledger $ledger, array $contentPatch): void
+    {
+        $allowedColumnIds = collect($ledger->define->column_define ?? [])
+            ->map(fn ($column) => (string) $column->id)
+            ->values();
+
+        $invalidColumnIds = collect(array_keys($contentPatch))
+            ->map(fn ($columnId) => (string) $columnId)
+            ->reject(fn (string $columnId) => $allowedColumnIds->contains($columnId))
+            ->values();
+
+        if ($invalidColumnIds->isNotEmpty()) {
+            throw ValidationException::withMessages([
+                'content_patch' => [
+                    'Unknown column definition id(s): '.$invalidColumnIds->implode(', '),
+                ],
+            ]);
+        }
+    }
+
+    /**
+     * @param  array<string|int, mixed>  $contentPatch
+     * @return array<string|int, mixed>
+     */
+    private function applyContentPatch(Ledger $ledger, array $contentPatch): array
+    {
+        $currentContent = is_array($ledger->content) ? $ledger->content : [];
+
+        foreach ($contentPatch as $columnId => $value) {
+            $currentContent[$columnId] = $value;
+        }
+
+        return $currentContent;
+    }
+
+    /**
+     * @return array<int, array{column_id:int, column_name:string, before:mixed, after:mixed}>
+     */
+    private function buildChangedColumns(Ledger $ledger, array $newContent): array
+    {
+        $currentContent = is_array($ledger->content) ? $ledger->content : [];
+        $columnDefinitions = collect($ledger->define->column_define ?? [])->keyBy(
+            fn ($column) => (string) $column->id
+        );
+
+        return collect($newContent)
+            ->map(function ($afterValue, $columnId) use ($currentContent, $columnDefinitions) {
+                $beforeValue = $currentContent[$columnId] ?? null;
+
+                if ($beforeValue === $afterValue) {
+                    return null;
+                }
+
+                $column = $columnDefinitions->get((string) $columnId);
+
+                return [
+                    'column_id' => (int) $columnId,
+                    'column_name' => $column?->name ?? 'unknown_column_'.$columnId,
+                    'before' => $beforeValue,
+                    'after' => $afterValue,
+                ];
+            })
+            ->filter()
+            ->values()
+            ->all();
+    }
+
+    private function buildMetaData(Collection $ledgers): array
     {
         $ledgerDefines = $ledgers->pluck('define')->filter()->unique('id');
         $creators = $ledgers->pluck('creator')->filter()->unique('id');

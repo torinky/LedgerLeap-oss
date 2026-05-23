@@ -7,12 +7,13 @@ use App\Models\Tenant;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Request;
+use Livewire\Component;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
 // テスト用のダミーLivewireコンポーネント
-class TestComponent extends \Livewire\Component
+class TestComponent extends Component
 {
     use InitializesTenantContext;
 

@@ -63,8 +63,20 @@
 
 ## スプリント分解
 - [x] Sprint 1: 情報設計とデザイン方針の確定
-- [ ] Sprint 2: マイポータル overview と遷移導線の再構成
-- [ ] Sprint 3: 台帳一覧の state handoff と回帰テスト
+  - Evidence: [docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-plan.md](../ui-ux/navigation/2026-04-27_my-portal-folder-handoff-plan.md) の「6.6 Sprint 1 完了メモ」
+  - Evidence: [docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-sprint1-completion.md](../ui-ux/navigation/2026-04-27_my-portal-folder-handoff-sprint1-completion.md)
+  - Evidence: `./vendor/bin/sail test tests/Feature/Livewire/MyPortalTest.php` ✅
+- [x] Sprint 2: マイポータル overview と遷移導線の再構成
+  - Evidence: `app/Livewire/MyPortal.php`
+  - Evidence: `resources/views/livewire/my-portal.blade.php`
+  - Evidence: `resources/views/components/folder/tree.blade.php`
+  - Evidence: `./vendor/bin/sail test tests/Feature/Livewire/MyPortalTest.php` ✅
+- [x] Sprint 3: 台帳一覧の state handoff と回帰テスト
+  - Evidence: `app/Livewire/Ledger/IndexManager.php`
+  - Evidence: `tests/Feature/Livewire/Ledger/IndexManagerIntegrationTest.php`
+  - Evidence: `tests/Feature/Http/Controllers/NotificationControllerTest.php`
+  - Evidence: `tests/Feature/Livewire/Workflow/OtherRelatedTasksListAdditionalTest.php`
+  - Evidence: `./vendor/bin/sail test tests/Feature/Livewire/MyPortalTest.php tests/Feature/Http/Controllers/NotificationControllerTest.php tests/Feature/Livewire/Workflow/OtherRelatedTasksListAdditionalTest.php tests/Feature/Livewire/Ledger/IndexManagerIntegrationTest.php` ✅
 
 ## エビデンス / 参照先
 - `docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-plan.md`
@@ -83,27 +95,37 @@
 - `resources/views/components/ledger/search.blade.php`
 
 ## 完了条件
-- [ ] マイポータルの見た目と役割が overview として成立している
-- [ ] フォルダツリーから台帳一覧へ自然に遷移できる
-- [ ] 遷移後に対象フォルダが選択済みとして見える
-- [ ] アイコン / badge / tooltip / CTA の意味が重複していない
-- [ ] 変更後も tenant 文脈が維持される
-- [ ] 回帰テストが追加されている
+- [x] マイポータルの見た目と役割が overview として成立している
+  - Evidence: `resources/views/livewire/my-portal.blade.php` の stats ベースの所属 / 役割表示
+  - Evidence: `docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-sprint1-completion.md`
+- [x] フォルダツリーから台帳一覧へ自然に遷移できる
+  - Evidence: `resources/views/components/folder/tree.blade.php` の `clickNavigatesToLedgerList`
+  - Evidence: `tests/Feature/Livewire/MyPortalTest.php`
+- [x] 遷移後に対象フォルダが選択済みとして見える
+  - Evidence: `app/Livewire/Ledger/IndexManager.php` の `currentFolderId` / `selectedFolderIds` 初期化
+  - Evidence: `tests/Feature/Livewire/Ledger/IndexManagerIntegrationTest.php`
+- [x] アイコン / badge / tooltip / CTA の意味が重複していない
+  - Evidence: `resources/views/components/folder/tree.blade.php` の `showPermissionTooltip` 切り替え
+  - Evidence: `docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-plan.md` の「6.6 Sprint 1 完了メモ」
+- [x] 変更後も tenant 文脈が維持される
+  - Evidence: `tests/Feature/Http/Controllers/NotificationControllerTest.php` の global route / tenant id 検証
+  - Evidence: `tests/Feature/Livewire/Workflow/OtherRelatedTasksListAdditionalTest.php` の `tenant_id` 参照
+- [x] 回帰テストが追加されている
+  - Evidence: `tests/Feature/Livewire/MyPortalTest.php`
+  - Evidence: `tests/Feature/Http/Controllers/NotificationControllerTest.php`
+  - Evidence: `tests/Feature/Livewire/Workflow/OtherRelatedTasksListAdditionalTest.php`
+  - Evidence: `tests/Feature/Livewire/Ledger/IndexManagerIntegrationTest.php`
 
 ## 関連リンク
 - docs: `docs/work/ui-ux/navigation/2026-04-27_my-portal-folder-handoff-plan.md`
 - docs: `docs/function/MyPortal.md`
 - Issue / PR: なし
 
-## Sprint 1 完了メモ
-- ポータルは overview、台帳一覧は workbench と役割分担する方針で確定した
-- アイコンは意味補助に限定し、ラベルなしで意味を成立させない方針で確定した
-- 所属、役割、権限、担当フォルダは近接させて一塊で読ませる方針で確定した
-- badge は短いメタ情報に限定し、tooltip は補足説明に限定する方針で確定した
-- 文字サイズとアイコンサイズは、desktop で読める標準寄りのサイズ感を優先する方針で確定した
-- フォルダツリーから台帳一覧への遷移は、既存の `currentFolderId` / `selectedFolderIds` 契約を再利用する方針で確定した
-- Sprint 2 以降は、この設計方針を前提に view と state handoff を実装する
-- 2026-04-27 時点で Sprint 1 は完了済み
+## GitHub 追跡
+- Parent Issue: `#176`
+- Sprint 1: `#178`
+- Sprint 2: `#179`
+- Sprint 3: `#177`
 
 ## 確認事項
 - [x] 改善イシューであることを確認した

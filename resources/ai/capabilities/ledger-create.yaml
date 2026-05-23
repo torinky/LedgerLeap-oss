@@ -1,0 +1,50 @@
+id: ledger-create
+version: 1
+status: active
+summary: 台帳定義と必須項目を確認し、必要な記録を新しく登録する能力
+primary_user_goals:
+  - 会議録や日報を対話から登録したい
+  - 台帳定義に沿って安全にレコードを作成したい
+when_to_use:
+  - ユーザーが新しい台帳を作成したいとき
+  - 台帳種別は分かるが入力項目を毎回覚えたくないとき
+recommended_flow:
+  - step: fetch-ledger-defines
+    description: GetLedgerDefinesTool で候補の台帳定義を取得する
+  - step: choose-ledger-define
+    description: ユーザー意図に最も近い台帳定義を選ぶ
+  - step: map-content
+    description: column_define を見て content の数値キーに値を割り当てる
+  - step: create-ledger
+    description: CreateLedgerTool で台帳を作成する
+required_mcp_tools:
+  - GetLedgerDefinesTool
+  - CreateLedgerTool
+required_rest_endpoints:
+  - method: GET
+    path: /api/v1/ledger-defines
+  - method: POST
+    path: /api/v1/ledgers
+required_guides:
+  - ledgerleap://guides/create-strategy
+  - ledgerleap://guides/common-usage-basics
+key_inputs:
+  - ledger_define_id
+  - folder_id
+  - content
+  - tags
+success_criteria:
+  - 台帳定義に合う content を作れる
+  - 書き込み権限のある folder_id を使う
+  - 作成結果をユーザーへ分かりやすく返せる
+ledgerleap_constraints:
+  - content は column_define の id に対応する数値インデックス配列として扱う
+  - Livewire/public state と違い、API/MCP でも台帳 content の意味は定義依存で決まる
+  - cast-array 列に対して manual json_encode を前提にしない
+  - テナント・フォルダ権限を無視して作成しない
+examples:
+  - user: 今日の定例議事録を作成して
+    intent: 定義選択から作成まで一気に行う
+  - user: フォルダ 10 に日報を登録して
+    intent: folder_id が与えられた作成
+

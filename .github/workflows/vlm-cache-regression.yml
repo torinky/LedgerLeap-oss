@@ -1,0 +1,39 @@
+name: VLM Cache Regression Tests
+
+on:
+  push:
+    paths:
+      - 'docker/paddle/**'
+      - '.github/workflows/vlm-cache-regression.yml'
+  pull_request:
+    paths:
+      - 'docker/paddle/**'
+      - '.github/workflows/vlm-cache-regression.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  vlm-cache-regression:
+    name: VLM cache regression tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Run cache regression tests
+        run: |
+          python -m unittest discover -s docker/paddle/tests -p "test_*.py"
+

@@ -5,41 +5,7 @@
     @push('stylesheets')
         @vite(['resources/sass/ledgerShow.scss'])
     @endpush
-    <x-slot name="header" class="sticky top-0 z-10">
-        <div class="ttl_3d5 md:flex md:items-center space-x-4 bg-info/40 rounded">
-            <h2 class="font-black text-lg text-info-content/60 md:text-xl">
-                <i class="fas fa-list mr-2"></i>
-                {{ __('ledger.details') }}
-            </h2>
-            <div class="text-info-content/50 text-sm"><i class="fas fa-book-open"></i> {{$ledgerDefineRecord->title}}
-            </div>
-        </div>
-    </x-slot>
-
-    <div class="p-0 md:p-4 bg-base-100 rounded-b-xl grid grid-cols-1 gap-5">
-
-        <div class="collapse bg-base-200 collapse-arrow border-base-300 border">
-            <input type="checkbox" id="createDescription" checked/>
-            <label for="createDescription"
-                   class="collapse-title font-medium">{{$ledgerDefineRecord->title}}</label>
-            <div class="collapse-content">
-                @if($ledgerDefineRecord->detail_description)
-                    @php
-                        $detailDescriptionHtml = app(App\Services\AutoLinkService::class)->convert(
-                            app(Spatie\LaravelMarkdown\MarkdownRenderer::class)->toHtml($ledgerDefineRecord->detail_description), 
-                            null, 
-                            $ledgerDefineRecord
-                        );
-                    @endphp
-                    <div class="prose text-sm leading-relaxed max-w-none">
-                        <x-expandable-content 
-                            :content="$detailDescriptionHtml"
-                            max-height="6rem"
-                        />
-                    </div>
-                @endif
-            </div>
-        </div>
+    <div class="container max-w-full px-0 md:px-4 mt-4">
         <livewire:ledger.show :ledgerId="$ledger->id"/>
     </div>
 

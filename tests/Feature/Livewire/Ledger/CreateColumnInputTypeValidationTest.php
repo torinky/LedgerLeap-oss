@@ -2,10 +2,13 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\CreateColumn;
 use App\Models\Folder;
+use App\Models\Ledger;
 use App\Models\LedgerDefine;
 use App\Models\Role;
+use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
 use Livewire\Livewire;
@@ -46,10 +49,10 @@ class CreateColumnInputTypeValidationTest extends TestCase
             'modifier_id' => $this->user->id,
         ]);
 
-        \App\Models\RoleFolderPermission::create([
+        RoleFolderPermission::create([
             'role_id' => $role->id,
             'folder_id' => $this->folder->id,
-            'permission' => \App\Enums\FolderPermissionType::WRITE,
+            'permission' => FolderPermissionType::WRITE,
             'modifier_id' => $this->user->id,
         ]);
     }
@@ -84,7 +87,7 @@ class CreateColumnInputTypeValidationTest extends TestCase
             ->assertHasErrors(['content.1' => 'regex']);
 
         // Verify stabilization/normalization in DB
-        $ledger = \App\Models\Ledger::where('ledger_define_id', $ledgerDefine->id)->latest()->first();
+        $ledger = Ledger::where('ledger_define_id', $ledgerDefine->id)->latest()->first();
         // Option normalize => true was set, so it should be numeric only and half-width
         $this->assertEquals('09012345678', $ledger->content[1]);
     }

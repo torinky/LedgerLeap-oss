@@ -1,5 +1,5 @@
 {{-- History Tab --}}
-<div class="p-4 space-y-4" x-data="{
+<div class="p-4 space-y-4 min-w-0 max-w-full overflow-x-hidden" x-data="{
     showAllLogs: false,
     showAllActivity: false,
     maxInitialLogs: 3,

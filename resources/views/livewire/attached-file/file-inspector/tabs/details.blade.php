@@ -1,5 +1,9 @@
 {{-- Details Tab --}}
-<div class="px-6 py-4 space-y-8 pb-10">
+<div class="px-6 py-4 space-y-8 pb-10 min-w-0 max-w-full overflow-x-hidden">
+    @php
+        $tenantId = $this->resolveTenantId($file?->tenant_id);
+    @endphp
+
     {{-- 0. 未最終化ファイル警告 --}}
     @if ($file && !$file->processing_finalized_at)
         <x-mary-alert icon="o-clock" class="alert-warning">
@@ -153,7 +157,7 @@
                             </div>
                         </div>
                         <div class="flex flex-col gap-1">
-                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => tenant('id'), 'attachedFile' => $file->id]) }}"
+                            <a href="{{ route('file.download-ocr-pdf', ['tenant' => $tenantId, 'attachedFile' => $file->id]) }}"
                                 class="btn btn-xs btn-primary gap-1" @click="handleDownload()" :disabled="downloading">
                                 <span x-show="downloading" class="loading loading-spinner loading-xs"></span>
                                 <i class="fa-solid fa-download" x-show="!downloading"></i>
@@ -231,7 +235,7 @@
                     <div class="flex-none">
                         @if (!$mockData && $file->ledger_id)
                             <x-mary-button icon="o-arrow-top-right-on-square"
-                                link="{{ route('ledgersByDefineId', ['tenant' => tenant('id'), 'defineId' => $file->ledger?->define?->id]) }}"
+                                link="{{ route('ledgersByDefineId', ['tenant' => $tenantId, 'defineId' => $file->ledger?->define?->id]) }}"
                                 class="btn-xs btn-ghost btn-circle" target="_blank" />
                         @endif
                     </div>

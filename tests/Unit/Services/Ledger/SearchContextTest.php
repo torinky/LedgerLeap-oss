@@ -61,8 +61,52 @@ class SearchContextTest extends TestCase
     public function set_search_extracts_tags_from_hashtags(): void
     {
         $this->context->setSearch('#urgent テスト');
-        // タグが抽出されること（keywords配列に含まれる）
-        $this->assertNotEmpty($this->context->keywords);
+        $this->assertSame(['urgent'], $this->context->tags);
+        $this->assertNotContains('#urgent', $this->context->keywords);
+        $this->assertNotContains('urgent', $this->context->keywords);
+        $this->assertContains('テスト', $this->context->keywords);
+    }
+
+    #[Test]
+    public function set_search_builds_kind_aware_trace_for_synonyms_and_technical_terms(): void
+    {
+        $config = new SynonymServiceConfig(['useSynonym' => true, 'useTechnicalTerm' => true]);
+        $synonymService = new class($config) extends SynonymService
+        {
+            public function getSearchTermsFromWord($word, array $options = []): array
+            {
+                if ($word === '請求') {
+                    return [
+                        ['term' => '請求', 'kind' => 'original'],
+                        ['term' => '請求書', 'kind' => 'synonym'],
+                        ['term' => 'インボイス', 'kind' => 'technical'],
+                    ];
+                }
+
+                return [['term' => $word, 'kind' => 'original']];
+            }
+
+            public function getSynonymsFromWord($word, array $options = [])
+            {
+                return ['請求書', 'インボイス'];
+            }
+        };
+
+        $context = new SearchContext($synonymService);
+
+        $context->setSearch('請求 #重要');
+
+        $trace = $context->getTrace();
+
+        $this->assertSame('請求 #重要', $trace['original_q']);
+        $this->assertNotEmpty($trace['normalized_q']);
+        $this->assertSame(['重要'], $trace['tags']);
+        $this->assertNotContains('#重要', $trace['keywords']);
+        $this->assertContains('請求', array_column($trace['selected_terms'], 'term'));
+        $this->assertContains('請求書', array_column($trace['selected_terms'], 'term'));
+        $this->assertContains('インボイス', array_column($trace['selected_terms'], 'term'));
+        $this->assertContains('synonym', array_column($trace['selected_terms'], 'kind'));
+        $this->assertContains('technical', array_column($trace['selected_terms'], 'kind'));
     }
 
     // ----------------------------------------------------------------

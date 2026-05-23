@@ -211,7 +211,10 @@ services:
     ports:
       - "${VLM_SERVICE_PORT:-8001}:${VLM_INTERNAL_PORT:-8000}"
     volumes:
-      - ./storage/vlm-cache:/root/.cache/huggingface
+      # Persist PaddleOCR / PaddleOCR-VL caches so startup can reuse downloaded models.
+      - ./storage/vlm-cache/paddleocr:/root/.paddleocr
+      - ./storage/vlm-cache/paddlex:/root/.paddlex
+      - ./storage/vlm-cache/huggingface:/root/.cache/huggingface
       - .:/var/www/html
     environment:
       - PYTHONUNBUFFERED=1

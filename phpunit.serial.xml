@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<phpunit xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:noNamespaceSchemaLocation="./vendor/phpunit/phpunit/phpunit.xsd"
+         bootstrap="vendor/autoload.php"
+         colors="true"
+>
+    <testsuites>
+        <testsuite name="Unit">
+            <directory suffix="Test.php">./tests/Unit</directory>
+        </testsuite>
+        <testsuite name="Feature">
+            <directory suffix="Test.php">./tests/Feature</directory>
+        </testsuite>
+    </testsuites>
+    <source>
+        <include>
+            <directory suffix=".php">./app</directory>
+        </include>
+    </source>
+    <php>
+        <env name="APP_ENV" value="testing"/>
+        <env name="LOG_CHANNEL" value="single"/>
+        <server name="DB_CONNECTION" value="mysql_testing"/>
+        <server name="DB_DATABASE" value="ledgerleap_test"/>
+        <env name="BCRYPT_ROUNDS" value="10"/>
+        <env name="CACHE_DRIVER" value="array"/>
+        <env name="MAIL_MAILER" value="array"/>
+        <env name="QUEUE_CONNECTION" value="sync"/>
+        <env name="SESSION_DRIVER" value="array"/>
+        <env name="TELESCOPE_ENABLED" value="false"/>
+        <env name="RAG_ENABLED" value="false"/>
+        <env name="LDAP_LOGGING" value="true"/>
+        <env name="LDAP_HOST" value="openldap"/>
+        <env name="LDAP_USERNAME" value="cn=admin,dc=planetexpress,dc=com"/>
+        <env name="LDAP_PASSWORD" value="GoodNewsEveryone"/>
+        <env name="LDAP_PORT" value="10389"/>
+        <env name="LDAP_BASE_DN" value="dc=planetexpress,dc=com"/>
+    </php>
+</phpunit>
+

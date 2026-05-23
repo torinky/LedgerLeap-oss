@@ -87,46 +87,46 @@ class LedgerControllerTest extends TestCase
     public function test_admin_can_view_any_ledger()
     {
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => $this->writeLedger->id]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => $this->writeLedger->id]))
             ->assertOk();
 
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => $this->readLedger->id]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => $this->readLedger->id]))
             ->assertOk();
     }
 
     public function test_writer_can_view_ledger_in_writable_folder()
     {
         $this->actingAs($this->writerUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => $this->writeLedger->id]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => $this->writeLedger->id]))
             ->assertOk();
     }
 
     public function test_writer_is_forbidden_to_view_ledger_in_non_writable_folder()
     {
         $this->actingAs($this->writerUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => $this->readLedger->id]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => $this->readLedger->id]))
             ->assertForbidden();
     }
 
     public function test_viewer_can_view_ledger_in_readable_folder()
     {
         $this->actingAs($this->viewerUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => $this->readLedger->id]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => $this->readLedger->id]))
             ->assertOk();
     }
 
     public function test_viewer_is_forbidden_to_view_ledger_in_non_readable_folder()
     {
         $this->actingAs($this->viewerUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => $this->writeLedger->id]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => $this->writeLedger->id]))
             ->assertForbidden();
     }
 
     public function test_returns_404_for_non_existent_ledger()
     {
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.show', ['ledgerId' => 9999]))
+            ->get(tenant_route_url('ledger.show', ['ledgerId' => 9999]))
             ->assertNotFound();
     }
 
@@ -135,21 +135,21 @@ class LedgerControllerTest extends TestCase
     public function test_admin_can_view_ledger_list()
     {
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.index'))
+            ->get(tenant_route_url('ledger.index'))
             ->assertOk();
     }
 
     public function test_writer_can_view_ledger_list()
     {
         $this->actingAs($this->writerUser)
-            ->get(tenant_route('ledger.index'))
+            ->get(tenant_route_url('ledger.index'))
             ->assertOk();
     }
 
     public function test_viewer_can_view_ledger_list()
     {
         $this->actingAs($this->viewerUser)
-            ->get(tenant_route('ledger.index'))
+            ->get(tenant_route_url('ledger.index'))
             ->assertOk();
     }
 
@@ -158,7 +158,7 @@ class LedgerControllerTest extends TestCase
     public function test_admin_can_access_create_page()
     {
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.create', ['ledgerDefineId' => $this->ledgerDefine->id]))
+            ->get(tenant_route_url('ledger.create', ['ledgerDefineId' => $this->ledgerDefine->id]))
             ->assertOk();
     }
 
@@ -167,14 +167,14 @@ class LedgerControllerTest extends TestCase
         // Note: The create page itself doesn't require a folder context,
         // but the subsequent store action will.
         $this->actingAs($this->writerUser)
-            ->get(tenant_route('ledger.create', ['ledgerDefineId' => $this->ledgerDefine->id]))
+            ->get(tenant_route_url('ledger.create', ['ledgerDefineId' => $this->ledgerDefine->id]))
             ->assertOk();
     }
 
     public function test_viewer_is_forbidden_to_access_create_page()
     {
         $this->actingAs($this->viewerUser)
-            ->get(tenant_route('ledger.create', ['ledgerDefineId' => $this->ledgerDefine->id]))
+            ->get(tenant_route_url('ledger.create', ['ledgerDefineId' => $this->ledgerDefine->id]))
             ->assertForbidden();
     }
 
@@ -183,37 +183,32 @@ class LedgerControllerTest extends TestCase
     public function test_admin_can_access_edit_page_for_any_ledger()
     {
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.edit', ['ledgerId' => $this->writeLedger->id]))
+            ->get(tenant_route_url('ledger.edit', ['ledgerId' => $this->writeLedger->id]))
             ->assertOk();
 
         $this->actingAs($this->adminUser)
-            ->get(tenant_route('ledger.edit', ['ledgerId' => $this->readLedger->id]))
+            ->get(tenant_route_url('ledger.edit', ['ledgerId' => $this->readLedger->id]))
             ->assertOk();
     }
 
     public function test_writer_can_access_edit_page_for_writable_ledger()
     {
         $this->actingAs($this->writerUser)
-            ->get(tenant_route('ledger.edit', ['ledgerId' => $this->writeLedger->id]))
+            ->get(tenant_route_url('ledger.edit', ['ledgerId' => $this->writeLedger->id]))
             ->assertOk();
     }
 
     public function test_writer_is_forbidden_to_access_edit_page_for_non_writable_ledger()
     {
         $this->actingAs($this->writerUser)
-            ->get(tenant_route('ledger.edit', ['ledgerId' => $this->readLedger->id]))
+            ->get(tenant_route_url('ledger.edit', ['ledgerId' => $this->readLedger->id]))
             ->assertForbidden();
     }
 
     public function test_viewer_is_forbidden_to_access_edit_page()
     {
         $this->actingAs($this->viewerUser)
-            ->get(tenant_route('ledger.edit', ['ledgerId' => $this->writeLedger->id]))
+            ->get(tenant_route_url('ledger.edit', ['ledgerId' => $this->writeLedger->id]))
             ->assertForbidden();
     }
-}
-
-function tenant_route(string $name, array $parameters = []): string
-{
-    return route($name, array_merge(['tenant' => tenant('id')], $parameters));
 }

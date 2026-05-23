@@ -95,7 +95,7 @@ class UserServiceTest extends TestCase
         $user = Mockery::mock(User::class);
         $organization = Mockery::mock(Organization::class);
 
-        $user->shouldReceive('hasRole')->with(\App\Models\Role::SUPER_ADMIN)->andReturn(false);
+        $user->shouldReceive('hasRole')->with(Role::SUPER_ADMIN)->andReturn(false);
         $user->shouldReceive('hasPermissionTo')->with('specific-permission')->andReturn(true);
 
         $userService->shouldReceive('hasPermissionForOrganization')

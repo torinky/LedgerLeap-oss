@@ -2,16 +2,20 @@
 
 namespace Tests\Feature\Http\Controllers;
 
+use App\Enums\FolderPermissionType;
 use App\Models\ColumnDefine;
 use App\Models\Folder;
 use App\Models\Ledger;
 use App\Models\LedgerDefine;
+use App\Models\RoleFolderPermission;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
-use Tests\TestCase; // 追加
+use Tests\TestCase;
+
+// 追加
 
 class LedgerLookupControllerTest extends TestCase
 {
@@ -58,10 +62,10 @@ class LedgerLookupControllerTest extends TestCase
         // Grant folder permission to the admin role
         $this->tenant->run(function () use ($adminRole) {
             $folder = Folder::create(['title' => '/', 'creator_id' => $this->adminUser->id, 'modifier_id' => $this->adminUser->id]);
-            \App\Models\RoleFolderPermission::create([
+            RoleFolderPermission::create([
                 'role_id' => $adminRole->id,
                 'folder_id' => $folder->id,
-                'permission' => \App\Enums\FolderPermissionType::ADMIN,
+                'permission' => FolderPermissionType::ADMIN,
                 'modifier_id' => $this->adminUser->id,
             ]);
         });
@@ -110,14 +114,14 @@ class LedgerLookupControllerTest extends TestCase
         ]);
 
         $this->get('/'.$this->tenant->id.'/l/common-term')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=common-term&highlight=common-term&l=&f=');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=common-term');
     }
 
     #[Test]
     public function it_redirects_to_index_on_zero_matches()
     {
         $this->get('/'.$this->tenant->id.'/l/non-existent')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=non-existent&highlight=non-existent&l=&f=');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=non-existent');
     }
 
     #[Test]
@@ -130,6 +134,6 @@ class LedgerLookupControllerTest extends TestCase
         ]);
 
         $this->get('/'.$this->tenant->id.'/l/unique-id-for-list?mode=list')
-            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=unique-id-for-list&highlight=unique-id-for-list&l=&f=');
+            ->assertRedirect('/'.$this->tenant->id.'/ledger?q=unique-id-for-list');
     }
 }

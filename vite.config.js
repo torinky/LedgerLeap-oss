@@ -7,6 +7,7 @@ export default defineConfig(({ mode }) => {
     const env = loadEnv(mode, process.cwd(), '');
     
     return {
+        base: '/build/',
         plugins: [
             laravel({
                 input: [
@@ -16,6 +17,7 @@ export default defineConfig(({ mode }) => {
                     'resources/sass/ledgerEdit.scss',
                     'resources/sass/ledgerDefineEdit.scss',
                     'resources/sass/ledgerShow.scss',
+                    'resources/css/filament/admin/theme.css',
                     'resources/sass/filamentCustom.scss',
                     'resources/css/tree.css',
                     'resources/js/app.js',
@@ -23,7 +25,8 @@ export default defineConfig(({ mode }) => {
                     'resources/js/ledgerIndex.js',
                     'resources/js/ledgerShow.js',
                     'resources/js/ledgerDefineEdit.js',
-                    'resources/sass/app.scss',
+                    'resources/js/admin-announcement-banner-preview.js',
+                    'resources/js/filament-tree.js',
                 ],
                 refresh: true,
             }),

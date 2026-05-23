@@ -1,3 +1,4 @@
+{{-- 関連案件タブ用: 識別理由インジケーター（null=通常リスト） --}}
 @props([
     'ledgerRecord' => null,
     'highlightKeyword' => null,
@@ -6,7 +7,11 @@
     'allAttachments' => [],
     'filteredColumnDefines' => [],
     'currentTenantId' => null,
-    'relatedBadge' => null,    {{-- 関連案件タブ用: 識別理由インジケーター（null=通常リスト） --}}
+    'relatedBadge' => null,
+    'selectedFileId' => null,
+    'selectedLedgerId' => null,
+    'selectedColumnId' => null,
+    'expandableObserveResize' => true,
 ])
 @php
     use App\Helpers\SearchHelper;
@@ -31,8 +36,13 @@
         }
     }
 @endphp
-<tr class="hover group hover:bg-accent/20" wire:key="ledger-row-{{ $ledgerRecord->id }}">
-    <th class=" border flex-col bg-accent/20">
+@php
+    $isSelectedLedger = $selectedLedgerId !== null && (int) $selectedLedgerId === (int) $ledgerRecord->id;
+@endphp
+<tr id="ledger-row-{{ $ledgerRecord->id }}" tabindex="-1"
+    class="hover group hover:bg-accent/20 focus:outline-none {{ $isSelectedLedger ? 'ring-2 ring-primary/40 bg-primary/5' : '' }}"
+    wire:key="ledger-row-{{ $ledgerRecord->id }}">
+    <th scope="row" class=" border flex-col bg-accent/20">
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.edit') }}">
             @if ($canUpdate && !$ledgerRecord->isLocked())
                 <a href="{{ route('ledger.edit', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id]) }}"
@@ -52,7 +62,14 @@
 
 
         <div class="tooltip tooltip-right" data-tip="{{ __('ledger.show_details') }}">
-            <a href="{{ route('ledger.show', ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id, 'highlight' => $highlightKeyword]) }}"
+            @php
+                $ledgerShowParams = ['tenant' => $currentTenantId, 'ledgerId' => $ledgerRecord->id];
+
+                if (! empty($highlightKeyword)) {
+                    $ledgerShowParams['highlight'] = $highlightKeyword;
+                }
+            @endphp
+            <a href="{{ route('ledger.show', $ledgerShowParams) }}"
                 class="btn btn-outline btn-info btn-sm my-1 btn-square opacity-70 hover:opacity-100"
                 target="ledgerShow_{{ $ledgerRecord->define->id }}}}">
                 <i class="fas fa-table-list"></i>
@@ -62,7 +79,11 @@
     </th>
 
     @foreach ($filteredColumnDefines as $cKey => $columnDefine)
-        <td class="hover:bg-accent/20 border px-4 py-2">
+        @php
+            $isSelectedColumn = $selectedColumnId !== null && (int) $selectedColumnId === (int) ($columnDefine->id ?? -1);
+        @endphp
+        <td id="ledger-cell-{{ $ledgerRecord->id }}-{{ $columnDefine->id ?? 'na' }}"
+            class="hover:bg-accent/20 border px-4 py-2 transition-colors {{ $isSelectedColumn ? 'ring-2 ring-primary/40 bg-primary/5' : '' }}">
             @php
                 $isAttachmentColumn =
                     in_array($columnDefine->type ?? null, ['file', 'files']) ||
@@ -84,151 +105,37 @@
                     unset($mf); // 参照を解除してサイドエフェクトを防ぐ
                 @endphp
                 <x-ledger.attachment-list :files="$mockFiles" mode="compact" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
-                    :search="$highlightKeyword" />
+                    :search="$highlightKeyword" :selected-file-id="$selectedFileId" />
                 <x-ledger.attachment-list :files="$mockFiles" mode="icon-only" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
-                    :search="$highlightKeyword" />
+                    :search="$highlightKeyword" :selected-file-id="$selectedFileId" />
                 <x-ledger.attachment-list :files="$mockFiles" mode="full" :column-id="$mockColumnId" :tenant-id="$currentTenantId"
-                    :search="$highlightKeyword" />
+                    :search="$highlightKeyword" :selected-file-id="$selectedFileId" />
             @elseif($isAttachmentColumn)
-                @php
-                    $files = [];
-                    // ここでは、既に $allAttachments は親（RecordsTable）から渡されており、
-                    // [ledger_id => attachments[]] の形でグループ化されている。
-                    $columnId = $columnDefine->id ?? null;
-                    $attached = $allAttachments->get($ledgerRecord->id, collect())->where('column_id', $columnId);
-                    foreach ($attached as $af) {
-                        // Download Logic (Same as ColumnHtmlService)
-                        $mainDownloadUrl = route('file.download', [
-                            'tenant' => $currentTenantId,
-                            'attachedFile' => $af->id,
-                        ]);
-                        $thumbnailUrl = null;
-                        if (
-                            str_starts_with($af->original_mime_type, 'image/') &&
-                            \Illuminate\Support\Facades\Storage::disk('public')->exists(
-                                \App\Helpers\AttachedFilePathHelper::getThumbnailStoragePath(
-                                    basename($af->filename),
-                                    $currentTenantId,
-                                ),
-                            )
-                        ) {
-                            $thumbnailUrl = route('file.download', [
-                                'tenant' => $currentTenantId,
-                                'attachedFile' => $af->id,
-                                'thumbnail' => 'true',
-                            ]);
-                        }
-                        $originalDownloadUrl = route('file.download', [
-                            'tenant' => $currentTenantId,
-                            'attachedFile' => $af->id,
-                            'original' => true,
-                        ]);
-                        $optimizedPdfDownloadUrl = route('file.download', [
-                            'tenant' => $currentTenantId,
-                            'attachedFile' => $af->id,
-                        ]);
-
-                        $primaryDownload = null;
-                        $secondaryDownload = null;
-
-                        if (str_starts_with($af->original_mime_type, 'image/')) {
-                            $primaryDownload = [
-                                'url' => $originalDownloadUrl,
-                                'label' => __('ledger.uploadedFile.download_image'),
-                                'icon' => 'fa-download',
-                            ];
-                            $secondaryDownload = [
-                                'url' => $optimizedPdfDownloadUrl,
-                                'label' => 'PDF',
-                                'icon' => 'fa-file-pdf',
-                                'tooltip' => __('ledger.uploadedFile.download_pdf_with_text'),
-                            ];
-                        } elseif ($af->original_mime_type === 'application/pdf' && $af->optimized) {
-                            $primaryDownload = [
-                                'url' => $optimizedPdfDownloadUrl,
-                                'label' => __('ledger.uploadedFile.download_optimized_pdf'),
-                                'icon' => 'fa-file-pdf',
-                            ];
-                            $secondaryDownload = [
-                                'url' => $originalDownloadUrl,
-                                'label' => 'Original',
-                                'icon' => 'fa-file',
-                                'tooltip' => __('ledger.uploadedFile.download_original_pdf'),
-                            ];
-                        } else {
-                            $primaryDownload = [
-                                'url' => $mainDownloadUrl,
-                                'label' => __('ledger.download'),
-                                'icon' => 'fa-download',
-                            ];
-                        }
-
-                        $files[] = [
-                            'id' => $af->id,
-                            'filename' =>
-                                $af->original_filename ??
-                                ($ledgerRecord->content[$columnId][$af->hashedbasename] ??
-                                    (basename($af->filename) ?? '')),
-                            'mime' => $af->original_mime_type ?? ($af->mime ?? 'application/octet-stream'),
-                            'status' => $af->getDisplayStatus()->value ?? 'completed',
-                            'size' => $af->size,
-                            'thumbnailUrl' => $thumbnailUrl,
-                            'downloadUrl' => $mainDownloadUrl, // Backward compatibility
-                            'primary_download' => $primaryDownload,
-                            'secondary_download' => $secondaryDownload,
-                            'created_at' => $af->created_at,
-                            'is_hit' => isset($hitHashes[$af->hashedbasename]),
-                        ];
-                    }
-                    if (
-                        empty($files) &&
-                        isset($ledgerRecord->content_attached[$columnId]) &&
-                        is_array($ledgerRecord->content_attached[$columnId])
-                    ) {
-                        foreach ($ledgerRecord->content_attached[$columnId] as $hashed => $metaOrName) {
-                            $originalName = is_array($metaOrName)
-                                ? $metaOrName['name'] ?? ($metaOrName['original'] ?? $hashed)
-                                : $metaOrName ?? $hashed;
-                            $ext = strtolower(pathinfo($originalName, PATHINFO_EXTENSION));
-                            $mime = match ($ext) {
-                                'jpg', 'jpeg', 'png', 'gif', 'bmp', 'webp', 'svg' => 'image/*',
-                                'pdf' => 'application/pdf',
-                                'doc',
-                                'docx'
-                                    => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-                                'xls', 'xlsx' => 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                default => 'application/octet-stream',
-                            };
-                            $files[] = [
-                                'id' => 0,
-                                'filename' => $originalName,
-                                'mime' => $mime,
-                                'status' => 'completed',
-                                'thumbnailUrl' => null,
-                                'downloadUrl' => '#',
-                                'is_hit' => isset($hitHashes[$hashed]),
-                            ];
-                        }
-                    }
-                @endphp
-                @if (!empty($files))
-                    <x-ledger.attachment-list :files="$files" mode="compact" :column-id="$columnDefine->id" :tenant-id="$currentTenantId"
-                        :search="$highlightKeyword" />
-                @else
-                    <x-ledger.empty-message />
-                @endif
+                <livewire:ledger.records-table-row
+                    :ledgerId="$ledgerRecord->id"
+                    :columnId="$columnDefine->id"
+                    :highlightKeyword="$highlightKeyword"
+                    :canView="$canView"
+                    :currentTenantId="$currentTenantId"
+                    :selectedFileId="$selectedFileId"
+                    wire:key="ledger-attachment-cell-{{ $ledgerRecord->id }}-{{ $columnDefine->id }}"
+                    defer />
             @else
                 @if (empty($ledgerRecord->content[$columnDefine->id]))
                     {{--                    @php \Log::info('Debug table-row: content empty', ['id' => $columnDefine->id, 'content' => $ledgerRecord->content]); @endphp --}}
-                    <x-ledger.empty-message />
+                    <div class="text-neutral/50 flex w-full items-center justify-center">
+                        <i class="fa-solid fa-cube text-info/50 mr-2"></i>
+                        <span>{{ __('ledger.empty') }}</span>
+                    </div>
                 @else
                     @php
-                        //                        \Log::info('Debug table-row: rendering content', ['id' => $columnDefine->id, 'val' => $ledgerRecord->content[$columnDefine->id]]);
-                        // ColumnHtmlServiceを使用してバッジ表示などを適切にレンダリング
+                        // ColumnHtmlServiceでHTMLを生成し、もっと見るの表示可否は
+                        // expandable-content 側の実測（overflow）に委ねる。
                         $columnHtml = ColumnHtml::setAttachmentCollection(
                             $allAttachments->get($ledgerRecord->id, collect())->keyBy('hashedbasename'),
                         )
                             ->setAttachmentContents($ledgerRecord->content_attached[$columnDefine->id] ?? [])
+                            ->setSource('table-row')
                             ->show(
                                 $columnDefine,
                                 $ledgerRecord->content[$columnDefine->id],
@@ -243,12 +150,16 @@
                         $columnHtmlString = $columnHtml->toHtml();
                     @endphp
 
-                    <x-expandable-content :content="$columnHtmlString" max-height="6rem" />
+                    <x-expandable-content
+                        :content="$columnHtmlString"
+                        max-height="6rem"
+                        :observe-resize="$expandableObserveResize"
+                    />
                 @endif
             @endif
         </td>
     @endforeach
-    {{--                        <td class="border px-4 py-2 break-words whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}} --}}
+        {{--                        <td class="border px-4 py-2 wrap-break-word whitespace-pre-wrap">{{$ledgerRecord->updated_at->format('Y-m-d H:i:s')}} --}}
 
 
     <td class="border px-4 py-2 relative">

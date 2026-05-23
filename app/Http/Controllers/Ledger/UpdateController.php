@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Ledger;
 
 use App\Http\Controllers\Controller;
+use App\Models\Folder;
 use App\Models\Ledger;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\View;
 
 class UpdateController extends Controller
 {
-    public function edit(request $request): \Illuminate\Contracts\View\View
+    public function edit(Request $request): \Illuminate\Contracts\View\View
     {
 
         $ledgerId = (int) $request->route('ledgerId');
@@ -21,14 +22,25 @@ class UpdateController extends Controller
             abort(403);
         }
 
+        // ── パンくずリストの取得 ──────────────────────────────────────
+        $breadcrumbs = [];
+        if ($ledgerRecord->define && $ledgerRecord->define->folder_id) {
+            $folder = Folder::with('ancestors')->find($ledgerRecord->define->folder_id);
+            if ($folder) {
+                $breadcrumbs = $folder->ancestors->all();
+                $breadcrumbs[] = $folder;
+            }
+        }
+
         return View::make('ledger.edit', [
             'ledgerDefineRecord' => $ledgerRecord->define,
             'ledger' => $ledgerRecord,
+            'breadcrumbs' => $breadcrumbs,
         ]);
 
     }
 
-    public function delete(request $request)
+    public function delete(Request $request)
     {
         $ledgerId = (int) $request->route('ledgerId');
 

@@ -2,7 +2,7 @@
 
 namespace App\Providers\Filament;
 
-use Althinect\FilamentSpatieRolesPermissions\FilamentSpatieRolesPermissionsPlugin;
+use App\Filament\Resources\AdminAnnouncementResource;
 use App\Filament\Widgets\DashboardLinksWidget;
 use Filament\Http\Middleware\Authenticate;
 use Filament\Http\Middleware\DisableBladeIconComponents;
@@ -12,13 +12,14 @@ use Filament\Pages\Dashboard;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\Width;
+use Filament\View\PanelsRenderHook;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
-use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken;
+use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Routing\Middleware\SubstituteBindings;
 use Illuminate\Session\Middleware\AuthenticateSession;
 use Illuminate\Session\Middleware\StartSession;
-use Illuminate\Support\Facades\Blade;
 use Illuminate\View\Middleware\ShareErrorsFromSession;
 
 class AdminPanelProvider extends PanelProvider
@@ -27,9 +28,7 @@ class AdminPanelProvider extends PanelProvider
     {
         // URLクエリパラメータからfrom_tenantを取得し、セッションに保存
         if ($fromTenantId = request()->query('tenant')) {
-            if (! empty($fromTenantId)) {
-                session()->put('filament_from_tenant_id', $fromTenantId);
-            }
+            session()->put('filament_from_tenant_id', $fromTenantId);
         }
         $fromTenantId = session('filament_from_tenant_id');
 
@@ -37,11 +36,12 @@ class AdminPanelProvider extends PanelProvider
             ->default()
             ->id('admin')
             ->path('app')
+            ->maxContentWidth(Width::Full)
             ->colors([
                 'primary' => Color::Amber,
             ])
+            ->viteTheme('resources/css/filament/admin/theme.css')
             ->plugins([
-                FilamentSpatieRolesPermissionsPlugin::make(),
             ])
             ->discoverResources(in: app_path('Filament/Resources'), for: 'App\\Filament\\Resources')
             ->discoverPages(in: app_path('Filament/Pages'), for: 'App\\Filament\\Pages')
@@ -60,6 +60,12 @@ class AdminPanelProvider extends PanelProvider
             ->globalSearchKeyBindings(['command+k', 'ctrl+k'])
 //            ->navigation(false)
             ->navigationItems([
+                NavigationItem::make(__('ledger.admin_announcement_banner_title'))
+                    ->icon('heroicon-o-megaphone')
+                    ->activeIcon('heroicon-s-megaphone')
+                    ->isActiveWhen(fn (): bool => request()->routeIs('filament.admin.resources.admin-announcements.*'))
+                    ->url(fn (): string => AdminAnnouncementResource::getUrl('index').($fromTenantId ? '?tenant='.$fromTenantId : ''))
+                    ->sort(0),
                 NavigationItem::make(__('ledger.navigation.back_to_tenant'))
                     ->url(function () {
                         $fromTenantId = session('filament_from_tenant_id');
@@ -114,7 +120,7 @@ class AdminPanelProvider extends PanelProvider
                 StartSession::class,
                 AuthenticateSession::class,
                 ShareErrorsFromSession::class,
-                VerifyCsrfToken::class,
+                PreventRequestForgery::class,
                 SubstituteBindings::class,
                 DisableBladeIconComponents::class,
                 DispatchServingFilamentEvent::class,
@@ -122,17 +128,9 @@ class AdminPanelProvider extends PanelProvider
             ->authMiddleware([
                 Authenticate::class,
             ])
-//            ->theme(asset('css/filament/admin/theme.css'))
-
-//            ->viteTheme('resources/css/filament/admin/theme.css')
             ->renderHook(
-                'panels::global-search.after',
-                fn (): string => Blade::render('
-                    <div class="flex items-center gap-x-3">
-                        @livewire(\App\Livewire\Common\PageQrCode::class, ["triggerType" => "filament"])
-                        <livewire:tenant-switcher-filament :show-folders="false" />
-                    </div>
-                '),
+                PanelsRenderHook::GLOBAL_SEARCH_AFTER,
+                fn (): string => view('livewire.filament-topbar')->render(),
             );
     }
 }

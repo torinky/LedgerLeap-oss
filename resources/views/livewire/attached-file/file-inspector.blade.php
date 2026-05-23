@@ -42,7 +42,6 @@
             this.performanceMetrics.drawerOpenEnd = performance.now();
             const duration = this.performanceMetrics.drawerOpenEnd - this.performanceMetrics.drawerOpenStart;
             console.log('[FileInspector Performance] Drawer open duration:', duration.toFixed(2), 'ms');
-            this.$wire.logPerformance('drawer_open', duration);
             // リセット
             this.performanceMetrics.drawerOpenStart = null;
         }
@@ -55,7 +54,6 @@
             const duration = performance.now() - start;
             console.log('[FileInspector Performance] Tab switch:', fromTab, '->', toTab, duration.toFixed(2), 'ms');
             this.performanceMetrics.tabSwitchTimes.push({ from: fromTab, to: toTab, duration });
-            this.$wire.logPerformance('tab_switch', duration, { from: fromTab, to: toTab });
         });
     }
     @endif
@@ -65,6 +63,7 @@
      x-init="$watch('isLoading', (value) => { if (!value && performanceMetrics.drawerOpenStart) { measureDrawerOpened(); } })"
      @endif
      @keydown.escape.window="open = false; $wire.close()"
+     @file-inspector-selection-changed.window="const url = new URL(window.location.href); if ($event.detail.selectedFileId) { url.searchParams.set('file', $event.detail.selectedFileId); } else { url.searchParams.delete('file'); } window.history.replaceState({}, '', url);"
      @open-file-inspector.window="
         open = true;
         isLoading = true;
@@ -78,14 +77,14 @@
     <div x-show="open" x-transition:enter="transition ease-out duration-300" x-transition:enter-start="opacity-0"
          x-transition:enter-end="opacity-100" x-transition:leave="transition ease-in duration-200"
          x-transition:leave-start="opacity-100" x-transition:leave-end="opacity-0" @click="open = false; $wire.close()"
-         class="fixed inset-0 bg-base-content/20 backdrop-blur-xs z-[55]" aria-hidden="true"></div>
+         class="fixed inset-0 bg-base-content/20 backdrop-blur-xs z-55" aria-hidden="true"></div>
 
     {{-- Drawer content --}}
     <div x-show="open" x-transition:enter="transition ease-out duration-300 transform"
          x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0"
          x-transition:leave="transition ease-in duration-200 transform" x-transition:leave-start="translate-x-0"
          x-transition:leave-end="translate-x-full"
-         class="fixed inset-y-0 right-0 w-full md:w-[600px] bg-base-100 shadow-2xl flex flex-col focus:outline-hidden z-[60]"
+          class="fixed inset-y-0 right-0 w-full md:w-[600px] bg-base-100 shadow-2xl flex flex-col focus:outline-hidden z-60 overflow-hidden"
          role="dialog" aria-modal="true" aria-labelledby="drawer-title" x-cloak>
 
         {{-- Skeleton UI (Always rendered, controlled by isLoading) --}}
@@ -100,71 +99,104 @@
                  x-transition:leave="transition ease-in duration-150"
                  x-transition:leave-start="opacity-100"
                  x-transition:leave-end="opacity-0"
-                 class="flex flex-col flex-1 h-full"
+                  class="flex flex-col flex-1 h-full min-w-0 overflow-x-hidden"
                  x-cloak>
                 @include('livewire.attached-file.file-inspector.header')
 
-                {{-- Scrollable content area --}}
-                <div class="flex-1 overflow-y-auto relative" style="scrollbar-width: thin;">
+                @include('livewire.attached-file.file-inspector.quick-actions')
+                @include('livewire.attached-file.file-inspector.preview')
 
-                    @include('livewire.attached-file.file-inspector.quick-actions')
-                    @include('livewire.attached-file.file-inspector.preview')
-
-                    @if($performanceEnabled && $tabSwitchMetricEnabled)
-                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]"
-                         x-data="{
-                             previousTab: 'content',
-                             init() {
-                                 this.$watch('$wire.selectedTab', (value, oldValue) => {
-                                     if (oldValue && value !== oldValue) {
-                                         // タブ切り替え時間を測定
-                                         const start = performance.now();
-                                         requestAnimationFrame(() => {
-                                             const duration = performance.now() - start;
-                                             console.log('[FileInspector Performance] Tab switch:', oldValue, '->', value, duration.toFixed(2), 'ms');
-                                             $wire.logPerformance('tab_switch', duration, { from: oldValue, to: value });
-                                         });
-                                         this.previousTab = value;
-                                     }
-                                 });
-                             }
-                         }">
+                {{-- Scrollable tab area only --}}
+                <div class="flex-1 min-h-0 overflow-y-auto overflow-x-hidden relative min-w-0" style="scrollbar-width: thin;">
+                    <div class="flex flex-col min-h-[400px] px-2 pb-2 relative min-w-0 overflow-x-hidden"
+                        @if($performanceEnabled && $tabSwitchMetricEnabled)
+                            x-data="{
+                                previousTab: 'content',
+                                init() {
+                                    this.$watch('$wire.selectedTab', (value, oldValue) => {
+                                        if (oldValue && value !== oldValue) {
+                                            // タブ切り替え時間を測定
+                                            const start = performance.now();
+                                            requestAnimationFrame(() => {
+                                                const duration = performance.now() - start;
+                                                console.log('[FileInspector Performance] Tab switch:', oldValue, '->', value, duration.toFixed(2), 'ms');
+                                            });
+                                            this.previousTab = value;
+                                        }
+                                    });
+                                }
+                            }"
+                        @endif>
                         {{-- Tier 2: Tab switching loading overlay REMOVED per user request (Reference: Phase 6 remediation) --}}
-                    @else
-                    <div class="flex-1 flex flex-col min-h-0 px-2 pb-2 relative min-h-[400px]">
-                        {{-- Tier 2: Tab switching loading overlay REMOVED per user request (Reference: Phase 6 remediation) --}}
-                    @endif
                         <x-mary-tabs wire:model="selectedTab"
+                                     class="w-full min-w-0 overflow-x-hidden"
                                      tabsClass="flex flex-col mt-2"
                                      activeClass="border-b-0"
-                                     labelDivClass="tabs tabs-lift ml-3"
-                                     class="w-full">
+                                     labelDivClass="tabs tabs-lift pl-3">
 
                             <x-mary-tab name="content" label="{{ __('ledger.file_inspector.tabs.content') }}"
                                         icon="o-document-text"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="w-full max-w-full min-w-0 overflow-x-hidden shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
                                 @include('livewire.attached-file.file-inspector.tabs.content')
                             </x-mary-tab>
 
                             <x-mary-tab name="details" label="{{ __('ledger.file_inspector.tabs.details') }}"
                                         icon="o-information-circle"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="w-full max-w-full min-w-0 overflow-x-hidden shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
+                                @if ($this->isTabLoaded('details'))
+                                    <x-element.loading-overlay tier="2" target="selectedTab" />
+                                @else
+                                    <x-element.loading-overlay tier="2" target="selectedTab">
+                                        <div class="space-y-4 p-2 w-full animate-pulse">
+                                            <div class="h-6 bg-base-300 rounded w-40 shimmer"></div>
+                                            <x-element.skeleton-table rows="6" cols="2" />
+                                            <x-element.skeleton-list items="3" />
+                                        </div>
+                                    </x-element.loading-overlay>
+                                @endif
+
                                 @include('livewire.attached-file.file-inspector.tabs.details')
                             </x-mary-tab>
 
                             <x-mary-tab name="history" label="{{ __('ledger.file_inspector.tabs.history') }}"
                                         icon="o-clock"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="w-full max-w-full min-w-0 overflow-x-hidden shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
+                                @if ($this->isTabLoaded('history'))
+                                    <x-element.loading-overlay tier="2" target="selectedTab" />
+                                @else
+                                    <x-element.loading-overlay tier="2" target="selectedTab">
+                                        <div class="space-y-4 p-2 w-full animate-pulse">
+                                            <div class="h-6 bg-base-300 rounded w-44 shimmer"></div>
+                                            <x-element.skeleton-list items="6" />
+                                            <div class="h-px bg-base-200 my-4"></div>
+                                            <div class="h-6 bg-base-300 rounded w-36 shimmer"></div>
+                                            <x-element.skeleton-list items="5" />
+                                        </div>
+                                    </x-element.loading-overlay>
+                                @endif
+
                                 @include('livewire.attached-file.file-inspector.tabs.history')
                             </x-mary-tab>
 
                             <x-mary-tab name="permissions" label="{{ __('ledger.file_inspector.tabs.permissions') }}"
                                         icon="o-shield-check"
-                                        class="shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0"
+                                        class="w-full max-w-full min-w-0 overflow-x-hidden shadow-md tab-content bg-base-100 border-base-300 p-6 border-t-0 relative"
                             >
+                                @if ($this->isTabLoaded('permissions'))
+                                    <x-element.loading-overlay tier="2" target="selectedTab" />
+                                @else
+                                    <x-element.loading-overlay tier="2" target="selectedTab">
+                                        <div class="space-y-4 p-2 w-full animate-pulse">
+                                            <div class="h-6 bg-base-300 rounded w-52 shimmer"></div>
+                                            <x-element.skeleton-table rows="4" cols="3" />
+                                            <x-element.skeleton-list items="3" />
+                                        </div>
+                                    </x-element.loading-overlay>
+                                @endif
+
                                 @include('livewire.attached-file.file-inspector.tabs.permissions')
                             </x-mary-tab>
                         </x-mary-tabs>

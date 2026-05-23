@@ -4,7 +4,7 @@ namespace App\Filament\Tables\Actions;
 
 use App\Enums\FolderPermissionType;
 use App\Models\RoleFolderPermission;
-use Filament\Tables\Actions\Action;
+use Filament\Actions\Action;
 use Illuminate\Database\Eloquent\Model;
 
 class DeleteNotification extends Action

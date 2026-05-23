@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Livewire\Ledger;
 
+use App\Enums\WorkflowStatus;
 use App\Enums\FolderPermissionType;
 use App\Livewire\Ledger\RelatedLedgers;
 use App\Models\ColumnDefine;
@@ -11,7 +12,10 @@ use App\Models\LedgerDefine;
 use App\Models\RoleFolderPermission;
 use App\Models\Tenant;
 use App\Models\User;
+use App\Services\RagSearchService;
 use App\Services\UserService;
+use Illuminate\Support\Facades\Cache;
+use Mockery;
 use Livewire\Livewire;
 use PHPUnit\Framework\Attributes\Test;
 use Spatie\Permission\Models\Permission;
@@ -295,7 +299,7 @@ class RelatedLedgersTest extends TestCase
     public function it_handles_rag_service_unavailable_gracefully(): void
     {
         // RagSearchService が例外を投げる状況をモック
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
+        $this->mock(RagSearchService::class, function ($mock) {
             $mock->shouldReceive('searchLedgers')->andThrow(new \RuntimeException('RAG service unavailable'));
         });
 
@@ -331,7 +335,7 @@ class RelatedLedgersTest extends TestCase
 
         // RagSearchService が関連レコードを返すようにモック
         // 戻り値の形式: [['ledger_id' => id, 'max_score' => float, ...], ...]
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) use ($relatedLedger) {
+        $this->mock(RagSearchService::class, function ($mock) use ($relatedLedger) {
             $mock->shouldReceive('searchLedgers')
                 ->once()
                 ->andReturn([
@@ -356,10 +360,58 @@ class RelatedLedgersTest extends TestCase
     }
 
     #[Test]
+    public function it_uses_passage_prefix_and_related_limit_for_semantic_search(): void
+    {
+        $relatedLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-003',
+                    1 => '設備関連レコード',
+                    2 => '関連案件の意味検索確認用',
+                ],
+            ]);
+
+        $semanticLimit = config('rag.related_ledger.semantic_limit', 10);
+
+        $this->mock(RagSearchService::class, function ($mock) use ($relatedLedger, $semanticLimit) {
+            $mock->shouldReceive('searchLedgers')
+                ->once()
+                ->with(
+                    Mockery::type('string'),
+                    $semanticLimit,
+                    Mockery::on(function (array $filters) {
+                        return isset($filters['user']) && $filters['user'] instanceof User;
+                    }),
+                    'passage'
+                )
+                ->andReturn([
+                    [
+                        'ledger_id' => $relatedLedger->id,
+                        'max_score' => 0.91,
+                        'best_chunk_text' => '関連案件の意味検索確認用',
+                        'chunk_count' => 1,
+                    ],
+                ]);
+        });
+
+        $component = new RelatedLedgers;
+        $component->ledgerId = $this->ledger->id;
+
+        $results = $component->searchBySemantic($this->ledger);
+
+        $this->assertFalse($results->isEmpty());
+        $this->assertSame($relatedLedger->id, $results->first()['ledger']->id);
+        $this->assertTrue($component->ragAvailable);
+    }
+
+    #[Test]
     public function it_excludes_self_from_semantic_search(): void
     {
         // RagSearchService が自身も含む結果を返すモック
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) {
+        $this->mock(RagSearchService::class, function ($mock) {
             $mock->shouldReceive('searchLedgers')
                 ->once()
                 ->andReturn([
@@ -521,6 +573,71 @@ class RelatedLedgersTest extends TestCase
         $this->assertNotContains('semantic', $reasons);
     }
 
+    #[Test]
+    public function it_updates_display_level_from_event(): void
+    {
+        $component = Livewire::test(RelatedLedgers::class, ['ledgerId' => $this->ledger->id]);
+
+        $component->assertSet('displayLevel', 1);
+        $component->dispatch('displayLevelUpdated', displayLevel: 3);
+        $component->assertSet('displayLevel', 3);
+    }
+
+    #[Test]
+    public function it_targets_update_display_level_in_loading_overlay(): void
+    {
+        $component = Livewire::withoutLazyLoading()->test(RelatedLedgers::class, ['ledgerId' => $this->ledger->id]);
+
+        $this->assertStringContainsString(
+            'wire:target="showIdentifier,showSemantic,displayLevel"',
+            $component->html()
+        );
+    }
+
+    #[Test]
+    public function it_disables_resize_observation_for_related_tab_rows(): void
+    {
+        $relatedLedger = Ledger::factory()
+            ->for($this->define, 'define')
+            ->for($this->user, 'creator')
+            ->for($this->user, 'modifier')
+            ->create([
+                'content' => [
+                    0 => 'EQ-001',
+                    1 => str_repeat('関連案件タブの表示確認用テキスト', 4),
+                    2 => '説明',
+                ],
+                'status' => WorkflowStatus::NONE,
+            ]);
+        $relatedLedger->load('define');
+
+        $view = $this->blade(
+            <<<'BLADE'
+<x-ledger.table-row
+    :ledger-record="$ledger"
+    :highlight-keyword="null"
+    :can-update="false"
+    :can-view="true"
+    :all-attachments="collect()"
+    :filtered-column-defines="$filteredColumnDefines"
+    :current-tenant-id="$currentTenantId"
+    :related-badge="null"
+    :selected-file-id="null"
+    :selected-ledger-id="null"
+    :selected-column-id="null"
+    :expandable-observe-resize="false"
+/>
+BLADE,
+            [
+                'ledger' => $relatedLedger,
+                'filteredColumnDefines' => $this->define->column_define,
+                'currentTenantId' => $this->tenant->id,
+            ]
+        );
+
+        $view->assertSee('observeResize: false', false);
+    }
+
     // ─────────────────────────────────────────────
     // Sprint 3: ページング
     // ─────────────────────────────────────────────
@@ -560,8 +677,8 @@ class RelatedLedgersTest extends TestCase
             ->for($this->folder)
             ->create([
                 'column_define' => [
-                    new \App\Models\ColumnDefine(0, '管理番号', 'auto_number', 1),
-                    new \App\Models\ColumnDefine(1, 'タイトル', 'text', 2),
+                    new ColumnDefine(0, '管理番号', 'auto_number', 1),
+                    new ColumnDefine(1, 'タイトル', 'text', 2),
                 ],
             ]);
 
@@ -619,7 +736,7 @@ class RelatedLedgersTest extends TestCase
             ->for($this->define, 'define')->for($this->user, 'creator')->for($this->user, 'modifier')
             ->create(['content' => [0 => 'EQ-099', 1 => 'スコアテスト', 2 => '']]);
 
-        $this->mock(\App\Services\RagSearchService::class, function ($mock) use ($relatedLedger) {
+        $this->mock(RagSearchService::class, function ($mock) use ($relatedLedger) {
             $mock->shouldReceive('searchLedgers')->once()->andReturn([
                 ['ledger_id' => $relatedLedger->id, 'max_score' => 0.87, 'best_chunk_text' => '', 'chunk_count' => 1],
             ]);
@@ -740,7 +857,7 @@ class RelatedLedgersTest extends TestCase
             ]);
 
         // キャッシュをクリアして確実に最新パターンを取得
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $ledgerWithTextRef->id;
@@ -779,7 +896,7 @@ class RelatedLedgersTest extends TestCase
                 ],
             ]);
 
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $ledger->id;
@@ -833,7 +950,7 @@ class RelatedLedgersTest extends TestCase
                 ],
             ]);
 
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $sourceledger->id;
@@ -895,7 +1012,7 @@ class RelatedLedgersTest extends TestCase
                 ],
             ]);
 
-        \Illuminate\Support\Facades\Cache::tags(['auto_links'])->flush();
+        Cache::tags(['auto_links'])->flush();
 
         $component = new RelatedLedgers;
         $component->ledgerId = $ledger->id;
