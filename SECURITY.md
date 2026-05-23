@@ -2,20 +2,31 @@
 
 ## Supported Versions
 
-Use this section to tell people about which versions of your project are
-currently being supported with security updates.
-
-| Version | Supported          |
-| ------- | ------------------ |
-| 5.1.x   | :white_check_mark: |
-| 5.0.x   | :x:                |
-| 4.0.x   | :white_check_mark: |
-| < 4.0   | :x:                |
+| Version | Supported |
+| ------- | --------- |
+| `main` | :white_check_mark: |
+| public release branches or tags | :x: until the public release policy is finalized |
+| abandoned or archived branches | :x: |
 
 ## Reporting a Vulnerability
 
-Use this section to tell people how to report a vulnerability.
+Please do not open public GitHub issues for security reports.
 
-Tell them where to go, how often they can expect to get an update on a
-reported vulnerability, what to expect if the vulnerability is accepted or
-declined, etc.
+Report suspected vulnerabilities through the private security channel that will be
+listed for the public repository before release. Until that channel is published,
+contact the maintainers directly through the private repository workflow.
+
+Include as much of the following as you can:
+
+- a short summary of the issue
+- affected version, branch, or commit
+- impact and exploitability details
+- reproduction steps or proof of concept
+- any relevant file paths, logs, or screenshots
+
+We will acknowledge legitimate reports, triage the impact, and share status updates
+with the reporter as the investigation progresses. If a report is not security-related,
+we may redirect it to a normal issue or discussion instead.
+
+Do not include live tokens, passwords, or other secrets in the report body unless the
+private channel explicitly requests them.
