@@ -18,6 +18,8 @@ docs/runbooks/skill-maintenance-playbook.md
 docs/runbooks/browser-har-analysis-playbook.md
 docs/runbooks/local-llm-mcp-setup.md
 docs/harnesses/
+.idea/
+LedgerLeap.code-workspace
 docker-compose.prod.yml
 prod.sh
 .env.development

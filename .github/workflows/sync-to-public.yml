@@ -101,6 +101,185 @@ jobs:
     if: ${{ vars.PUBLIC_SYNC_ENABLED == 'true' && needs.preview.outputs.should_sync == 'true' }}
     runs-on: ubuntu-latest
     permissions:
+      contents: read
+    outputs:
+      public_commit_sha: ${{ steps.publish.outputs.public_commit_sha }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Guard sync token
+        shell: bash
+        env:
+          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [[ -z "${PUBLIC_REPO_TOKEN:-}" ]]; then
+            echo "PUBLIC_REPO_TOKEN is required when PUBLIC_SYNC_ENABLED=true"
+            exit 1
+          fi
+
+      - name: Mirror source snapshot into public repo
+        id: publish
+        shell: bash
+        env:
+          PUBLIC_REPO_TOKEN: ${{ secrets.PUBLIC_REPO_TOKEN }}
+          SOURCE_SHA: ${{ github.sha }}
+          INCLUDED_FILES: ${{ needs.preview.outputs.included_files }}
+        run: |
+          set -euo pipefail
+
+          PUBLIC_REPO_DIR="$RUNNER_TEMP/public-repo"
+          PUBLIC_REPO_URL="https://x-access-token:${PUBLIC_REPO_TOKEN}@github.com/${PUBLIC_REPO}.git"
+
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+          git clone --branch main --single-branch "$PUBLIC_REPO_URL" "$PUBLIC_REPO_DIR"
+
+          rsync -a --delete \
+            --exclude-from="$GITHUB_WORKSPACE/.github/sync-excludes.txt" \
+            --exclude='.git/' \
+            "$GITHUB_WORKSPACE"/ \
+            "$PUBLIC_REPO_DIR"/
+
+          git -C "$PUBLIC_REPO_DIR" add -A
+
+          if git -C "$PUBLIC_REPO_DIR" diff --cached --quiet; then
+            public_commit_sha="$(git -C "$PUBLIC_REPO_DIR" rev-parse HEAD)"
+            {
+              echo "public_commit_sha=$public_commit_sha"
+            } >> "$GITHUB_OUTPUT"
+
+            {
+              echo "## Public sync result"
+              echo "- Source SHA: ${SOURCE_SHA}"
+              echo "- Public commit SHA: ${public_commit_sha}"
+              echo "- Included files: ${INCLUDED_FILES:-none}"
+              echo "- Result: no file changes after mirroring"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+
+          git -C "$PUBLIC_REPO_DIR" commit -m "chore(sync): mirror private main [private-ref: ${SOURCE_SHA}]"
+          git -C "$PUBLIC_REPO_DIR" push origin HEAD:main
+
+          public_commit_sha="$(git -C "$PUBLIC_REPO_DIR" rev-parse HEAD)"
+          {
+            echo "public_commit_sha=$public_commit_sha"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## Public sync result"
+            echo "- Source SHA: ${SOURCE_SHA}"
+            echo "- Public commit SHA: ${public_commit_sha}"
+            echo "- Included files: ${INCLUDED_FILES:-none}"
+            echo "- Result: public repo main updated"
+          } >> "$GITHUB_STEP_SUMMARY"name: Sync to public
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: sync-to-public-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  PUBLIC_REPO: torinky/LedgerLeap-oss
+  PUBLIC_SYNC_ENABLED: ${{ vars.PUBLIC_SYNC_ENABLED }}
+
+jobs:
+  preview:
+    name: Preview public sync scope
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    outputs:
+      base_sha: ${{ steps.classify.outputs.base_sha }}
+      should_sync: ${{ steps.classify.outputs.should_sync }}
+      included_files: ${{ steps.classify.outputs.included_files }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Classify changed files
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          base_sha='${{ github.event.before }}'
+          if [[ -z "$base_sha" || "$base_sha" == '0000000000000000000000000000000000000000' ]]; then
+            base_sha="$(git rev-list --max-parents=0 HEAD | tail -n 1)"
+          fi
+
+          mapfile -t changed_files < <(git diff --name-only "$base_sha" '${{ github.sha }}' --)
+          mapfile -t exclude_patterns < <(grep -vE '^[[:space:]]*(#|$)' .github/sync-excludes.txt)
+
+          included_files=()
+          should_sync=false
+
+          for path in "${changed_files[@]}"; do
+            excluded=false
+
+            for pattern in "${exclude_patterns[@]}"; do
+              case "$pattern" in
+                */)
+                  if [[ "$path" == "$pattern"* ]]; then
+                    excluded=true
+                    break
+                  fi
+                  ;;
+                *)
+                  if [[ "$path" == "$pattern" || "$path" == "$pattern"* ]]; then
+                    excluded=true
+                    break
+                  fi
+                  ;;
+              esac
+            done
+
+            if [[ "$excluded" == false ]]; then
+              included_files+=("$path")
+              should_sync=true
+            fi
+          done
+
+          {
+            echo "base_sha=$base_sha"
+            echo "should_sync=$should_sync"
+            printf 'included_files=%s\n' "$(IFS=,; echo "${included_files[*]-}")"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Summarize preview
+        shell: bash
+        run: |
+          included_files='${{ steps.classify.outputs.included_files }}'
+          {
+            echo "## Public sync preview"
+            echo "- Base SHA: ${{ steps.classify.outputs.base_sha }}"
+            echo "- Should sync: ${{ steps.classify.outputs.should_sync }}"
+            if [[ -n "$included_files" ]]; then
+              echo "- Included files: $included_files"
+            else
+              echo "- Included files: none"
+            fi
+            echo "- Sync gate: set PUBLIC_SYNC_ENABLED=true before the push step is enabled"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  sync:
+    name: Sync snapshot to public repo
+    needs: preview
+    if: ${{ vars.PUBLIC_SYNC_ENABLED == 'true' && needs.preview.outputs.should_sync == 'true' }}
+    runs-on: ubuntu-latest
+    permissions:
       contents: write
     steps:
       - name: Checkout repository
