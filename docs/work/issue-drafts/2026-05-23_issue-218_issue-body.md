@@ -152,3 +152,4 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 ## 同期の注意
 - 現行の sync は repo ツリーを広く mirror するため、`.github/sync-excludes.txt` に入っていないものは `LedgerLeap-oss` に反映される。
 - もし `LedgerLeap-oss` に含めたくないものが見つかったら、除外ファイルを更新してから再実行する。
+- `.ai/`, `.aiassistant/`, `.gemini/`, `.serena/`, `.tmp/` は作業用メタデータとして除外済み。

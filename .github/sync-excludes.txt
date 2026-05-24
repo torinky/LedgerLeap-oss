@@ -9,6 +9,11 @@
 .github/workflows/opencode.yml
 .github/workflows/sync-to-public.yml
 .github/sync-excludes.txt
+.ai/
+.aiassistant/
+.gemini/
+.serena/
+.tmp/
 AGENTS.md
 opencode.json
 resources/ai/

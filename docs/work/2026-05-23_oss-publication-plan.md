@@ -388,6 +388,7 @@ LedgerLeap-ai-assets/ (private)
 
 > workflow ファイルを含める構成では `workflow` 権限が必須。権限を付けられない場合は workflow ファイルを除外して再実行する。
 > 現行の sync は除外リスト外を広く mirror するため、`LedgerLeap-oss` に想定より多く見える内容があれば `.github/sync-excludes.txt` を先に見直す。
+> `.ai/`, `.aiassistant/`, `.gemini/`, `.serena/`, `.tmp/` は作業用メタデータなので公開同期から除外済み。
 ---
 
 ## 8. 実行フェーズ計画
