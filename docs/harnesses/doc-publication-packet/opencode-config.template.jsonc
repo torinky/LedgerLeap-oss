@@ -1,0 +1,54 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+
+  // Launch with:
+  // OPENCODE_CONFIG=/absolute/path/to/opencode-config.local.jsonc \
+  // opencode -m ledgerleap-lmstudio/<LM_STUDIO_MODEL_ID>
+  "default_agent": "plan",
+
+  "provider": {
+    "ledgerleap-lmstudio": {
+      "npm": "@ai-sdk/openai-compatible",
+      "name": "LedgerLeap LM Studio",
+      "options": {
+        "baseURL": "http://127.0.0.1:1234/v1",
+        "apiKey": "lm-studio"
+      },
+      "models": {
+        "__LM_STUDIO_MODEL_ID__": {
+          "name": "Replace this key with the LM Studio model id returned by GET /v1/models"
+        }
+      }
+    }
+  },
+
+  "mcp": {
+    "ledgerleap": {
+      "type": "remote",
+      "url": "http://localhost/__TENANT_SLUG__/mcp/ledgerleap",
+      "oauth": false,
+      "enabled": true,
+      "timeout": 10000,
+      "headers": {
+        "Authorization": "Bearer {env:LEDGERLEAP_MCP_TOKEN}"
+      }
+    }
+  },
+
+  "agent": {
+    "plan": {
+      "mode": "primary",
+      "permission": {
+        "edit": "deny",
+        "bash": "deny"
+      }
+    },
+    "build": {
+      "mode": "primary",
+      "permission": {
+        "edit": "ask",
+        "bash": "ask"
+      }
+    }
+  }
+}

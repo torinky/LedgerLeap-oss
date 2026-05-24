@@ -5,7 +5,8 @@ schema: v1
 models:
   - name: LedgerLeap Gemma4 26B
     provider: openai
-    model: gemma-4-26b
+    # Replace with the exact model id returned by LM Studio GET /v1/models
+    model: __LM_STUDIO_MODEL_ID__
     apiBase: http://127.0.0.1:1234/v1
     apiKey: lm-studio
     capabilities:
@@ -25,6 +26,7 @@ mcpServers:
       - "Authorization:Bearer ${LEDGERLEAP_TOKEN}"
     env:
       LEDGERLEAP_TOKEN: your-sanctum-token-here
+    connectionTimeout: 10000
 
 rules:
   - uses: file:///ABSOLUTE_PROJECT_PATH/.continue/rules/01-doc-packet-core.md

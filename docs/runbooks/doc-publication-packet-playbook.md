@@ -29,7 +29,7 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 | Inventory | `doc-source-inventory` | #226 baseline と packet readiness の差分確認 | packet handoff / downstream issue |
 | Execution | `doc-publication-audit` | handoff 済み 1 packet の rewrite / comment sync | target doc / acceptance / issue handoff |
 | Contract | `docs/templates/doc-publication-packet-template.md` | manifest / handoff / acceptance の SoT | すべての lane |
-| Adapter | `docs/harnesses/doc-publication-packet/continue-config.template.yaml` | `packet-plan` / `packet-rewrite` / `packet-comment-sync` の責務反映 | Continue / local model 実行 |
+| Adapter | `docs/harnesses/doc-publication-packet/opencode-config.template.jsonc`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml` | `packet-plan` / `packet-rewrite` / `packet-comment-sync` の責務反映 | OpenCode / Continue / local model 実行 |
 
 - `/doc-publication-packet` と `doc-publication-audit` は同じことをしない
 - 前者は **router**, 後者は **executor**
@@ -157,6 +157,7 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 - `.opencode/commands/packet-plan.md`
 - `.opencode/commands/packet-rewrite.md`
 - `.opencode/commands/packet-comment-sync.md`
+- `docs/harnesses/doc-publication-packet/opencode-config.template.jsonc`
 
 ### 使い分け
 
@@ -164,6 +165,7 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 - `/packet-rewrite` は単一 writer で 1 packet を実装
 - `/packet-comment-sync` は comment anchor だけを更新
 - packet-plan は `subtask: true` で子タスク化し、packet-rewrite / comment-sync は main writer を維持する
+- local LM Studio trial は harness の `opencode-config.template.jsonc` を `OPENCODE_CONFIG` で読み込み、`-m ledgerleap-lmstudio/<model-id>` で project default model を上書きする
 
 ## 9. Continue.dev adapter
 
@@ -178,6 +180,7 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 - `.continue/rules/*` は packet core rule と comment sync rule を分ける
 - Continue prompt blocks は harness の `config.template.yaml` に置き、unsupported な repo-local prompt discovery を仮定しない
 - `Plan` mode は inventory / anchor read、`Agent` mode は single writer の rewrite に使う
+- `continue-config.template.yaml` の `model` は固定名のまま使わず、LM Studio の `GET /v1/models` が返す実 model id に置き換える
 
 ## 10. 2-A4 に渡す最小 asset set
 
@@ -186,7 +189,7 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 | JetBrains entry | `.github/prompts/doc-publication-packet.prompt.md` |
 | Inventory refresh | `.github/skills/doc-source-inventory/SKILL.md`, `.github/agents/doc-source-inventory.agent.md` |
 | Packet rewrite | `.github/skills/doc-publication-audit/SKILL.md`, `.github/agents/doc-packet-executor.agent.md`, `docs/templates/doc-publication-packet-template.md` |
-| OpenCode | `.opencode/agents/*`, `.opencode/commands/*` |
+| OpenCode | `.opencode/agents/*`, `.opencode/commands/*`, `docs/harnesses/doc-publication-packet/opencode-config.template.jsonc` |
 | Continue | `.continue/rules/*`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml` |
 | Human ops | `docs/runbooks/doc-publication-packet-playbook.md` |
 

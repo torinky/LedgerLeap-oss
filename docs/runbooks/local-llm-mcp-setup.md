@@ -90,31 +90,47 @@ context overflow と VRAM 不足を確実に切り分けられます。
 
 ## 5. OpenCode での設定例
 
-### 5.1 mcp-remote 経由のリモート接続（推奨）
+### 5.1 OpenCode native remote MCP 設定（推奨）
 
-```json
+```jsonc
 {
+  "$schema": "https://opencode.ai/config.json",
   "mcp": {
-    "servers": {
-      "ledgerleap": {
-        "command": "npx",
-        "args": [
-          "-y",
-          "mcp-remote",
-          "https://your-server.example.com/mcp/ledgerleap",
-          "--header",
-          "Authorization:Bearer ${LEDGERLEAP_TOKEN}"
-        ],
-        "env": {
-          "LEDGERLEAP_TOKEN": "your-sanctum-token-here"
-        }
+    "ledgerleap": {
+      "type": "remote",
+      "url": "http://localhost/tenant-a/mcp/ledgerleap",
+      "oauth": false,
+      "headers": {
+        "Authorization": "Bearer {env:LEDGERLEAP_MCP_TOKEN}"
       }
     }
   }
 }
 ```
 
-### 5.2 システムプロンプト経由のパラメータ指示
+OpenCode の current docs では remote MCP を直接扱えるため、OpenCode 単体では
+`mcp-remote` ブリッジは必須ではありません。LedgerLeap の token は
+`LEDGERLEAP_MCP_TOKEN` 環境変数で渡してください。
+
+### 5.2 publication packet harness（#219 / doc packet trial）
+
+Issue #219 の packet trial を OpenCode で行う場合は、
+`docs/harnesses/doc-publication-packet/opencode-config.template.jsonc` をコピーして
+使うのが最短です。
+
+1. `opencode-config.template.jsonc` をローカル用ファイルへコピー
+2. `__LM_STUDIO_MODEL_ID__`, `__TENANT_SLUG__`, `LEDGERLEAP_MCP_TOKEN` を置換
+3. リポジトリ直下で次のように起動
+
+```bash
+OPENCODE_CONFIG=/absolute/path/to/opencode-config.local.jsonc \
+opencode -m ledgerleap-lmstudio/<model-id>
+```
+
+この overlay は repo 既定の `opencode.json` を壊さず、packet trial だけ
+LM Studio + remote MCP + `plan` default agent へ切り替えます。
+
+### 5.3 システムプロンプト経由のパラメータ指示
 
 MCP サーバーの `instructions` は LLM に自動的に渡されますが、
 より明示的な指示が必要な場合はシステムプロンプトに追記してください：
@@ -144,6 +160,7 @@ args:
   - "Authorization:Bearer ${LEDGERLEAP_TOKEN}"
 env:
   LEDGERLEAP_TOKEN: your-sanctum-token-here
+connectionTimeout: 10000
 ```
 
 ### 6.2 ⚠️ `defaultToolArgs` は非対応
@@ -152,7 +169,20 @@ Continue.dev の `.continue/mcpServers/*.yaml` で認められているフィー
 `name`, `command`, `args`, `env`, `cwd`, `requestOptions`, `connectionTimeout` のみです。
 **`defaultToolArgs` は使用しないでください。**（設定しても無視されます）
 
-### 6.3 ✅ 代替: `.continue/rules/` ディレクトリ
+### 6.3 publication packet harness（#219 / doc packet trial）
+
+Issue #219 の packet trial を Continue.dev で行う場合は、
+`docs/harnesses/doc-publication-packet/continue-config.template.yaml` をそのまま
+assistant config の雛形として使うのが最短です。
+
+1. `continue-config.template.yaml` をローカル用ファイルへコピー
+2. `__LM_STUDIO_MODEL_ID__`, `ABSOLUTE_PROJECT_PATH`, MCP URL, token placeholder を置換
+3. `model` には LM Studio の `GET /v1/models` が返す実際の model id を入れる
+4. lane 判定は `Plan` mode + `packet-plan`
+5. rewrite は `Agent` mode + `packet-rewrite`
+6. comment のみは `Agent` mode + `packet-comment-sync`
+
+### 6.4 ✅ 代替: `.continue/rules/` ディレクトリ
 
 プロジェクトルートに `.continue/rules/ledgerleap-local-llm.md` を作成してください：
 

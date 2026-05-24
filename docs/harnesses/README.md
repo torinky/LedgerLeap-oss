@@ -17,8 +17,8 @@ LedgerLeap の LLM / AI 評価で使う **copyable fixture / harness** をここ
   - Browser DevTools の HAR を比較するための定型化 harness
   - `document` / `livewire/update` / static assets の要約スクリプトを含む
 - [`doc-publication-packet/`](./doc-publication-packet/README.md)
-  - Continue.dev で publication packet workflow を始めるための sanitized config template
-  - `.continue/rules/*` と packet template / playbook を結ぶ最小 harness
+  - OpenCode / Continue.dev で publication packet workflow を始めるための sanitized config template
+  - `.opencode/*` / `.continue/rules/*` と packet template / playbook を結ぶ最小 harness
 
 ## 位置づけ
 
@@ -28,4 +28,3 @@ LedgerLeap の LLM / AI 評価で使う **copyable fixture / harness** をここ
 関連:
 - [AI運用資産メンテナンス・プレイブック](../runbooks/ai-asset-maintenance-playbook.md)
 - [LedgerLeap Agent Routing](../../AGENTS.md)
-
