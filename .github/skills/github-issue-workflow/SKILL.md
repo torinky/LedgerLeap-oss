@@ -59,6 +59,7 @@ compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap)"
 6. Add directly checkable acceptance criteria.
 7. Before creating a new issue, confirm whether an existing issue already covers the same work.
 8. Keep issue body in Japanese unless user explicitly asks otherwise.
+9. If the owner must click through GitHub manually, add a dedicated `Owner manual steps` section to the canonical issue body with the UI path, required permission, expected result, and confirmation evidence.
 
 ## Checklist Update Rule
 

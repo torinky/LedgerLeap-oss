@@ -55,5 +55,13 @@
 - `status`: confirmed
 - `last_confirmed_at`: 2026-05-24
 - `recheck_after`: 90d
+- `recheck_trigger`: a public mirror again includes local assistant metadata, `PUBLIC_REPO_TOKEN` needs another permission bump, a branch cleanup requires history reset because a no-op sync cannot remove already mirrored content, or a plan needs owner-manual GitHub actions without an explicit numbered handoff checklist
+
+## 2026-05-24 Issue-218 Public Sync Brushup
+
+- [docs/work/2026-05-24_issue-218_public-sync-retrospective.md](../../../docs/work/2026-05-24_issue-218_public-sync-retrospective.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-05-24
+- `recheck_after`: 90d
 - `recheck_trigger`: a public mirror again includes local assistant metadata, `PUBLIC_REPO_TOKEN` needs another permission bump, or a branch cleanup requires history reset because a no-op sync cannot remove already mirrored content
 
