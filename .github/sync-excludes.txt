@@ -23,6 +23,7 @@ docs/runbooks/skill-maintenance-playbook.md
 docs/runbooks/browser-har-analysis-playbook.md
 docs/runbooks/local-llm-mcp-setup.md
 docs/harnesses/
+bin/sync-ai-instructions.sh
 .idea/
 LedgerLeap.code-workspace
 docker-compose.prod.yml

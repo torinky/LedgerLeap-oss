@@ -172,6 +172,7 @@ git log -1 --format=%B | grep "private-ref:"
 AGENTS.md
 opencode.json
 resources/ai/
+bin/sync-ai-instructions.sh
 docs/work/
 docs/runbooks/ai-asset-maintenance-playbook.md
 docs/runbooks/skill-maintenance-playbook.md
