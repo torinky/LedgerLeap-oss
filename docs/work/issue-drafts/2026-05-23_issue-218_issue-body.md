@@ -138,6 +138,7 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 8. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree の変化を確認する。
 9. run URL、public commit SHA、変更内容を issue に evidence として記録する。
 10. 履歴ごと public 側を作り直す場合は `workflow_dispatch` の `force_history_reset=true` を使う。
+	- Evidence: run 26348939849 で `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` は `2026-05-24T01:49:50Z`、`updatedAt` は `2026-05-24T01:49:54Z`、最新 commit は orphan の `a81aea98aa8b28eaf0521711c6ee3bc864c0cf3d` になった。
 
 ## `PUBLIC_REPO_TOKEN` の取得方法
 1. GitHub の右上プロフィールから `Settings` を開く。
