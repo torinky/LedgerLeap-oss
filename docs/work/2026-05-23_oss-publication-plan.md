@@ -381,7 +381,7 @@ LedgerLeap-ai-assets/ (private)
 3. 含めない場合は、`.github/workflows/` を `.github/sync-excludes.txt` に追加し、除外方針を commit する。
 4. `PUBLIC_SYNC_ENABLED=true` を GitHub の repo variable に設定する。
 5. `PUBLIC_REPO_TOKEN` を GitHub の Actions secret に設定する。
-6. `main` へ対象変更を push するか、`workflow_dispatch` を実行する。
+6. `main` へ対象変更を push するか、`workflow_dispatch` を実行する。履歴ごと整理したいときは `force_history_reset=true` を指定する。
 7. `Preview public sync scope` で `should_sync=true` と `included_files` を確認する。
 8. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree が更新されていることを確認する。
 9. run URL、public commit SHA、変更内容を issue #218 に evidence として記録する。

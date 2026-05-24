@@ -137,6 +137,7 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 7. `Preview public sync scope` で `should_sync` と `included_files` を確認する。
 8. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree の変化を確認する。
 9. run URL、public commit SHA、変更内容を issue に evidence として記録する。
+10. 履歴ごと public 側を作り直す場合は `workflow_dispatch` の `force_history_reset=true` を使う。
 
 ## `PUBLIC_REPO_TOKEN` の取得方法
 1. GitHub の右上プロフィールから `Settings` を開く。
