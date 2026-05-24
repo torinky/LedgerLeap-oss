@@ -136,6 +136,7 @@ jobs:
           INCLUDED_FILES: ${{ needs.preview.outputs.included_files }}
         run: |
           set -euo pipefail
+          force_history_reset='${{ github.event_name == 'workflow_dispatch' && inputs.force_history_reset }}'
 
           PUBLIC_REPO_DIR="$RUNNER_TEMP/public-repo"
           PUBLIC_REPO_URL="https://x-access-token:${PUBLIC_REPO_TOKEN}@github.com/${PUBLIC_REPO}.git"
@@ -152,6 +153,25 @@ jobs:
             "$PUBLIC_REPO_DIR"/
 
           git -C "$PUBLIC_REPO_DIR" add -A
+
+          if [[ "$force_history_reset" == 'true' ]]; then
+            public_commit_sha="$(printf 'chore(sync): mirror private main [private-ref: %s]\n' "$SOURCE_SHA" | git -C "$PUBLIC_REPO_DIR" commit-tree "$(git -C "$PUBLIC_REPO_DIR" write-tree)")"
+            git -C "$PUBLIC_REPO_DIR" update-ref refs/heads/main "$public_commit_sha"
+            git -C "$PUBLIC_REPO_DIR" push --force-with-lease origin HEAD:main
+
+            {
+              echo "public_commit_sha=$public_commit_sha"
+            } >> "$GITHUB_OUTPUT"
+
+            {
+              echo "## Public sync result"
+              echo "- Source SHA: ${SOURCE_SHA}"
+              echo "- Public commit SHA: ${public_commit_sha}"
+              echo "- Included files: ${INCLUDED_FILES:-none}"
+              echo "- Result: public branch history reset"
+            } >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
 
           if git -C "$PUBLIC_REPO_DIR" diff --cached --quiet; then
             public_commit_sha="$(git -C "$PUBLIC_REPO_DIR" rev-parse HEAD)"
