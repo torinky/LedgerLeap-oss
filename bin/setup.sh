@@ -131,6 +131,23 @@ fi
 export COMPOSE_FILE=$(IFS=: ; echo "${COMPOSE_FILES_ARRAY[*]}")
 info "Using COMPOSE_FILE: $COMPOSE_FILE"
 
+# --- Prerequisites Check ---
+
+# vendor/ がない場合は Docker 経由で Composer をブートストラップする
+# (vendor/ は .gitignore 対象のため fresh clone では存在しない)
+if [ ! -f "./vendor/bin/sail" ]; then
+    info "vendor/ not found. Bootstrapping Composer dependencies via Docker..."
+    if ! command -v docker &> /dev/null; then
+        error "Docker is not installed or not in PATH. Please install Docker and try again."
+        exit 1
+    fi
+    docker run --rm \
+        -v "$(pwd):/app" \
+        -w /app \
+        composer:latest install --ignore-platform-reqs --no-scripts
+    info "Composer bootstrap complete."
+fi
+
 # --- Main Setup ---
 
 info "Starting LedgerLeap setup..."
