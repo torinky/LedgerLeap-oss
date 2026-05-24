@@ -49,3 +49,11 @@
 - `recheck_after`: 90d
 - `recheck_trigger`: repeated `Can't find variable` errors show up across many Alpine bindings, a Livewire / Alpine page starts failing after bundle or layout changes, or a sprint finish needs both issue comments and the issue body updated together
 
+## 2026-05-24 Issue-218 Public Sync Brushup
+
+- [docs/work/2026-05-24_issue-218_public-sync-retrospective.md](../../../docs/work/2026-05-24_issue-218_public-sync-retrospective.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-05-24
+- `recheck_after`: 90d
+- `recheck_trigger`: a public mirror again includes local assistant metadata, `PUBLIC_REPO_TOKEN` needs another permission bump, or a branch cleanup requires history reset because a no-op sync cannot remove already mirrored content
+
