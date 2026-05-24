@@ -369,7 +369,7 @@ LedgerLeap-ai-assets/ (private)
 | デモログイン確認 | ローカル | #223 | `superadmin@example.com` / `demo@example.com` を使用 |
 | bootstrap commit の push | GitHub | #218 | `public-bootstrap` を `staging:main` へ送る |
 | sync workflow の実行条件確認 | GitHub | #218 | `sync-to-public.yml` の反映条件を確認 |
-| private main → private staging 同期確認 | GitHub | #218 | GitHub 側の反映検証 |
+| private main → private staging 同期確認 | GitHub | #218 | rerun 26347054600 で success。`LedgerLeap-oss` の `pushedAt` / `updatedAt` と `staging/main` の head SHA 更新を確認済み |
 | visibility 切り替え | GitHub | #216 | 全体計画完了後に実施 |
 
 > 目安: `#223` はローカル実機での完走確認、`#218` は GitHub 側の反映確認。

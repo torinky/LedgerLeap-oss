@@ -92,9 +92,8 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 	- Evidence: `public-bootstrap` の orphan commit `aafcb7bb3d2702e7bc159583f447a0734b6d08b3` を `staging:main` へ push 済み
 - [x] 公開リポジトリへ実ファイルを反映する push step を実装する
 	- Evidence: `sync-to-public.yml` で public repo を clone し、`rsync` で source snapshot を mirror して `git commit` → `git push origin HEAD:main` する処理を追加済み。コミットは `362b8b727b4d3009019da0345c8f6d5b09cd5c9d`。
-- [ ] プライベート main から private staging 側へ同期できる
-	- Evidence: `git ls-remote --heads origin main` で private main は確認済み、`git ls-remote --heads staging main` で private staging も確認済み。最新 run `26347054600` では preview は success したが、mirror step が `workflow` scope 不足で remote rejected となり、実ファイル反映はまだ未完了。
-	- 次にやること: `.github/workflows/*` を公開同期対象に含めるかを決めたうえで、必要な scope の `PUBLIC_REPO_TOKEN` を設定し、`workflow_dispatch` または main push で preview → sync の両方を通して、staging 側の反映結果を確認する。
+- [x] プライベート main から private staging 側へ同期できる
+	- Evidence: `git ls-remote --heads origin main` で private main を確認済み、`git ls-remote --heads staging main` で private staging を確認済み。rerun 26347054600 は `Preview public sync scope` と `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` は `2026-05-24T01:32:53Z`、`updatedAt` は `2026-05-24T01:33:00Z` に更新された。`staging/main` の head SHA は `3656fcc0f094a2318214343dccb566a25eb14966`。
 	- 実行手順:
 	  1. `.github/workflows/*` を公開同期対象に含めるかを決める。
 	  2. 含める場合は `contents: write` に加えて `workflow` scope を持つ `PUBLIC_REPO_TOKEN` を GitHub 側で設定する。
@@ -104,25 +103,6 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 	  6. Actions の `Preview public sync scope` で `should_sync=true` と `included_files` を確認する。
 	  7. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree が更新されていることを確認する。
 	  8. run URL、public commit SHA、変更内容を issue に evidence として記録する。
-	- 手動再現手順:
-	  1. GitHub の private repo `torinky/LedgerLeap` を開く。
-	  2. `Settings` → `Secrets and variables` → `Actions` を開く。
-	  3. `Variables` で `PUBLIC_SYNC_ENABLED` を `true` に設定する。
-	  4. `Secrets` で `PUBLIC_REPO_TOKEN` を登録する（workflow を含めるなら `workflow` scope 付き）。
-	  5. `Actions` タブで `Sync to public` ワークフローを開く。
-	  6. `Run workflow` で branch を `main` にして実行するか、`main` へ対象変更を push する。
-	  7. 実行結果で `Preview public sync scope` の `should_sync` と `included_files` を確認する。
-	  8. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree の変化を確認する。
-	- `PUBLIC_REPO_TOKEN` の取得方法:
-	  1. GitHub の右上プロフィールから `Settings` を開く。
-	  2. 左メニューの `Developer settings` を開く。
-	  3. `Personal access tokens` → `Fine-grained tokens` を選び、`Generate new token` を押す。
-	  4. トークン名を付け、必要なら有効期限を設定する。
-	  5. `Repository access` で `Only select repositories` を選び、`torinky/LedgerLeap-oss` を対象にする。
-	  6. `Repository permissions` で少なくとも `Contents: Read and write` を許可し、workflow ファイルを更新する場合は `workflow` scope も付与する。
-	  7. 必要に応じて `Metadata: Read-only` はそのまま付与する。
-	  8. トークンを生成し、表示された値をコピーして `PUBLIC_REPO_TOKEN` として secret に登録する。
-	  9. もし fine-grained token が使えない、または workflow scope を付けられない組織設定なら、管理者に workflow 更新権限付きの代替 PAT を依頼する。
 
 > `./bin/setup.sh` の完走確認とデモログイン確認は issue #223 に移し、ここでは GitHub 側の同期確認に集中する。
 
