@@ -357,8 +357,11 @@ LedgerLeap-ai-assets/ (private)
 | ルール | 設定値 |
 |--------|--------|
 | Require PR before merging | ON |
-| Allow force pushes | OFF（CI ミラーは force push しない設計） |
+| Allow specified actors to bypass required pull requests | GitHub Actions を許可（`sync-to-public.yml` が保護ブランチに直接 push するため） |
+| Allow force pushes | OFF（通常 sync も `--force-with-lease` を使用。履歴リセット時のみ `--force-with-lease`） |
 | Require status checks | ON（CI テスト必須） |
+
+> GitHub Actions bot はデフォルトでブランチ保護をバイパスできない。この設定は GitHub リポジトリの Settings → Branches → Branch protection rules で行い、コード管理の対象外。Filament の `monorepo-split.yml` も同様のアプローチ（`GH_ACCESS_TOKEN` を使って保護ブランチに直接 push）を採用している。詳細は §12.2 参照。
 
 ### 7.6 ローカル確認と GitHub 側確認の分担
 
@@ -482,3 +485,170 @@ LedgerLeap-ai-assets/ (private)
 - 表示・権利表記の設定化（作成予定）: `docs/work/issue-drafts/2026-05-23_ui-branding-config_issue-body.md`
 - 現行の AI 資産ルーティング: `AGENTS.md`（プライベートリポジトリ）
 - 現行の AI 動作ルール: `.github/copilot-instructions.md`（プライベートリポジトリ）
+
+---
+
+## 12. ベストプラクティスレビューと方針決定（2026-05-24 追記）
+
+LedgerLeap の公開移行計画を、同規模の OSS プロジェクト（Filament、Spatie、Laravel）の実例、OpenSSF Best Practices、GitHub Community Standards と比較し、以下の再検討事項を特定した。各項目には方針決定・エビデンス・影響先 Issue を付記する。
+
+> 比較調査の詳細なエビデンスは各 Issue 側のコメントと本節の参照先に分散して記録している。
+
+### 12.1 AI 資産の公開方針（決定）
+
+**比較エビデンス:**
+- Filament は `CLAUDE.md`（200行超の AI コーディングガイダンス）を公開リポジトリに配置し、AI ready であることを差別化要因としている（[filamentphp/filament CLAUDE.md](https://github.com/filamentphp/filament/blob/3.x/CLAUDE.md)）。
+- Laravel Boost も `AGENTS.md` / `CLAUDE.md` を公開生成する前提で設計されている。
+- `.github/instructions/`、`.github/skills/`、`.github/prompts/` といったディレクトリは LedgerLeap 独自のパターンであり、同種の構成を持つ大規模 OSS は確認できなかった。
+- グローバルに `AGENTS.md` / `CLAUDE.md` / `copilot-instructions.md` を公開しているリポジトリは約 1500+ 存在するが、大規模 Laravel プロジェクトでは Filament のみが包括的な AI ガイダンスを公開している。
+
+**方針決定:**
+LedgerLeap のスキル・ワークフロー・ハーネスは、開発過程で AI を利用する際に呼び出される個人の開発ノウハウや進め方を多分に反映しているため、**初期公開範囲からは除外する**。LedgerLeap を設置して利用する範囲を公開スコープとする。
+
+| 資産カテゴリ | 公開/非公開 | 理由 |
+|-------------|-----------|------|
+| `.github/instructions/*.md` | 非公開 | コーディング規約の一部だが、スキル・プロンプトと一体で AI 動作を構成するため |
+| `.github/skills/**/SKILL.md` | 非公開 | 個人の開発ノウハウ・進め方を反映 |
+| `.github/prompts/*.md` | 非公開 | 個人のワークフローを反映 |
+| `.github/copilot-instructions.md` | 非公開 | 内部運用指示を含む |
+| `AGENTS.md` | 非公開 | AI ルーティング設定 |
+| `resources/ai/capabilities/` | 非公開 | 内部 MCP 契約 |
+| `docs/harnesses/` | 非公開 | AI 評価ハーネス。コミュニティから貢献があった際にコミュニティ版へ反映を検討するが、現状の内容を公開する必要はない |
+| `docs/runbooks/ai-*` | 非公開 | AI 運用プレイブック |
+
+**影響先:** Issue #220（Sprint 3）、`.github/sync-excludes.txt`
+
+### 12.2 ブランチ保護と CI ミラーの整合性
+
+**比較エビデンス:**
+- Filament の `monorepo-split.yml` は `GH_ACCESS_TOKEN` を使って保護ブランチに直接 push している。
+- GitHub Actions bot はデフォルトではブランチ保護の "Require a pull request before merging" をバイパスできない。バイパスにはリポジトリ設定で "Allow specified actors to bypass required pull requests" に GitHub Actions を追加する必要がある。
+
+**現状の矛盾:**
+計画書 §7.5 で公開リポジトリに "Require PR before merging: ON" を設定する方針だが、`sync-to-public.yml:196` は GitHub Actions bot で `main` に直接 push する。この組み合わせは設定変更なしでは動作しない。
+
+**方針決定:**
+公開リポジトリのブランチ保護設定で、GitHub Actions bot を "Allow specified actors to bypass required pull requests" に追加する。この設定は GitHub リポジトリ側（Settings → Branches → Branch protection rules）で行い、コード管理の対象外とする。
+
+代替案として sync ワークフローを自動 PR 作成に変更する方式もあるが、同期遅延と PR 通知ノイズが発生するため採用しない。
+
+**影響先:** Issue #218（Sprint 1）、§7.5
+
+### 12.3 PR テンプレート
+
+**比較エビデンス:**
+- Filament: チェックリスト付き PR テンプレート（Code style、Tests pass、Documentation up-to-date）
+- Laravel: ブランチ選択ルール・テスト要件をコメントで明記
+- Spatie: 中央管理の `.github` リポジトリで PR ガイドラインを運用
+
+**現状:**
+`.github/PULL_REQUEST_TEMPLATE.md` が存在しない。
+
+**方針決定:**
+Sprint 4 で新規作成する。チェックリストに以下を含める:
+- コーディング規約準拠（`./vendor/bin/sail pint`）
+- テスト合格（`./vendor/bin/sail test`）
+- ドキュメント更新確認
+- 影響範囲の明示
+
+**影響先:** Issue #221（Sprint 4）
+
+### 12.4 Issue テンプレートの contact_links 欠如
+
+**比較エビデンス:**
+- Filament の `.github/ISSUE_TEMPLATE/config.yml` は feature request → Discussions、support → Discussions へ誘導する `contact_links` を設定している。
+- Laravel も同様に Discussions への誘導を持つ。
+- Spatie も Discussions を使用。
+
+**現状:**
+`.github/ISSUE_TEMPLATE/config.yml` は `blank_issues_enabled: false` のみで `contact_links` が未設定。ユーザーが質問や機能要望をどこに出せばよいか分からない。
+
+**方針決定:**
+Sprint 4 で `contact_links` を追加し、GitHub Discussions または適切な窓口へ誘導する。
+
+**影響先:** Issue #221（Sprint 4）
+
+### 12.5 SECURITY.md の連絡先具体化
+
+**比較エビデンス:**
+- Filament: `dan@danharrin.com` を明記
+- Laravel: PGP 公開鍵ブロックを含む連絡先を明記
+- Next.js / React / VS Code: いずれも具体的な報告チャネルを明記
+
+**現状:**
+`SECURITY.md:15-17` に "the private security channel that will be listed for the public repository before release" とあり、実際の連絡先が未設定。
+
+**方針決定:**
+公開前にセキュリティ報告用のメールアドレスまたは GitHub Security Advisory の private reporting 機能のどちらを使用するかを決定し、`SECURITY.md` に明記する。Sprint 4 の完了条件に含める。
+
+**影響先:** Issue #221（Sprint 4）、`SECURITY.md`
+
+### 12.6 `setup.sh` の `-p` フラグと docker-compose.prod.yml の除外矛盾
+
+**現状の矛盾:**
+`bin/setup.sh:68-73` で `-p`（production）フラグを提供し `docker-compose.prod.yml` を読み込むが、このファイルは `.github/sync-excludes.txt:28` で公開除外対象。公開リポジトリの `setup.sh -p` は実行時にファイル不在で失敗する。
+
+**方針決定:**
+公開版の README および Getting Started ドキュメントでは `-p` オプションの説明を記載しない。`setup.sh` 側には production モードで `docker-compose.prod.yml` が存在しない場合の明示的なエラーメッセージと代替手順への誘導を追加する。
+
+**影響先:** Issue #218（Sprint 1）、`bin/setup.sh`、`docs/getting-started/installation.md`
+
+### 12.7 `.env.example` の開発ツールトークン
+
+**現状:**
+`.env.example:183-184` に `GITHUB_PERSONAL_ACCESS_TOKEN=` と `CONTEXT7_API_KEY=` が含まれている。これらは開発者個人のツール用トークンであり、一般の利用者には不要で混乱を招く。
+
+**方針決定:**
+`.env.example` からは削除し、開発者向けドキュメント（`docs/contributing/development-setup.md`）でのみ説明する。もしくは `.env.example` 内でコメントにより「開発者向けツール設定（一般利用者は設定不要）」とセクションを分離する。
+
+**影響先:** Issue #219（Sprint 2）、`.env.example`
+
+### 12.8 Issue テンプレートの多言語対応
+
+**比較エビデンス:**
+- Filament、Spatie、Laravel のイシューテンプレートはいずれも英語。
+- LedgerLeap の既存テンプレート（`issue_request.yml`、`bug_report.yml`）は全フィールドのラベル・説明が日本語のみ。
+- README は英語併記だが、イシュー起票が日本語のみでは国際的なコントリビュータを遠ざける。
+
+**方針決定:**
+Sprint 4 で、既存の日本語テンプレートに加えて英語版テンプレートを別途用意する（`bug_report_en.yml`）。少なくとも各フィールドの description に英語訳を併記する。当面は日本語テンプレートをデフォルトとし、英語版はテンプレート選択画面で両方表示される構成とする。
+
+**影響先:** Issue #221（Sprint 4）、`.github/ISSUE_TEMPLATE/`
+
+### 12.9 その他のコミュニティ基盤（CHANGELOG / SUPPORT / FUNDING / CODE_OF_CONDUCT）
+
+**比較エビデンス:**
+| ファイル | Filament | Spatie | Laravel | LedgerLeap 現状 |
+|---------|----------|--------|---------|----------------|
+| `CHANGELOG.md` | あり（monorepo-split のパッケージ単位） | あり（全バージョンの詳細な変更履歴） | あり（upgrade guide と連携） | **未作成** |
+| `SUPPORT.md` | なし（Discord に誘導） | なし | なし | **未作成** |
+| `FUNDING.yml` | あり（`danharrin`） | あり（`spatie`） | なし | **未作成** |
+| `CODE_OF_CONDUCT.md` | Contributor Covenant v1.4 | なし（`.github` で共有） | あり（Web サイトで管理） | **未作成** |
+
+**方針決定:**
+
+- **`CHANGELOG.md`**: Sprint 4 で新規作成。初回公開時点では「初回公開リリース」のエントリのみとし、以後のリリースで追記する。
+- **`CODE_OF_CONDUCT.md`**: **Contributor Covenant v2.1**（執行ガイドライン付き）を採用する。計画書 §5.2 で v1.4 を参照していたが、v2.1 が現行標準であり、Correction/Warning/Temporary Ban/Permanent Ban の執行段階が定義されている（参照: [contributor-covenant.org/version/2/1](https://www.contributor-covenant.org/version/2/1/code_of_conduct/)）。
+- **`SUPPORT.md`**: Sprint 4 で新規作成。質問・サポートの窓口を案内する。
+- **`FUNDING.yml`**: Sprint 4 で `torinky` の GitHub Sponsors を設定。
+
+**影響先:** Issue #221（Sprint 4）
+
+### 12.10 Normal sync の競合リスク
+
+**現状:**
+`sync-to-public.yml:196` の通常 sync パスは plain `git push` を使用している。公開リポジトリに contributor PR が merge されると、private main と public main の履歴が分岐し push が rejected される。
+
+**方針決定:**
+通常 sync でも `--force-with-lease` を使用する（public 側の contributor commit を上書きしない安全策として適切）。競合発生時の手動リカバリ手順（public 側の変更を private に cherry-pick → 再 sync）を運用ドキュメントに明記する。
+
+**影響先:** Issue #218（Sprint 1）、`.github/workflows/sync-to-public.yml`
+
+---
+
+## 13. 更新履歴
+
+| 日付 | 変更内容 |
+|------|---------|
+| 2026-05-23 | 初版作成（v1〜v3） |
+| 2026-05-24 | §12 追加：ベストプラクティスレビューと方針決定（Filament/Spatie/Laravel との比較に基づく 10 項目） |
