@@ -126,3 +126,29 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 ## GitHub 追跡
 - Epic: #216（本 Issue）
 - Sprint 1-A: #223
+
+## GitHub 再現手順
+1. GitHub の private repo `torinky/LedgerLeap` を開く。
+2. `Settings` → `Secrets and variables` → `Actions` を開く。
+3. `Variables` で `PUBLIC_SYNC_ENABLED=true` を設定する。
+4. `Secrets` で `PUBLIC_REPO_TOKEN` を登録する。`LedgerLeap-oss` を更新するなら `contents: write` に加えて `workflow` 権限を付ける。
+5. `Actions` タブで `Sync to public` ワークフローを開く。
+6. `Run workflow` で branch を `main` にして実行するか、`main` へ対象変更を push する。
+7. `Preview public sync scope` で `should_sync` と `included_files` を確認する。
+8. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree の変化を確認する。
+9. run URL、public commit SHA、変更内容を issue に evidence として記録する。
+
+## `PUBLIC_REPO_TOKEN` の取得方法
+1. GitHub の右上プロフィールから `Settings` を開く。
+2. 左メニューの `Developer settings` を開く。
+3. `Personal access tokens` → `Fine-grained tokens` を選び、`Generate new token` を押す。
+4. トークン名を付け、必要なら有効期限を設定する。
+5. `Repository access` で `Only select repositories` を選び、`torinky/LedgerLeap-oss` を対象にする。
+6. `Repository permissions` で少なくとも `Contents: Read and write` を許可し、workflow ファイルを更新する場合は `workflow` 権限も付与する。
+7. 必要に応じて `Metadata: Read-only` はそのまま付与する。
+8. トークンを生成し、表示された値をコピーして `PUBLIC_REPO_TOKEN` として secret に登録する。
+9. fine-grained token が使えない、または workflow 権限を付けられない場合は、workflow 更新権限付きの代替 PAT を管理者に依頼する。
+
+## 同期の注意
+- 現行の sync は repo ツリーを広く mirror するため、`.github/sync-excludes.txt` に入っていないものは `LedgerLeap-oss` に反映される。
+- もし `LedgerLeap-oss` に含めたくないものが見つかったら、除外ファイルを更新してから再実行する。

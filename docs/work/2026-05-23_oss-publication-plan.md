@@ -387,6 +387,7 @@ LedgerLeap-ai-assets/ (private)
 9. run URL、public commit SHA、変更内容を issue #218 に evidence として記録する。
 
 > workflow ファイルを含める構成では `workflow` 権限が必須。権限を付けられない場合は workflow ファイルを除外して再実行する。
+> 現行の sync は除外リスト外を広く mirror するため、`LedgerLeap-oss` に想定より多く見える内容があれば `.github/sync-excludes.txt` を先に見直す。
 ---
 
 ## 8. 実行フェーズ計画
