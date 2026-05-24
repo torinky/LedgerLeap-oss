@@ -6,6 +6,12 @@ name: Parallel Tests Canary (Sprint 7)
 #
 # 対象: parallel-safe な Unit / Feature テスト（database-migrations / external を除く）
 # 標準 CI（phpunit.yml）とは重複させず、必要時のみ手動で実行する
+#
+# --- OSS contributors ---
+# This workflow requires a repository secret: DB_PASSWORD
+# Set it in your fork under Settings > Secrets and variables > Actions.
+# Without this secret the MySQL service container and Laravel test setup will fail.
+# The workflow is triggered manually (workflow_dispatch) only; it does NOT run automatically.
 
 on:
   workflow_dispatch:

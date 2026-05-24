@@ -12,6 +12,12 @@ name: External Service Tests (Nightly)
 # 注意: このワークフローは外部コンテナを別途起動できる環境（self-hosted runner 等）が
 #       整備されるまでは手動実行（workflow_dispatch）のみで運用する。
 #       外部サービスが利用可能になったら schedule を有効化する。
+#
+# --- OSS contributors ---
+# This workflow requires a repository secret: DB_PASSWORD
+# Set it in your fork under Settings > Secrets and variables > Actions.
+# Without this secret the MySQL service container and Laravel test setup will fail.
+# The workflow is triggered manually (workflow_dispatch) only; it does NOT run automatically.
 
 on:
   workflow_dispatch:
