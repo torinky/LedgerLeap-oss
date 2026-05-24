@@ -265,3 +265,37 @@ curl -o /dev/null -s -w "%{http_code}" http://localhost
 - Demo credentials: `docs/development/demo-credentials.md`
 - Setup notes: `docs/development/environment-setup.md`
 - Runbook: `docs/runbooks/oss-sync-runbook.md`
+
+---
+
+## 検証結果（2026-05-24 実施）
+
+### 実行結果サマリー
+
+| Sprint | 結果 | 備考 |
+|--------|------|------|
+| 3-A 事前確認 | ✅ | ディスク 18GB（目安 30GB 未達だがイメージ共有で最小消費） |
+| 3-B dev env 停止 | ✅ | sail down 正常完了 |
+| 3-C OSS クローン | ✅ | HEAD: 60ba7d1 |
+| 3-D vendor/ bootstrap | ✅ | Docker composer install で解決 |
+| 3-E setup.sh 実行 | ✅ | **完走** — build / up / migrate / npm build 全成功 |
+| 3-F 起動確認 | ✅ | 11コンテナ全 healthy / HTTP 302→200 |
+| 3-G demo login (superadmin) | ✅ | /demo-tenant/my-portal HTTP 200 |
+| 3-H demo login (demo user) | ✅ | /demo-tenant/my-portal HTTP 200 |
+| 3-I クリーンアップ | ✅ | dev env 復旧確認済み |
+
+### 発見した問題
+
+1. **vendor/ bootstrap gap** (#224)
+   - `setup.sh` は `./vendor/bin/sail` を呼ぶが `vendor/` は `.gitignore` 対象
+   - 回避策: `docker run --rm -v $(pwd):/app -w /app composer:latest install --ignore-platform-reqs --no-scripts`
+
+2. **VLM/RAG デフォルト true**
+   - `.env.example` のデフォルトは `VLM_ENABLED=true` / `RAG_ENABLED=true`
+   - 初回 setup では HuggingFace モデルダウンロードが発生
+   - 軽量検証時は false 推奨（README またはコメントでの案内が望ましい）
+
+3. **ディスク使用量**
+   - Docker images: 47.75GB（reclaim 可能 23.31GB）
+   - build cache: 17.1GB（reclaimable 4.6GB）
+   - fresh clone でのイメージ共有によりディスク追加消費は最小限
