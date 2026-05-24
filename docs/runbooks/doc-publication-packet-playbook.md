@@ -103,6 +103,8 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 - test がある packet は `test_anchor` も残す
 - comment sync を deferred にする場合は `defer_reason` を acceptance に残す
 - #229 の pilot では上の最低項目が揃っていない packet を対象にしない
+- comment sync 方針そのものを検証する pilot では、`comment_sync_policy = not_applicable` と `required` の packet を最低 1 件ずつ含める
+  - Evidence: [Issue #229 retrospective](../work/2026-05-24_issue-229-retrospective.md)
 
 ## 5. source comment policy
 

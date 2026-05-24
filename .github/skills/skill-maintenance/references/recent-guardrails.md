@@ -65,3 +65,10 @@
 - `recheck_after`: 90d
 - `recheck_trigger`: a public mirror again includes local assistant metadata, `PUBLIC_REPO_TOKEN` needs another permission bump, or a branch cleanup requires history reset because a no-op sync cannot remove already mirrored content
 
+## 2026-05-24 Issue-229 Publication Packet Pilot
+
+- [docs/work/2026-05-24_issue-229-retrospective.md](../../../docs/work/2026-05-24_issue-229-retrospective.md)
+- `status`: confirmed
+- `last_confirmed_at`: 2026-05-24
+- `recheck_after`: 90d
+- `recheck_trigger`: a publication packet pilot needs to validate comment-sync scope again, a user-facing packet starts adding unnecessary source comments, or `gh issue edit` fails because the repo was assumed instead of passed explicitly

@@ -6,7 +6,14 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SearchRequest;
 use App\Http\Resources\Api\V1\LedgerResource;
 use App\Services\LedgerService;
+use OpenApi\Annotations as OA;
 
+/**
+ * REST search endpoint for `GET` / `POST` `/api/v1/search`.
+ *
+ * Keeps the HTTP search contract separate from the MCP search tool while
+ * applying the authenticated user's readable-folder scope.
+ */
 class SearchController extends Controller
 {
     /**

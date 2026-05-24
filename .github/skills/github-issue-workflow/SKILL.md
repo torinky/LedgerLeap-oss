@@ -37,6 +37,7 @@ compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap)"
 ## Body Sync Rule
 
 - For substantive rewrites, keep a canonical markdown file locally and update GitHub with full-body replacement.
+- When using `gh`, always pass `-R torinky/LedgerLeap` instead of relying on a default repo.
 - After `gh issue edit --body-file ...`, immediately re-fetch and verify published content matches the canonical file.
 - If stale sections remain, rewrite the full body again instead of repairing with comments.
 - See [GitHub Issue Body Sync Playbook](/docs/runbooks/github-issue-body-sync-playbook.md).

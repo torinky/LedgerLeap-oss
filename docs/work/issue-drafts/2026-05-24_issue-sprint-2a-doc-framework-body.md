@@ -56,7 +56,8 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
   - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3-assets-body.md`, #228
 - [x] **#230 / Sprint 2-A3A:** publication packet の文書フォーマット規約 / evidence field / PHPDoc source comment policy を補強する
   - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3a-format-and-source-comment-body.md`, `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`, #230
-- [ ] **#229 / Sprint 2-A4:** #230 で固定した format/comment policy を前提に pilot packet と comment sync を実証し、#219 向け packet backlog を凍結する
+- [x] **#229 / Sprint 2-A4:** #230 で固定した format/comment policy を前提に pilot packet と comment sync を実証し、#219 向け packet backlog を凍結する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a4-pilot-body.md`, `docs/work/issue-229/2026-05-24_packet-portal-and-navigation.md`, `docs/work/issue-229/2026-05-24_packet-search-api.md`, #229
 
 ## 確定アウトプット
 | Sprint | 主アウトプット |
@@ -65,7 +66,7 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 | **#227 / 2-A2** | publication packet schema / handoff template / OpenCode-Gemma4 run profile / packet acceptance template ✅ |
 | **#228 / 2-A3** | source inventory 用 skill 方針 / packet rewrite 用 subagent 方針 / operator runbook 方針 ✅ |
 | **#230 / 2-A3A** | doc format profile matrix / evidence field matrix / PHPDoc minimum rule ✅ |
-| **#229 / 2-A4** | pilot packet 実行記録 / docs+comment sync 評価 / #219 packet backlog |
+| **#229 / 2-A4** | pilot packet 実行記録 / docs+comment sync 評価 / #219 packet backlog ✅ |
 
 ## Sprint 2-A1 handover (2026-05-24)
 
@@ -153,6 +154,28 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 - #229 の 1 件目 pilot packet を `portal-and-navigation`, `search-api`, `mcp-client-guide` のどれで始めるか
 - `docs/contributing/*` の provisional queue を #219 本体へどう引き渡すか
 
+## Sprint 2-A4 handover (2026-05-24)
+
+### Branch
+- 完了時 branch: `main`
+- 次 sprint 推奨起点: `main` から `issue-219-*` の branch を新規作成
+
+### Changed files
+| ファイル | 変更内容 | 次 sprint での扱い |
+|---|---|---|
+| `docs/getting-started/portal-and-navigation.md` | end-user 向け pilot packet を公開 | getting-started 系 packet の見本として再利用 |
+| `docs/api/search-api.md` | REST Search API reference packet を公開 | API reference 系 packet と bounded comment sync の見本として再利用 |
+| `docs/work/issue-229/2026-05-24_packet-portal-and-navigation.md` | tutorial packet の manifest / handoff / acceptance を記録 | 次の user-facing packet の SoT として再利用 |
+| `docs/work/issue-229/2026-05-24_packet-search-api.md` | reference packet の manifest / handoff / acceptance を記録 | 次の API packet の SoT として再利用 |
+| `docs/work/issue-drafts/2026-05-24_issue-sprint-2a4-pilot-body.md` | #229 canonical body を completion state へ同期 | #225 / #219 handoff の evidence source として参照 |
+
+### TODO comment locations
+- なし（TODO マーカーは追加していない）
+
+### Open questions
+- `docs/api/bootstrap-manifest-api.md` と `docs/api/mcp-client-guide.md` の着手順は、REST 契約優先か MCP onboarding 優先かで最終判断する
+- `docs/contributing/*` は引き続き provisional queue なので、#219 の本文執筆へ混ぜる前に別 source scan の要否を確認する
+
 ## エビデンス / 参照先
 - `docs/work/2026-05-24_issue-219_chunked-doc-framework-plan.md`
 - `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`
@@ -176,11 +199,11 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 - MCP Apps Patterns — https://apps.extensions.modelcontextprotocol.io/api/documents/Patterns.html
 
 ## 完了条件
-- [ ] source-derived な doc inventory と current coverage gap が整理されている
-- [ ] #219 の target doc list が source inventory ベースで更新されている
-- [ ] 1 packet を Gemma4 26B で処理する input / output / subagent / acceptance 契約が定義されている
-- [ ] skill / subagent / runbook の最小構成が決まり、再利用可能な形で整理されている
-- [ ] pilot packet を動かす前提が整い、#219 は packet backlog 実行だけで開始できる
+- [x] source-derived な doc inventory と current coverage gap が整理されている
+- [x] #219 の target doc list が source inventory ベースで更新されている
+- [x] 1 packet を Gemma4 26B で処理する input / output / subagent / acceptance 契約が定義されている
+- [x] skill / subagent / runbook の最小構成が決まり、再利用可能な形で整理されている
+- [x] pilot packet を動かす前提が整い、#219 は packet backlog 実行だけで開始できる
 
 ## 関連リンク
 - Epic: #216

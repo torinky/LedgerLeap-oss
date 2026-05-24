@@ -2,6 +2,7 @@
 
 **詳細仕様:**
 - [OpenAPI Specification (JSON)](openapi.json) - 完全なAPIリファレンス（Swagger/OpenAPI形式）
+- [Search API](search-api.md) - `/api/v1/search` の REST 契約と GET / POST の使い分け
 
 **関連ドキュメント:**
 - [client-facing capability taxonomy](../work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md) - client-facing capability の一覧とペルソナ別初期 skill セット
@@ -235,7 +236,7 @@ $token->plainTextToken;
 | **POST** | `/api/v1/ledgers` | 新しい台帳レコードの作成 | |
 | **GET** | `/api/v1/ledgers/{ledger}` | 単一台帳の取得 | 更新前確認向け。状態・列定義・現在値を返す |
 | **PATCH** | `/api/v1/ledgers/{ledger}` | 既存台帳の部分更新 | `content_patch` による更新。pending 保存時は `DRAFT` に戻る |
-| **GET** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | 添付資料を含む確認に利用 |
+| **GET / POST** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | [Search API](search-api.md) を参照 |
 
 ## implemented: bootstrap discovery 公開契約（Issue #89）
 

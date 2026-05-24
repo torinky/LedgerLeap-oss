@@ -6,6 +6,12 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
+/**
+ * Validation rules shared by the REST search endpoints.
+ *
+ * The same parameter set is accepted for query-string and JSON-body search
+ * requests so `/api/v1/search` stays aligned across `GET` and `POST`.
+ */
 class SearchRequest extends FormRequest
 {
     /**
