@@ -350,7 +350,7 @@ LedgerLeap-ai-assets/ (private)
 
 - CI フィルタが除外パターンを自動適用するため、手動確認コストはほぼゼロ
 - コミットメッセージにシークレットを埋め込まないルールを守れば他の対策は不要
-- `PUBLIC_REPO_TOKEN` は最小スコープ（`contents: write` のみ）で発行する
+- `PUBLIC_REPO_TOKEN` は `contents: write` に加えて、`.github/workflows/*` を更新できる権限も付けて発行する
 
 ### 7.5 公開リポジトリのブランチ保護設定
 

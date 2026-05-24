@@ -90,11 +90,13 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 	- Evidence: `gh repo view torinky/LedgerLeap-oss` で `isPrivate: true` を確認済み。visibility の切り替えは全体計画完了後に延期
 - [x] 初回コミットが private staging リポジトリに push される
 	- Evidence: `public-bootstrap` の orphan commit `aafcb7bb3d2702e7bc159583f447a0734b6d08b3` を `staging:main` へ push 済み
+- [x] 公開リポジトリへ実ファイルを反映する push step を実装する
+	- Evidence: `sync-to-public.yml` で public repo を clone し、`rsync` で source snapshot を mirror して `git commit` → `git push origin HEAD:main` する処理を追加済み。コミットは `362b8b727b4d3009019da0345c8f6d5b09cd5c9d`。
 - [ ] プライベート main から private staging 側へ同期できる
-	- Evidence: `git ls-remote --heads origin main` で private main は確認済み、`git ls-remote --heads staging main` で private staging も確認済み。ただし `sync-to-public.yml` は `PUBLIC_SYNC_ENABLED=true` と `PUBLIC_REPO_TOKEN` の投入前提で、現時点の実環境同期は未有効のため未確認。
-	- 次にやること: GitHub 側で `PUBLIC_SYNC_ENABLED=true` と `PUBLIC_REPO_TOKEN` を設定し、`workflow_dispatch` または main push で preview → sync の両方を通して、staging 側の反映結果を確認する。
+	- Evidence: `git ls-remote --heads origin main` で private main は確認済み、`git ls-remote --heads staging main` で private staging も確認済み。最新 run `26347054600` では preview は success したが、mirror step が `workflow` scope 不足で remote rejected となり、実ファイル反映はまだ未完了。
+	- 次にやること: `PUBLIC_REPO_TOKEN` を workflow file 更新可能な scope に更新し、`workflow_dispatch` または main push で preview → sync の両方を通して、staging 側の反映結果を確認する。
 	- 実行手順:
-	  1. `PUBLIC_SYNC_ENABLED=true` と `PUBLIC_REPO_TOKEN` を GitHub 側で設定する。
+	  1. `PUBLIC_SYNC_ENABLED=true` と、workflow file の更新が可能な `PUBLIC_REPO_TOKEN` を GitHub 側で設定する。
 	  2. `main` へ対象変更を push するか、`workflow_dispatch` を実行する。
 	  3. Actions の `Preview public sync scope` で `should_sync=true` と対象ファイルを確認する。
 	  4. `Sync snapshot to public repo` が走り、private staging 側の反映結果が出ることを確認する。
@@ -114,10 +116,10 @@ private のまま公開用リポジトリの土台を初期化し、プライベ
 	  3. `Personal access tokens` → `Fine-grained tokens` を選び、`Generate new token` を押す。
 	  4. トークン名を付け、必要なら有効期限を設定する。
 	  5. `Repository access` で `Only select repositories` を選び、`torinky/LedgerLeap-oss` を対象にする。
-	  6. `Repository permissions` で少なくとも `Contents: Read and write` を許可する。
+	  6. `Repository permissions` で少なくとも `Contents: Read and write` を許可し、workflow ファイルを更新する場合は `workflow` scope も付与する。
 	  7. 必要に応じて `Metadata: Read-only` はそのまま付与する。
 	  8. トークンを生成し、表示された値をコピーして `PUBLIC_REPO_TOKEN` として secret に登録する。
-	  9. もし fine-grained token が使えない組織設定なら、管理者に repo write 権限付きの代替 PAT を依頼する。
+	  9. もし fine-grained token が使えない、または workflow scope を付けられない組織設定なら、管理者に workflow 更新権限付きの代替 PAT を依頼する。
 
 > `./bin/setup.sh` の完走確認とデモログイン確認は issue #223 に移し、ここでは GitHub 側の同期確認に集中する。
 
