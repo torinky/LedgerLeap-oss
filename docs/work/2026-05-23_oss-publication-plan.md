@@ -373,6 +373,20 @@ LedgerLeap-ai-assets/ (private)
 | visibility 切り替え | GitHub | #216 | 全体計画完了後に実施 |
 
 > 目安: `#223` はローカル実機での完走確認、`#218` は GitHub 側の反映確認。
+
+### 7.7 GitHub 側で完了させる手順
+
+1. まず、`.github/workflows/*` を公開同期の対象に含めるかを決める。
+2. 含める場合は、`PUBLIC_REPO_TOKEN` に `contents: write` と `workflow` 権限の両方を付ける。
+3. 含めない場合は、`.github/workflows/` を `.github/sync-excludes.txt` に追加し、除外方針を commit する。
+4. `PUBLIC_SYNC_ENABLED=true` を GitHub の repo variable に設定する。
+5. `PUBLIC_REPO_TOKEN` を GitHub の Actions secret に設定する。
+6. `main` へ対象変更を push するか、`workflow_dispatch` を実行する。
+7. `Preview public sync scope` で `should_sync=true` と `included_files` を確認する。
+8. `Sync snapshot to public repo` が success し、`LedgerLeap-oss` の `pushedAt` / `updatedAt` と file tree が更新されていることを確認する。
+9. run URL、public commit SHA、変更内容を issue #218 に evidence として記録する。
+
+> workflow ファイルを含める構成では `workflow` 権限が必須。権限を付けられない場合は workflow ファイルを除外して再実行する。
 ---
 
 ## 8. 実行フェーズ計画
