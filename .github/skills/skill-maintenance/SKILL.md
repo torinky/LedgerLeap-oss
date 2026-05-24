@@ -28,7 +28,7 @@ A new learning was proven?
 - Keep one source of truth per rule; replace duplicates with links.
 - If a prompt and skill cover the same domain, make them cross-reference each other.
 - If the same investigation step stalls twice (for example CI status checks with unstable `gh` / shell / Python flows), promote the stable command recipe into the prompt, skill, and runbook.
-- For public mirror workflows, validate exclude scope and PAT scope independently before closure; if the public branch already contains unwanted content, add a documented history-reset path instead of relying on no-op syncs to clean it up.
+- For public mirror workflows, validate exclude scope and PAT scope independently before closure; if the public branch already contains unwanted content, add a documented history-reset path instead of relying on no-op syncs to clean it up. When adding a path to `rsync --exclude-from`, also check if the file exists in the destination and delete it manually — rsync `--delete` does NOT remove excluded files from the destination (confirmed issue #223; procedure in `docs/runbooks/oss-sync-runbook.md`).
 - When a user supersedes a prior plan or scope, treat the new instruction as authoritative immediately; sync the plan, issue, and docs in the same pass and remove stale wording instead of keeping both versions active.
 - When a user override changes the visible result, rewrite the affected branch from the nearest semantic anchor and keep only the authoritative version visible; do not leave the superseded label or checklist alongside the new one.
 - When a Blade or Livewire edit breaks a narrow branch, prefer a clean branch rewrite over stacking fragment patches, then validate before widening the search.

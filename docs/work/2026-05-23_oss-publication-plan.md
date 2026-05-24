@@ -188,6 +188,9 @@ prod.sh
 
 > 除外パターンを変更する際は **このドキュメントの §5 と `.github/sync-excludes.txt` を同時に更新する**。
 
+> ⚠️ **rsync トラップ:** rsync の `--delete` フラグは `--exclude-from` で除外されたファイルをコピー先（OSS repo）から**自動削除しない**。除外リストに追加した後も、OSS repo にすでにそのファイルが存在する場合は GitHub API で手動削除が必要。  
+> 操作手順: `docs/runbooks/oss-sync-runbook.md`
+
 ### 4.4 コントリビュータ PR の逆同期
 
 ```
