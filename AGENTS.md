@@ -52,11 +52,14 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 ## Domain Entry Points
 - Bug investigation: `/bug-investigation`
 - Bug implementation: `/bug-execution`
+- Doc publication packets: `/doc-publication-packet`
 - HAR analysis: `/browser-har-analysis`
 - Git commits: `/git-commit`
 - GitHub issues / PRs: `/github-issue-workflow`
 - Client-facing contract triage: `/client-facing-contract-triage`
 - Client-facing contract maintenance agent: `.github/agents/client-facing-contract-maintenance.agent.md`
+- Doc source inventory agent: `.github/agents/doc-source-inventory.agent.md`
+- Doc packet executor agent: `.github/agents/doc-packet-executor.agent.md`
 - CI failures: `/ci-failure-investigation`
 - RAG / search: `/rag-vector-search`
 - AI asset maintenance: `/skill-maintenance`
@@ -68,4 +71,3 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - Livewire public state must stay plain arrays.
 - `#[Lazy]` tenant-aware components and Livewire URL helpers should follow `.github/skills/livewire-tenant-context/SKILL.md` for the shared tenant resolver and `tenant_id` fallback pattern.
 - All UI composition and styling MUST strictly adhere to `/.github/instructions/design.instructions.md`. Prioritize Mary UI components but style them using daisyUI/Tailwind semantics to match the project's vibe.
-

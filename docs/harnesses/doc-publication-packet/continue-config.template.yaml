@@ -1,0 +1,50 @@
+name: LedgerLeap Doc Packet Local Model
+version: 0.0.1
+schema: v1
+
+models:
+  - name: LedgerLeap Gemma4 26B
+    provider: openai
+    model: gemma-4-26b
+    apiBase: http://127.0.0.1:1234/v1
+    apiKey: lm-studio
+    capabilities:
+      - tool_use
+    defaultCompletionOptions:
+      contextLength: 32768
+      maxTokens: 4096
+
+mcpServers:
+  - name: ledgerleap
+    command: npx
+    args:
+      - "-y"
+      - "mcp-remote"
+      - "https://your-server.example.com/mcp/ledgerleap"
+      - "--header"
+      - "Authorization:Bearer ${LEDGERLEAP_TOKEN}"
+    env:
+      LEDGERLEAP_TOKEN: your-sanctum-token-here
+
+rules:
+  - uses: file:///ABSOLUTE_PROJECT_PATH/.continue/rules/01-doc-packet-core.md
+  - uses: file:///ABSOLUTE_PROJECT_PATH/.continue/rules/02-doc-packet-comment-sync.md
+
+prompts:
+  - name: packet-plan
+    description: Prepare one LedgerLeap publication packet from the current backlog
+    prompt: |
+      Choose the inventory refresh lane or packet rewrite lane for one LedgerLeap packet.
+      Keep REST API and MCP contract separate.
+      Return a packet handoff using docs/templates/doc-publication-packet-template.md.
+  - name: packet-rewrite
+    description: Rewrite one LedgerLeap packet with a single writer
+    prompt: |
+      Rewrite exactly one LedgerLeap publication packet.
+      Use the packet manifest, the target public file, and the acceptance section from docs/templates/doc-publication-packet-template.md.
+      Stay in a single-writer flow and do not widen scope into a fresh inventory scan.
+  - name: packet-comment-sync
+    description: Sync only the comment anchors for one LedgerLeap packet
+    prompt: |
+      Update comment anchors only for the selected LedgerLeap packet.
+      Respect comment_sync_policy and record explicit defer reasons when comment sync is not applicable.

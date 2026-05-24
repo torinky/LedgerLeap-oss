@@ -1,79 +1,88 @@
 # Sprint 2-A3: packet 実行用 skill / subagent / runbook 整備
 
+## GitHub 追跡
+- Umbrella: #225
+- Upstream inventory: #226
+- Upstream contract: #227
+- Sprint 2-A3: #228（本 Issue）
+- Downstream pilot: #229
+
 ## 概要
-Sprint 2-A1 / 2-A2 の成果を、今回限りのメモで終わらせず reusable な AI asset として整備します。対象は **shared packet SoT**, source inventory 用 skill、packet rewrite 用 subagent、OpenCode / Continue.dev adapter、operator runbook です。
+Sprint 2-A1 / 2-A2 の成果を reusable な AI asset として固定しました。shared packet contract を再掲するのではなく、**JetBrains entry / inventory skill / packet executor agent / OpenCode adapter / Continue adapter / operator runbook / shared template** に分割し、#229 が packet backlog 実行から始められる状態にしました。
 
 ## 背景 / 目的
 - #219 だけでなく、その後の docs 保守でも同じ packet 実行系を再利用したい
-- 既存 `doc-publication-audit` は rewrite に強いが、source-derived inventory と Gemma4 packet orchestration はまだカバーしていない
-- OpenCode / LM Studio / Gemma4 26B 前提の作業ルールを human-readable な runbook にも残す必要がある
-- Continue.dev は OpenCode のような subagent 中心ではなく `rules / prompts / Plan / Agent` 中心なので、**共通ルール本体と agent 別 adapter を分ける設計** が必要
-- 類似事例として、Continue の `awesome-rules` と repo 内 `.continue/checks` は repeated task を source-controlled asset に落とす運用を採っている
+- `doc-publication-audit` は rewrite に強いが、packet handoff / comment sync / single-writer rule を直接は持っていなかった
+- Continue.dev は OpenCode と違って repo-local prompt discovery を前提にできないため、prompt / rule / config の受け皿を分けて置く必要があった
+- human-readable な runbook と sanitized harness がないと、operator が adapter 差分を再調査し続ける
 
-## 現状
-- `/.github/skills/doc-publication-audit/SKILL.md` は file-by-file rewrite を前提にしている
-- custom agent は現在 `client-facing-contract-maintenance`, `test-creation` だけで、doc packet 用 agent はない
-- OpenCode operator 用の public-doc packet runbook は未整備
-- `.opencode/*` / `.continue/*` に packet workflow 用 asset はまだない
+## 2-A3 で確定した判断
+1. **shared packet SoT は `docs/work` の issue canonical body + `docs/templates/doc-publication-packet-template.md` + `docs/runbooks/doc-publication-packet-playbook.md` の組み合わせで持つ**
+2. `doc-source-inventory` を新規 skill として追加し、役割を **inventory refresh / delta extraction** に限定する
+3. `doc-publication-audit` は rewrite 専用のまま維持し、packet handoff / comment sync / stale-baseline handback を追加する
+4. repo-native custom agent は `.github/agents/doc-source-inventory.agent.md` と `.github/agents/doc-packet-executor.agent.md` の 2 本に分ける
+5. OpenCode adapter は `.opencode/agents/*` と `.opencode/commands/*` に置き、`packet-plan` だけ `subtask: true` にする
+6. Continue adapter は `.continue/rules/*` と harness の `continue-config.template.yaml` に置き、**repo-local prompt discovery を仮定しない**
+7. operator flow は `docs/runbooks/doc-publication-packet-playbook.md` に集約し、JetBrains entry は `/.github/prompts/doc-publication-packet.prompt.md` に置く
 
-## 目標 / 完了状態
-- source inventory 用 skill 方針が確定している
-- packet rewrite 用 subagent 方針が確定している
-- OpenCode adapter と Continue adapter の役割分担が確定している
-- operator runbook / prompt entrypoint の要否が確定している
-- asset の primary destination と neighbor sync 方針が確定している
-
-## スコープ / 非スコープ
-### 対象
-- shared packet rule / handoff SoT の置き場
-- skill 追加または既存 skill 拡張方針
-- custom agent 追加方針
-- OpenCode `.opencode/agents` / `.opencode/commands` adapter 方針
-- Continue `.continue/rules` / prompts / config snippet adapter 方針
-- runbook の構成
-- prompt entrypoint の要否整理
-
-### 対象外
-- public doc 本文の大量執筆
-- packet pilot の実行
-- OSS sync
-- Continue Hub への公開配布
-
-## 確定したい asset 構成
-| 層 | 候補 | 役割 |
+## 役割分担
+| Layer | File | Role |
 |---|---|---|
-| shared SoT | packet rule / handoff spec / acceptance spec | agent 非依存の packet contract を 1 箇所に集約 |
-| repo-native skill | `doc-source-inventory`, `doc-publication-audit` 拡張 | 判断基準と flow を LedgerLeap 側の reusable knowledge として保持 |
-| repo-native agent | `doc-source-inventory.agent.md`, `doc-packet-executor.agent.md` | Copilot 系 subagent から bounded task を再利用 |
-| OpenCode adapter | `.opencode/agents/*`, `.opencode/commands/*` | OpenCode の primary/subagent と custom command に contract を載せる |
-| Continue adapter | `.continue/rules/*`, prompts, `config.yaml` snippet | Continue の Plan/Agent と `/prompt` に contract を載せる |
-| human-readable ops | `docs/runbooks/*` | オペレータが agent ごとの差を理解して運用する |
+| JetBrains entry | `/.github/prompts/doc-publication-packet.prompt.md` | inventory refresh / packet rewrite / comment sync の lane 選択 |
+| repo-native skill | `/.github/skills/doc-source-inventory/SKILL.md` | #226 baseline からの delta refresh |
+| repo-native skill | `/.github/skills/doc-publication-audit/SKILL.md` | 1 packet rewrite + comment sync |
+| repo-native agent | `/.github/agents/doc-source-inventory.agent.md` | Copilot subagent 用 inventory refresh |
+| repo-native agent | `/.github/agents/doc-packet-executor.agent.md` | Copilot subagent 用 single-packet writer |
+| OpenCode adapter | `.opencode/agents/*`, `.opencode/commands/*` | OpenCode の subagent / command entry |
+| Continue adapter | `.continue/rules/*`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml` | Continue の Plan/Agent rule + sanitized config |
+| human ops | `docs/runbooks/doc-publication-packet-playbook.md` | operator 向け全体フロー |
+| shared template | `docs/templates/doc-publication-packet-template.md` | packet manifest / handoff / acceptance |
 
-## 方針候補 / メモ
-1. `doc-publication-audit` は rewrite 専用として維持し、新たに `doc-source-inventory` を切る
-2. custom agent は `doc-source-inventory` と `doc-packet-executor` を候補にする
-3. OpenCode は `.opencode/commands/packet-plan.md`, `packet-rewrite.md`, `packet-comment-sync.md` のような command entry を候補にする
-4. Continue は `.continue/rules/01-doc-packet-core.md`, `02-comment-sync.md` と `/packet-plan`, `/packet-rewrite`, `/packet-comment-sync` 相当 prompt を候補にする
-5. operator 手順は `docs/runbooks/*` に置き、.github には reusable decision tree だけ残す
-6. repeated task の本文は agent ごとに複製せず、shared SoT から adapter を派生させる
+## Continue adapter で明示した制約
+- Continue `config.yaml` の top-level は `models`, `rules`, `prompts`, `mcpServers`
+- local rules は `.continue/rules/*.md` を使う
+- Continue docs で repo-local prompts の自動 discovery を前提にできないため、packet prompt blocks は harness の `continue-config.template.yaml` に置く
+- したがって Continue 側の reusable asset は **repo rule + harness snippet** を正本とし、JetBrains prompt をそのまま複製しない
+
+## 2-A4 に渡す最小 asset set
+- JetBrains: `/.github/prompts/doc-publication-packet.prompt.md`
+- Inventory refresh: `/.github/skills/doc-source-inventory/SKILL.md`, `/.github/agents/doc-source-inventory.agent.md`
+- Packet rewrite: `/.github/skills/doc-publication-audit/SKILL.md`, `/.github/agents/doc-packet-executor.agent.md`
+- Shared contract surface: `docs/templates/doc-publication-packet-template.md`, `docs/runbooks/doc-publication-packet-playbook.md`
+- OpenCode: `.opencode/agents/doc-source-inventory.md`, `.opencode/agents/doc-packet-executor.md`, `.opencode/commands/packet-plan.md`, `.opencode/commands/packet-rewrite.md`, `.opencode/commands/packet-comment-sync.md`
+- Continue: `.continue/rules/01-doc-packet-core.md`, `.continue/rules/02-doc-packet-comment-sync.md`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml`
 
 ## スプリント分解
-- [ ] shared packet rule / handoff SoT の primary destination を決める
-- [ ] skill 方針を決める
-- [ ] custom agent 方針を決める
-- [ ] OpenCode adapter 方針を決める
-- [ ] Continue adapter 方針を決める
-- [ ] runbook / prompt entrypoint の要否を決める
-- [ ] primary destination と neighbor sync 方針を確定する
-- [ ] 2-A4 で必要な最小 asset set を確定する
+- [x] shared packet rule / handoff SoT の primary destination を決める
+- [x] skill 方針を決める
+- [x] inventory refresh と packet execution の責務分離を決める
+- [x] custom agent 方針を決める
+- [x] OpenCode adapter 方針を決める
+- [x] Continue adapter 方針を決める
+- [x] runbook / prompt entrypoint の要否を決める
+- [x] primary destination と neighbor sync 方針を確定する
+- [x] 2-A4 で必要な最小 asset set を確定する
 
 ## エビデンス / 参照先
+- `/.github/prompts/doc-publication-packet.prompt.md`
+- `/.github/skills/doc-source-inventory/SKILL.md`
 - `/.github/skills/doc-publication-audit/SKILL.md`
-- `/.github/skills/skill-maintenance/SKILL.md`
-- `/.github/agents/client-facing-contract-maintenance.agent.md`
-- `/.github/agents/test-creation.agent.md`
-- `/.github/instructions/ai-assets.instructions.md`
-- `docs/runbooks/local-llm-mcp-setup.md`
+- `/.github/skills/doc-publication-audit/references/packet-execution-assets.md`
+- `/.github/agents/doc-source-inventory.agent.md`
+- `/.github/agents/doc-packet-executor.agent.md`
+- `.opencode/agents/doc-source-inventory.md`
+- `.opencode/agents/doc-packet-executor.md`
+- `.opencode/commands/packet-plan.md`
+- `.opencode/commands/packet-rewrite.md`
+- `.opencode/commands/packet-comment-sync.md`
+- `.continue/rules/01-doc-packet-core.md`
+- `.continue/rules/02-doc-packet-comment-sync.md`
+- `docs/runbooks/doc-publication-packet-playbook.md`
+- `docs/templates/doc-publication-packet-template.md`
+- `docs/harnesses/doc-publication-packet/continue-config.template.yaml`
+- `AGENTS.md`
+- `docs/runbooks/README.md`
+- `docs/harnesses/README.md`
 - OpenCode Agents — https://opencode.ai/docs/agents
 - OpenCode Commands — https://opencode.ai/docs/commands
 - OpenCode Config — https://opencode.ai/docs/config
@@ -81,12 +90,9 @@ Sprint 2-A1 / 2-A2 の成果を、今回限りのメモで終わらせず reusab
 - Continue Rules — https://docs.continue.dev/customize/deep-dives/rules
 - Continue Agent mode quick start — https://docs.continue.dev/ide-extensions/agent/quick-start
 - Continue OpenAI-compatible provider — https://docs.continue.dev/customize/model-providers/top-level/openai
-- Continue awesome-rules — https://github.com/continuedev/awesome-rules
-- Continue repo (`.continue/checks`) — https://github.com/continuedev/continue
-- OpenAI Codex Subagents — https://developers.openai.com/codex/concepts/subagents
 
 ## 完了条件
-- [ ] source inventory と packet rewrite の reusable asset 方針が定まっている
-- [ ] shared SoT / runbook / skill / agent / OpenCode adapter / Continue adapter の役割分担が明文化されている
-- [ ] OpenCode と Continue のどちらからでも 2-A4 を開始できる最小 asset set が定まっている
-- [ ] asset の primary destination と neighbor sync 手順が明文化されている
+- [x] source inventory と packet rewrite の reusable asset 方針が定まっている
+- [x] shared SoT / runbook / skill / agent / OpenCode adapter / Continue adapter の役割分担が明文化されている
+- [x] OpenCode と Continue のどちらからでも 2-A4 を開始できる最小 asset set が定まっている
+- [x] asset の primary destination と neighbor sync 手順が明文化されている

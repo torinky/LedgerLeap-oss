@@ -10,8 +10,9 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 - 今回だけの手順ではなく、今後の docs 維持でも再利用できる skill / subagent / runbook を用意したい
 
 ## 現状
-- `docs/work/2026-05-23_oss-publication-plan.md` では少なくとも 18 個の公開 doc 出力先が想定されているが、source-derived inventory はまだない
-- `routes/tenant.php`, `routes/api.php`, `app/Livewire/*`, `app/Filament/*`, `tests/Feature/*` を見ると、import/export, file inspector, rollback, bootstrap manifest, admin announcement, notification など追加候補がある
+- #226 で source-derived inventory / current coverage gap / #219 用 target doc list v2 / comment anchor candidate list が確定した
+- 公開 target は `docs/getting-started/*`, `docs/features/*`, `docs/admin/*`, `docs/api/*`, `docs/architecture/*` に再整理され、REST API と MCP は別 packet 系列として扱う前提になった
+- `docs/contributing/*` は 2-A1 の source set では十分に裏取りできておらず、別 source scan を前提に後続 sprint へ持ち越す
 - `docs/runbooks/local-llm-mcp-setup.md` と `docs/work/llm-integration/*` では local model 向けに `list -> detail`, 最小 bundle, text budget を前提にしている
 - `/.github/skills/doc-publication-audit/SKILL.md` は file-by-file rewrite を前提にしているが、Issue #219 用の source inventory / packet 契約 / Gemma4 実行プロファイルはまだ未整備
 
@@ -43,23 +44,97 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 3. OpenCode / Gemma4 26B では read-heavy のみ最大 2 subagent 並列、write-heavy は単一 writer に制限する
 4. docs 更新が public behavior を説明する場合、必要最小限の source comment / docblock を同 packet 内で整える
 5. reusable 化は `doc-publication-audit` を rewrite 専用に残し、source inventory 用の skill / subagent を別立てする方向で検討する
+6. packet contract / asset / pilot は #226 で確定した `feature family`, `doc area`, `public/internal`, `comment anchor group` を入力の正本として扱う
+7. `docs/contributing/*` は 2-A1 の inventory からは外し、#219 本体へ直結させる前に別 source set で再棚卸しする
 
 ## スプリント分解
-- [ ] **#226 / Sprint 2-A1:** source-derived な公開 doc candidate / coverage gap / comment anchor candidate を生成する
-- [ ] **#227 / Sprint 2-A2:** `publication packet` schema と OpenCode / LM Studio / Gemma4 26B 実行プロファイルを確定する
-- [ ] **#228 / Sprint 2-A3:** source inventory / packet rewrite 用の skill / subagent / runbook の方針と最小成果物を確定する
-- [ ] **#229 / Sprint 2-A4:** pilot packet と comment sync を実証し、#219 向け packet backlog を凍結する
+- [x] **#226 / Sprint 2-A1:** source-derived な公開 doc candidate / coverage gap / comment anchor candidate を生成する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a1-source-inventory-body.md`, #226
+- [x] **#227 / Sprint 2-A2:** `publication packet` schema と OpenCode / LM Studio / Gemma4 26B 実行プロファイルを確定する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a2-packet-contract-body.md`, #227
+- [x] **#228 / Sprint 2-A3:** source inventory / packet rewrite 用の skill / subagent / runbook の方針と最小成果物を確定する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3-assets-body.md`, #228
+- [ ] **#230 / Sprint 2-A3A:** publication packet の文書フォーマット規約 / evidence field / PHPDoc source comment policy を補強する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3a-format-and-source-comment-body.md`, #230
+- [ ] **#229 / Sprint 2-A4:** #230 で固定した format/comment policy を前提に pilot packet と comment sync を実証し、#219 向け packet backlog を凍結する
 
 ## 確定アウトプット
 | Sprint | 主アウトプット |
 |---|---|
-| **#226 / 2-A1** | source feature inventory / doc coverage gap / target doc list v2 / comment anchor candidate list |
-| **#227 / 2-A2** | publication packet schema / handoff template / OpenCode-Gemma4 run profile / packet acceptance template |
-| **#228 / 2-A3** | source inventory 用 skill 方針 / packet rewrite 用 subagent 方針 / operator runbook 方針 |
+| **#226 / 2-A1** | source feature inventory / doc coverage gap / target doc list v2 / comment anchor candidate list ✅ |
+| **#227 / 2-A2** | publication packet schema / handoff template / OpenCode-Gemma4 run profile / packet acceptance template ✅ |
+| **#228 / 2-A3** | source inventory 用 skill 方針 / packet rewrite 用 subagent 方針 / operator runbook 方針 ✅ |
+| **#230 / 2-A3A** | doc format profile matrix / evidence field matrix / PHPDoc minimum rule |
 | **#229 / 2-A4** | pilot packet 実行記録 / docs+comment sync 評価 / #219 packet backlog |
+
+## Sprint 2-A1 handover (2026-05-24)
+
+### Branch
+- 完了時 branch: `main`
+- 次 sprint 推奨起点: `main` から対象 issue 番号の branch を新規作成
+
+### Changed files
+| ファイル | 変更内容 | 次 sprint での扱い |
+|---|---|---|
+| `docs/work/issue-drafts/2026-05-24_issue-sprint-2a1-source-inventory-body.md` | source-derived inventory / coverage gap / target doc list v2 / comment anchors を正本化 | #227〜#230 / #229 の packet contract / asset / pilot 候補の正本として再利用 |
+| `docs/work/2026-05-24_issue-219_chunked-doc-framework-plan.md` | #226〜#230 の分割方針と sprint 詳細を保持 | 後続 sprint の目的・範囲確認に再利用 |
+
+### TODO comment locations
+- なし（TODO マーカーは追加していない）
+
+### Open questions
+- #228 の reusable asset で、`doc-source-inventory` を初回 discovery 用ではなく inventory refresh / diff 用に切り替えるか
+- #229 の pilot を `portal-and-navigation` と `search-api` / `bootstrap-manifest-api` のどれで始めるか
+- #219 の `docs/contributing/*` を別 source scan issue に切り出すか、2-A4 backlog 凍結時に provisional 扱いで残すか
+
+## Sprint 2-A2 handover (2026-05-24)
+
+### Branch
+- 完了時 branch: `main`
+- 次 sprint 推奨起点: `main` から対象 issue 番号の branch を新規作成
+
+### Changed files
+| ファイル | 変更内容 | 次 sprint での扱い |
+|---|---|---|
+| `docs/work/issue-drafts/2026-05-24_issue-sprint-2a2-packet-contract-body.md` | packet schema v1 / backlog conversion rule / handoff template / acceptance template / OpenCode-Continue run profile matrix を正本化 | #228 の shared SoT と adapter asset 設計の正本として再利用 |
+| `docs/work/issue-drafts/2026-05-24_issue-sprint-2a-doc-framework-body.md` | umbrella の sprint 進捗と 2-A2 handover を同期 | #228 以降の sprint handover 追記先として継続利用 |
+
+### TODO comment locations
+- なし（TODO マーカーは追加していない）
+
+### Open questions
+- #229 の pilot packet を `portal-and-navigation`, `search-api`, `mcp-client-guide` のどれで始めるか
+- `docs/contributing/*` の provisional queue を #219 本体へどう引き渡すか
+
+## Sprint 2-A3 handover (2026-05-24)
+
+### Branch
+- 完了時 branch: `main`
+- 次 sprint 推奨起点: `main` から対象 issue 番号の branch を新規作成
+
+### Changed files
+| ファイル | 変更内容 | 次 sprint での扱い |
+|---|---|---|
+| `/.github/prompts/doc-publication-packet.prompt.md` | JetBrains / Copilot 用の packet lane entrypoint を追加 | #229 の packet kickoff entry として再利用 |
+| `/.github/skills/doc-source-inventory/SKILL.md` | inventory refresh 専用 skill を追加 | #229 で stale packet / anchor delta が出たときの起点にする |
+| `/.github/skills/doc-publication-audit/SKILL.md` | packet handoff / comment sync / stale-baseline handback を追加 | #229 の rewrite lane に再利用 |
+| `/.github/agents/doc-source-inventory.agent.md`, `/.github/agents/doc-packet-executor.agent.md` | Copilot 系 subagent の inventory / rewrite 役割を追加 | #229 で bounded task を切るときの候補として再利用 |
+| `.opencode/agents/*`, `.opencode/commands/*` | OpenCode adapter を追加 | #229 で OpenCode 実行時にそのまま使用 |
+| `.continue/rules/*`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml` | Continue adapter と sanitized config harness を追加 | #229 で Continue 実行時の最小セットとして再利用 |
+| `docs/runbooks/doc-publication-packet-playbook.md` | packet operator flow を追加 | #229 の人間向け手順として再利用 |
+| `docs/templates/doc-publication-packet-template.md` | shared packet manifest / handoff / acceptance template を追加 | #229 の packet evidence 形として再利用 |
+
+### TODO comment locations
+- なし（TODO マーカーは追加していない）
+
+### Open questions
+- doc format profile / evidence field / PHPDoc source comment policy の補強を #230 でどこまで shared asset に反映するか
+- #229 の pilot packet を `portal-and-navigation`, `search-api`, `mcp-client-guide` のどれで始めるか
+- `docs/contributing/*` の provisional queue を #219 本体へどう引き渡すか
 
 ## エビデンス / 参照先
 - `docs/work/2026-05-24_issue-219_chunked-doc-framework-plan.md`
+- `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`
 - `docs/work/2026-05-23_oss-publication-plan.md`
 - `docs/runbooks/local-llm-mcp-setup.md`
 - `routes/tenant.php`
@@ -92,11 +167,11 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 - 関連計画: `docs/work/2026-05-24_issue-219_chunked-doc-framework-plan.md`
 
 ## GitHub 追跡
-- Epic: #216 / Sprint 2: #219 / Sprint 2-A: #225 / Sprint 2-A1: #226 / Sprint 2-A2: #227 / Sprint 2-A3: #228 / Sprint 2-A4: #229
+- Epic: #216 / Sprint 2: #219 / Sprint 2-A: #225 / Sprint 2-A1: #226 / Sprint 2-A2: #227 / Sprint 2-A3: #228 / Sprint 2-A3A: #230 / Sprint 2-A4: #229
 
 ## Owner manual steps
 1. GitHub Web UI で #225 を開く
-2. 右サイドバーまたは sub-issue UI から #226, #227, #228, #229 を sub-issue として追加する
+2. 右サイドバーまたは sub-issue UI から #226, #227, #228, #230, #229 を sub-issue として追加する
 3. #216 と #219 から見て追跡しやすいよう、必要なら handover/comment に #225 系列を追記する
 
 ## 確認事項
