@@ -68,6 +68,10 @@ while getopts "pnh" opt; do
   case ${opt} in
     p )
       ENV="production"
+      if [ ! -f "docker-compose.prod.yml" ]; then
+        error "docker-compose.prod.yml not found. This file is excluded from the public repository. Obtain it from the private repository or skip production mode."
+        exit 1
+      fi
       COMPOSE_FILES_ARRAY+=("docker-compose.prod.yml")
       ;;
     n )

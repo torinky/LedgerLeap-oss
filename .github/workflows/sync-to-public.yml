@@ -190,11 +190,7 @@ jobs:
           fi
 
           git -C "$PUBLIC_REPO_DIR" commit -m "chore(sync): mirror private main [private-ref: ${SOURCE_SHA}]"
-          if [[ "${{ github.event_name == 'workflow_dispatch' && inputs.force_history_reset }}" == 'true' ]]; then
-            git -C "$PUBLIC_REPO_DIR" push --force-with-lease origin HEAD:main
-          else
-            git -C "$PUBLIC_REPO_DIR" push origin HEAD:main
-          fi
+          git -C "$PUBLIC_REPO_DIR" push --force-with-lease origin HEAD:main
 
           public_commit_sha="$(git -C "$PUBLIC_REPO_DIR" rev-parse HEAD)"
           {
