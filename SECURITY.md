@@ -16,6 +16,9 @@ Report suspected vulnerabilities through the private security channel that will 
 listed for the public repository before release. Until that channel is published,
 contact the maintainers directly through the private repository workflow.
 
+If you are unsure whether a report is security-related, submit it privately anyway
+and we will route it to the appropriate channel.
+
 Include as much of the following as you can:
 
 - a short summary of the issue
