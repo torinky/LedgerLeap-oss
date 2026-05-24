@@ -19,7 +19,8 @@ Sprint 2-A1〜2-A3 と 2-A3A で定めた source inventory, packet contract, reu
 - #226 で source-derived inventory / target doc list v2 / comment anchor candidate が確定した
 - #227 で packet schema / handoff / acceptance が確定した
 - #228 で prompt / skill / agent / runbook / harness の最小資産が追加された
-- #230 で doc format profile / evidence field / PHPDoc source comment policy を補強してから pilot に入る前提にした
+- #230 で doc format profile / evidence field / PHPDoc source comment policy を shared asset に反映し、pilot 前提を固定した
+- pilot packet は `docs/templates/doc-publication-packet-template.md` の `doc_format_profile`, evidence fields, comment sync decision を埋めてから着手する
 - #219 は packet backlog がないため implementation sprint として即着手しづらい
 - #226 の結果として、pilot 候補は `docs/getting-started/*`, `docs/features/*`, `docs/api/*` の bounded packet を優先し、`docs/contributing/*` や広い admin/RBAC packet は後段へ回すのが妥当になった
 
@@ -64,6 +65,8 @@ Sprint 2-A1〜2-A3 と 2-A3A で定めた source inventory, packet contract, reu
 - Sprint 2-A1〜2-A3 の成果物
 - `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3a-format-and-source-comment-body.md`
 - `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`
+- `docs/templates/doc-publication-packet-template.md`
+- `docs/runbooks/doc-publication-packet-playbook.md`
 - `docs/work/2026-05-24_issue-219_chunked-doc-framework-plan.md`
 - `docs/work/issue-drafts/2026-05-24_issue-sprint-2a1-source-inventory-body.md`
 - `/.github/skills/doc-publication-audit/SKILL.md`

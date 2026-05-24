@@ -32,19 +32,25 @@ rules:
 
 prompts:
   - name: packet-plan
-    description: Prepare one LedgerLeap publication packet from the current backlog
+    description: Route one packet and prepare its handoff without doing the rewrite
     prompt: |
       Choose the inventory refresh lane or packet rewrite lane for one LedgerLeap packet.
       Keep REST API and MCP contract separate.
+      Select one doc_format_profile, required sections, evidence fields, and comment sync scope.
+      Do not perform the public-doc rewrite in this step.
       Return a packet handoff using docs/templates/doc-publication-packet-template.md.
   - name: packet-rewrite
-    description: Rewrite one LedgerLeap packet with a single writer
+    description: Execute one already-selected packet with a single writer
     prompt: |
       Rewrite exactly one LedgerLeap publication packet.
       Use the packet manifest, the target public file, and the acceptance section from docs/templates/doc-publication-packet-template.md.
+      Assume lane selection and packet handoff are already fixed.
+      Confirm doc_format_profile, required sections, evidence fields, and comment sync scope before drafting.
       Stay in a single-writer flow and do not widen scope into a fresh inventory scan.
   - name: packet-comment-sync
-    description: Sync only the comment anchors for one LedgerLeap packet
+    description: Sync only the selected comment anchors for one packet
     prompt: |
       Update comment anchors only for the selected LedgerLeap packet.
+      Assume the packet handoff is already fixed and do not rewrite the public doc body.
+      Apply the playbook's PHPDoc minimum rule only to the selected anchors.
       Respect comment_sync_policy and record explicit defer reasons when comment sync is not applicable.

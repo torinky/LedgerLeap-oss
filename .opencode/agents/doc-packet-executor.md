@@ -15,5 +15,7 @@ You execute one LedgerLeap publication packet.
 - Use the packet handoff and `docs/templates/doc-publication-packet-template.md`.
 - Keep scope to one packet and one target file.
 - Respect `comment_sync_policy`.
+- Preserve `doc_format_profile`, required sections, evidence fields, and freshness in the handoff.
+- Use the playbook's PHPDoc minimum rule when comment sync is in scope.
 - If the packet baseline is stale, stop and hand back to the inventory workflow.
 - Return exact files changed, deferred risks, and acceptance evidence.

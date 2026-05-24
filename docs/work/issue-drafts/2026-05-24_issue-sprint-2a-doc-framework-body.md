@@ -54,8 +54,8 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
   - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a2-packet-contract-body.md`, #227
 - [x] **#228 / Sprint 2-A3:** source inventory / packet rewrite 用の skill / subagent / runbook の方針と最小成果物を確定する
   - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3-assets-body.md`, #228
-- [ ] **#230 / Sprint 2-A3A:** publication packet の文書フォーマット規約 / evidence field / PHPDoc source comment policy を補強する
-  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3a-format-and-source-comment-body.md`, #230
+- [x] **#230 / Sprint 2-A3A:** publication packet の文書フォーマット規約 / evidence field / PHPDoc source comment policy を補強する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a3a-format-and-source-comment-body.md`, `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`, #230
 - [ ] **#229 / Sprint 2-A4:** #230 で固定した format/comment policy を前提に pilot packet と comment sync を実証し、#219 向け packet backlog を凍結する
 
 ## 確定アウトプット
@@ -64,7 +64,7 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 | **#226 / 2-A1** | source feature inventory / doc coverage gap / target doc list v2 / comment anchor candidate list ✅ |
 | **#227 / 2-A2** | publication packet schema / handoff template / OpenCode-Gemma4 run profile / packet acceptance template ✅ |
 | **#228 / 2-A3** | source inventory 用 skill 方針 / packet rewrite 用 subagent 方針 / operator runbook 方針 ✅ |
-| **#230 / 2-A3A** | doc format profile matrix / evidence field matrix / PHPDoc minimum rule |
+| **#230 / 2-A3A** | doc format profile matrix / evidence field matrix / PHPDoc minimum rule ✅ |
 | **#229 / 2-A4** | pilot packet 実行記録 / docs+comment sync 評価 / #219 packet backlog |
 
 ## Sprint 2-A1 handover (2026-05-24)
@@ -128,8 +128,29 @@ Issue #219 の本文執筆に入る前に、公開ドキュメント作業を **
 - なし（TODO マーカーは追加していない）
 
 ### Open questions
-- doc format profile / evidence field / PHPDoc source comment policy の補強を #230 でどこまで shared asset に反映するか
 - #229 の pilot packet を `portal-and-navigation`, `search-api`, `mcp-client-guide` のどれで始めるか
+- `docs/contributing/*` の provisional queue を #219 本体へどう引き渡すか
+
+## Sprint 2-A3A handover (2026-05-24)
+
+### Branch
+- 完了時 branch: `main`
+- 次 sprint 推奨起点: `main` から対象 issue 番号の branch を新規作成
+
+### Changed files
+| ファイル | 変更内容 | 次 sprint での扱い |
+|---|---|---|
+| `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md` | `doc_format_profile` matrix / evidence field matrix / source comment target selection / PHPDoc minimum rule を正本化 | #229 の pilot handoff と acceptance の根拠として再利用 |
+| `docs/templates/doc-publication-packet-template.md` | packet manifest / handoff / acceptance に format profile と evidence fields を追加 | #229 の packet handoff にそのまま使用 |
+| `docs/runbooks/doc-publication-packet-playbook.md` | format profile / evidence / source comment policy を operator flow に追加 | #229 の pilot 実行手順として再利用 |
+| `/.github/prompts/doc-publication-packet.prompt.md`, `/.github/skills/doc-publication-audit/SKILL.md` | JetBrains / Copilot 側の rewrite entrypoint に format / evidence / PHPDoc policy を同期 | #229 の packet kickoff 時にそのまま使用 |
+| `.continue/rules/*`, `.opencode/commands/*`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml`, `/.github/agents/doc-packet-executor.agent.md`, `.opencode/agents/doc-packet-executor.md` | Continue / OpenCode / Copilot adapter に policy を同期 | pilot adapter として再利用 |
+
+### TODO comment locations
+- なし（TODO マーカーは追加していない）
+
+### Open questions
+- #229 の 1 件目 pilot packet を `portal-and-navigation`, `search-api`, `mcp-client-guide` のどれで始めるか
 - `docs/contributing/*` の provisional queue を #219 本体へどう引き渡すか
 
 ## エビデンス / 参照先

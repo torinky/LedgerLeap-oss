@@ -64,6 +64,12 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - RAG / search: `/rag-vector-search`
 - AI asset maintenance: `/skill-maintenance`
 
+### Doc publication packet routing
+- `/doc-publication-packet` is the router: choose lane, confirm inputs, and decide the handoff target.
+- `doc-source-inventory` refreshes #226-derived backlog / readiness deltas.
+- `doc-publication-audit` executes one already-selected packet; it is not the lane selector.
+- `docs/runbooks/doc-publication-packet-playbook.md` is the human/AI sequence, and `docs/harnesses/doc-publication-packet/continue-config.template.yaml` mirrors the same split for adapters.
+
 ## LedgerLeap-Specific Traps
 - Tenancy initialization in tests is mandatory.
 - Permission changes require both permission cache and tenant access cache clearing.

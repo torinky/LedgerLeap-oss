@@ -58,10 +58,14 @@ Sprint 2-A3 で packet 実行用の reusable asset は整ったが、harness / t
 - #229 pilot 前提の sequencing update
 
 ## スプリント分解
-- [ ] major project docs / PHPDoc 系の外部根拠を整理する
-- [ ] packet の doc format profile と required sections を定義する
-- [ ] source comment 対象と PHPDoc minimum rule を定義する
-- [ ] #225 / #229 / packet asset へ反映し、pilot 前提を固定する
+- [x] major project docs / PHPDoc 系の外部根拠を整理する
+  - Evidence: `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`
+- [x] packet の doc format profile と required sections を定義する
+  - Evidence: `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`, `docs/templates/doc-publication-packet-template.md`, `docs/runbooks/doc-publication-packet-playbook.md`
+- [x] source comment 対象と PHPDoc minimum rule を定義する
+  - Evidence: `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`, `.continue/rules/02-doc-packet-comment-sync.md`, `.github/skills/doc-publication-audit/SKILL.md`
+- [x] #225 / #229 / packet asset へ反映し、pilot 前提を固定する
+  - Evidence: `docs/work/issue-drafts/2026-05-24_issue-sprint-2a-doc-framework-body.md`, `docs/work/issue-drafts/2026-05-24_issue-sprint-2a4-pilot-body.md`, `.github/prompts/doc-publication-packet.prompt.md`, `.opencode/commands/packet-plan.md`
 
 ## エビデンス / 参照先
 - `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`
@@ -78,10 +82,31 @@ Sprint 2-A3 で packet 実行用の reusable asset は整ったが、harness / t
 - Doctum — https://github.com/code-lts/doctum
 
 ## 完了条件
-- [ ] `doc_format_profile` ごとの required / optional sections が packet asset に反映されている
-- [ ] packet evidence に根拠 URL / `last_confirmed_at` / source anchor が入る
-- [ ] source comment 対象の class / method と PHPDoc minimum tags が明文化されている
-- [ ] #229 は upstream format/comment policy を再発明せず pilot 実行に専念できる
+- [x] `doc_format_profile` ごとの required / optional sections が packet asset に反映されている
+- [x] packet evidence に根拠 URL / `last_confirmed_at` / source anchor が入る
+- [x] source comment 対象の class / method と PHPDoc minimum tags が明文化されている
+- [x] #229 は upstream format/comment policy を再発明せず pilot 実行に専念できる
+
+## 完了エビデンス（2026-05-24）
+
+- Evidence SoT: `docs/work/2026-05-24_issue-230_doc-format-and-source-comment-evidence.md`
+- Shared packet contract:
+  - `docs/templates/doc-publication-packet-template.md`
+  - `docs/runbooks/doc-publication-packet-playbook.md`
+  - `.github/prompts/doc-publication-packet.prompt.md`
+  - `.github/skills/doc-publication-audit/SKILL.md`
+- Adapter sync:
+  - `.continue/rules/01-doc-packet-core.md`
+  - `.continue/rules/02-doc-packet-comment-sync.md`
+  - `.opencode/commands/packet-plan.md`
+  - `.opencode/commands/packet-rewrite.md`
+  - `.opencode/commands/packet-comment-sync.md`
+  - `docs/harnesses/doc-publication-packet/continue-config.template.yaml`
+  - `/.github/agents/doc-packet-executor.agent.md`
+  - `.opencode/agents/doc-packet-executor.md`
+- Downstream handoff:
+  - `docs/work/issue-drafts/2026-05-24_issue-sprint-2a-doc-framework-body.md`
+  - `docs/work/issue-drafts/2026-05-24_issue-sprint-2a4-pilot-body.md`
 
 ## 関連リンク
 - Umbrella: #225

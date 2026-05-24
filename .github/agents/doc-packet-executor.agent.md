@@ -38,7 +38,8 @@ Do not widen the scope into a new inventory refresh unless the packet inputs are
 ## Working Rules
 
 - One packet, one target file, one writer
-- Treat `packet_id`, `target_path`, `doc_type`, `comment_sync_policy`, and `must_exclude` as fixed inputs
+- Treat `packet_id`, `target_path`, `doc_type`, `doc_format_profile`, `comment_sync_policy`, and `must_exclude` as fixed inputs
+- Preserve the packet's required sections, external evidence, freshness, and comment-sync decision
 - Keep REST API and MCP docs separate even inside `docs/api/*`
 - If `comment_sync_policy` is `not_applicable`, record the reason and stop there
 - If the packet baseline changed, hand back to `doc-source-inventory`
@@ -46,9 +47,9 @@ Do not widen the scope into a new inventory refresh unless the packet inputs are
 ## Workflow
 
 1. Read the packet handoff and the shared template.
-2. Confirm audience, doc type, and exclusion scope.
+2. Confirm audience, doc type, format profile, and exclusion scope.
 3. Rewrite the target file from summary-first evidence.
-4. Sync comment anchors only when the packet policy allows it.
+4. Sync comment anchors only when the packet policy allows it, using the PHPDoc minimum rule.
 5. Fill acceptance evidence and update the issue / handoff if needed.
 
 ## Output Style
