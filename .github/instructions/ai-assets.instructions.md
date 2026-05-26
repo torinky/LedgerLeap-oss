@@ -31,6 +31,9 @@ applyTo: ".github/**/*.md,AGENTS.md,docs/runbooks/**/*.md,docs/templates/**/*.md
 - Never delete client-facing guidance from a tool description unless the destination asset already preserves equivalent information for generated skills or discovery flows.
 - Durable guidance must cite traceable evidence: use `docs/work/*` for repo proof and `references/*.md` for official source summaries.
 - For official-doc-sensitive guidance, record `last_confirmed_at` and `recheck_after`, and recheck when the same domain changes or the window expires.
+- If a file will be mirrored to the OSS repo (for example `README.md` or `docs/**` outside excluded paths), do not link it to sync-excluded AI assets such as `docs/work/llm-integration/*`, `resources/ai/*`, `AGENTS.md`, or `.github/*`.
+- If a file will be mirrored to the OSS repo, do not leave private issue numbers, canonical-body references, or packet-tracking metadata in the public doc body; keep them in the private packet / issue record and link only sanitized public artifacts.
+- OSS-facing AI / API examples must use project-relative commands and placeholders; do not embed local absolute paths, private workspace paths, or demo-account identifiers in public docs.
 
 ## Prompt / Skill Bias
 

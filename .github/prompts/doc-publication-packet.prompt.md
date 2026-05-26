@@ -51,6 +51,7 @@ description: Plan or execute one LedgerLeap publication packet using the shared 
 - `source_paths`, `code_anchors`, `test_anchors`
 - `comment_sync_policy`
 - `must_exclude`
+- `tracking_record_location` と public/private traceability の扱い
 
 ## 出力
 
@@ -58,6 +59,7 @@ description: Plan or execute one LedgerLeap publication packet using the shared 
 - selected `doc_format_profile`
 - required sections / optional sections
 - evidence fields (`external_evidence_urls`, `last_confirmed_at`, `source_anchor`, `comment_sync_decision`)
+- traceability split (`tracking_record_location`, `private_reference_map`, `public_reference_targets`)
 - PHPDoc minimum rule / defer reason
 - 読むべきファイル一覧
 - 更新対象の asset / doc
@@ -72,4 +74,4 @@ description: Plan or execute one LedgerLeap publication packet using the shared 
 
 ## 使い方
 
-この prompt で packet lane を決めたあと、inventory 側は [doc-source-inventory](../skills/doc-source-inventory/SKILL.md)、rewrite 側は [doc-publication-audit](../skills/doc-publication-audit/SKILL.md) と packet playbook に引き継ぐ。rewrite に入る前に `doc_format_profile`, required sections, evidence fields, comment sync scope を確定する。**packet handoff がすでに確定している場合は、この prompt を経由せず `doc-publication-audit` に直接入ってよい。**
+この prompt で packet lane を決めたあと、inventory 側は [doc-source-inventory](../skills/doc-source-inventory/SKILL.md)、rewrite 側は [doc-publication-audit](../skills/doc-publication-audit/SKILL.md) と packet playbook に引き継ぐ。rewrite に入る前に `doc_format_profile`, required sections, evidence fields, comment sync scope, **public/private traceability split** を確定する。公開 doc 本文には `docs/work/*` や private issue 番号を残さず、追跡情報は companion record に移す。**packet handoff がすでに確定している場合は、この prompt を経由せず `doc-publication-audit` に直接入ってよい。**

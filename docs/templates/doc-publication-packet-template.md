@@ -15,6 +15,7 @@
 | `doc_type` | `tutorial` / `how-to` / `reference` / `explanation` |
 | `doc_format_profile` | `tutorial` / `how-to` / `reference` / `explanation` |
 | `comment_sync_policy` | `required` / `optional` / `not_applicable` |
+| `tracking_record_location` | |
 | `external_evidence_urls` | |
 | `last_confirmed_at` | |
 | `recheck_after` | `90d` など |
@@ -52,6 +53,9 @@
 | `style_guardrails` | yes | wording / sample / format-order の制約 |
 | `comment_sync_decision` | yes | 実施 / defer / not applicable |
 | `defer_reason` | if deferred | defer の根拠 |
+| `tracking_record_location` | yes | private companion record の置き場 |
+| `private_reference_map` | if internal refs exist | private issue / worklog / note との対応 |
+| `public_reference_targets` | if public refs exist | public issue / ADR / changelog の導線 |
 
 ### Source comment policy
 
@@ -76,6 +80,10 @@
 - Freshness:
   - `last_confirmed_at`:
   - `recheck_after`:
+- Traceability split:
+  - `tracking_record_location`:
+  - `private_reference_map`:
+  - `public_reference_targets`:
 - Required anchors:
   - code:
   - test:
@@ -87,6 +95,8 @@
 - PHPDoc minimum:
   -
 - Must exclude:
+  -
+- Internal-only references removed from public body:
   -
 - Open questions:
   -
@@ -105,12 +115,14 @@
 | evidence fields captured | ✅ / ❌ | |
 | code / test anchors reflected | ✅ / ❌ | |
 | comment sync handled | ✅ / ❌ | |
+| traceability split captured | ✅ / ❌ | |
 | unresolved risks recorded | ✅ / ❌ | |
 
 - Done when:
   - [ ] packet target が更新済み
   - [ ] `doc_format_profile` と required sections が handoff / acceptance に残っている
   - [ ] `external_evidence_urls` / `last_confirmed_at` / `source_anchor` が残っている
+  - [ ] `tracking_record_location` / traceability split が handoff / acceptance に残っている
   - [ ] acceptance table が埋まっている
   - [ ] comment sync 判定が残っている
   - [ ] 次 sprint が迷わない handoff が残っている

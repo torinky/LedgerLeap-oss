@@ -27,6 +27,7 @@
 - When slimming MCP / API tool descriptions, move client-facing workflow text to `resources/ai/capabilities/*.yaml` or discovery docs first; keep tool descriptions contract-centered and record rationale in `docs/work/*`.
 - Reusable guidance must link to evidence that the next agent can inspect; keep repo proof in `docs/work/*` and official source summaries in `references/*.md`.
 - If guidance depends on upstream docs or IDE support behavior, record when it was last confirmed and recheck it after the configured window or when the same area changes.
+- For mirrored public docs, keep internal tracking metadata out of the public body. Store private issue mappings, worklog references, and packet workflow metadata in the companion packet / issue record, and link only sanitized public artifacts from `README.md` or `docs/**`.
 
 ## Proven Learning → Destination
 - Global short invariant → `/.github/copilot-instructions.md`
@@ -69,6 +70,7 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - `doc-source-inventory` refreshes #226-derived backlog / readiness deltas.
 - `doc-publication-audit` executes one already-selected packet; it is not the lane selector.
 - `docs/runbooks/doc-publication-packet-playbook.md` is the human/AI sequence, and `docs/harnesses/doc-publication-packet/continue-config.template.yaml` mirrors the same split for adapters.
+- Public/private traceability handling for packet rewrites lives in `doc-publication-audit`, the packet template, and `docs/runbooks/doc-publication-packet-playbook.md`.
 
 ## LedgerLeap-Specific Traps
 - Tenancy initialization in tests is mandatory.

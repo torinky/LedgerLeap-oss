@@ -1,6 +1,6 @@
 # マルチテナント・アーキテクチャ
 
-**関連ドキュメント:** [新マルチテナント実装計画書](/docs/work/2025-08-30_new-multi-tenant-implementation-plan-final.md)
+**関連ドキュメント:** [アーキテクチャ概要](./overview.md)
 
 ## 1. 概要
 

@@ -106,6 +106,33 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 - comment sync 方針そのものを検証する pilot では、`comment_sync_policy = not_applicable` と `required` の packet を最低 1 件ずつ含める
   - Evidence: [Issue #229 retrospective](../work/2026-05-24_issue-229-retrospective.md)
 
+## 4.5 public/private traceability split
+
+packet rewrite を始める前に、**公開本文に残す情報** と **private companion record に残す情報** を分ける。
+
+公開本文に残さないもの:
+
+- `docs/work/*`
+- `issue-drafts/*`
+- private issue 番号
+- `private-ref:` や canonical-body 参照
+- packet handoff / acceptance のような workflow-only metadata
+
+companion record に残すもの:
+
+- `tracking_record_location`
+- `private_reference_map`
+- `public_reference_targets`
+- `packet_id`
+- `target_path`
+
+運用ルール:
+
+1. public traceability が必要なら、sanitized public issue / ADR / changelog を先に用意する
+2. issue 番号ではなく `packet_id` と `target_path` を stable trace key にする
+3. rewrite 後は public doc body に internal tracking metadata が残っていないか確認する
+4. 詳細根拠は [Public/private traceability guidance](../../.github/skills/doc-publication-audit/references/public-private-traceability.md) と [repo evidence](../work/2026-05-26_public-doc-traceability-governance.md) を参照する
+
 ## 5. source comment policy
 
 - comment sync は **packet の `comment_anchors` と `source_anchor` に限定** し、repo-wide sweep にしない
@@ -132,6 +159,7 @@ packet rewrite を始める前に、`doc_type` と同じ 4 種の `doc_format_pr
 4. main conversation には raw source dump を残さず summary-first で進める
 5. write phase は常に 1 writer に固定する
 6. packet handoff / acceptance は template に合わせる
+7. public doc body には internal tracking metadata を残さず、traceability は companion record に寄せる
 
 ## 7. JetBrains / Copilot entrypoint
 

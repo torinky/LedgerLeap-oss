@@ -6,6 +6,22 @@
 
 ## 1. 除外リストに新しいパスを追加する手順
 
+### Step 0: 公開ドキュメントの導線と追跡メタデータを検証
+
+公開される `README.md` や `docs/**` を触った場合は、sync 前に次を実行する。
+
+```bash
+./bin/check-public-ai-doc-scope.sh
+```
+
+このチェックは `README.md`, `docs/README.md`, `docs/api/*`, `docs/architecture/*`, `docs/contributing/*`, `docs/features/*`, `docs/getting-started/*` を対象に次を検出する。
+
+- 公開 doc から `docs/work/*`、`resources/ai/*`、`AGENTS.md`、`.github/*`、`issue-drafts/*` などの **private / sync-excluded 資産** への直リンク
+- 公開 doc に残った `private-ref:`, `canonical body`, `packet handoff`, `packet acceptance` などの **internal tracking metadata**
+- `docs/api/*` などの公開 AI / API doc に残った **ローカル絶対パス** や **demo アカウント識別子**
+
+`sync-to-public.yml` の preview job でも同じスクリプトを実行するため、ローカルで通らない状態のまま push しない。
+
 ### Step 1: `.github/sync-excludes.txt` を更新
 
 ```bash
