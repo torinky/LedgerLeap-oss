@@ -45,10 +45,23 @@ prompts:
     description: Execute one already-selected packet with a single writer
     prompt: |
       Rewrite exactly one LedgerLeap publication packet.
-      Use the packet manifest, the target public file, and the acceptance section from docs/templates/doc-publication-packet-template.md.
-      Assume lane selection and packet handoff are already fixed.
-      Confirm doc_format_profile, required sections, evidence fields, and comment sync scope before drafting.
-      Stay in a single-writer flow and do not widen scope into a fresh inventory scan.
+
+      ## Mandatory pre-flight gate (from #227)
+      BEFORE any prose, read the packet handoff and confirm ALL these fields are populated:
+      packet_id, feature_family, doc_area, target_path, public_classification,
+      source_status, audience, doc_type, doc_format_profile, source_paths (1-5),
+      code_anchors (2-8 in path:line), test_anchors (1-5 in path:line),
+      comment_anchors (0-5), comment_sync_policy, must_exclude (1-6),
+      external_evidence_urls (≥1), last_confirmed_at, recheck_after, done_when (3-5).
+      If any field is missing, STOP and report the gap — do NOT proceed to writing.
+
+      ## After gate passes
+      - Confirm doc_format_profile and copy required/optional sections from docs/templates/doc-publication-packet-template.md
+      - Write only the public doc body using the selected profile's required sections
+      - Do not embed packet tracking metadata in the public doc body — keep it in the handoff record
+      - Stay in a single-writer flow and do not widen scope into a fresh inventory scan
+      - If comment sync applies, respect comment_sync_policy and apply the PHPDoc minimum rule
+      - After writing, run post-validation: section compliance, anchor resolution, must-exclude, freshness, comment sync
   - name: packet-comment-sync
     description: Sync only the selected comment anchors for one packet
     prompt: |

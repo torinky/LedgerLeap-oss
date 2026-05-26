@@ -21,7 +21,11 @@
   },
   "permission": {
     "edit": "ask",
-    "bash": "ask"
+    "bash": "ask",
+    "skill": {
+      "*": "allow",
+      "doc-*": "allow"
+    }
   },
   "share": "manual",
   "autoupdate": "notify",
