@@ -3,15 +3,9 @@
 **詳細仕様:**
 - [OpenAPI Specification (JSON)](openapi.json) - 完全なAPIリファレンス（Swagger/OpenAPI形式）
 - [Search API](search-api.md) - `/api/v1/search` の REST 契約と GET / POST の使い分け
+- [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - remote MCP の技術仕様と実装上の制約
 
-**関連ドキュメント:**
-- [client-facing capability taxonomy](../work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md) - client-facing capability の一覧とペルソナ別初期 skill セット
-- [on-prem / local model onboarding design](../work/llm-integration/2026-03-13_OnPrem_Local_Model_Onboarding_Design.md) - on-prem / local model 前提の onboarding 役割分担
-- [first-access bootstrap discovery contract](../work/llm-integration/2026-03-14_First_Access_Bootstrap_Discovery_Contract.md) - Sprint 6 で固定した bootstrap discovery contract と carrier 比較
-- [update path public contract](../work/llm-integration/2026-03-13_Update_Path_Public_Contract.md) - 更新系公開契約の planned workflow
-- [update API implementation log](../work/llm-integration/2026-03-13_Update_API_Implementation_Log.md) - `GET/PATCH /api/v1/ledgers/{ledger}` 実装時の判断記録
-- [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - LLM統合のMCPプロトコル詳解
-- [MCP プロンプトガイドライン](../development/MCP_Prompt_Guidelines.md) - MCP経由でのAPI活用方法
+> client-facing の API / MCP 文書は、この `docs/api/` 配下と上記の技術仕様を正本とします。内部の planning / worklog への直リンクは OSS mirror に含めません。
 
 ## 概要説明
 LedgerLeap APIは、外部アプリケーションやフロントエンドフレームワークとの連携を可能にするために提供されるHTTPベースのインターフェースです。このAPIを利用することで、台帳データの操作、フォルダ情報の取得、ファイルのアップロードなど、LedgerLeapの主要な機能をプログラム経由で利用できます。
@@ -114,21 +108,16 @@ LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
 
 LedgerLeap で bearer token を用意する方法は、少なくとも次の 2 つがあります。
 
-#### 方法 1: demo 用 token をコマンドで生成する
+#### 方法 1: `mcp:*` 付き token をコマンドで生成する
 
 評価や clean-room 検証では、`mcp:*` ability を明示した token を生成できるこの方法が最も確実です。
 
 ```bash
-cd /Users/kazutaka/PhpstormProjects/LedgerLeap
 ./vendor/bin/sail artisan demo:generate-mcp-token
 ```
 
-このコマンドは:
-
-- user: `demo@example.com`
-- token ability: `mcp:*`
-
-の token を生成し、`MCP_AUTH_TOKEN=...` 形式も表示します。
+このコマンドが利用できる環境では、`mcp:*` ability を持つ token を生成し、
+`MCP_AUTH_TOKEN=<generated-token>` 形式も表示します。
 
 #### 方法 1a: MCP 用 token を任意ユーザーへ生成する（推奨）
 
@@ -136,12 +125,11 @@ cd /Users/kazutaka/PhpstormProjects/LedgerLeap
 **`mcp:*` ability を明示して** 発行します。
 
 ```bash
-cd /Users/kazutaka/PhpstormProjects/LedgerLeap
 ./vendor/bin/sail artisan tinker
 ```
 
 ```php
-$user = App\Models\User::where('email', 'operator@example.com')->firstOrFail();
+$user = App\Models\User::where('email', '<user-email>')->firstOrFail();
 $token = $user->createToken('mcp-client', ['mcp:*']);
 $token->plainTextToken;
 ```

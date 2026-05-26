@@ -41,8 +41,7 @@ LedgerLeap のテスト設計・実装に関するドキュメントをトピッ
 `#[Reactive]` や `wire:loading.remove.delay` の挙動に注意。
 
 ### テストが CI でだけ失敗するとき
-→ **[03-external-dependency-isolation.md](./03-external-dependency-isolation.md)** および
-→ **[.github/skills/ci-failure-investigation/SKILL.md](../../../.github/skills/ci-failure-investigation/SKILL.md)**
+→ **[03-external-dependency-isolation.md](./03-external-dependency-isolation.md)**
 
 ### VLM の起動前キャッシュ判定や offline mode を確認したいとき
 → **[08-vlm-cache-regression.md](./08-vlm-cache-regression.md)**
@@ -71,16 +70,15 @@ LedgerLeap のテスト設計・実装に関するドキュメントをトピッ
 
 ---
 
-## スキル（定型ワークフロー）
+## 関連ガイド（定型ワークフロー）
 
-より具体的な操作手順は `.github/skills/` のスキルを参照：
+より具体的な操作手順は、次の公開ドキュメントを参照：
 
-| スキル | 用途 |
+| ガイド | 用途 |
 |---|---|
-| [test-external-dependency-isolation](../../../.github/skills/test-external-dependency-isolation/SKILL.md) | 外部サービス依存テストのチェックリスト |
-| [database-migrations-test-optimization](../../../.github/skills/database-migrations-test-optimization/SKILL.md) | DBMigrationsトレイルの選択と高速化 |
-| [ci-failure-investigation](../../../.github/skills/ci-failure-investigation/SKILL.md) | CI失敗ログの調査手順 |
-| [github-issue-workflow](../../../.github/skills/github-issue-workflow/SKILL.md) | イシューの更新・報告 |
+| [03-external-dependency-isolation.md](./03-external-dependency-isolation.md) | 外部サービス依存テストのチェックリスト |
+| [02-database-traits.md](./02-database-traits.md) | DB トレイトの選択と Mroonga 系の運用 |
+| [07-coverage.md](./07-coverage.md) | カバレッジ低下時の確認手順 |
 
 ## ローカル実行の推奨パターン（CI準拠）
 

@@ -3,7 +3,7 @@
 ## この文書の位置づけ
 
 この文書は **developer-facing の機能仕様** です。
-client-facing で使う capability 名や初期 skill セットは `docs/work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md` を正本とし、ここでは実装・内部構造・保守判断に必要な詳細を扱います。
+client-facing では台帳操作を `ledger-search` / `ledger-create` / `ledger-update` などの公開 capability として扱い、ここでは実装・内部構造・保守判断に必要な詳細を扱います。
 
 ## 概要
 

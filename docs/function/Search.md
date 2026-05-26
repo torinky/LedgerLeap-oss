@@ -3,7 +3,7 @@
 ## この文書の位置づけ
 
 この文書は **developer-facing の機能仕様** です。
-client-facing では `ledger-search` capability を `docs/work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md` で定義し、ここでは検索実装・添付解析・内部制約の詳細を扱います。
+client-facing では検索を `ledger-search` capability として扱い、ここでは検索実装・添付解析・内部制約の詳細を扱います。
 
 ## 概要
 

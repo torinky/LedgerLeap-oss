@@ -22,9 +22,9 @@
   +-- それ以外 --> RefreshDatabase
 ```
 
-詳細な使い分けと高速化パターンは
-[.github/skills/database-migrations-test-optimization/SKILL.md](../../../.github/skills/database-migrations-test-optimization/SKILL.md)
-を参照。
+詳細な使い分けと高速化パターンは、この文書と
+[`README.md`](./README.md)
+の分類方針を参照。
 
 ---
 

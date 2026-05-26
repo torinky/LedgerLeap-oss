@@ -10,7 +10,7 @@
 
 - **目的:** 利用者が「どんな状況で」「何に困り」「どの流れで LedgerLeap を使うか」を共有する
 - **役割:** ペルソナの厚み、現場背景、判断軸、ユースケースの具体像を保持する
-- **関連:** Sprint 2 で整理した capability 名や初期 skill セットとの対応は `docs/work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md` を参照する
+- **関連:** 公開 capability 名との対応は、本書の各ペルソナに記載した初期 skill セットと `docs/api/README.md` の API / MCP 契約を基準に読む
 
 > この文書は、client-facing capability を設計するための**物語的・業務的な根拠資料**です。
 >

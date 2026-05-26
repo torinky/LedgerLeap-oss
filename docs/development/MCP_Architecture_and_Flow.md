@@ -729,8 +729,8 @@ protected array $tools = [
 - 更新系は **検索結果から即更新せず、単一レコード read path で最新内容・状態を確認してから実行する** 前提にする
 - MCP 側では `SearchLedgersTool` → `GetLedgerDetailTool` → `GetLedgerDefinesTool` → `UpdateLedgerTool(dry_run=true)` → `UpdateLedgerTool` の流れを標準 workflow とする
 - `dry_run` は列単位の最小差分 (`changed_columns`) を返す初期実装とし、複雑な自然言語差分要約は後続スプリントへ分離した
-- 詳細は `docs/work/llm-integration/2026-03-13_Update_Path_Public_Contract.md` を参照
-- 実装判断の詳細は `docs/work/llm-integration/2026-03-13_MCP_Update_Tools_Implementation_Log.md` を参照
+- 公開契約の入口は `docs/api/README.md` と `docs/api/openapi.json`
+- この節では、公開 sync に含める技術仕様と標準 workflow のみを保持する
 
 ### related ledger investigation 契約メモ
 

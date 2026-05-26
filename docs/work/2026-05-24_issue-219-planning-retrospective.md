@@ -81,3 +81,39 @@
 - #226 では、まず source scan と feature family normalization だけに集中する
 - #227 / #228 の detailed plan は終わっているので、2-A1 セッションでは packet schema や asset 実装へ脱線しない
 - 新セッションでは handoff と ready todo から再開する
+
+## 11. 2026-05-25 OSS sync 導線の追加確認
+
+### 11.1 良かったこと
+
+- `.github/sync-excludes.txt` で `resources/ai/`, `docs/work/`, `AGENTS.md`, `.github/*` が既に公開除外されており、**AI 資産そのものの公開方針** は先に固定されていた
+- issue #219 の packet backlog が `docs/api/*` を public contract として切り分けていたため、**どこを公開導線に残すべきか** を判断しやすかった
+
+### 11.2 悪かったこと
+
+- `README.md`、`docs/api/README.md`、AI 関連の developer-facing docs から、sync-excluded な AI worklog / capability SoT へ直リンクが残っていた
+- `docs/api/README.md` にローカル絶対パスと demo アカウント識別子が残っており、OSS-facing な AI / API 例としては過剰だった
+
+### 11.3 直接修正したこと
+
+- `README.md`
+- `docs/api/README.md`
+- `docs/development/MCP_Architecture_and_Flow.md`
+- `docs/development/testing/README.md`
+- `docs/development/testing/02-database-traits.md`
+- `docs/development/testing/03-external-dependency-isolation.md`
+- `docs/function/Ledger.md`
+- `docs/function/Search.md`
+- `docs/function/WorkFlow.md`
+- `docs/function/PersonaUseCaseScenario.md`
+- `.github/instructions/ai-assets.instructions.md`
+- `docs/runbooks/oss-sync-runbook.md`
+- `bin/check-public-ai-doc-scope.sh`
+- `.github/workflows/sync-to-public.yml`
+
+### 11.4 学びの分類
+
+| 学び | 技術 / 進め方 | 判定 | 次の置き場 | evidence |
+|---|---|---|---|---|
+| 公開 sync に含める README / docs は、sync-excluded な AI 資産へ直リンクしてはいけない | 技術 + 進め方 | reusable | `.github/instructions/ai-assets.instructions.md`, `docs/runbooks/oss-sync-runbook.md` | `.github/sync-excludes.txt`, `README.md`, `docs/api/README.md`, `docs/development/testing/README.md` |
+| 公開 AI / API docs の例はローカル絶対パスや demo 識別子を避け、placeholder へ寄せる | 技術 | reusable | `.github/instructions/ai-assets.instructions.md`, `bin/check-public-ai-doc-scope.sh` | `docs/api/README.md`, `bin/check-public-ai-doc-scope.sh` |

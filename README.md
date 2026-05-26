@@ -7,10 +7,9 @@ LedgerLeap is a web-based ledger and document management system designed to stre
 ## ドキュメント案内
 
 - [Developer Documentation (`docs/README.md`)](docs/README.md) - 開発者向けドキュメントの入口
-- [LLM Integration Workstream (`docs/work/llm-integration/README.md`)](docs/work/llm-integration/README.md) - LLM 連携の現行計画と作業ログ
-- [Client Skill Bootstrap Strategy (`docs/work/llm-integration/2026-03-09_Client_Skill_Bootstrap_Strategy.md`)](docs/work/llm-integration/2026-03-09_Client_Skill_Bootstrap_Strategy.md) - **現在の主計画**。MCP / API first、client-facing / developer-facing 分離、on-prem / local model 前提を整理
+- [API / MCP Documentation (`docs/api/README.md`)](docs/api/README.md) - REST API と remote MCP の公開契約
 
-> LLM 連携の現行方針は **MCP / API を唯一の client 接点** とする公開契約整備です。クライアント別ファイル生成は主導線ではなく、補助的な資産として扱います。
+> AI / automation client 向けの公開導線は **MCP / API の公開契約** に集約し、内部の planning / worklog は OSS mirror に含めません。
 
 ---
 

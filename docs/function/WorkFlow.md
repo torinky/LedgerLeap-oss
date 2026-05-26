@@ -3,7 +3,7 @@
 ## この文書の位置づけ
 
 この文書は **developer-facing の機能仕様** です。
-client-facing では `workflow-review` capability を `docs/work/llm-integration/2026-03-10_Client_Facing_Capability_Taxonomy.md` で定義し、ここでは状態遷移・通知・内部データ保持などの実装詳細を扱います。
+client-facing ではレビュー操作を `workflow-review` capability として扱い、ここでは状態遷移・通知・内部データ保持などの実装詳細を扱います。
 
 ## 概要
 

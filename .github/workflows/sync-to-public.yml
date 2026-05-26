@@ -36,6 +36,10 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Validate public AI doc scope
+        shell: bash
+        run: ./bin/check-public-ai-doc-scope.sh
+
       - name: Classify changed files
         id: classify
         shell: bash

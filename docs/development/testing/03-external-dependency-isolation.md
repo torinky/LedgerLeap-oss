@@ -174,7 +174,6 @@ class MyJobTest extends TestCase
 - [ ] 実コンテナ（VLM/LDAP/OCR）への接続が必須なら `#[Group('external')]` を付与したか
 - [ ] 「省略した外部処理」が別テストで担保されているか確認したか
 
-詳細な判断フローは
-[.github/skills/test-external-dependency-isolation/SKILL.md](../../../.github/skills/test-external-dependency-isolation/SKILL.md)
-を参照。
-
+詳細な判断フローは、この文書と
+[`README.md`](./README.md)
+の入口を参照。
