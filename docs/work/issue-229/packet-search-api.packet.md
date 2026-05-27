@@ -9,7 +9,10 @@ source_status: confirmed
 audience: product user
 doc_type: reference
 doc_format_profile: reference
-comment_sync_policy: not_applicable
+comment_sync_policy: required
+comment_anchors:
+  - app/Http/Controllers/Api/V1/SearchController.php
+  - app/Http/Requests/Api/V1/SearchRequest.php
 tracking_record_location: docs/work/issue-229/packet-search-api-record.md
 external_evidence_urls:
   - openapi.json
