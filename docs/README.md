@@ -14,6 +14,7 @@ LedgerLeap は、組織内の情報管理と共有を効率化するための**W
 
 - [My Portal とナビゲーション](getting-started/portal-and-navigation.md) - ログイン直後の確認事項と台帳一覧への移動方法
 - [Search API](api/search-api.md) - `/api/v1/search` の REST 契約
+- [日本語検索ガイド](api/JAPANESE_SEARCH_GUIDE.md) - 日本語検索の運用とベストプラクティス（POST推奨）
 
 ---
 
