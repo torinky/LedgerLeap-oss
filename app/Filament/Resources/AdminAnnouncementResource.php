@@ -24,6 +24,14 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Filament resource for managing admin announcement banners.
+ *
+ * Provides CRUD operations for announcement banners with status-based
+ * badge display (published/scheduled/draft/ended/archived), scope
+ * formatting, duplicate/replicate support, and permission-gated
+ * access. Requires create/update/delete_admin_announcements permissions.
+ */
 class AdminAnnouncementResource extends Resource
 {
     protected static ?string $model = AdminAnnouncement::class;
@@ -390,6 +398,15 @@ class AdminAnnouncementResource extends Resource
         };
     }
 
+    /**
+     * Converts CTA label and URL fields into the links payload array.
+     *
+     * Returns a single-element array with label/url when both fields
+     * are filled; returns an empty array otherwise.
+     *
+     * @param  array  $data  Form data containing cta_label and cta_url
+     * @return array
+     */
     public static function toLinksPayload(array $data): array
     {
         return array_values(array_filter([

@@ -18,6 +18,13 @@ use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 use Mary\Traits\Toast;
 
+/**
+ * Workflow task queue for inspectors and approvers.
+ *
+ * Lists pending inspection and approval tasks assigned to the current user across the
+ * active tenant. Provides modals for assigning approvers, submitting inspection results,
+ * requesting approval, and returning to draft with comments.
+ */
 class PendingList extends BaseLivewireComponent
 {
     use InitializesTenantContext, Toast, WithoutUrlPagination, WithPagination;

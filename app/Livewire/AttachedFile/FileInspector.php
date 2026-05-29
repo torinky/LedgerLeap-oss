@@ -27,6 +27,13 @@ use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
 use Stancl\Tenancy\Tenancy;
 
+/**
+ * Interactive file preview and inspection component.
+ *
+ * Renders attached files (images, PDFs, text) in an overlay panel with tabbed views
+ * for raw content, OCR-extracted text, VLM descriptions, and thumbnail previews.
+ * Handles secure, tenant-scoped downloads and re-processing triggers for OCR and VLM jobs.
+ */
 class FileInspector extends BaseLivewireComponent
 {
     use InitializesTenantContext, LogPerformance, Toast;
@@ -234,6 +241,14 @@ class FileInspector extends BaseLivewireComponent
         $this->preparePreviewState();
     }
 
+    /**
+     * Opens the file inspector overlay for a given attached file.
+     *
+     * Accepts an event payload that may contain a file ID, search keyword,
+     * and column context for highlighting.
+     *
+     * @param array|null $payload Event payload with optional file ID, search query, and column info
+     */
     #[On('open-file-inspector')]
     public function openInspector($payload = null): void
     {

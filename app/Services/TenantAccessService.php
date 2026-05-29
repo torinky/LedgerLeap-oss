@@ -6,6 +6,12 @@ use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * ユーザーのテナントアクセス権限を管理するサービス。
+ *
+ * ユーザーがアクセス可能なテナントの一覧をロールとフォルダ権限から
+ * 導出し、キャッシュを通じて効率的に提供する。
+ */
 class TenantAccessService
 {
     /**
@@ -13,6 +19,9 @@ class TenantAccessService
      * ユーザーのロールに紐づくフォルダ権限をすべて確認し、
      * 関連するテナントを重複なく返します。
      * 結果は24時間キャッシュされます。
+     *
+     * @param  User  $user  対象ユーザー
+     * @return Collection<int, \App\Models\Tenant>
      */
     public function getAccessibleTenants(User $user): Collection
     {
@@ -36,6 +45,8 @@ class TenantAccessService
 
     /**
      * 特定のユーザーのテナントリストキャッシュをクリアします。
+     *
+     * @param  User  $user  キャッシュをクリアする対象ユーザー
      */
     public function clearUserCache(User $user): void
     {
@@ -52,6 +63,9 @@ class TenantAccessService
 
     /**
      * キャッシュキーを生成します。
+     *
+     * @param  User  $user  対象ユーザー
+     * @return string  ユーザー単位のキャッシュキー
      */
     protected function getCacheKey(User $user): string
     {

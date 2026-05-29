@@ -5,15 +5,37 @@ namespace App\Services;
 use App\Models\AdminAnnouncement;
 use Carbon\CarbonImmutable;
 
+/**
+ * Normalizes and filters admin announcement banners for display.
+ *
+ * Queries published AdminAnnouncement records from the database
+ * and falls back to configuration-driven banners when no database
+ * records exist. Active banners are filtered by their time window
+ * and sorted by priority then start date.
+ */
 class AdminAnnouncementService
 {
     private const DATE_TIME_FORMAT = 'Y-m-d H:i:s';
 
+    /**
+     * Returns the highest-priority currently active announcement, or null.
+     *
+     * @return array|null
+     */
     public function currentAnnouncement(): ?array
     {
         return $this->notificationCenterAnnouncements()[0] ?? null;
     }
 
+    /**
+     * Returns all published announcements that are within their active time window.
+     *
+     * Sorted by priority descending, then start date ascending, then update date descending.
+     * Falls back to config keys `ledgerleap.announcement_banner.feed` and
+     * `ledgerleap.announcement_banner.current` when no database records exist.
+     *
+     * @return array
+     */
     public function notificationCenterAnnouncements(): array
     {
         $announcements = AdminAnnouncement::query()

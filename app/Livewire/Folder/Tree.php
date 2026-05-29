@@ -13,6 +13,14 @@ use Kalnoy\Nestedset\Collection as NestedSetCollection;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Reactive;
 
+/**
+ * Renders the interactive folder tree for navigation.
+ *
+ * Displays the tenant's folder hierarchy as a collapsible tree filtered to the
+ * current user's readable folders. Tracks writable, manageable, and readable
+ * folder IDs for permission-aware rendering and provides folder selection events
+ * to parent components.
+ */
 class Tree extends BaseLivewireComponent
 {
     use InitializesTenantContext;

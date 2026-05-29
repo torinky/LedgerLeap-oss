@@ -15,6 +15,15 @@ use App\Services\UserService;
 use Illuminate\Http\Request;
 use OpenApi\Annotations as OA;
 
+/**
+ * REST API endpoints for ledger CRUD operations.
+ *
+ * Provides list/search, create, single-read, and partial-update (PATCH)
+ * endpoints at /api/v1/ledgers. All endpoints enforce folder-level access
+ * control and respect workflow status locks (APPROVED ledger update returns 409).
+ *
+ * @api
+ */
 class LedgerController extends Controller
 {
     protected LedgerService $ledgerService;

@@ -19,6 +19,14 @@ use Livewire\Attributes\Computed;
 use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 
+/**
+ * Paginated activity history viewer for resources.
+ *
+ * Displays the audit trail for a ledger, ledger definition, or folder,
+ * including creation, updates, deletions, downloads, and workflow events.
+ * Supports filtering by event type and causer name, with optional
+ * inclusion of parent resource activity.
+ */
 class ActivityHistoryDisplay extends BaseLivewireComponent
 {
     use WithoutUrlPagination, WithPagination;

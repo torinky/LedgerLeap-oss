@@ -11,6 +11,13 @@ use Illuminate\Support\Facades\Cache;
 use Livewire\WithFileUploads;
 use Maatwebsite\Excel\Facades\Excel;
 
+/**
+ * Excel/CSV batch import wizard for ledgers.
+ *
+ * Accepts an uploaded spreadsheet file, validates column mapping against the
+ * target ledger definition, and dispatches a batch import job. Supports add-new
+ * and update-existing modes using auto-number key matching.
+ */
 class Import extends BaseLivewireComponent
 {
     use InitializesTenantContext, WithFileUploads;

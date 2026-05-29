@@ -16,6 +16,13 @@ use Livewire\Attributes\On;
 use Livewire\Attributes\Url;
 use Mary\Traits\Toast;
 
+/**
+ * Ledger detail page with tabbed content panels.
+ *
+ * Renders the full ledger record with basic info, attachments, related ledgers,
+ * change history, activity log, and access permission tabs. Enforces view/edit
+ * authorization and manages the display level for column visibility.
+ */
 class Show extends BaseLivewireComponent
 {
     use AuthorizesRequests, InitializesTenantContext, Toast;

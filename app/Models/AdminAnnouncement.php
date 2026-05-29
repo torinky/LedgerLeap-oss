@@ -8,6 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Auth;
 
+/**
+ * Database model for an admin announcement banner.
+ *
+ * Supports draft/published/archived status lifecycle with scheduled
+ * visibility windows (starts_at/ends_at). Each content change
+ * regenerates a revision hash for dismissal tracking so that
+ * previously dismissed users see updated content again.
+ */
 class AdminAnnouncement extends Model
 {
     use HasFactory;
@@ -63,11 +71,26 @@ class AdminAnnouncement extends Model
         });
     }
 
+    /**
+     * Whether the announcement is published and within its time window.
+     *
+     * @return bool
+     */
     public function isCurrentlyVisible(?CarbonImmutable $now = null): bool
     {
         return $this->displayStatusKey($now) === 'published';
     }
 
+    /**
+     * Returns the effective display status based on the current time.
+     *
+     * Derives a presentation-level status from the stored status and
+     * the starts_at/ends_at time window. Even when stored status is
+     * `published`, the display status may be `scheduled` (before starts_at)
+     * or `ended` (after ends_at).
+     *
+     * @return string One of: draft, published, scheduled, ended, archived
+     */
     public function displayStatusKey(?CarbonImmutable $now = null): string
     {
         if ($this->status !== 'published') {
@@ -90,6 +113,15 @@ class AdminAnnouncement extends Model
         return 'published';
     }
 
+    /**
+     * Regenerates the revision hash from the current content fields.
+     *
+     * The revision hash is used to construct the dismiss_storage_key.
+     * When content changes, the key changes and previously dismissed
+     * users see the updated banner again.
+     *
+     * @return void
+     */
     public function refreshRevision(): void
     {
         $this->revision = sha1(implode('|', [

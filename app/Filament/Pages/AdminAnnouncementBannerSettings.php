@@ -23,6 +23,12 @@ use Illuminate\Contracts\Support\Htmlable;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Validation\Rule;
 
+/**
+ * Custom Filament page for creating and editing admin announcement banners.
+ *
+ * Provides a two-column form with live preview of the rendered banner.
+ * Supports draft save, publish, and archive lifecycle actions.
+ */
 class AdminAnnouncementBannerSettings extends Page implements HasForms
 {
     use InteractsWithForms;
@@ -292,6 +298,11 @@ class AdminAnnouncementBannerSettings extends Page implements HasForms
         ];
     }
 
+    /**
+     * Saves the current form state as a draft.
+     *
+     * @return void
+     */
     public function saveDraft(): void
     {
         $this->setAnnouncementStatus('draft');
@@ -303,6 +314,14 @@ class AdminAnnouncementBannerSettings extends Page implements HasForms
             ->send();
     }
 
+    /**
+     * Validates and publishes the current draft.
+     *
+     * Enforces required fields (title, body, level, scope, starts_at, ends_at)
+     * and that ends_at is after starts_at.
+     *
+     * @return void
+     */
     public function publishAnnouncement(): void
     {
         $this->validatePublishingDraft();
@@ -315,6 +334,11 @@ class AdminAnnouncementBannerSettings extends Page implements HasForms
             ->send();
     }
 
+    /**
+     * Archives the current announcement.
+     *
+     * @return void
+     */
     public function archiveAnnouncement(): void
     {
         $this->setAnnouncementStatus('archived');

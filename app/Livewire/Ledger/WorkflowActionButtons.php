@@ -10,6 +10,12 @@ use App\Traits\WorkflowActions;
 use Illuminate\Foundation\Auth\Access\AuthorizesRequests;
 use Mary\Traits\Toast;
 
+/**
+ * Renders the contextual workflow action buttons on the ledger detail page.
+ *
+ * Shows submit, inspect, approve, reject, and rollback buttons based on the
+ * ledger's current workflow status and the authenticated user's role.
+ */
 class WorkflowActionButtons extends BaseLivewireComponent
 {
     use AuthorizesRequests, InitializesTenantContext, Toast, WorkflowActions;

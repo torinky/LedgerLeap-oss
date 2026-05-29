@@ -19,6 +19,17 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
+/**
+ * Implements the ledger workflow state machine.
+ *
+ * Manages transitions across the DRAFT → PENDING_INSPECTION → PENDING_APPROVAL → APPROVED
+ * lifecycle. Handles submit, inspection, approval, rejection, and rollback operations.
+ * Each transition creates a LedgerDiff record, updates the ledger's latest_diff_id,
+ * and sends workflow notifications to the affected users.
+ *
+ * @see \App\Enums\WorkflowStatus
+ * @see \App\Models\LedgerDiff
+ */
 class WorkflowService
 {
     protected NotificationService $notificationService; // NotificationService をインジェクト

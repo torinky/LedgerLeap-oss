@@ -13,6 +13,13 @@ use Illuminate\Support\Facades\Log;
 use Livewire\WithoutUrlPagination;
 use Livewire\WithPagination;
 
+/**
+ * Displays the user's notification stream with admin announcements.
+ *
+ * Lists database notifications (workflow tasks, comments, status changes) and
+ * admin announcement banners in a paginated view. Supports read/unread toggling
+ * and click-through navigation to the related ledger or resource.
+ */
 class NotificationList extends BaseLivewireComponent
 {
     use WithoutUrlPagination, WithPagination;
