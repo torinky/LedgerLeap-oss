@@ -40,24 +40,40 @@ Want to create a doc?
 ## Handoff Generation Phase
 
 6. Build a packet handoff for the selected target using `docs/templates/doc-publication-packet-template.md`.
-7. Populate mandatory fields from #226 inventory data (feature family, source anchors, comment anchors, test anchors, audience, doc_type).
-8. Select `doc_format_profile` matching the doc_type.
-9. Record `external_evidence_urls`, `last_confirmed_at`, `recheck_after`.
-10. Record `must_exclude` based on the inventory's public/internal split and `docs/work/` avoidance rule.
+7. Populate mandatory fields from #226 inventory data (feature family, source anchors, test anchors, audience, doc_type).
+8. **Comment sync triage** — run BEFORE finalizing `comment_sync_policy`. Do not assume `not_applicable` without evidence.
+   a. For every PHP file in `source_paths` that is NOT a Blade template or migration, check whether the class has a DocBlock (`get_symbols_overview`). Classify each as: complete, incomplete, or missing.
+   b. Use `search_in_files_by_text` with the key service class name to discover **indirect consumers** (Livewire components, controllers, etc.) that call the service. Add undocumented consumers to `comment_anchors`.
+   c. **Gate**: if ANY service class, model with public business methods, or Livewire component has a missing or incomplete DocBlock, `comment_sync_policy` MUST be `optional` or `required` — never `not_applicable`.
+   d. `not_applicable` is valid ONLY when every source class already has a complete class-level DocBlock AND every described public method already has a correct DocBlock. Pure Filament boilerplate (form/table schema only, no described behavior) may qualify.
+   e. Record the triage result in the companion record under `comment_sync_triage` (which classes checked, which found undocumented).
+9. Select `doc_format_profile` matching the doc_type.
+10. Record `external_evidence_urls`, `last_confirmed_at`, `recheck_after`.
+11. Record `must_exclude` based on the inventory's public/internal split and `docs/work/` avoidance rule.
 
 ## Execution Phase
 
-11. Follow the `doc-publication-audit` file-by-file flow: gate check → read source anchors → confirm behavior → draft prose → remove internal refs → validate links.
-12. Follow the profile's required sections; do not invent new sections.
-13. Write the public doc body only. Do not embed packet tracking metadata in the public file.
-14. If `comment_sync_policy` is `required` or `optional`, apply the PHPDoc minimum rule per the playbook.
-15. Fill the packet acceptance table in the handoff record (not in the public doc body).
+12. Follow the `doc-publication-audit` file-by-file flow: gate check → read source anchors → confirm behavior → draft prose → remove internal refs → validate links.
+13. Follow the profile's required sections; do not invent new sections.
+14. Write the public doc body only. Do not embed packet tracking metadata in the public file.
+15. **Run comment-sync** if policy is `required` or `optional`. Do not skip silently — the companion record MUST show execution evidence or explicit deferral with reason.
+    - `required`: full checklist on every class/method in `comment_anchors` (class-level summary, `@param`/`@return`/`@throws`).
+    - `optional`: apply only to undocumented classes. Skip classes that already have a complete class-level summary + method-level DocBlocks.
+    - Follow `.github/skills/comment-sync/SKILL.md` and `references/phpdoc-inspection-checklist.md`.
+    - Record execution log (file, symbols changed, what was done) in the companion record.
+16. Fill the packet acceptance table in the handoff record (not in the public doc body).
 
 ## Post-Execution
 
-16. Report the created file, the applied profile, the comment sync decision, the evidence fields captured, and the next candidate in the backlog.
-17. Do not continue to create a second doc — one execution = one file.
-18. If the creation exposes a reusable pattern, route the learning through `/skill-maintenance`.
+17. Report the created file, the applied profile, the comment sync decision, the evidence fields captured, and the next candidate in the backlog.
+18. Do not continue to create a second doc — one execution = one file.
+19. If the creation exposes a reusable pattern, route the learning through `/skill-maintenance`.
+
+## Anti-Patterns
+
+- **Assuming `not_applicable` without evidence**: Filament Resource ≠ no DocBlock needed. Check actual DocBlock presence via step 8 before setting the policy.
+- **Skipping indirect consumers**: A service used by 4+ Livewire components/controllers is in scope. Use `search_in_files_by_text` to trace the call graph (step 8b).
+- **Silently skipping comment-sync**: When policy is `required` or `optional`, step 15 MUST produce execution evidence (log of files changed) or an explicit deferral reason in the companion record.
 
 ## Priority Order
 
@@ -74,7 +90,8 @@ Want to create a doc?
 - Confirm the target did not exist before execution and exists after.
 - Confirm `doc_format_profile` and required sections match the template.
 - Confirm no `docs/work/` references, no private issue numbers, no packet tracking metadata in the public body.
-- Confirm comment sync decision is recorded.
+- Confirm `comment_sync_triage` is recorded (step 8e) — policy was evidence-driven, not assumed.
+- Confirm `comment_sync_policy` is recorded and any `required`/`optional` policy produced execution evidence (step 15).
 
 ## Evidence
 
@@ -86,6 +103,6 @@ Want to create a doc?
 ## Freshness
 
 - status: confirmed-repo
-- last_confirmed_at: 2026-05-27
+- last_confirmed_at: 2026-05-29
 - recheck_after: 180d
-- recheck_trigger: #226 superseded, doc area layout changes, new priority scheme introduced
+- recheck_trigger: #226 superseded, doc area layout changes, new priority scheme introduced, or comment-sync audit workflow changes

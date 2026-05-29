@@ -55,6 +55,7 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - Bug implementation: `/bug-execution`
 - Doc creation sprint: `/doc-creation-sprint`
 - Doc publication packets: `/doc-publication-packet`
+- Comment sync (PHPDoc audit): `comment-sync`
 - HAR analysis: `/browser-har-analysis`
 - Git commits: `/git-commit`
 - GitHub issues / PRs: `/github-issue-workflow`
