@@ -1,6 +1,6 @@
 ---
 name: doc-publication-audit
-description: Audits mixed internal/public documentation and rewrites one file at a time into stable public-facing docs. Use when docs/work, development notes, or issue plans need to become external docs with a consistent feature-to-doc mapping.
+description: Create or rewrite one stable public-facing doc from a packet handoff. Use when a packet contract is ready (packet_id, target_path, doc_format_profile, anchors, comment_sync_policy fixed) and one file under docs/ needs to be written, restructured, or moved from docs/work/ to its public home.
 compatibility: LedgerLeap (`docs/`, `docs/work/`, `.github/skills/`, `.github/prompts/`)
 ---
 

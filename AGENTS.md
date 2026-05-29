@@ -53,6 +53,7 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 ## Domain Entry Points
 - Bug investigation: `/bug-investigation`
 - Bug implementation: `/bug-execution`
+- Doc creation sprint: `/doc-creation-sprint`
 - Doc publication packets: `/doc-publication-packet`
 - HAR analysis: `/browser-har-analysis`
 - Git commits: `/git-commit`
@@ -67,6 +68,7 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 
 ### Doc publication packet routing
 - `/doc-publication-packet` is the router: choose lane, confirm inputs, and decide the handoff target.
+- `doc-creation-sprint` discovers the top unwritten doc from the #226 backlog and creates it in one execution. Entrypoint for "make a doc without picking the target."
 - `doc-source-inventory` refreshes #226-derived backlog / readiness deltas.
 - `doc-publication-audit` executes one already-selected packet; it is not the lane selector.
 - `docs/runbooks/doc-publication-packet-playbook.md` is the human/AI sequence, and `docs/harnesses/doc-publication-packet/continue-config.template.yaml` mirrors the same split for adapters.

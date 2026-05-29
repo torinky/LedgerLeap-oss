@@ -21,4 +21,5 @@ LedgerLeap の標準運用手順への入口です。
 3. 公開 doc packet を扱うなら [Doc Publication Packet Playbook](./doc-publication-packet-playbook.md) を使う
 4. 再利用可能な学びが出たら [AI Asset Maintenance Playbook](./ai-asset-maintenance-playbook.md) に移る
 5. HAR 比較が必要なら [Browser HAR Analysis Playbook](./browser-har-analysis-playbook.md) を使う
-6. slash entrypoints は `/.github/prompts/bug-investigation.prompt.md`, `/.github/prompts/bug-execution.prompt.md`, `/.github/prompts/browser-har-analysis.prompt.md`, `/.github/prompts/skill-maintenance.prompt.md`, `/.github/prompts/doc-publication-packet.prompt.md`
+6. 新規 doc 自動作成は `/doc-creation-sprint`
+7. slash entrypoints は `/.github/prompts/bug-investigation.prompt.md`, `/.github/prompts/bug-execution.prompt.md`, `/.github/prompts/browser-har-analysis.prompt.md`, `/.github/prompts/skill-maintenance.prompt.md`, `/.github/prompts/doc-publication-packet.prompt.md`, `/.github/prompts/doc-creation-sprint.prompt.md`

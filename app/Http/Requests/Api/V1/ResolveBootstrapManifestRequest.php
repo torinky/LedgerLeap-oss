@@ -8,6 +8,15 @@ use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
+/**
+ * Validates bootstrap manifest resolution requests.
+ *
+ * Ensures the required parameters (client_type, role_profile) are present
+ * and valid, and applies defaults for model_profile and language before
+ * validation runs.
+ *
+ * @api
+ */
 class ResolveBootstrapManifestRequest extends FormRequest
 {
     public function authorize(): bool

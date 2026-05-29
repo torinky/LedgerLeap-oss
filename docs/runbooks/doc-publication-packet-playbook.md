@@ -5,6 +5,7 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 ## 関連資料
 
 - [Doc Publication Packet Prompt](../../.github/prompts/doc-publication-packet.prompt.md)
+- [doc-creation-sprint skill](../../.github/skills/doc-creation-sprint/SKILL.md)
 - [doc-source-inventory skill](../../.github/skills/doc-source-inventory/SKILL.md)
 - [doc-publication-audit skill](../../.github/skills/doc-publication-audit/SKILL.md)
 - [Doc Publication Packet Template](../templates/doc-publication-packet-template.md)
@@ -25,6 +26,7 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 
 | Layer | Primary asset | 役割 | ここから先へ渡す先 |
 |---|---|---|---|
+| Discovery | `/doc-creation-sprint` | 未作成 doc を発見して 1 つ作成 | target doc / acceptance |
 | Entry | `/doc-publication-packet` | lane 選定と handoff 整理 | `doc-source-inventory` / `doc-publication-audit` / comment sync lane |
 | Inventory | `doc-source-inventory` | #226 baseline と packet readiness の差分確認 | packet handoff / downstream issue |
 | Execution | `doc-publication-audit` | handoff 済み 1 packet の rewrite / comment sync | target doc / acceptance / issue handoff |
@@ -34,6 +36,7 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 - `/doc-publication-packet` と `doc-publication-audit` は同じことをしない
 - 前者は **router**, 後者は **executor**
 - packet handoff が確定済みなら `/doc-publication-packet` を毎回経由する必要はない
+- `/doc-creation-sprint` は discovery + execution を 1 回で行うため、router と executor の両方を兼ねる
 
 ## 2. lane の選び方
 
@@ -60,6 +63,21 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 - 1 packet の本文 rewrite
 - handoff / acceptance 記録
 - comment sync 付きの bounded rewrite
+
+### Sprint creation (automatic target discovery)
+
+使うもの:
+- `/doc-creation-sprint` (prompt / OpenCode command)
+- [doc-creation-sprint skill](../skills/doc-creation-sprint/SKILL.md)
+- `.github/agents/doc-creation-sprint.agent.md`
+- `.continue/rules/03-doc-creation-sprint.md`
+
+向いている作業:
+- ターゲットを自分で選ばずに未作成 doc を 1 つ作りたい
+- どの doc がまだ書かれていないか把握していない
+- 優先度順に backlog を消化したい
+
+注意: packet handoff がすでに固定されている場合は `doc-publication-audit` を直接使うこと。
 
 ### Comment sync only
 
@@ -163,14 +181,16 @@ companion record に残すもの:
 
 ## 7. JetBrains / Copilot entrypoint
 
-1. `/doc-publication-packet` で lane を決める
-2. inventory refresh が必要なら `doc-source-inventory`
-3. packet rewrite なら `doc-publication-audit`
-4. rewrite 前に `doc_format_profile`, required sections, evidence fields, comment sync scope を固定する
-5. 終了時は issue body / handoff / runbook への影響を確認する
+1. **新規 doc を自動発見して作成** → `/doc-creation-sprint`
+2. `/doc-publication-packet` で lane を決める
+3. inventory refresh が必要なら `doc-source-inventory`
+4. packet rewrite なら `doc-publication-audit`
+5. rewrite 前に `doc_format_profile`, required sections, evidence fields, comment sync scope を固定する
+6. 終了時は issue body / handoff / runbook への影響を確認する
 
 ### 最短判断
 
+- **ターゲットを選ばずに新しい doc を作りたい** → `/doc-creation-sprint`
 - **まだ何を使うか迷う** → `/doc-publication-packet`
 - **backlog / anchor / readiness を見直す** → `doc-source-inventory`
 - **1 packet の rewrite に入る** → `doc-publication-audit`
@@ -182,6 +202,7 @@ companion record に残すもの:
 
 - `.opencode/agents/doc-source-inventory.md`
 - `.opencode/agents/doc-packet-executor.md`
+- `.opencode/commands/doc-creation-sprint.md`
 - `.opencode/commands/packet-plan.md`
 - `.opencode/commands/packet-rewrite.md`
 - `.opencode/commands/packet-comment-sync.md`
@@ -189,6 +210,7 @@ companion record に残すもの:
 
 ### 使い分け
 
+- `/doc-creation-sprint` は未作成 doc を自動発見して 1 つ作成
 - `/packet-plan` は read-only の packet inventory / handoff preparation
 - `/packet-rewrite` は単一 writer で 1 packet を実装
 - `/packet-comment-sync` は comment anchor だけを更新
@@ -201,19 +223,23 @@ companion record に残すもの:
 
 - `.continue/rules/01-doc-packet-core.md`
 - `.continue/rules/02-doc-packet-comment-sync.md`
+- `.continue/rules/03-doc-creation-sprint.md`
 - `docs/harnesses/doc-publication-packet/continue-config.template.yaml`
 
 ### 使い分け
 
-- `.continue/rules/*` は packet core rule と comment sync rule を分ける
+- `.continue/rules/01-doc-packet-core.md` は packet gate と writing rules
+- `.continue/rules/02-doc-packet-comment-sync.md` は comment sync 専用
+- `.continue/rules/03-doc-creation-sprint.md` は自動発見 + 作成
 - Continue prompt blocks は harness の `config.template.yaml` に置き、unsupported な repo-local prompt discovery を仮定しない
 - `Plan` mode は inventory / anchor read、`Agent` mode は single writer の rewrite に使う
 - `continue-config.template.yaml` の `model` は固定名のまま使わず、LM Studio の `GET /v1/models` が返す実 model id に置き換える
 
-## 10. 2-A4 に渡す最小 asset set
+## 10. 現行 asset set
 
 | Layer | File |
 |---|---|
+| Sprint creation (auto discovery) | `.github/prompts/doc-creation-sprint.prompt.md`, `.github/skills/doc-creation-sprint/SKILL.md`, `.github/agents/doc-creation-sprint.agent.md`, `.opencode/commands/doc-creation-sprint.md`, `.continue/rules/03-doc-creation-sprint.md` |
 | JetBrains entry | `.github/prompts/doc-publication-packet.prompt.md` |
 | Inventory refresh | `.github/skills/doc-source-inventory/SKILL.md`, `.github/agents/doc-source-inventory.agent.md` |
 | Packet rewrite | `.github/skills/doc-publication-audit/SKILL.md`, `.github/agents/doc-packet-executor.agent.md`, `docs/templates/doc-publication-packet-template.md` |
@@ -224,6 +250,7 @@ companion record に残すもの:
 ## 11. 完了条件
 
 - inventory refresh と packet rewrite の責務分離が明確
+- doc-creation-sprint が discovery + execution の自動選択経路として利用可能
 - OpenCode と Continue の両方に最小 adapter asset がある
 - handoff / acceptance template が 1 箇所で参照できる
 - `doc_format_profile`, evidence fields, PHPDoc minimum rule が shared packet contract に反映されている

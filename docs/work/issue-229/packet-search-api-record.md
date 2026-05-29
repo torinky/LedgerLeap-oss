@@ -75,7 +75,9 @@ public function test_admin_can_search_all_ledgers()
 - Companion record created at docs/work/issue-229/packet-search-api-record.md
 - Internal details moved to this companion record
 - Basic syntax checks passed for controller/request/test files
+- PHPDoc comment sync applied to SearchController::search (added @param/@return summary) per packet requirement
 
 # Notes
 
 - Test execution of SearchApiTest.php via Sail was not executed in this environment (requires Docker/Sail). The packet acceptance records the test anchor and recommends running `./vendor/bin/sail test tests/Feature/Api/SearchApiTest.php` in CI or a Sail-enabled developer environment as the final verification step.
+- After running Sail tests, update `done_when` in packet manifest to mark "Links and examples validated" and "Sail tests passed" as completed.

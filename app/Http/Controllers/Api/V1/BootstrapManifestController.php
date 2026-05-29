@@ -8,6 +8,16 @@ use App\Http\Resources\Api\V1\BootstrapManifestResource;
 use App\Services\Ai\BootstrapManifestService;
 use OpenApi\Annotations as OA;
 
+/**
+ * REST bootstrap manifest endpoints.
+ *
+ * Provides GET and POST endpoints for AI clients to discover LedgerLeap
+ * capabilities, resources, prompts, and placement instructions before
+ * connecting to the MCP server. This is the HTTP REST surface only;
+ * MCP resource–based bootstrap is handled separately.
+ *
+ * @api
+ */
 class BootstrapManifestController extends Controller
 {
     /**

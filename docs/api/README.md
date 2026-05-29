@@ -3,6 +3,7 @@
 **詳細仕様:**
 - [OpenAPI Specification (JSON)](openapi.json) - 完全なAPIリファレンス（Swagger/OpenAPI形式）
 - [Search API](search-api.md) - `/api/v1/search` の REST 契約と GET / POST の使い分け
+- [Bootstrap Manifest API](bootstrap-manifest-api.md) - `GET/POST /api/v1/ai/bootstrap-manifest` の REST 契約
 - [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - remote MCP の技術仕様と実装上の制約
 
 > client-facing の API / MCP 文書は、この `docs/api/` 配下と上記の技術仕様を正本とします。内部の planning / worklog への直リンクは OSS mirror に含めません。
