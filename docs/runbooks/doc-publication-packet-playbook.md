@@ -37,6 +37,7 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 - 前者は **router**, 後者は **executor**
 - packet handoff が確定済みなら `/doc-publication-packet` を毎回経由する必要はない
 - `/doc-creation-sprint` は discovery + execution を 1 回で行うため、router と executor の両方を兼ねる
+- `comment-sync` は 1 packet の source anchors に対して PHPDoc を全監査し、不足やズレを修正する（`doc-creation-sprint` の step 14 から呼ばれる）
 
 ## 2. lane の選び方
 
@@ -79,14 +80,19 @@ LedgerLeap の公開ドキュメントを **1 packet = 1 target file** で進め
 
 注意: packet handoff がすでに固定されている場合は `doc-publication-audit` を直接使うこと。
 
-### Comment sync only
+### Comment sync (per-packet PHPDoc audit)
 
 使うもの:
+- [comment-sync skill](../../.github/skills/comment-sync/SKILL.md)
+- [PHPDoc Inspection Checklist](../../.github/skills/comment-sync/references/phpdoc-inspection-checklist.md)
+- [Source comment policy](#5-source-comment-policy) and PHPDoc minimum rule
 - `.opencode/commands/packet-comment-sync.md`
 - `.continue/rules/02-doc-packet-comment-sync.md`
 - packet template の acceptance section
 
 向いている作業:
+- 1 packet の source anchors に含まれる全クラス・メソッドの PHPDoc を実コードと照合し、不足・ズレ・欠落を修正する
+- `doc-creation-sprint` の step 14 から自動呼び出し
 - docs 本文は変えず、comment anchor だけを整えるケース
 
 ## 3. `doc_format_profile` を先に固定する
@@ -191,6 +197,7 @@ companion record に残すもの:
 ### 最短判断
 
 - **ターゲットを選ばずに新しい doc を作りたい** → `/doc-creation-sprint`
+- **1 doc の source anchors の PHPDoc を監査したい** → `comment-sync`
 - **まだ何を使うか迷う** → `/doc-publication-packet`
 - **backlog / anchor / readiness を見直す** → `doc-source-inventory`
 - **1 packet の rewrite に入る** → `doc-publication-audit`
@@ -242,6 +249,7 @@ companion record に残すもの:
 | Sprint creation (auto discovery) | `.github/prompts/doc-creation-sprint.prompt.md`, `.github/skills/doc-creation-sprint/SKILL.md`, `.github/agents/doc-creation-sprint.agent.md`, `.opencode/commands/doc-creation-sprint.md`, `.continue/rules/03-doc-creation-sprint.md` |
 | JetBrains entry | `.github/prompts/doc-publication-packet.prompt.md` |
 | Inventory refresh | `.github/skills/doc-source-inventory/SKILL.md`, `.github/agents/doc-source-inventory.agent.md` |
+| Comment sync | `.github/skills/comment-sync/SKILL.md`, `.github/skills/comment-sync/references/phpdoc-inspection-checklist.md` |
 | Packet rewrite | `.github/skills/doc-publication-audit/SKILL.md`, `.github/agents/doc-packet-executor.agent.md`, `docs/templates/doc-publication-packet-template.md` |
 | OpenCode | `.opencode/agents/*`, `.opencode/commands/*`, `docs/harnesses/doc-publication-packet/opencode-config.template.jsonc` |
 | Continue | `.continue/rules/*`, `docs/harnesses/doc-publication-packet/continue-config.template.yaml` |
