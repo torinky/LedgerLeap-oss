@@ -1,7 +1,7 @@
 {
-  "name": "laravel/laravel",
+  "name": "ledgerleap/ledgerleap",
   "type": "project",
-  "description": "The Laravel Framework.",
+  "description": "LedgerLeap - OSS ledger management system built with Laravel.",
   "keywords": [
     "framework",
     "laravel"

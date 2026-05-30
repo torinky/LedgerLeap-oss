@@ -4,8 +4,8 @@
 
 | Version | Supported |
 | ------- | --------- |
-| `main` | :white_check_mark: |
-| public release branches or tags | :x: until the public release policy is finalized |
+| `main` (development) | :white_check_mark: |
+| `2026.1.0-alpha.1` (pre-release) | :white_check_mark: |
 | abandoned or archived branches | :x: |
 
 ## Reporting a Vulnerability
