@@ -110,7 +110,9 @@
     {{-- グローバルモーダル --}}
     @livewire('attached-file.text-preview-modal')
 
-    @include('partials.app-footer')
+    <div class="xl:pl-64 2xl:pl-72">
+        @include('partials.app-footer')
+    </div>
 
     @livewireScriptConfig
     @vite(['resources/js/app.js'])

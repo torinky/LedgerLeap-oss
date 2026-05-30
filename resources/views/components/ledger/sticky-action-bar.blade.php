@@ -1,10 +1,3 @@
-{{-- フッターがスティッキーバーの下に隠れないようスペーサーを挿入 (app.blade.php の @stack('body-end-pad') で受け取る) --}}
-@once
-    @push('body-end-pad')
-        <div class="h-20"></div>
-    @endpush
-@endonce
-
 @props([
     'left' => null,
     'right' => null,

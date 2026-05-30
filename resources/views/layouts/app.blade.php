@@ -42,7 +42,7 @@
 
 </head>
 
-<body class="font-sans antialiased {{ $attributes->get('class') ?? 'bg-base-200' }}">
+<body class="font-sans antialiased {{ $attributes->get('class') ?? 'bg-base-200' }} pb-20">
 
     {{-- Tier 0: Global Progress Bar (Livewire通信中のみ表示) --}}
     <x-mary-loading wire:loading.delay class="text-primary fixed top-0 w-full h-1 z-110" />
@@ -75,8 +75,6 @@
             {{ $slot }}
         </main>
     </div>
-    {{-- sticky-action-bar が存在するページはここにスペーサーを push する --}}
-    @stack('body-end-pad')
     @include('partials.app-footer')
     @livewireScriptConfig
     @vite(['resources/js/app.js'])
