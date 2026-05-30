@@ -44,11 +44,10 @@
 
 ## 3. Gemini 特有の運用メモ (Delta Memories)
 
-*※以下は GitHub 側の指示書にまだ統合されていない、Gemini CLI での対話から得られた暫定的な知見である。*
+*卒業済みの知見はすべて `.github/copilot-instructions.md` の Critical Constraints に統合済み。*
+*新たな発見はここに記録し、十分な確信を得たら `.github/` に PR で統合すること。*
 
-- **Livewire Serialization**: 公開プロパティに PHP オブジェクトを保持するとシリアライズエラーが発生する。常にプレーンな配列として扱うこと。
-- **MaryUI Toast**: `$this->success()` 等のショートカットは Livewire テストで捕捉できない。`$this->dispatch('mary-toast', ...)` を明示的に呼ぶこと。
-- **Sail Container**: Sail 環境の Git 操作で `Permission denied` が発生する場合は、`bash -c "cd /path && git ..."` の形式を使用せよ。
+*(現在 Gemini 特有の未統合知見はなし)*
 
 ---
 **Status:** Integrated with .github assets.

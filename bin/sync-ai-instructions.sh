@@ -3,7 +3,9 @@
 # ==============================================================================
 # AI Instructions Sync Script for LedgerLeap
 #
-# ARCHITECTURE: Bidirectional sync via symlinks
+# ARCHITECTURE: Two-layer sync
+#
+# Layer 1 — Symlinks (same format, bidirectional):
 #   .gemini/instructions  -> ../.github/instructions
 #   .gemini/skills        -> ../.github/skills
 #   .gemini/prompts       -> ../.github/prompts
@@ -11,15 +13,21 @@
 #   .agents/skills        -> ../.github/skills
 #   .agents/prompts       -> ../.github/prompts
 #
-# Because all targets are symlinks to .github/, editing from any tool
-# (Gemini CLI, Antigravity CLI "agy", Copilot, opencode) modifies the
-# same source files — no copy needed, true bidirectional sync.
+# Layer 2 — Generated files (format dialects, canonical → derived):
+#   .gemini/settings.json mcpServers → opencode.json mcp section
+#     Gemini format: { command: "cmd", args: [...], env: {...} }
+#     opencode format: { type: "local", command: ["cmd", ...], environment: {...} }
+#
+# Canonical sources:
+#   - skills/instructions/prompts: .github/ (bidirectional via symlinks)
+#   - MCP servers: .gemini/settings.json mcpServers section
 #
 # opencode reads .github/ directly via opencode.json — no copy needed.
 # GitHub Copilot reads .github/ natively — no copy needed.
 #
-# This script ensures the symlinks exist and are correct.
-# Run automatically via the pre-commit hook when any .github/ AI asset is staged.
+# Auto-triggered by .git/hooks/pre-commit on:
+#   - .github/instructions|skills|prompts changes
+#   - .gemini/settings.json changes
 # ==============================================================================
 
 set -euo pipefail
@@ -29,15 +37,14 @@ GITHUB_DIR="$PROJECT_ROOT/.github"
 DIRS=("instructions" "skills" "prompts")
 TARGETS=(".gemini" ".agents")
 
-echo "Verifying AI instructions symlinks (.gemini, .agents -> .github)..."
+# --- Layer 1: Symlinks ---
+echo "Layer 1: Verifying symlinks (.gemini, .agents -> .github)..."
 
 for target in "${TARGETS[@]}"; do
     TARGET_DIR="$PROJECT_ROOT/$target"
     mkdir -p "$TARGET_DIR"
     for dir in "${DIRS[@]}"; do
         link="$TARGET_DIR/$dir"
-        expected="../../.github/$dir"
-        # Use relative path from inside $target/
         rel_target="../.github/$dir"
         if [ -L "$link" ]; then
             current=$(readlink "$link")
@@ -58,8 +65,57 @@ for target in "${TARGETS[@]}"; do
     echo "  ✓ $target verified"
 done
 
-# Verify skill counts match
+# --- Layer 2: MCP server sync (.gemini/settings.json → opencode.json) ---
+echo ""
+echo "Layer 2: Syncing MCP servers (.gemini/settings.json → opencode.json)..."
+
+python3 - "$PROJECT_ROOT" <<'PYEOF'
+import json, sys, os, re
+
+project = sys.argv[1]
+gemini_settings_path = os.path.join(project, ".gemini", "settings.json")
+opencode_path = os.path.join(project, "opencode.json")
+
+with open(gemini_settings_path) as f:
+    gemini = json.load(f)
+
+mcp_servers = gemini.get("mcpServers", {})
+if not mcp_servers:
+    print("  No mcpServers found — skipping opencode.json update")
+    sys.exit(0)
+
+# Convert Gemini format → opencode format
+# Gemini: { command: "cmd", args: [...], env: {...} }
+# opencode: { type: "local", command: ["cmd", ...], environment: {...} }
+opencode_mcp = {}
+for name, cfg in mcp_servers.items():
+    entry = {"type": "local"}
+    cmd = cfg.get("command", "")
+    args = cfg.get("args", [])
+    entry["command"] = [cmd] + args if cmd else list(args)
+    if "env" in cfg:
+        entry["environment"] = cfg["env"]
+    opencode_mcp[name] = entry
+
+# Read opencode.json — strip trailing commas for tolerance
+with open(opencode_path) as f:
+    raw = f.read()
+raw_clean = re.sub(r',(\s*[}\]])', r'\1', raw)
+oc = json.loads(raw_clean)
+
+oc["mcp"] = opencode_mcp
+
+with open(opencode_path, "w") as f:
+    json.dump(oc, f, indent=2, ensure_ascii=False)
+    f.write("\n")
+
+print(f"  ✓ opencode.json updated — {len(opencode_mcp)} MCP server(s) synced")
+PYEOF
+
+# Summary
 GITHUB_SKILLS=$(ls "$GITHUB_DIR/skills/" | wc -l | tr -d ' ')
 echo ""
-echo "Sync complete (symlink-based — all tools share the same source)."
-echo "  skills in .github: $GITHUB_SKILLS  (same for .gemini and .agents via symlink)"
+echo "Sync complete."
+echo "  Layer 1 (symlinks): {instructions,skills,prompts} shared across .github/.gemini/.agents"
+echo "  Layer 2 (generated): $( python3 -c "import json; d=json.load(open('$PROJECT_ROOT/.gemini/settings.json')); print(len(d.get('mcpServers',{})))" ) MCP servers .gemini/settings.json → opencode.json"
+echo "  Skills: $GITHUB_SKILLS in .github (same for .gemini/.agents via symlink)"

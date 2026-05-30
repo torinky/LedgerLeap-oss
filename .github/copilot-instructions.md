@@ -8,6 +8,7 @@
 - **No manual json_encode**: Never call `json_encode()` on `files`, `chk`, or other cast-array columns.
 - **Livewire state**: Public properties must be plain arrays. Objects cause serialization errors.
 - **Livewire parent calls**: Use `$parent.method()` for sort/filter; not `Livewire.dispatch()`.
+- **MaryUI Toast**: `$this->success()` shortcut cannot be caught in Livewire tests. Use `$this->dispatch('mary-toast', ...)` explicitly.
 - **Tailwind JIT**: After adding new utility classes, run `sail npm run build`.
 - **Model events in Sail**: Use `$model->update([...])` not `touch()` in event-driven tests.
 - **Permission cache**: Role/Org/User change requires both `flushAllUserPermissionsCache()` + `TenantAccessService::clearAllCache()`.

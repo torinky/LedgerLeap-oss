@@ -35,4 +35,89 @@
     "reserved": 10000
   },
   "snapshot": true,
+  "mcp": {
+    "sail-laravel-boost": {
+      "type": "local",
+      "command": [
+        "./vendor/bin/sail",
+        "artisan",
+        "boost:mcp"
+      ]
+    },
+    "ledgerleap-api": {
+      "type": "local",
+      "command": [
+        "/bin/sh",
+        "-c",
+        "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && vendor/bin/sail artisan mcp:start ledgerleap:mcp"
+      ]
+    },
+    "serena": {
+      "type": "local",
+      "command": [
+        "/opt/homebrew/bin/uv",
+        "run",
+        "--directory",
+        "../../serena",
+        "serena-mcp-server",
+        "--transport",
+        "stdio",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        "9121",
+        "--project",
+        "PROJECT_ROOT"
+      ],
+      "environment": {
+        "SERENA_ROOT": "${SERENA_ROOT}",
+        "PROJECT_ROOT": "${PROJECT_ROOT}"
+      }
+    },
+    "microsoft/markitdown": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "markitdown-mcp==0.0.1a4"
+      ]
+    },
+    "io.github.ChromeDevTools/chrome-devtools-mcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "chrome-devtools-mcp@0.12.1"
+      ]
+    },
+    "microsoft/playwright-mcp": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@playwright/mcp@latest"
+      ]
+    },
+    "io.github.upstash/context7": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@upstash/context7-mcp@1.0.31"
+      ],
+      "environment": {
+        "CONTEXT7_API_KEY": "${CONTEXT7_API_KEY}"
+      }
+    },
+    "github": {
+      "type": "local",
+      "command": [
+        "npx",
+        "-y",
+        "@modelcontextprotocol/server-github"
+      ],
+      "environment": {
+        "GITHUB_PERSONAL_ACCESS_TOKEN": "${GITHUB_PERSONAL_ACCESS_TOKEN}"
+      }
+    }
+  }
 }
