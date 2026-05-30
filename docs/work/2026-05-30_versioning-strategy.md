@@ -124,16 +124,43 @@ git tag v2027.1.0
 
 ## 4. リリースフロー
 
-### 4.1 ブランチ連携
+### 4.1 デュアルリポジトリ構成
+
+| リポジトリ | Remote | 用途 |
+|-----------|--------|------|
+| `torinky/LedgerLeap`（private） | `origin` | 開発主軸。タグ・Release の起点 |
+| `torinky/LedgerLeap-oss`（private → public） | `staging` | OSS 公開窓口 |
+
+OSS リポジトリが **private** の間は招待開発者向けに全段階で OSS にタグ同期する。
+public 化後も継続。
+
+```
+private repo（origin）                       OSS repo（staging）
+       │                                            │
+       │ git push origin <tag>                      │
+       │ → release.yml 起動 → Release 作成          │
+       │                                            │
+       │ git push staging <tag>                     │
+       │ ────────────────────────────────────────→  │
+       │                                            │ release.yml 起動（同期後）
+       │                                            │ → Release 作成
+       │                                            │
+       │ main push → sync-to-public.yml             │
+       │ コミットが cherry-pick ─────────────────→ │ main に反映
+```
+
+### 4.2 ブランチ連携
 
 ```
 feature/xxx ──PR──→ develop ──PR──→ main
                                       │
                                 git tag v2026.1.0
                                 git push origin v2026.1.0
+                                git push staging v2026.1.0
                                       │
                                 GitHub Actions:
-                                  ├─ Release 自動作成
+                                  ├─ private repo に Release 自動作成
+                                  ├─ OSS repo に Release 自動作成（release.yml 同期後）
                                   ├─ リリースノート自動生成
                                   └─ プレリリース自動判定
 ```
@@ -141,7 +168,7 @@ feature/xxx ──PR──→ develop ──PR──→ main
 - `main` ブランチへのマージをトリガーにリリース作業を実施
 - ホットフィックスは `main` からブランチを切り、修正後 `main` にマージ → PATCH バージョンタグ
 
-### 4.2 GitHub Actions による自動化
+### 4.3 GitHub Actions による自動化
 
 `.github/workflows/release.yml` により、タグプッシュをトリガーに以下を自動化する。
 

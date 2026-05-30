@@ -72,8 +72,8 @@ JetBrains スタイルの CalVer (`YYYY.MINOR.PATCH`) を採用し、Alpha → B
 ### Phase 3: Alpha リリース (`v2026.1.0-alpha.1`)
 - [ ] `SECURITY.md` の Supported Versions テーブルを更新
   - Evidence: `SECURITY.md` に `2026.1.0-alpha.1` のエントリが追加されていること
-- [ ] `git tag v2026.1.0-alpha.1` の作成・プッシュ
-  - Evidence: GitHub Release (Pre-release) が自動生成されていること
+- [ ] `git tag v2026.1.0-alpha.1` の作成・プッシュ（private + OSS）
+  - Evidence: 両リポジトリで GitHub Release (Pre-release) が生成されていること
 - [ ] クローズドな範囲での動作確認・不具合収集
 
 ### Phase 4: Beta リリース (`v2026.1.0-beta.1`)
