@@ -26,10 +26,10 @@ private repo でタグ作成 → git push origin <tag>
 **CalVer `YYYY.MINOR.PATCH`** — 年.MINOR.パッチ
 
 ```
-v2026.1.0-alpha.1    Alpha（private のみ）
-v2026.1.0-beta.1     Beta（OSS にもタグ同期）
-v2026.1.0-rc.1       RC（OSS にもタグ同期）
-v2026.1.0            Stable（OSS にもタグ同期）
+v2026.1.0-alpha.1    Alpha（private + OSS private staging）
+v2026.1.0-beta.1     Beta
+v2026.1.0-rc.1       RC
+v2026.1.0            Stable
 v2026.2.0            機能追加
 v2026.1.1            バグ修正
 v2027.1.0            年跨ぎ（MINOR リセット）
@@ -37,12 +37,15 @@ v2027.1.0            年跨ぎ（MINOR リセット）
 
 ## OSS Tag Sync Decision
 
+OSS リポジトリが **private** の間は全段階でタグ同期する（招待開発者もアクセス可能なため）。
+OSS リポジトリが **public** 化された後も引き続き全段階で同期する。
+
 | 段階 | private にタグ | OSS にタグ同期 | 理由 |
 |------|--------------|-------------|------|
-| Alpha | ✅ | ❌ | クローズドテスト。OSS repo はまだ private |
-| Beta | ✅ | ✅（公開化後） | 公開テスト。public 化後にタグを push staging |
-| RC | ✅ | ✅ | リリース候補。OSS 側でも確認可能に |
-| Stable | ✅ | ✅ | 正式版。両リポジトリで Release 生成 |
+| Alpha | ✅ | ✅ | OSS repo は private。招待開発者向け |
+| Beta | ✅ | ✅ | 公開テスト |
+| RC | ✅ | ✅ | リリース候補 |
+| Stable | ✅ | ✅ | 正式版 |
 
 ```bash
 # OSS にタグを同期する場合

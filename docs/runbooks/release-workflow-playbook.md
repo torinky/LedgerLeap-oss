@@ -28,12 +28,12 @@ v2027.1.0            年跨ぎ（MINOR リセット）
 
 | 段階 | `push origin` (private) | `push staging` (OSS) | 備考 |
 |------|------------------------|---------------------|------|
-| Alpha | ✅ | ❌ | クローズドテスト。OSS はまだ private |
-| Beta | ✅ | ✅ | OSS public 化後に実行 |
+| Alpha | ✅ | ✅ | OSS repo が private の間は全段階同期 |
+| Beta | ✅ | ✅ | |
 | RC | ✅ | ✅ | |
 | Stable | ✅ | ✅ | |
-| MINOR bump | ✅ | ✅ | 初回 Stable 以降 |
-| PATCH bump | ✅ | ✅ | 初回 Stable 以降 |
+| MINOR bump | ✅ | ✅ | |
+| PATCH bump | ✅ | ✅ | |
 | Year transition | ✅ | ✅ | |
 
 ---
@@ -58,10 +58,14 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && \
 # 5. プッシュ
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin develop"
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2026.1.0-alpha.1"
+bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push staging v2026.1.0-alpha.1"
 
-# 6. 確認
+# 6. private リポジトリの Release 確認
 gh release view v2026.1.0-alpha.1 -R torinky/LedgerLeap
 # → isPrerelease: true を確認
+
+# 7. OSS リポジトリの Release 確認
+gh release view v2026.1.0-alpha.1 -R torinky/LedgerLeap-oss
 ```
 
 ---
@@ -247,6 +251,4 @@ private repo (origin)                    OSS repo (staging)
 
 - **コミット同期**: `main` への push で `sync-to-public.yml` が自動実行。`release.yml` も同期対象（`sync-excludes.txt` の除外対象外）
 - **タグ同期**: 自動化されない。各リリース段階に応じて手動で `git push staging <tag>` を実行
-- **Alpha リリース**: private リポジトリのみ。OSS にタグは流さない
-- **Beta/RC**: 公開リポジトリの public 化後にタグを同期
-- **Stable 以降**: 両リポジトリで Release を作成（`push origin` + `push staging`）
+- **Alpha 以降**: OSS リポジトリが private の間は全段階でタグ同期（招待開発者向け）。public 化後も継続

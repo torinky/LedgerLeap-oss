@@ -40,10 +40,12 @@ vYYYY.MINOR.PATCH[-alpha.N|-beta.N|-rc.N]
 
 ### 2. Determine if OSS tag sync is needed
 
+OSS リポジトリが **private** の間は全段階で OSS にタグ同期する。（public 化後も継続）
+
 | Stage | OSS tag sync? |
 |-------|---------------|
-| Alpha | ❌（private のみ） |
-| Beta  | ✅（public 化後に `git push staging <tag>`） |
+| Alpha | ✅（private staging、招待開発者向け） |
+| Beta  | ✅ |
 | RC    | ✅ |
 | Stable | ✅ |
 
@@ -72,8 +74,8 @@ gh release view vYYYY.MINOR.PATCH -R torinky/LedgerLeap-oss
 
 | Stage | `SECURITY.md` | `CHANGELOG.md` | `push origin` | `push staging` |
 |-------|---------------|----------------|---------------|----------------|
-| Alpha | エントリ追加 | `[Unreleased]` に追記 | ✅ | ❌ |
-| Beta | エントリ更新 | 同上 | ✅ | ✅（公開化後） |
+| Alpha | エントリ追加 | `[Unreleased]` に追記 | ✅ | ✅ |
+| Beta | エントリ更新 | 同上 | ✅ | ✅ |
 | RC | エントリ更新 | 同上 | ✅ | ✅ |
 | Stable | Supported にマーク | セクション確定 | ✅ | ✅ |
 
