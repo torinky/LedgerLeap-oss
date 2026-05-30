@@ -89,17 +89,28 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git remote prune orig
 
 ## 6. リリース
 
+バージョン形式は **CalVer `YYYY.MINOR.PATCH`** を採用。詳細は `docs/work/2026-05-30_versioning-strategy.md`
+
 ```
 develop → main にマージ → バージョンタグ → OSS mirror に自動同期
 ```
 
 ```bash
+# (Stable リリース時)
 git checkout main
 git merge develop
-git tag v1.2.3
-git push origin main --tags
-# main への push で sync-to-public.yml が自動実行され OSS mirror に同期
+git tag -a v2026.1.0 -m "v2026.1.0: Stable release"
+git push origin main
+git push origin v2026.1.0
+# main への push で sync-to-public.yml が自動実行され OSS mirror にコミット同期
+# タグは別途 git push staging <tag> が必要
+
+# (プレリリース: develop ブランチ上でタグ作成)
+git tag -a v2026.1.0-alpha.1 -m "v2026.1.0-alpha.1: Alpha pre-release"
+git push origin v2026.1.0-alpha.1
 ```
+
+手順詳細: `docs/runbooks/release-workflow-playbook.md`
 
 ## 7. ブランチ整理（定期メンテナンス）
 

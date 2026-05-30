@@ -66,6 +66,7 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - CI failures: `/ci-failure-investigation`
 - RAG / search: `/rag-vector-search`
 - AI asset maintenance: `/skill-maintenance`
+- Release workflow: `/release-workflow`
 
 ### Doc publication packet routing
 - `/doc-publication-packet` is the router: choose lane, confirm inputs, and decide the handoff target.
