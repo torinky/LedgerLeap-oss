@@ -9,7 +9,7 @@
     $hasLinks   = $supportUrl || $email || $forumUrl;
 @endphp
 
-<footer class="border-t border-base-300 bg-base-100 text-base-content/60 text-xs py-4 px-6">
+<footer id="app-footer" class="border-t border-base-300 bg-base-100 text-base-content/60 text-xs py-4 px-6">
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 max-w-7xl mx-auto">
         <span>© {{ $yearRange }} {{ $owner }}. {{ __('ledger.footer.all_rights_reserved') }}</span>
 
