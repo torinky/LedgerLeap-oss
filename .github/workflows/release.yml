@@ -20,33 +20,39 @@ jobs:
       - name: Detect prerelease
         id: meta
         run: |
-          VERSION="${{ github.ref_name }}"
-          if echo "$VERSION" | grep -qE -- '-(alpha|beta|rc)'; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          if echo "${{ github.ref_name }}" | grep -qE -- '-(alpha|beta|rc)'; then
+            echo "flag=--prerelease" >> "$GITHUB_OUTPUT"
           else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "flag=" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Generate release notes
-        id: notes
         run: |
-          {
-            echo 'notes<<EOF'
-            PREV_TAG=$(git tag --sort=-creatordate | sed -n "/^${{ github.ref_name }}$/{n;p;}")
-            if [ -z "$PREV_TAG" ]; then
-              echo '## Initial Release'
-              git log --oneline --no-merges
-            else
-              echo '## Changes'
+          PREV_TAG=$(git tag --sort=-creatordate | sed -n "/^${{ github.ref_name }}$/{n;p;}")
+          if [ -z "$PREV_TAG" ]; then
+            {
+              echo '## v${{ github.ref_name }}'
+              echo ''
+              echo '初回 Alpha プレリリースです。'
+              echo ''
+              echo '### 含まれる変更'
+              echo ''
+              git log --oneline --no-merges -50
+            } > /tmp/release-notes.md
+          else
+            {
+              echo '## Changes since ${{ github.ref_name }}'
+              echo ''
               git log "${PREV_TAG}..${{ github.ref_name }}" --oneline --no-merges | sed 's/^/- /'
-            fi
-            echo 'EOF'
-          } >> "$GITHUB_OUTPUT"
+            } > /tmp/release-notes.md
+          fi
 
       - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: ${{ github.ref_name }}
-          name: ${{ github.ref_name }}
-          body: ${{ steps.notes.outputs.notes }}
-          prerelease: ${{ steps.meta.outputs.prerelease }}
+        run: |
+          gh release create "${{ github.ref_name }}" \
+            --repo "${{ github.repository }}" \
+            --title "${{ github.ref_name }}" \
+            --notes-file /tmp/release-notes.md \
+            ${{ steps.meta.outputs.flag }}
+        env:
+          GH_TOKEN: ${{ github.token }}
