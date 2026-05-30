@@ -1,0 +1,101 @@
+/.phpunit.cache
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.vscode
+
+# Laravel 4 specific
+bootstrap/compiled.php
+app/storage/
+
+# Laravel 5 & Lumen specific
+public/storage
+public/hot
+public_html/storage
+public_html/hot
+
+# PhpStorm template
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+.idea/**/aws.xml
+.idea/**/contentModel.xml
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml
+.idea/**/gradle.xml
+.idea/**/libraries
+.idea/**/mongoSettings.xml
+.idea/**/replstate.xml
+.idea/**/sonarlint/
+.idea/**/httpRequests
+.idea/caches/build_file_checksums.ser
+
+# IntelliJ
+out/
+.idea_modules/
+atlassian-ide-plugin.xml
+com_crashlytics_export_strings.xml
+crashlytics.properties
+crashlytics-build.properties
+fabric.properties
+
+# CMake
+cmake-build-*/
+
+# File-based project format
+*.iws
+
+# Android studio 3.1+ serialized cache file
+
+# IntelliJ project files
+*.iml
+out
+gen
+/_ide_helper.php
+!/database/tansi/tansi_v110.db
+/.env.development
+/.env.production
+/storage/app/
+/storage/api-docs/
+/storage/vlm*
+/storage/test/
+
+# Added by Gemini
+.DS_Store
+public/css/
+public/js/
+/database/tansi/tansi_v110.db
+coverage/
+coverage-*/
+coverage-unit-check/
+.playwright-mcp/
+1cd
+/database/wordnet_data/wnjpn.db
+/.idea
+!/.idea/
+.idea/*
+!.idea/runConfigurations/
+!.idea/runConfigurations/*.xml
+
+# Browser HAR captures (large, not committed)
+*.har

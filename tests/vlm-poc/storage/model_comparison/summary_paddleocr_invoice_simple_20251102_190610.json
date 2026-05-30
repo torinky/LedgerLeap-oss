@@ -1,0 +1,26 @@
+{
+  "test_info": {
+    "file": "invoice_simple",
+    "timestamp": "20251102_190610",
+    "model": "paddleocr"
+  },
+  "performance": {
+    "processing_time_s": 7.220879554748535,
+    "total_time_s": 7.239406
+  },
+  "extraction_results": {
+    "pages": 1,
+    "text_blocks": 69,
+    "key_value_pairs": 5,
+    "tables": 0
+  },
+  "quality_metrics": {
+    "markdown_length": 551,
+    "html_length": 994,
+    "confidence": {
+      "average": 0.9522919335227081,
+      "min": 0.5355342626571655,
+      "max": 0.9999852776527405
+    }
+  }
+}

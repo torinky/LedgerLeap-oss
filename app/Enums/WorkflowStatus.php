@@ -1,0 +1,97 @@
+<?php
+
+namespace App\Enums;
+
+enum WorkflowStatus: string
+{
+    case NONE = 'none';                     // ワークフロー非適用 (または Not Applicable)
+    case DRAFT = 'draft';                   // 作成中/編集中
+    case PENDING_INSPECTION = 'pending_inspection'; // 点検待ち
+    case PENDING_APPROVAL = 'pending_approval';     // 承認待ち
+    case APPROVED = 'approved';               // 承認済み
+
+    // (オプション) 日本語ラベル等が必要であれば追加
+    public function label(): string
+    {
+        return match ($this) {
+            self::NONE => __('ledger.workflow.status.none'), // 新規追加
+            self::DRAFT => __('ledger.workflow.status.draft'),
+            self::PENDING_INSPECTION => __('ledger.workflow.status.pending_inspection'),
+            self::PENDING_APPROVAL => __('ledger.workflow.status.pending_approval'),
+            self::APPROVED => __('ledger.workflow.status.approved'),
+        };
+    }
+
+    /**
+     * ステータスに応じた DaisyUI/Tailwind の色クラスを返すメソッド (新規追加)
+     * 例: badge-warning, badge-info, badge-success など
+     */
+    public function colorClass(): string
+    {
+        return match ($this) {
+            self::NONE => 'badge-ghost', // 目立たない色
+            self::DRAFT => 'badge-ghost', // 下書きは目立たない色
+            self::PENDING_INSPECTION => 'badge-warning', // 点検待ちは警告色
+            self::PENDING_APPROVAL => 'badge-info',    // 承認待ちは情報色
+            self::APPROVED => 'badge-success',  // 承認済みは成功色
+            // default => 'badge-secondary', // 万が一の場合のデフォルト
+        };
+    }
+
+    /**
+     * ステータスに応じた Font Awesome アイコンクラスを返すメソッド (新規追加)
+     */
+    public function icon(): string
+    {
+        return match ($this) {
+            self::NONE => 'fas fa-minus-circle', // ワークフロー非適用
+            self::DRAFT => 'fas fa-file-alt', // 下書き
+            self::PENDING_INSPECTION => 'fas fa-search', // 点検待ち
+            self::PENDING_APPROVAL => 'fas fa-hourglass-half', // 承認待ち
+            self::APPROVED => 'fas fa-check-circle', // 承認済み
+            // default => 'fas fa-info-circle', // 万が一の場合のデフォルト
+        };
+    }
+
+    /**
+     * ステータスに応じた Heroicon 名を返すメソッド (Mary UI 向け)
+     */
+    public function heroicon(): string
+    {
+        return match ($this) {
+            self::NONE => 'o-minus-circle',
+            self::DRAFT => 'o-document-text',
+            self::PENDING_INSPECTION => 'o-magnifying-glass',
+            self::PENDING_APPROVAL => 'o-clock',
+            self::APPROVED => 'o-check-circle',
+        };
+    }
+
+    /**
+     * このステータスが承認済みかどうかを判定する
+     */
+    public function isApproved(): bool
+    {
+        return $this === self::APPROVED;
+    }
+
+    // ワークフロー対象の状態か判定するヘルパー (新規追加)
+    public function isWorkflowActive(): bool
+    {
+        return in_array($this, [
+            self::DRAFT,
+            self::PENDING_INSPECTION,
+            self::PENDING_APPROVAL,
+            self::APPROVED, // 承認済みもワークフローの結果
+        ]);
+    }
+
+    // ワークフローが現在進行中か判定するヘルパー (新規追加)
+    public function isWorkflowPending(): bool
+    {
+        return in_array($this, [
+            self::PENDING_INSPECTION,
+            self::PENDING_APPROVAL,
+        ]);
+    }
+}

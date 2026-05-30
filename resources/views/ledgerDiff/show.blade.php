@@ -1,0 +1,22 @@
+<x-app-layout title="{{__('ledger.history_title')}}">
+    <x-slot name="header">
+        <h2 class="font-semibold text-xl text-gray-800 leading-tight">
+            {{ __('ledger.history_title') }}
+        </h2>
+    </x-slot>
+
+
+    <livewire:ledger.show-diff :ledgerId="$ledgerId" :diffId="$diffId"/>
+
+    <div class=" flex min-h-[6rem] flex-wrap items-center justify-center">
+        {{--
+                <a href="{{ route('ledger.edit', ['tenant' => tenant()?->id, 'ledgerId'=>$ledgerRecord->id]) }}"
+                   class="btn btn-outline btn-primary btn-wide"
+                ><i class="fa-solid fa-pencil mr-2"></i>{{__('edit')}}</a>
+        --}}
+
+        <a href="#" class="btn btn-outline btn-info ml-5" onclick="window.close();"><i
+                    class="fa-solid fa-close mr-2"></i>{{__('ledger.close_window')}}</a>
+    </div>
+
+</x-app-layout>

@@ -1,0 +1,26 @@
+{
+  "test_info": {
+    "file": "test",
+    "timestamp": "20251102_182211",
+    "model": "paddleocr"
+  },
+  "performance": {
+    "processing_time_s": 36.86499738693237,
+    "total_time_s": 36.919868
+  },
+  "extraction_results": {
+    "pages": 1,
+    "text_blocks": 500,
+    "key_value_pairs": 51,
+    "tables": 0
+  },
+  "quality_metrics": {
+    "markdown_length": 4649,
+    "html_length": 7678,
+    "confidence": {
+      "average": 0.9511493498086929,
+      "min": 0.5231800675392151,
+      "max": 0.9999388456344604
+    }
+  }
+}

@@ -1,0 +1,264 @@
+<?php
+
+namespace Tests\Unit\Mcp\Tools;
+
+use App\Enums\AttachedFileStatus;
+use App\Mcp\Tools\ReadMcpResourceTool;
+use App\Models\AttachedFile;
+use App\Models\Ledger;
+use App\Models\User;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
+use Laravel\Mcp\Request;
+use Laravel\Sanctum\Sanctum;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+class ReadMcpResourceToolTest extends TestCase
+{
+    use RefreshDatabaseWithTenant;
+
+    private User $user;
+
+    private ReadMcpResourceTool $tool;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        $this->user = User::factory()->create();
+        Sanctum::actingAs($this->user, ['mcp:*']);
+        Auth::setUser($this->user);
+        putenv('MCP_AUTH_TOKEN='.$this->user->createToken('test-token', ['mcp:*'])->plainTextToken);
+
+        $this->tool = app(ReadMcpResourceTool::class);
+    }
+
+    protected function tearDown(): void
+    {
+        putenv('MCP_AUTH_TOKEN=');
+        parent::tearDown();
+    }
+
+    #[Test]
+    public function it_returns_a_bootstrap_envelope_for_supported_clients(): void
+    {
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => 'ledgerleap://bootstrap/copilot',
+        ]));
+
+        $this->assertFalse($response->isError());
+
+        $payload = json_decode($response->content()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('bootstrap', $payload['resource_type']);
+        $this->assertSame('ledgerleap://bootstrap/copilot', $payload['resource_uri']);
+        $this->assertSame('text/markdown', $payload['mime_type']);
+        $this->assertSame('text', $payload['delivery_mode']);
+        $this->assertSame(['text', 'markdown'], $payload['available_formats']);
+        $this->assertStringContainsString('# LedgerLeap bootstrap card: copilot', $payload['payloads']['text']['text']);
+        $this->assertSame($payload['payloads']['text']['text'], $payload['payloads']['markdown']['text']);
+        $this->assertSame('ReadMcpResourceTool', $payload['access_guide']['read_via']);
+    }
+
+    #[Test]
+    public function it_returns_an_attachment_envelope_for_supported_attachment_uris(): void
+    {
+        $tenantId = (string) tenant('id');
+
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $tenantId,
+            'content_attached' => [
+                1 => [
+                    'hash-123' => [
+                        'name' => 'invoice.json',
+                        'mime' => 'application/json',
+                        'size' => 4096,
+                        'source' => 'vlm',
+                        'meta' => [
+                            'content' => '{"invoice":"INV-001"}',
+                        ],
+                        'pages' => [
+                            ['page_index' => 1],
+                        ],
+                        'text_blocks' => [],
+                        'key_value_pairs' => [
+                            ['key' => 'invoice', 'value' => 'INV-001'],
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $attachment = AttachedFile::factory()->forLedger($ledger)->create([
+            'tenant_id' => $tenantId,
+            'filename' => 'invoice.json',
+            'hashedbasename' => 'hash-123',
+            'column_id' => 1,
+            'mime' => 'application/json',
+            'original_mime_type' => 'application/json',
+            'status' => AttachedFileStatus::COMPLETED,
+            'vlm_markdown' => '# invoice INV-001',
+            'vlm_structured_data' => [
+                'pages' => [
+                    ['page_index' => 1],
+                ],
+                'text_blocks' => [],
+                'key_value_pairs' => [
+                    ['key' => 'invoice', 'value' => 'INV-001'],
+                ],
+            ],
+            'finalized_source' => 'vlm',
+        ]);
+
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => sprintf('ledgerleap://ledger/%s/%s/attachments/%s', $tenantId, $ledger->id, $attachment->id),
+        ]));
+
+        $this->assertFalse($response->isError());
+
+        $payload = json_decode($response->content()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertSame('attachment', $payload['resource_type']);
+        $this->assertSame(sprintf('ledgerleap://ledger/%s/%s/attachments/%s', $tenantId, $ledger->id, $attachment->id), $payload['resource_uri']);
+        $this->assertSame('application/json', $payload['mime_type']);
+        $this->assertSame('text', $payload['delivery_mode']);
+        $this->assertSame(['text', 'markdown', 'structured', 'json'], $payload['available_formats']);
+        $this->assertSame('# invoice INV-001', $payload['payloads']['text']['text']);
+        $this->assertTrue($payload['payloads']['structured']['available']);
+        $this->assertSame([['page_index' => 1]], $payload['payloads']['structured']['pages']);
+        $this->assertSame('ReadMcpResourceTool', $payload['access_guide']['read_via']);
+        $this->assertFalse($payload['access_guide']['delivery_options']['inline_base64']['available']);
+        $this->assertTrue($payload['access_guide']['delivery_options']['download_url']['available']);
+        $this->assertSame('routes.download.url', $payload['access_guide']['delivery_options']['download_url']['payload_path']);
+        $this->assertStringContainsString('MCP トークン', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('Authorization: Bearer <MCP_TOKEN>', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertSame('Bearer <MCP_TOKEN>', $payload['access_guide']['delivery_options']['download_url']['request_headers']['Authorization']);
+        $this->assertSame('application/json', $payload['access_guide']['delivery_options']['download_url']['request_headers']['Accept']);
+        $this->assertStringContainsString('login redirect', $payload['access_guide']['delivery_options']['download_url']['browser_behavior']);
+    }
+
+    #[Test]
+    public function it_keeps_visual_signed_urls_when_include_blob_is_disabled(): void
+    {
+        Storage::fake('public');
+
+        $tenantId = (string) tenant('id');
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $tenantId,
+            'content_attached' => [
+                1 => [
+                    'hash-visual' => [
+                        'name' => 'receipt.jpg',
+                        'mime' => 'image/jpeg',
+                        'size' => 13,
+                    ],
+                ],
+            ],
+        ]);
+
+        $attachment = AttachedFile::factory()->image()->forLedger($ledger)->create([
+            'tenant_id' => $tenantId,
+            'filename' => 'receipt.jpg',
+            'hashedbasename' => 'hash-visual',
+            'path' => 'attachments/receipt.jpg',
+            'column_id' => 1,
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'size' => 13,
+            'status' => AttachedFileStatus::COMPLETED,
+        ]);
+
+        Storage::disk('public')->put('attachments/receipt.jpg', 'visual-bytes');
+
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => sprintf('ledgerleap://ledger/%s/%s/attachments/%s', $tenantId, $ledger->id, $attachment->id),
+        ]));
+
+        $this->assertFalse($response->isError());
+
+        $payload = json_decode($response->content()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['payloads']['visual']['available']);
+        $this->assertNull($payload['payloads']['visual']['base64']);
+        $this->assertNotNull($payload['payloads']['visual']['signed_url']);
+        $this->assertTrue($payload['access_guide']['delivery_options']['inline_base64']['available']);
+        $this->assertTrue($payload['access_guide']['delivery_options']['download_url']['available']);
+        $this->assertSame('payloads.visual.base64', $payload['access_guide']['delivery_options']['inline_base64']['payload_path']);
+        $this->assertSame('routes.download.url', $payload['access_guide']['delivery_options']['download_url']['payload_path']);
+        $this->assertStringContainsString('include_blob=true', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('curl', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('Accept: application/json', implode(' ', $payload['access_guide']['instructions']));
+        $this->assertStringContainsString('Authorization: Bearer <MCP_TOKEN>', implode(' ', $payload['access_guide']['instructions']));
+    }
+
+    #[Test]
+    public function it_inlines_visual_base64_when_include_blob_is_enabled(): void
+    {
+        Storage::fake('public');
+
+        $tenantId = (string) tenant('id');
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $tenantId,
+            'content_attached' => [
+                1 => [
+                    'hash-visual' => [
+                        'name' => 'receipt.jpg',
+                        'mime' => 'image/jpeg',
+                        'size' => 13,
+                    ],
+                ],
+            ],
+        ]);
+
+        $attachment = AttachedFile::factory()->image()->forLedger($ledger)->create([
+            'tenant_id' => $tenantId,
+            'filename' => 'receipt.jpg',
+            'hashedbasename' => 'hash-visual',
+            'path' => 'attachments/receipt.jpg',
+            'column_id' => 1,
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'size' => 13,
+            'status' => AttachedFileStatus::COMPLETED,
+        ]);
+
+        Storage::disk('public')->put('attachments/receipt.jpg', 'visual-bytes');
+
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => sprintf('ledgerleap://ledger/%s/%s/attachments/%s', $tenantId, $ledger->id, $attachment->id),
+            'include_blob' => true,
+        ]));
+
+        $this->assertFalse($response->isError());
+
+        $payload = json_decode($response->content()->__toString(), true, 512, JSON_THROW_ON_ERROR);
+        $this->assertTrue($payload['payloads']['visual']['available']);
+        $this->assertSame(base64_encode('visual-bytes'), $payload['payloads']['visual']['base64']);
+        $this->assertNull($payload['payloads']['visual']['signed_url']);
+    }
+
+    #[Test]
+    public function it_returns_an_error_for_unsupported_resource_uris(): void
+    {
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => 'ledgerleap://unsupported/resource',
+        ]));
+
+        $this->assertTrue($response->isError());
+        $this->assertStringContainsString('Unsupported LedgerLeap resource URI', $response->content());
+    }
+
+    #[Test]
+    public function it_returns_an_authentication_error_when_no_user_is_authenticated(): void
+    {
+        Auth::shouldReceive('user')->andReturn(null);
+        putenv('MCP_AUTH_TOKEN=');
+
+        $response = $this->tool->handle(new Request([
+            'resource_uri' => 'ledgerleap://bootstrap/copilot',
+        ]));
+
+        $this->assertTrue($response->isError());
+        $this->assertStringContainsString('MCP_AUTH_TOKEN environment variable is not set', $response->content());
+    }
+}

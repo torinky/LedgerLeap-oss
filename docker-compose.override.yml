@@ -1,0 +1,56 @@
+services:
+#  laravel:
+#    depends_on:
+#      - openldap
+
+#  openldap:
+#    image: rroemhild/test-openldap
+#    ports:
+#      - '${FORWARD_LDAP_PORT:-389}:10389'
+#    environment:
+#      LDAP_ROOTPASS: secret
+#      LDAP_ORGANISATION: LedgerLeap
+#      LDAP_DOMAIN: local.com
+#      LDAP_BASEDN: dc=local,dc=com
+#    networks:
+#      - sail
+#    healthcheck:
+#      test: ["CMD", "ldapsearch", "-x", "-H", "ldap://localhost:10389", "-b", "", "-s", "base", "(objectclass=*)", "namingContexts"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#      start_period: 30s
+  meilisearch:
+    image: 'getmeili/meilisearch:latest'
+    ports:
+      - '${FORWARD_MEILISEARCH_PORT:-7700}:7700'
+    volumes:
+      - 'sail-meilisearch:/meili_data'
+    networks:
+      - sail
+    healthcheck:
+      test:
+        - CMD
+        - curl
+        - '-f'
+        - 'http://localhost:7700/health'
+      retries: 3
+      timeout: 5s
+  mailpit:
+    image: 'axllent/mailpit:latest'
+    ports:
+      - '${FORWARD_MAILPIT_PORT:-1025}:1025'
+      - '${FORWARD_MAILPIT_DASHBOARD_PORT:-8025}:8025'
+    networks:
+      - sail
+#  selenium:
+#    image: seleniarm/standalone-chromium
+#    extra_hosts:
+#      - 'host.docker.internal:host-gateway'
+#    volumes:
+#      - '/dev/shm:/dev/shm'
+#    networks:
+#      - sail
+volumes:
+  sail-meilisearch:
+    driver: local

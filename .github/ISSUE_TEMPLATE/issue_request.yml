@@ -1,0 +1,159 @@
+name: 通常イシュー
+description: 改善・機能追加・調査・ドキュメント更新・リファクタなど、バグ以外の作業を標準フォーマットで起票します。
+title: "[Issue]: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        バグ報告や CI 失敗は `/.github/ISSUE_TEMPLATE/bug_report.yml` を使ってください。
+        このテンプレートは、改善・機能追加・調査・ドキュメント更新・リファクタなどの通常イシュー向けです。
+        書き方の正本はこのフォームの項目順です。背景 / 現状 / 目標 / スコープ / 方針候補 / スプリント分解 / エビデンス / 完了条件を具体的に記入してください。
+
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: イシュー種別
+      description: もっとも近いものを 1 つ選んでください。
+      options:
+        - 改善
+        - 機能追加
+        - 調査
+        - ドキュメント
+        - リファクタ
+        - 運用改善
+        - その他
+    validations:
+      required: true
+
+  - type: textarea
+    id: summary
+    attributes:
+      label: 概要
+      description: 何を改善・追加・調査したいかを 1〜3 文で要約してください。
+      placeholder: |
+        例: `lang/ja/ledger.php` と `lang/ja.json` の同期方針を整理したい。
+        例: 新しい一覧画面の検索条件を追加したい。
+    validations:
+      required: true
+
+  - type: textarea
+    id: background
+    attributes:
+      label: 背景 / 目的
+      description: なぜこのイシューが必要かを記入してください。
+      placeholder: |
+        例: 既存の指示が分散しているため、起票時の迷いを減らしたい。
+    validations:
+      required: true
+
+  - type: textarea
+    id: current_state
+    attributes:
+      label: 現状
+      description: 現在の状態、制約、関連ファイル、既存挙動を記入してください。
+      placeholder: |
+        - 参照ファイル: `path/to/file`
+        - 既存の挙動: ...
+        - 制約: ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: target_state
+    attributes:
+      label: 目標 / 完了状態
+      description: 何が満たされれば完了とみなせるかを記入してください。
+      placeholder: |
+        - 何がどう変わるべきか
+        - どの状態なら完了か
+    validations:
+      required: true
+
+  - type: textarea
+    id: scope
+    attributes:
+      label: スコープ / 非スコープ
+      description: やることと、今回はやらないことを分けて書いてください。
+      placeholder: |
+        対象:
+        - ...
+
+        対象外:
+        - ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: approach
+    attributes:
+      label: 方針候補 / メモ
+      description: 実施案が複数ある場合は並べてください。現時点で未確定でも構いません。
+      placeholder: |
+        1. 案A
+        2. 案B
+        3. 案C
+    validations:
+      required: false
+
+  - type: textarea
+    id: sprint_plan
+    attributes:
+      label: スプリント分解
+      description: 複数段階で進める場合のチェックリストを記入してください。
+      placeholder: |
+        - [ ] Sprint 1: 調査 / 再現
+        - [ ] Sprint 2: 実装修正
+        - [ ] Sprint 3: 回帰確認 / 文書化
+    validations:
+      required: true
+
+  - type: textarea
+    id: evidence
+    attributes:
+      label: エビデンス / 参照先
+      description: 関連ファイル、テスト結果、ログ、スクリーンショット、commit などを記入してください。
+      placeholder: |
+        - `app/...`
+        - `tests/...`
+        - `phpunit` 実行結果
+        - commit SHA
+    validations:
+      required: true
+
+  - type: textarea
+    id: acceptance_criteria
+    attributes:
+      label: 完了条件
+      description: 完了判定できる基準をチェック可能な形で記入してください。
+      placeholder: |
+        - [ ] 条件1
+        - [ ] 条件2
+    validations:
+      required: true
+
+  - type: textarea
+    id: related_links
+    attributes:
+      label: 関連リンク
+      description: 関連 Issue / PR / docs / commit などがあれば記入してください。
+      placeholder: |
+        - Issue #
+        - PR #
+        - docs/...md
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: confirmations
+    attributes:
+      label: 確認事項
+      options:
+        - label: バグ報告ではないことを確認した
+          required: true
+        - label: 背景 / 現状 / 目標 / スコープを分けて書いた
+          required: true
+        - label: スプリント分解と完了条件を記入した
+          required: true
+        - label: 参照先やエビデンスを可能な範囲で添付した
+          required: true
+

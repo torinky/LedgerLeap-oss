@@ -1,0 +1,21 @@
+# Docker Compose configuration for ARM64 architecture
+# This file is automatically loaded by setup.sh on ARM64 systems
+
+services:
+  # mysql: groonga/mroonga image does not support explicit platform specification
+  # Let Docker automatically select the appropriate platform
+  
+  meilisearch:
+    platform: linux/arm64
+
+  redis:
+    platform: linux/arm64
+
+  tika:
+    platform: linux/arm64
+
+  embedding:
+    platform: linux/arm64
+
+  vlm:
+    platform: linux/arm64

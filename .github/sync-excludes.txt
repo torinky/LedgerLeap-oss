@@ -1,0 +1,30 @@
+# Public sync exclusion list for LedgerLeap
+# Keep this file aligned with docs/work/2026-05-23_oss-publication-plan.md §4.3 and §5.3.
+
+.github/copilot-instructions.md
+.github/instructions/
+.github/skills/
+.github/prompts/
+.github/agents/
+.github/workflows/opencode.yml
+.github/workflows/sync-to-public.yml
+.github/sync-excludes.txt
+AGENTS.md
+opencode.json
+resources/ai/
+docs/work/
+docs/runbooks/ai-asset-maintenance-playbook.md
+docs/runbooks/skill-maintenance-playbook.md
+docs/runbooks/browser-har-analysis-playbook.md
+docs/runbooks/local-llm-mcp-setup.md
+docs/harnesses/
+docker-compose.prod.yml
+prod.sh
+.env.development
+.env.production
+.env.testing
+
+# Secret handling:
+# - Never publish raw secrets, tokens, credentials, or demo credentials.
+# - Public-facing docs must use placeholders such as <generated-token>.
+# - Perform secret scans before publishing or syncing new content.

@@ -1,0 +1,944 @@
+{
+    "openapi": "3.0.0",
+    "info": {
+        "title": "LedgerLeap API",
+        "description": "LedgerLeap API for LLM integration",
+        "version": "1.0.0"
+    },
+    "servers": [
+        {
+            "url": "http://tenanta.localhost",
+            "description": "LedgerLeap API Server"
+        }
+    ],
+    "paths": {
+        "/api/v1/ledgers": {
+            "get": {
+                "tags": [
+                    "Ledgers"
+                ],
+                "summary": "List and search ledgers",
+                "description": "Retrieve a list of ledgers with optional filtering and search capabilities.",
+                "operationId": "fc8f474bc8af8ded632f5eef9efb71df",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Full-text search keyword using Mroonga",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "日報"
+                        }
+                    },
+                    {
+                        "name": "creator_id",
+                        "in": "query",
+                        "description": "Filter by creator user ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "created_from",
+                        "in": "query",
+                        "description": "Filter by creation date from (YYYY-MM-DD format)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-01-18"
+                        }
+                    },
+                    {
+                        "name": "created_to",
+                        "in": "query",
+                        "description": "Filter by creation date to (YYYY-MM-DD format)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date",
+                            "example": "2025-01-19"
+                        }
+                    },
+                    {
+                        "name": "created_between",
+                        "in": "query",
+                        "description": "Filter by creation date range (comma-separated: from,to)",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2025-01-18,2025-01-19"
+                        }
+                    },
+                    {
+                        "name": "filter[creator_id]",
+                        "in": "query",
+                        "description": "Alternative filter syntax for creator ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    },
+                    {
+                        "name": "filter[created_between]",
+                        "in": "query",
+                        "description": "Alternative filter syntax for date range",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "2025-01-18,2025-01-19"
+                        }
+                    },
+                    {
+                        "name": "tags",
+                        "in": "query",
+                        "description": "Comma-separated tag names to filter by",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "日報,営業"
+                        }
+                    },
+                    {
+                        "name": "ledger_define_id",
+                        "in": "query",
+                        "description": "Filter by ledger definition ID",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 15
+                        }
+                    },
+                    {
+                        "name": "folder_id",
+                        "in": "query",
+                        "description": "Filter by folder ID (recursive search)",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "ledgers": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/LedgerResource"
+                                            }
+                                        },
+                                        "total": {
+                                            "type": "integer",
+                                            "example": 5
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Ledgers"
+                ],
+                "summary": "Create a new ledger",
+                "description": "Creates a new ledger record based on a ledger definition.",
+                "operationId": "3b3b318a37f8664fa2a659964a0aead3",
+                "requestBody": {
+                    "description": "Ledger object that needs to be added to the store",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/StoreLedgerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "Successfully created",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LedgerResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ledgers/{ledger}": {
+            "get": {
+                "tags": [
+                    "Ledgers"
+                ],
+                "summary": "Get a single ledger for update confirmation",
+                "description": "Retrieve a single ledger with status and column definition details before applying an update.",
+                "operationId": "getSingleLedgerForUpdateConfirmation",
+                "parameters": [
+                    {
+                        "name": "ledger",
+                        "in": "path",
+                        "required": true,
+                        "description": "Ledger ID",
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LedgerDetailResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "Ledgers"
+                ],
+                "summary": "Partially update a ledger",
+                "description": "Apply a partial update to a ledger after confirming its latest status and current content.",
+                "operationId": "patchLedger",
+                "parameters": [
+                    {
+                        "name": "ledger",
+                        "in": "path",
+                        "required": true,
+                        "description": "Ledger ID",
+                        "schema": {
+                            "type": "integer",
+                            "example": 1
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "description": "Ledger patch payload",
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateLedgerRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successfully updated",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "$ref": "#/components/schemas/LedgerDetailResource"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "403": {
+                        "description": "Forbidden"
+                    },
+                    "404": {
+                        "description": "Not found"
+                    },
+                    "409": {
+                        "description": "Locked by workflow status"
+                    },
+                    "422": {
+                        "description": "Validation error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/ledger-defines": {
+            "get": {
+                "tags": [
+                    "Ledger Defines"
+                ],
+                "summary": "Get a list of ledger definitions",
+                "description": "Returns a list of all available ledger definitions that can be used to create new ledgers.",
+                "operationId": "8c2e5acb75c9853eab73e7988a905e69",
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/LedgerDefineResource"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/api/v1/search": {
+            "get": {
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Search ledgers (GET)",
+                "description": "Advanced search for ledgers based on various criteria. For Japanese or multi-byte characters, consider using POST /api/v1/search or ensure proper URL encoding.",
+                "operationId": "7abc881cbaca3aae0b1c62c2d39e7dcb",
+                "parameters": [
+                    {
+                        "name": "q",
+                        "in": "query",
+                        "description": "Full-text search keyword. For Japanese text, use POST method or ensure URL encoding.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "tags",
+                        "in": "query",
+                        "description": "Comma-separated tag names to filter by (AND condition).",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "folder_id",
+                        "in": "query",
+                        "description": "Search recursively within the specified folder ID.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "ledger_define_id",
+                        "in": "query",
+                        "description": "Filter by a specific ledger definition ID.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "exclude_q",
+                        "in": "query",
+                        "description": "Keyword to exclude from results.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "exclude_tags",
+                        "in": "query",
+                        "description": "Comma-separated tag names to exclude.",
+                        "required": false,
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    {
+                        "name": "mode",
+                        "in": "query",
+                        "description": "Response mode ('search' or 'count').",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "default": "search",
+                            "enum": [
+                                "search",
+                                "count"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "limit",
+                        "in": "query",
+                        "description": "Maximum number of items to return.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 10
+                        }
+                    },
+                    {
+                        "name": "offset",
+                        "in": "query",
+                        "description": "Number of items to skip for pagination.",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "default": 0
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/LedgerResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "limit": {
+                                                    "type": "integer"
+                                                },
+                                                "offset": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Search"
+                ],
+                "summary": "Search ledgers (POST)",
+                "description": "Advanced search for ledgers based on various criteria. Recommended for Japanese or multi-byte character queries as it avoids URL encoding issues.",
+                "operationId": "99f5c58345ffaae8012ddb1e54d745e7",
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "q": {
+                                        "description": "Full-text search keyword. Supports Japanese without URL encoding (e.g., '株式会社').",
+                                        "type": "string"
+                                    },
+                                    "tags": {
+                                        "description": "Comma-separated tag names to filter by (AND condition).",
+                                        "type": "string"
+                                    },
+                                    "folder_id": {
+                                        "description": "Search recursively within the specified folder ID.",
+                                        "type": "integer"
+                                    },
+                                    "ledger_define_id": {
+                                        "description": "Filter by a specific ledger definition ID.",
+                                        "type": "integer"
+                                    },
+                                    "exclude_q": {
+                                        "description": "Keyword to exclude from results.",
+                                        "type": "string"
+                                    },
+                                    "exclude_tags": {
+                                        "description": "Comma-separated tag names to exclude.",
+                                        "type": "string"
+                                    },
+                                    "mode": {
+                                        "description": "Response mode.",
+                                        "type": "string",
+                                        "default": "search",
+                                        "enum": [
+                                            "search",
+                                            "count"
+                                        ]
+                                    },
+                                    "limit": {
+                                        "description": "Maximum number of items to return.",
+                                        "type": "integer",
+                                        "default": 10
+                                    },
+                                    "offset": {
+                                        "description": "Number of items to skip for pagination.",
+                                        "type": "integer",
+                                        "default": 0
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Successful operation",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/LedgerResource"
+                                            }
+                                        },
+                                        "meta": {
+                                            "properties": {
+                                                "total": {
+                                                    "type": "integer"
+                                                },
+                                                "limit": {
+                                                    "type": "integer"
+                                                },
+                                                "offset": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthenticated"
+                    },
+                    "422": {
+                        "description": "Validation Error"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        }
+    },
+    "components": {
+        "schemas": {
+            "StoreLedgerRequest": {
+                "title": "Store Ledger Request Body",
+                "required": [
+                    "ledger_define_id",
+                    "folder_id",
+                    "content"
+                ],
+                "properties": {
+                    "ledger_define_id": {
+                        "description": "The ID of the ledger definition.",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "folder_id": {
+                        "description": "The ID of the folder to store the ledger in.",
+                        "type": "integer",
+                        "example": 5
+                    },
+                    "content": {
+                        "description": "An object where keys are column definition IDs and values are the content.",
+                        "type": "object"
+                    },
+                    "tags": {
+                        "description": "An array of tag names.",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        },
+                        "example": [
+                            "New Project",
+                            "Important"
+                        ]
+                    }
+                },
+                "type": "object"
+            },
+            "LedgerDefineResource": {
+                "title": "Ledger Define Resource",
+                "properties": {
+                    "id": {
+                        "description": "Ledger Define ID",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "name": {
+                        "description": "Name of the ledger definition",
+                        "type": "string",
+                        "example": "Meeting Minutes"
+                    },
+                    "description": {
+                        "description": "Description of the ledger definition",
+                        "type": "string",
+                        "example": "Record meeting minutes."
+                    },
+                    "columns": {
+                        "description": "Columns of the ledger definition",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "description": "Column ID",
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "name": {
+                                    "description": "Column name",
+                                    "type": "string",
+                                    "example": "Meeting Name"
+                                },
+                                "type": {
+                                    "description": "Column type (e.g., text, date, select)",
+                                    "type": "string",
+                                    "example": "text"
+                                },
+                                "options": {
+                                    "description": "Options for select type columns",
+                                    "type": "array",
+                                    "items": {
+                                        "type": "string"
+                                    },
+                                    "example": [
+                                        "Regular",
+                                        "Extraordinary"
+                                    ],
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateLedgerRequest": {
+                "title": "Update Ledger Request Body",
+                "required": [
+                    "content_patch"
+                ],
+                "properties": {
+                    "content_patch": {
+                        "description": "An object where keys are column definition IDs and values are only the fields to update.",
+                        "type": "object"
+                    },
+                    "comment": {
+                        "description": "Optional comment describing why the update was made.",
+                        "type": "string",
+                        "nullable": true,
+                        "example": "差し戻し指摘を反映"
+                    }
+                },
+                "type": "object"
+            },
+            "LedgerResource": {
+                "title": "Ledger Resource",
+                "properties": {
+                    "id": {
+                        "description": "Ledger ID",
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "define": {
+                        "description": "The definition of this ledger",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Sample Ledger Title"
+                            },
+                            "description": {
+                                "type": "string",
+                                "example": "This is a sample ledger."
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "content": {
+                        "description": "Content of the ledger, with column names as keys",
+                        "type": "object"
+                    },
+                    "content_attached": {
+                        "description": "Text content extracted from attached files",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "folder": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 5
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Project A"
+                            },
+                            "path": {
+                                "type": "string",
+                                "example": "/Root/Project A"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "tags": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 1
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "tag1"
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "LedgerDetailResource": {
+                "title": "Ledger Detail Resource",
+                "properties": {
+                    "id": {
+                        "type": "integer",
+                        "example": 1
+                    },
+                    "define": {
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 1
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "日報"
+                            },
+                            "description": {
+                                "type": "string",
+                                "example": "日報入力用の台帳です"
+                            },
+                            "workflow_enabled": {
+                                "type": "boolean",
+                                "example": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "content": {
+                        "type": "object"
+                    },
+                    "content_by_column_id": {
+                        "type": "object"
+                    },
+                    "column_definitions": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "id": {
+                                    "type": "integer",
+                                    "example": 0
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "example": "件名"
+                                },
+                                "type": {
+                                    "type": "string",
+                                    "example": "text"
+                                },
+                                "required": {
+                                    "type": "boolean",
+                                    "example": true
+                                },
+                                "order": {
+                                    "type": "integer",
+                                    "example": 1
+                                }
+                            }
+                        }
+                    },
+                    "content_attached": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "folder": {
+                        "type": "object",
+                        "properties": {
+                            "id": {
+                                "type": "integer",
+                                "example": 5
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Project A"
+                            },
+                            "path": {
+                                "type": "string",
+                                "example": "/Root/Project A"
+                            }
+                        }
+                    },
+                    "workflow": {
+                        "type": "object",
+                        "properties": {
+                            "status": {
+                                "type": "string",
+                                "example": "draft"
+                            },
+                            "status_label": {
+                                "type": "string",
+                                "example": "作成中"
+                            },
+                            "editable": {
+                                "type": "boolean",
+                                "example": true
+                            },
+                            "returns_to_draft_on_save": {
+                                "type": "boolean",
+                                "example": false
+                            },
+                            "latest_comment": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        }
+                    },
+                    "version": {
+                        "type": "integer",
+                        "example": 2
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            }
+        },
+        "securitySchemes": {
+            "sanctum": {
+                "type": "http",
+                "description": "Enter token in format (Bearer <token>)",
+                "bearerFormat": "JWT",
+                "scheme": "bearer"
+            }
+        }
+    },
+    "tags": [
+        {
+            "name": "Ledgers",
+            "description": "Ledgers"
+        },
+        {
+            "name": "Ledger Defines",
+            "description": "Ledger Defines"
+        },
+        {
+            "name": "Search",
+            "description": "Search"
+        }
+    ]
+}

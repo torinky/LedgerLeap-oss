@@ -1,0 +1,317 @@
+# LedgerLeap API仕様概要
+
+**詳細仕様:**
+- [OpenAPI Specification (JSON)](openapi.json) - 完全なAPIリファレンス（Swagger/OpenAPI形式）
+- [Search API](search-api.md) - `/api/v1/search` の REST 契約と GET / POST の使い分け
+- [Bootstrap Manifest API](bootstrap-manifest-api.md) - `GET/POST /api/v1/ai/bootstrap-manifest` の REST 契約
+- [MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md) - remote MCP の技術仕様と実装上の制約
+
+> client-facing の API / MCP 文書は、この `docs/api/` 配下と上記の技術仕様を正本とします。内部の planning / worklog への直リンクは OSS mirror に含めません。
+
+## 概要説明
+LedgerLeap APIは、外部アプリケーションやフロントエンドフレームワークとの連携を可能にするために提供されるHTTPベースのインターフェースです。このAPIを利用することで、台帳データの操作、フォルダ情報の取得、ファイルのアップロードなど、LedgerLeapの主要な機能をプログラム経由で利用できます。
+
+client-facing では、API の役割を **検索・登録・更新・承認・集計の業務フローを支える公開契約** として扱います。
+
+## on-prem / local model onboarding における API の位置づけ
+
+Sprint 6 時点では、on-prem / local model 前提の onboarding で REST API を次のように扱います。
+
+- **接続契約の主導線**: ベース URL、認証、OpenAPI、HTTP エンドポイントを確認する入口
+- **非MCP クライアントの主要導線**: 既存システム統合や API gateway 経由の利用で参照する契約
+  - **bootstrap discovery の初期 contract は REST API で提供開始**: `GET /api/v1/ai/bootstrap-manifest` と `POST /api/v1/ai/bootstrap-manifest/resolve` で最小 bundle を解決できる
+
+つまり、Sprint 6 時点では **API は「接続方法を理解するための入口」かつ「初期 bootstrap discovery contract」** を兼ねます。
+一方で、MCP 側の `resource / prompt / tool` は役割比較を固定したうえで、後続実装へ分離します。
+
+## LLM統合 (MCP) について
+
+LedgerLeap APIは、MCP (Model Context Protocol) を通じてLLMクライアント（ChatGPT、Claude等）からも利用可能です。自然言語での台帳操作や検索が可能で、以下のような対話が実現されています：
+
+**ユーザー:** 「昨日私が作成した日報を見せて」  
+**システム:** 適切な検索パラメータでAPI呼び出し → 視覚的に整理された結果を表示
+
+詳細な技術情報については、[MCP アーキテクチャと動作フロー](../development/MCP_Architecture_and_Flow.md)を参照してください。
+
+### MCP endpoint URL とテナント切り替え
+
+remote MCP は、次の 2 つの URL 形式をサポートします。
+
+1. **推奨: path-based tenant URL**
+2. **互換: subdomain / domain-based tenant URL**
+
+通常の LedgerLeap 画面遷移は `/{tenant}/...` の path-based URL が中心なので、
+MCP も基本は **path-based tenant URL** を使うことを推奨します。
+
+- 推奨 path: `/{tenant}/mcp/ledgerleap`
+- 互換 path: `/mcp/ledgerleap` + tenant-resolving host
+- Bearer token は **認証済み** であるだけでなく、**その tenant にアクセス可能** でなければ拒否される
+
+例:
+
+```text
+https://ledgerleap.example.com/tenant-a/mcp/ledgerleap
+https://ledgerleap.example.com/tenant-b/mcp/ledgerleap
+
+https://tenant-a.example.com/mcp/ledgerleap
+https://tenant-b.example.com/mcp/ledgerleap
+
+http://localhost/tenant-a/mcp/ledgerleap
+http://localhost/tenant-b/mcp/ledgerleap
+
+http://tenant-a.localhost/mcp/ledgerleap
+http://tenant-b.localhost/mcp/ledgerleap
+```
+
+path-based では `{tenant}` セグメント、subdomain-based では host 名によって tenant が切り替わります。
+
+### MCP 認証ヘッダー例
+
+remote MCP では、Sanctum の bearer token を `Authorization` ヘッダーで送ります。
+
+```text
+Authorization: Bearer <MCP_TOKEN>
+Accept: application/json
+Content-Type: application/json
+```
+
+MCP client 設定では、たとえば次のようになります。
+
+```json
+{
+  "mcpServers": {
+    "ledgerleap-api": {
+      "httpUrl": "http://localhost/tenant-a/mcp/ledgerleap",
+      "headers": {
+        "Authorization": "Bearer <MCP_TOKEN>"
+      }
+    }
+  }
+}
+```
+
+## 認証
+
+LedgerLeap APIの認証は、**Laravel Sanctum** を利用しています。
+
+*   **SPA認証**:
+    LedgerLeap自身のフロントエンド（SPA: Single Page Application）から利用される場合、Sanctumのクッキーベースのセッション認証が利用されます。ログイン時に認証情報がセキュアなクッキーとして設定され、以降のリクエストで自動的に認証が行われます。
+*   **APIトークン認証**:
+    サードパーティアプリケーションやスクリプトからAPIを利用する場合は、APIトークンによる認証が必要です。ユーザーは自身のプロファイル画面などからAPIトークンを発行し、そのトークンをリクエストヘッダーに含めることで認証を行います。
+
+    **ヘッダー例 (APIトークン認証):**
+    ```
+    Authorization: Bearer <YOUR_API_TOKEN>
+    Accept: application/json
+    ```
+
+### MCP / API 用 Bearer トークンの生成方法
+
+LedgerLeap で bearer token を用意する方法は、少なくとも次の 2 つがあります。
+
+#### 方法 1: `mcp:*` 付き token をコマンドで生成する
+
+評価や clean-room 検証では、`mcp:*` ability を明示した token を生成できるこの方法が最も確実です。
+
+```bash
+./vendor/bin/sail artisan demo:generate-mcp-token
+```
+
+このコマンドが利用できる環境では、`mcp:*` ability を持つ token を生成し、
+`MCP_AUTH_TOKEN=<generated-token>` 形式も表示します。
+
+#### 方法 1a: MCP 用 token を任意ユーザーへ生成する（推奨）
+
+開発環境で任意ユーザーに対して MCP 専用 token を発行する場合は、`tinker` から
+**`mcp:*` ability を明示して** 発行します。
+
+```bash
+./vendor/bin/sail artisan tinker
+```
+
+```php
+$user = App\Models\User::where('email', '<user-email>')->firstOrFail();
+$token = $user->createToken('mcp-client', ['mcp:*']);
+$token->plainTextToken;
+```
+
+この方法は、remote MCP 用として必要な ability を明示できるため、
+評価・接続確認・クライアント設定例の正本として扱いやすいです。
+
+#### 方法 2: Filament UI 既存 token を使う場合の注意
+
+> [!IMPORTANT]
+> Filament の通常トークン管理 UI から発行した token は、現状コード上
+> `mcp:*` ability を自動付与しません。
+> remote MCP で使う token は、**`demo:generate-mcp-token` または `createToken(..., ['mcp:*'])`**
+> のどちらかで生成してください。
+
+
+> [!NOTE]
+> 既存のユーザー token 管理 UI から発行した token を使う運用も可能ですが、
+> MCP 用には少なくとも `mcp:*` または同等以上の ability を持つ token を使う方針で統一してください。
+
+## 共通リクエスト形式
+
+*   **HTTPメソッド**: 標準的なHTTPメソッド（GET, POST, PUT, DELETEなど）を使用します。
+*   **ベースURL**: APIのベースURLは `https://your-ledgerleap-domain.com/api/` となります。（実際のドメインに置き換えてください）
+*   **リクエストボディ (POST/PUT)**:
+    *   データを作成・更新するリクエスト (POST, PUT) では、リクエストボディはJSON形式であることが期待されます。
+    *   `Content-Type` ヘッダーには `application/json` を指定してください。
+    ```text
+    {
+        "title": "新しい台帳エントリ",
+        "content": {
+            "field1": "値1",
+            "field2": "値2"
+        },
+        "folder_id": 10
+    }
+    ```
+*   **共通ヘッダー**:
+    *   `Content-Type: application/json` (POST/PUTリクエストの場合)
+    *   `Accept: application/json` (レスポンス形式としてJSONを期待する場合)
+
+## 共通レスポンス形式
+
+*   **成功時のレスポンス**:
+    *   通常、成功時のレスポンスボディはJSON形式で返却されます。
+    *   主要なデータは `data` キー以下に格納されることが一般的です。
+    *   一覧取得APIなどでは、ページネーション情報（`meta`, `links` キーなど）が含まれる場合があります。
+
+    **例 (単一リソース取得):**
+    ```text
+    {
+        "data": {
+            "id": 1,
+            "title": "台帳エントリのタイトル",
+            "status": "draft"
+        }
+    }
+    ```
+    **例 (リソース一覧取得):**
+    ```text
+    {
+        "data": [
+            { "id": 1, "title": "..." },
+            { "id": 2, "title": "..." }
+        ],
+        "links": {
+            "first": "/api/ledgers?page=1",
+            "last": "/api/ledgers?page=5",
+            "prev": null,
+            "next": "/api/ledgers?page=2"
+        },
+        "meta": {
+            "current_page": 1,
+            "from": 1,
+            "last_page": 5,
+            "total": 42
+        }
+    }
+    ```
+*   **エラー時のレスポンス**:
+    *   エラー発生時もJSON形式でエラー情報が返却されます。
+    *   `message` キーにエラーの概要メッセージが含まれます。
+    *   バリデーションエラーの場合は、`errors` キーに各フィールドごとのエラー詳細が含まれることがあります。
+
+## 主要エンドポイント
+
+| メソッド | パス | 説明 | 備考 |
+|---------|------|------|------|
+| **GET** | `/api/v1/ledger-defines` | 台帳定義（テンプレート）の一覧取得 | フォルダID等でフィルタ可能 |
+| **GET** | `/api/v1/ai/bootstrap-manifest` | 初回 bootstrap bundle の取得 | `client_type` / `role_profile` / `model_profile` で最小 bundle を返す |
+| **POST** | `/api/v1/ai/bootstrap-manifest/resolve` | 初回 bootstrap bundle の取得 | 構造化クライアント向けの POST 版 |
+| **POST** | `/api/v1/ledgers` | 新しい台帳レコードの作成 | |
+| **GET** | `/api/v1/ledgers/{ledger}` | 単一台帳の取得 | 更新前確認向け。状態・列定義・現在値を返す |
+| **PATCH** | `/api/v1/ledgers/{ledger}` | 既存台帳の部分更新 | `content_patch` による更新。pending 保存時は `DRAFT` に戻る |
+| **GET / POST** | `/api/v1/search` | 高度な全文検索（キーワード / 条件検索） | [Search API](search-api.md) を参照 |
+
+## implemented: bootstrap discovery 公開契約（Issue #89）
+
+初回アクセス時の bootstrap discovery は、REST 側では次の contract を入口にします。
+
+| 種別 | メソッド | パス | 役割 |
+|---|---|---|---|
+| bootstrap discovery | **GET** | `/api/v1/ai/bootstrap-manifest` | Query パラメータから最小 bootstrap bundle を解決する |
+| bootstrap discovery | **POST** | `/api/v1/ai/bootstrap-manifest/resolve` | 構造化 JSON から最小 bootstrap bundle を解決する |
+
+### 返却する主な内容
+
+- `recommended_capabilities`
+- `resources`
+- `prompts`
+- `files`
+- `placement_instructions`
+- `warnings`
+
+### 初期 contract の判断
+
+- client-facing では **WebUI で観測できる概念と業務フロー** のみを返す
+- `required_guides` は初期段階では **client-safe な logical reference** として返し、実体 resource との紐付けは後続で拡張する
+- prompt は discovery の主契約ではなく **補助導線** として返す
+- bundle 解決は `role_profile` / `model_profile` / `client_type` を主入力とし、local model 向け text budget を維持する
+
+### MCP との役割分担（Sprint 6）
+
+- **REST API**: 現在の初期 discovery contract
+- **MCP Resource**: `ledgerleap://bootstrap/{client}` の静的 bootstrap card を resource template として提供（Issue #92 実装済み）
+- **MCP Prompt**: `bootstrap-client-skills` により、最初の質問例 / 確認事項 / 次アクションだけを返す開始支援を提供（Issue #93 実装済み）
+- **MCP Tool**: `GetClientBootstrapManifestTool` により REST bootstrap manifest と同じ bundle 解決を取得可能（Issue #94 実装済み）
+
+詳細な比較軸は [first-access bootstrap discovery contract](../work/llm-integration/2026-03-14_First_Access_Bootstrap_Discovery_Contract.md) を参照してください。
+
+## implemented: update path 公開契約（Issue #90）
+
+> **注意:** 実装済み endpoint の正確なスキーマは [OpenAPI Specification (JSON)](openapi.json) を正本とします。ここでは、実装時に採った contract 上の判断だけを短く整理します。
+
+Sprint 5 では、更新系公開契約を次のように整理しました。
+
+| 種別 | メソッド | パス | 役割 |
+|---|---|---|---|
+| supporting read path | **GET** | `/api/v1/ledgers/{ledger}` | 更新前に単一レコードの最新内容・状態を確認する |
+| primary update path | **PATCH** | `/api/v1/ledgers/{ledger}` | 必要項目だけを部分更新する |
+| deferred contract | **PUT** | `/api/v1/ledgers/{ledger}` | 将来の完全置換向け候補。初期公開契約の主対象にはしない |
+
+### Sprint 5 の判断
+
+- update path は **検索結果だけで即更新せず、単一レコード read path を前提**にする
+- 初期公開契約の主契約は **PATCH** とする
+- `PENDING_INSPECTION` / `PENDING_APPROVAL` の編集保存では、client-facing に **`DRAFT` へ戻る** ことを説明する
+- `APPROVED` は初期公開契約では **原則更新不可** とする
+- `dry_run` は拡張候補だが、初期 API 実装の必須要件にはしない
+- 初期 REST update API では **tag update を未対応** とし、`content_patch` + `comment` に絞る
+
+### 検索API活用例
+
+```bash
+curl -H "Authorization: Bearer {token}" \
+     -H "Accept: application/json" \
+     "http://localhost/api/v1/search?q=日報&limit=5"
+```
+
+詳細なパラメータやスキーマについては [OpenAPI Specification (JSON)](openapi.json) を参照してください。planned contract の判断根拠は [update path public contract](../work/llm-integration/2026-03-13_Update_Path_Public_Contract.md) を参照してください。
+
+## セキュリティ考慮事項
+
+APIを利用する際は、以下のセキュリティ考慮事項に留意してください。
+
+*   **認証情報の管理**:
+    APIトークンや認証情報は厳重に管理し、第三者に漏洩しないようにしてください。
+*   **HTTPSの利用**:
+    APIへのアクセスは必ずHTTPS経由で行い、通信の盗聴や改ざんを防止してください。
+*   **入力データの検証**:
+    APIリクエストで送信するデータは適切に検証し、不正なデータや攻撃コードが含まれないようにしてください。
+*   **エラーメッセージの取り扱い**:
+    エラーメッセージにはシステム内部の情報が含まれることがあります。外部に漏洩しないように注意してください。
+
+## レート制限
+現在、APIリクエストに対する明確なレート制限は設けていませんが、将来的にシステムの安定性維持のために導入される可能性があります。レート制限が導入された場合は、適切なHTTPヘッダー（`X-RateLimit-Limit`, `X-RateLimit-Remaining`など）で情報が提供されます。
+
+## 今後の拡充予定
+*   各APIエンドポイントの詳細な仕様（リクエストパラメータ、レスポンスフィールド、具体的なパスなど）のドキュメント化。
+*   より高度な検索・フィルタリングオプションの追加。
+*   Webhook機能の提供。
+*   APIバージョニングの導入。
+
+このドキュメントはLedgerLeap APIの概要を提供するものです。APIは継続的に改善・拡張されるため、最新の情報については開発チームにお問い合わせください。

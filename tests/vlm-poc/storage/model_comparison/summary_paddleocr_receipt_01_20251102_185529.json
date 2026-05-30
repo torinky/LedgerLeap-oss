@@ -1,0 +1,26 @@
+{
+  "test_info": {
+    "file": "receipt_01",
+    "timestamp": "20251102_185529",
+    "model": "paddleocr"
+  },
+  "performance": {
+    "processing_time_s": 3.4553611278533936,
+    "total_time_s": 3.485589
+  },
+  "extraction_results": {
+    "pages": 1,
+    "text_blocks": 30,
+    "key_value_pairs": 1,
+    "tables": 0
+  },
+  "quality_metrics": {
+    "markdown_length": 239,
+    "html_length": 448,
+    "confidence": {
+      "average": 0.9393886923789978,
+      "min": 0.6080350875854492,
+      "max": 0.9999539852142334
+    }
+  }
+}

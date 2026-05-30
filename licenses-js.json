@@ -1,0 +1,314 @@
+{
+  "@fortawesome/fontawesome-free@6.7.2": {
+    "licenses": "(CC-BY-4.0 AND OFL-1.1 AND MIT)",
+    "repository": "https://github.com/FortAwesome/Font-Awesome",
+    "publisher": "The Font Awesome Team",
+    "url": "https://github.com/orgs/FortAwesome/people",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@fortawesome/fontawesome-free",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@fortawesome/fontawesome-free/LICENSE.txt"
+  },
+  "@types/codemirror@5.60.16": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/codemirror",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/codemirror/LICENSE"
+  },
+  "@types/estree@1.0.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/estree",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/estree/LICENSE"
+  },
+  "@types/marked@4.3.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/marked",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/marked/LICENSE"
+  },
+  "@types/tern@0.23.9": {
+    "licenses": "MIT",
+    "repository": "https://github.com/DefinitelyTyped/DefinitelyTyped",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/tern",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@types/tern/LICENSE"
+  },
+  "@wotz/livewire-sortablejs@1.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/wotzebra/livewire-sortablejs",
+    "publisher": "Günther Debrauwer",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@wotz/livewire-sortablejs",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/@wotz/livewire-sortablejs/LICENSE.md"
+  },
+  "asynckit@0.4.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/alexindigo/asynckit",
+    "publisher": "Alex Indigo",
+    "email": "iam@alexindigo.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/asynckit",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/asynckit/LICENSE"
+  },
+  "axios@1.10.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/axios/axios",
+    "publisher": "Matt Zabriskie",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/axios",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/axios/LICENSE"
+  },
+  "call-bind-apply-helpers@1.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/call-bind-apply-helpers",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/call-bind-apply-helpers",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/call-bind-apply-helpers/LICENSE"
+  },
+  "codemirror-spell-checker@1.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/NextStepWebs/codemirror-spell-checker",
+    "publisher": "Wes Cossick",
+    "url": "http://www.WesCossick.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/codemirror-spell-checker",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/codemirror-spell-checker/LICENSE"
+  },
+  "codemirror@5.65.19": {
+    "licenses": "MIT",
+    "repository": "https://github.com/codemirror/CodeMirror",
+    "publisher": "Marijn Haverbeke",
+    "email": "marijn@haverbeke.berlin",
+    "url": "http://marijnhaverbeke.nl",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/codemirror",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/codemirror/LICENSE"
+  },
+  "combined-stream@1.0.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/felixge/node-combined-stream",
+    "publisher": "Felix Geisendörfer",
+    "email": "felix@debuggable.com",
+    "url": "http://debuggable.com/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/combined-stream",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/combined-stream/License"
+  },
+  "delayed-stream@1.0.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/felixge/node-delayed-stream",
+    "publisher": "Felix Geisendörfer",
+    "email": "felix@debuggable.com",
+    "url": "http://debuggable.com/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/delayed-stream",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/delayed-stream/License"
+  },
+  "dunder-proto@1.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/es-shims/dunder-proto",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/dunder-proto",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/dunder-proto/LICENSE"
+  },
+  "easymde@2.20.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Ionaru/easy-markdown-editor",
+    "publisher": "Jeroen Akkerman",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/easymde",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/easymde/LICENSE"
+  },
+  "es-define-property@1.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/es-define-property",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-define-property",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-define-property/LICENSE"
+  },
+  "es-errors@1.3.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/es-errors",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-errors",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-errors/LICENSE"
+  },
+  "es-object-atoms@1.1.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/es-object-atoms",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-object-atoms",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-object-atoms/LICENSE"
+  },
+  "es-set-tostringtag@2.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/es-shims/es-set-tostringtag",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-set-tostringtag",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/es-set-tostringtag/LICENSE"
+  },
+  "filepond-plugin-file-validate-size@2.2.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/pqina/filepond-plugin-file-validate-size",
+    "publisher": "PQINA",
+    "url": "https://pqina.nl/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond-plugin-file-validate-size",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond-plugin-file-validate-size/LICENSE"
+  },
+  "filepond-plugin-file-validate-type@1.2.9": {
+    "licenses": "MIT",
+    "repository": "https://github.com/pqina/filepond-plugin-file-validate-type",
+    "publisher": "PQINA",
+    "url": "https://pqina.nl/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond-plugin-file-validate-type",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond-plugin-file-validate-type/LICENSE"
+  },
+  "filepond-plugin-image-preview@4.6.12": {
+    "licenses": "MIT",
+    "repository": "https://github.com/pqina/filepond-plugin-image-preview",
+    "publisher": "PQINA",
+    "url": "https://pqina.nl/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond-plugin-image-preview",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond-plugin-image-preview/LICENSE"
+  },
+  "filepond@4.32.8": {
+    "licenses": "MIT",
+    "repository": "https://github.com/pqina/filepond",
+    "publisher": "PQINA",
+    "url": "https://pqina.nl/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/filepond/LICENSE"
+  },
+  "flatpickr@4.6.13": {
+    "licenses": "MIT",
+    "repository": "https://github.com/chmln/flatpickr",
+    "publisher": "Gregory",
+    "email": "gregory.mkv@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/flatpickr",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/flatpickr/LICENSE.md"
+  },
+  "follow-redirects@1.15.9": {
+    "licenses": "MIT",
+    "repository": "https://github.com/follow-redirects/follow-redirects",
+    "publisher": "Ruben Verborgh",
+    "email": "ruben@verborgh.org",
+    "url": "https://ruben.verborgh.org/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/follow-redirects",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/follow-redirects/LICENSE"
+  },
+  "form-data@4.0.4": {
+    "licenses": "MIT",
+    "repository": "https://github.com/form-data/form-data",
+    "publisher": "Felix Geisendörfer",
+    "email": "felix@debuggable.com",
+    "url": "http://debuggable.com/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/form-data",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/form-data/License"
+  },
+  "function-bind@1.1.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Raynos/function-bind",
+    "publisher": "Raynos",
+    "email": "raynos2@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/function-bind",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/function-bind/LICENSE"
+  },
+  "get-intrinsic@1.3.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/get-intrinsic",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/get-intrinsic",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/get-intrinsic/LICENSE"
+  },
+  "get-proto@1.0.1": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/get-proto",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/get-proto",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/get-proto/LICENSE"
+  },
+  "gopd@1.2.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/ljharb/gopd",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/gopd",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/gopd/LICENSE"
+  },
+  "has-symbols@1.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/inspect-js/has-symbols",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "url": "http://ljharb.codes",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/has-symbols",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/has-symbols/LICENSE"
+  },
+  "has-tostringtag@1.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/inspect-js/has-tostringtag",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "url": "http://ljharb.codes",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/has-tostringtag",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/has-tostringtag/LICENSE"
+  },
+  "hasown@2.0.2": {
+    "licenses": "MIT",
+    "repository": "https://github.com/inspect-js/hasOwn",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/hasown",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/hasown/LICENSE"
+  },
+  "marked@4.3.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/markedjs/marked",
+    "publisher": "Christopher Jeffrey",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/marked",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/marked/LICENSE.md"
+  },
+  "math-intrinsics@1.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/es-shims/math-intrinsics",
+    "publisher": "Jordan Harband",
+    "email": "ljharb@gmail.com",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/math-intrinsics",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/math-intrinsics/LICENSE"
+  },
+  "mime-db@1.52.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jshttp/mime-db",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/mime-db",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/mime-db/LICENSE"
+  },
+  "mime-types@2.1.35": {
+    "licenses": "MIT",
+    "repository": "https://github.com/jshttp/mime-types",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/mime-types",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/mime-types/LICENSE"
+  },
+  "proxy-from-env@1.1.0": {
+    "licenses": "MIT",
+    "repository": "https://github.com/Rob--W/proxy-from-env",
+    "publisher": "Rob Wu",
+    "email": "rob@robwu.nl",
+    "url": "https://robwu.nl/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/proxy-from-env",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/proxy-from-env/LICENSE"
+  },
+  "sortablejs@1.15.6": {
+    "licenses": "MIT",
+    "repository": "https://github.com/SortableJS/Sortable",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/sortablejs",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/sortablejs/LICENSE"
+  },
+  "typo-js@1.2.5": {
+    "licenses": "BSD-3-Clause",
+    "repository": "https://github.com/cfinke/Typo.js",
+    "publisher": "Christopher Finke",
+    "email": "cfinke@gmail.com",
+    "url": "http://www.chrisfinke.com/",
+    "path": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/typo-js",
+    "licenseFile": "/Users/kazutaka/PhpstormProjects/LedgerLeap/node_modules/typo-js/README.md"
+  }
+}
+

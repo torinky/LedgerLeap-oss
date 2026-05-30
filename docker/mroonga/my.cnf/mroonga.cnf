@@ -1,0 +1,42 @@
+[mysqld]
+character-set-server = utf8mb4
+collation-server = utf8mb4_bin
+
+# パフォーマンス最適化設定
+# 参照: docs/work/2025-10-09_physical-db-separation-architecture-study.md
+# 案A: 現行アーキテクチャ継続 + 最適化
+
+# Buffer Pool サイズ (推奨: 16-32GB、開発環境: 4-8GB)
+# 本番環境では物理メモリの50-75%を割り当て
+innodb_buffer_pool_size = 4G
+
+# Buffer Pool インスタンス数 (推奨: pool_size/1GB、最大16)
+innodb_buffer_pool_instances = 4
+
+# ログファイルサイズ (大きいほど書き込み性能向上)
+innodb_log_file_size = 512M
+
+# テーブルオープンキャッシュ
+table_open_cache = 4000
+table_definition_cache = 2000
+
+# スレッドキャッシュ
+thread_cache_size = 32
+
+# クエリキャッシュ (MySQL 8.0では廃止済み、念のため)
+# query_cache_type = 0
+# query_cache_size = 0
+
+# パーティションプルーニング有効化（デフォルトON）
+# optimizer_switch = 'partition_pruning=on'
+
+# ソートバッファ (activity_log の ORDER BY + EXISTS 組み合わせ時の OOM 対策)
+sort_buffer_size = 8M
+read_rnd_buffer_size = 4M
+
+# パフォーマンススキーマ有効化（監視用）
+performance_schema = ON
+performance_schema_instrument = '%=ON'
+
+[client]
+default-character-set = utf8mb4

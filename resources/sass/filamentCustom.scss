@@ -1,0 +1,36 @@
+/*
+   * ダッシュボードリンクウィジェット ホバースタイル
+   *
+   * Bladeファイル側で付与したカスタムクラス (link-hover-color-*) を使って
+   * ホバー時の背景色を定義します。
+   *
+   * 背景色はFilamentのCSS変数 (--*-500) を参照し、
+   * rgba()関数とアルファ値（例: 0.1）で透過度を指定しています。
+   * この数値を 0.1 (薄い) 〜 0.9 (濃い) の間で調整してください。
+   */
+
+.link-hover-color-primary:hover {
+  /* --primary-500 変数を使って色を適用し、透明度を 10% に設定 */
+  background-color: rgba(var(--primary-500), 0.1);
+}
+
+.link-hover-color-secondary:hover {
+  /* secondaryは未定義のためgrayを使用 */
+  background-color: rgba(var(--gray-500), 0.1);
+}
+
+.link-hover-color-success:hover {
+  background-color: rgba(var(--success-500), 0.1);
+}
+
+.link-hover-color-warning:hover {
+  background-color: rgba(var(--warning-500), 0.1);
+}
+
+.link-hover-color-danger:hover {
+  background-color: rgba(var(--danger-500), 0.1);
+}
+
+.link-hover-color-info:hover {
+  background-color: rgba(var(--info-500), 0.1);
+}

@@ -1,0 +1,566 @@
+<?php
+
+namespace Tests\Feature\Console;
+
+use App\Enums\AttachedFileStatus;
+use App\Jobs\ProcessLedgerForRagJob;
+use App\Models\AttachedFile;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
+use App\Models\User;
+use Illuminate\Support\Facades\Bus;
+use PHPUnit\Framework\Attributes\Test;
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+class FinalizeAttachedFileProcessingTest extends TestCase
+{
+    use RefreshDatabaseWithTenant;
+
+    protected bool $fakeQueue = false;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+        Bus::fake();
+    }
+
+    #[Test]
+    public function command_runs_successfully_with_no_files()
+    {
+        $this->artisan('ledger:finalize-processing')
+            ->expectsOutput('No files ready for finalization.')
+            ->assertExitCode(0);
+    }
+
+    #[Test]
+    public function command_finalizes_files_ready_for_finalization()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg',
+            'mime' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => false,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_processed_at' => now()->subMinute(),
+            'vlm_markdown' => '# Test VLM Result',
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertNotNull($file->processing_finalized_at);
+        $this->assertEquals('vlm', $file->finalized_source);
+        $this->assertTrue($file->contain_content);
+
+        // Check RAG job dispatched
+        Bus::assertDispatched(ProcessLedgerForRagJob::class);
+    }
+
+    #[Test]
+    public function command_selects_vlm_over_ocr()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [], // Column 0 must exist for column 1 to have correct index
+                1 => [
+                    'test.jpg' => [
+                        'meta' => [
+                            'content' => 'OCR extracted text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg',
+            'mime' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => false,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_processed_at' => now()->subMinute(),
+            'vlm_markdown' => '# VLM Result - Superior',
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $ledger->refresh();
+
+        $this->assertEquals('vlm', $file->finalized_source);
+        $this->assertStringContainsString('VLM Result', $ledger->content_attached[1]['test.jpg']['meta']['content']);
+    }
+
+    #[Test]
+    public function command_falls_back_to_ocr_when_vlm_failed()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test.jpg' => [
+                        'meta' => [
+                            'content' => 'Tika extracted text', // Tika result
+                        ],
+                    ],
+                    'test.pdf' => [
+                        'meta' => [
+                            'content' => 'OCR extracted text', // OCR result (converted to PDF)
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg', // Original filename before OCR conversion
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => false,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('ocr', $file->finalized_source);
+    }
+
+    #[Test]
+    public function command_falls_back_to_tika_when_both_vlm_and_ocr_failed()
+    {
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test.jpg' => [
+                        'meta' => [
+                            'content' => 'Tika extracted text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg',
+            'mime' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => false,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_failed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('tika', $file->finalized_source);
+    }
+
+    #[Test]
+    public function command_correctly_selects_tika_when_ocr_is_empty()
+    {
+        // VLMは失敗、OCRは完了したがテキストは空、Tikaのみテキストがあるケース
+        // この場合、sourceは 'tika' となるべき
+        // Arrange
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test.pdf' => [ // Tikaは元のファイル名でテキストを保存
+                        'meta' => [
+                            'content' => 'Tika only text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.pdf',
+            'hashedbasename' => 'test.pdf',
+            'mime' => 'application/pdf',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.pdf",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => true,
+            'optimized' => false,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(), // OCRは完了したがテキストは抽出されなかった
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('tika', $file->finalized_source);
+    }
+
+    #[Test]
+    public function command_respects_timeout_parameter()
+    {
+        // Arrange - File with tika_processed_at within timeout (should NOT be finalized)
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg', // Original filename before OCR conversion
+            'mime' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.jpg",
+            'size' => 1000,
+            'status' => AttachedFileStatus::PARALLEL_PROCESSING,
+            'contain_content' => false,
+            'optimized' => false,
+            'tika_processed_at' => now()->subSeconds(30), // 30s ago (within 60s timeout)
+            'vlm_processed_at' => null,
+            'ocr_processed_at' => null,
+            'vlm_failed_at' => null,
+            'ocr_failed_at' => null,
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act with 60s timeout (file is only 30s old, should not be finalized)
+        $this->artisan('ledger:finalize-processing', ['--timeout' => 60])
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertNull($file->processing_finalized_at);
+    }
+
+    #[Test]
+    public function command_respects_limit_parameter()
+    {
+        // Arrange - Create 3 files ready for finalization
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test0.jpg' => ['meta' => ['content' => 'Tika extracted text']],
+                    'test1.jpg' => ['meta' => ['content' => 'Tika extracted text']],
+                    'test2.jpg' => ['meta' => ['content' => 'Tika extracted text']],
+                ],
+            ],
+        ]);
+
+        for ($i = 0; $i < 3; $i++) {
+            AttachedFile::create([
+                'ledger_id' => $ledger->id,
+                'ledger_define_id' => $ledgerDefine->id,
+                'column_id' => 1,
+                'filename' => "test{$i}.jpg",
+                'hashedbasename' => "test{$i}.jpg",
+                'mime' => 'image/jpeg',
+                'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test{$i}.jpg",
+                'size' => 1000,
+                'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+                'contain_content' => false,
+                'optimized' => false,
+                'tika_processed_at' => now()->subMinutes(2),
+                'vlm_processed_at' => now()->subMinute(),
+                'vlm_markdown' => '# Test',
+                'ocr_processed_at' => now()->subMinute(),
+                'processing_finalized_at' => null,
+                'creator_id' => $user->id,
+                'modifier_id' => $user->id,
+            ]);
+        }
+
+        // Act with limit=2
+        $this->artisan('ledger:finalize-processing', ['--limit' => 2])
+            ->assertExitCode(0);
+
+        // Assert - Only 2 files should be finalized (for this specific ledger)
+        $finalized = AttachedFile::where('ledger_id', $ledger->id)
+            ->whereNotNull('processing_finalized_at')
+            ->count();
+        $this->assertEquals(2, $finalized);
+    }
+
+    #[Test]
+    public function command_correctly_selects_ocr_for_image_files()
+    {
+        // 画像ファイル（.jpg → .pdf）のOCR結果を正しく検出
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'test.pdf' => [ // OCR後のキー
+                        'meta' => [
+                            'content' => 'OCR extracted text from image',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'test.jpg',
+            'hashedbasename' => 'test.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/test.pdf",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => true,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('ocr', $file->finalized_source);
+        $this->assertTrue($file->contain_content);
+    }
+
+    #[Test]
+    public function command_correctly_handles_pdf_with_skip_text_ocr()
+    {
+        // PDFファイル（.pdf → .pdf）のOCR処理（最適化のみ）
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'document.pdf' => [ // 元のキーが上書きされる
+                        'meta' => [
+                            'content' => 'Tika re-extracted text after OCR optimization',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'document.pdf',
+            'hashedbasename' => 'document.pdf',
+            'mime' => 'application/pdf',
+            'original_mime_type' => 'application/pdf',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/document.pdf",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => true,
+            'optimized' => true,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('tika', $file->finalized_source); // OCRは最適化のみなのでTika扱い
+        $this->assertTrue($file->contain_content);
+    }
+
+    #[Test]
+    public function command_selects_ocr_when_vlm_fails_for_image()
+    {
+        // VLM失敗、OCR成功のケース
+        $folder = Folder::factory()->create();
+        $ledgerDefine = LedgerDefine::factory()->create(['folder_id' => $folder->id]);
+        $user = User::factory()->create();
+        $ledger = Ledger::factory()->create([
+            'ledger_define_id' => $ledgerDefine->id,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+            'content_attached' => [
+                0 => [],
+                1 => [
+                    'photo.pdf' => [
+                        'meta' => [
+                            'content' => 'OCR fallback text',
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        $file = AttachedFile::create([
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $ledgerDefine->id,
+            'column_id' => 1,
+            'filename' => 'photo.jpg',
+            'hashedbasename' => 'photo.jpg',
+            'mime' => 'image/jpeg',
+            'original_mime_type' => 'image/jpeg',
+            'path' => "public/Ledger/Attachments/{$ledgerDefine->id}/photo.pdf",
+            'size' => 1000,
+            'status' => AttachedFileStatus::READY_FOR_FINALIZATION,
+            'contain_content' => false,
+            'optimized' => true,
+            'tika_processed_at' => now()->subMinutes(2),
+            'vlm_failed_at' => now()->subMinute(),
+            'ocr_processed_at' => now()->subMinute(),
+            'processing_finalized_at' => null,
+            'creator_id' => $user->id,
+            'modifier_id' => $user->id,
+        ]);
+
+        // Act
+        $this->artisan('ledger:finalize-processing')
+            ->assertExitCode(0);
+
+        // Assert
+        $file->refresh();
+        $this->assertEquals('ocr', $file->finalized_source);
+        $this->assertTrue($file->contain_content);
+    }
+}

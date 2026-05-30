@@ -1,0 +1,26 @@
+{
+  "test_info": {
+    "file": "invoice_simple",
+    "timestamp": "20251102_200705",
+    "model": "mineru"
+  },
+  "performance": {
+    "processing_time_s": 37.98640823364258,
+    "total_time_s": 37.99993
+  },
+  "extraction_results": {
+    "pages": 1,
+    "text_blocks": 10,
+    "key_value_pairs": 0,
+    "tables": 0
+  },
+  "quality_metrics": {
+    "markdown_length": 1147,
+    "html_length": 1218,
+    "confidence": {
+      "average": 0.953,
+      "min": 0.95,
+      "max": 0.98
+    }
+  }
+}

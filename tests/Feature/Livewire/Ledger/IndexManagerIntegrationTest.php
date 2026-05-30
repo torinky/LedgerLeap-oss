@@ -1,0 +1,335 @@
+<?php
+
+namespace Tests\Feature\Livewire\Ledger;
+
+use App\Livewire\Ledger\IndexManager;
+use App\Models\Folder;
+use App\Models\Ledger;
+use App\Models\LedgerDefine;
+use App\Models\Tag;
+use App\Models\User;
+use Livewire\Livewire;
+use PHPUnit\Framework\Attributes\Test;
+use Spatie\Permission\Models\Permission;
+use Tests\TestCase;
+use Tests\Traits\RefreshDatabaseWithTenant;
+
+class IndexManagerIntegrationTest extends TestCase
+{
+    use RefreshDatabaseWithTenant;
+
+    protected bool $tenancy = false; // RefreshDatabaseWithTenant で管理するため false に戻す
+
+    private User $user;
+
+    private Folder $rootFolder;
+
+    private Folder $subFolder;
+
+    private LedgerDefine $ledgerDefine;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->setUpRefreshDatabaseWithTenant();
+
+        // テナントを明示的に初期化
+        if ($this->getTenant()) {
+            tenancy()->initialize($this->getTenant());
+        }
+
+        // Mroongaテーブル明示的クリア
+        Ledger::query()->delete();
+
+        $this->user = User::factory()->create();
+
+        // 権限の付与
+        Permission::firstOrCreate(['name' => 'ledgerView', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('ledgerView');
+        Permission::firstOrCreate(['name' => 'view_ledger_defines', 'guard_name' => 'web']);
+        $this->user->givePermissionTo('view_ledger_defines');
+
+        $this->rootFolder = Folder::factory()->create(['parent_id' => null, 'title' => 'Root']);
+        $this->subFolder = Folder::factory()->create(['parent_id' => $this->rootFolder->id, 'title' => 'Sub']);
+
+        $this->ledgerDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Test Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        $this->be($this->user);
+
+        // RecordsTable は #[Lazy] のため、テスト時は実コンテンツをレンダリングする
+        Livewire::withoutLazyLoading();
+    }
+
+    #[Test]
+    public function it_renders_correctly_with_initial_state()
+    {
+        // テナントコンテキストを確実に設定した上で currentFolderId を初期値として渡す。
+        // Livewire::test() はHTTPリクエストをシミュレートするため、テナントミドルウェアが
+        // 動作せず mount() 内の Folder::root()->first() が null になる場合がある。
+        // currentFolderId を公開プロパティとして直接渡すことでテナントなしでも初期化できる。
+        Livewire::test(IndexManager::class)
+            ->set('currentFolderId', $this->rootFolder->id)
+            ->assertStatus(200)
+            ->assertSee('Root');
+    }
+
+    #[Test]
+    public function it_renders_search_summary_and_display_level_controls()
+    {
+        Livewire::test(IndexManager::class)
+            ->set('currentFolderId', $this->rootFolder->id)
+            ->assertSee(__('ledger.search_options'))
+            ->assertSee(__('ledger.form.display_level'))
+            ->assertSee(__('ledger.form.display_level').': '.__('ledger.form.display_level_options.1'))
+            ->assertSee(__('ledger.opened_count'));
+    }
+
+    #[Test]
+    public function it_renders_sticky_announcements_inside_the_ledger_page_context(): void
+    {
+        config([
+            'ledgerleap.announcement_banner.current' => [
+                'title' => '台帳リスト通知',
+                'body' => 'スクロールしても見える位置に出す通知です。',
+                'level' => 'warning',
+                'sticky' => true,
+                'dismiss_storage_key' => 'ledgerleap.test.banner.index-manager',
+                'links' => [],
+            ],
+        ]);
+
+        Livewire::test(IndexManager::class)
+            ->set('currentFolderId', $this->rootFolder->id)
+            ->assertSee('data-admin-announcement-banner')
+            ->assertSee('sticky top-0 z-50')
+            ->assertSee('台帳リスト通知')
+            ->assertSee('aria-label="'.__('ledger.close').'"', false);
+    }
+
+    #[Test]
+    public function it_updates_search_keywords_reactively()
+    {
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'TargetContent']),
+        ]);
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'No Search Match']),
+        ]);
+
+        // Mroonga インデックス更新待ち
+        sleep(1);
+
+        // IndexManager が検索状態を正しく管理できることを確認
+        $component = Livewire::withQueryParams([
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->subFolder->id,
+            'f' => [$this->subFolder->id],
+        ])->test(IndexManager::class);
+
+        // 初期状態の確認
+        $component->assertSet('selectedLedgerDefineIds', [$this->ledgerDefine->id])
+            ->assertSet('search', '');
+
+        // 検索語を設定
+        $component->set('search', 'Target')
+            ->assertSet('search', 'Target');
+
+        // SearchContext が正しく初期化されることを確認
+        $keywords = $component->get('keywords');
+        $this->assertNotEmpty($keywords, 'Keywords should be initialized from search term');
+        $this->assertContains('Target', $keywords, 'Keywords should contain the search term');
+
+        // 検索語がクリアできることを確認
+        $component->set('search', '')
+            ->assertSet('search', '');
+
+        $keywordsAfterClear = $component->get('keywords');
+        $this->assertEmpty($keywordsAfterClear, 'Keywords should be empty when search is cleared');
+    }
+
+    #[Test]
+    public function it_filters_by_tag_only_from_query_string(): void
+    {
+        $taggedDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Tagged Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        Tag::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'folder_id' => $this->subFolder->id,
+            'name' => 'urgent',
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'content' => $taggedDefine->normalizeByColumnDefine([0 => 'TaggedOnlyUrgentMatch']),
+        ]);
+
+        $bodyOnlyDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Body Only Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $bodyOnlyDefine->id,
+            'content' => $bodyOnlyDefine->normalizeByColumnDefine([0 => 'BodyOnlyUrgentMatch']),
+        ]);
+
+        Livewire::withQueryParams([
+            'q' => '#urgent',
+            'cf' => $this->rootFolder->id,
+        ])
+            ->test(IndexManager::class)
+            ->assertOk()
+            ->assertSee(__('ledger.search_tag_active'))
+            ->assertSee('TaggedOnlyUrgentMatch')
+            ->assertDontSee('BodyOnlyUrgentMatch');
+    }
+
+    #[Test]
+    public function it_uses_three_columns_when_keyword_and_tag_search_are_active(): void
+    {
+        $taggedDefine = LedgerDefine::factory()->create([
+            'folder_id' => $this->subFolder->id,
+            'title' => 'Tagged Ledger',
+            'column_define' => [
+                ['id' => 0, 'name' => 'Name', 'type' => 'text', 'order' => 1, 'display_level' => 1],
+            ],
+        ]);
+
+        Tag::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'folder_id' => $this->subFolder->id,
+            'name' => 'urgent',
+        ]);
+
+        Ledger::factory()->create([
+            'ledger_define_id' => $taggedDefine->id,
+            'content' => $taggedDefine->normalizeByColumnDefine([0 => 'TargetUrgentMatch']),
+        ]);
+
+        Livewire::withQueryParams([
+            'q' => 'Target #urgent',
+            'cf' => $this->rootFolder->id,
+        ])
+            ->test(IndexManager::class)
+            ->assertOk()
+            ->assertSeeHtml('grid grid-cols-1 md:grid-cols-3')
+            ->assertSee(__('ledger.search_tag_active'));
+    }
+
+    #[Test]
+    public function it_updates_display_level_via_search_options()
+    {
+        Livewire::test(IndexManager::class)
+            ->call('updateDisplayLevel', 2)
+            ->assertSet('displayLevel', 2)
+            ->call('updateDisplayLevel', 9)
+            ->assertSet('displayLevel', 2);
+    }
+
+    #[Test]
+    public function it_changes_current_folder_reactively()
+    {
+        $otherFolder = Folder::factory()->create(['title' => 'Other Folder', 'parent_id' => $this->rootFolder->id]);
+
+        Livewire::test(IndexManager::class)
+            ->call('changeCurrentFolder', $otherFolder->id)
+            ->assertSet('currentFolderId', $otherFolder->id)
+            ->assertDispatched('currentFolderChangedByMain', newFolderId: $otherFolder->id, newSelectedFolderIds: [$otherFolder->id])
+            ->assertSee($otherFolder->title);
+    }
+
+    #[Test]
+    public function it_handles_sort_requests_from_child()
+    {
+        Livewire::test(IndexManager::class)
+            ->dispatch('sortRequested', columnName: 'created_at', columnLabel: 'Created Date')
+            ->assertSet('orderBy', 'created_at')
+            ->assertSet('orderByLabel', 'Created Date')
+            ->assertSet('orderAsc', true); // Toggled from initial false
+    }
+
+    #[Test]
+    public function it_syncs_url_parameters()
+    {
+        Livewire::withQueryParams(['q' => 'search-term', 'dl' => 2])
+            ->test(IndexManager::class)
+            ->assertSet('search', 'search-term')
+            ->assertSet('displayLevel', 2);
+    }
+
+    #[Test]
+    public function it_syncs_canonical_display_and_sort_query_parameters()
+    {
+        Livewire::withQueryParams([
+            'q' => 'search-term',
+            'dl' => 2,
+            'sort' => 'created_at',
+            'dir' => 1,
+            'status' => 'pending_approval',
+            'pp' => 25,
+            'sem' => 1,
+            'syn' => 0,
+            'tt' => 0,
+            'filter' => ['1' => 'foo'],
+        ])
+            ->test(IndexManager::class)
+            ->assertSet('search', 'search-term')
+            ->assertSet('displayLevel', 2)
+            ->assertSet('orderBy', 'created_at')
+            ->assertSet('orderAsc', true)
+            ->assertSet('filterStatus', 'pending_approval')
+            ->assertSet('perPage', 25)
+            ->assertSet('useSemanticSearch', true)
+            ->assertSet('useSynonym', false)
+            ->assertSet('useTechnicalTerm', false);
+    }
+
+    #[Test]
+    public function it_handles_current_folder_change_event()
+    {
+        $otherFolder = Folder::factory()->create(['title' => 'Event Folder', 'parent_id' => $this->rootFolder->id]);
+        Livewire::test(IndexManager::class)
+            ->dispatch('currentFolderChangeRequested', newFolderId: $otherFolder->id)
+            ->assertSet('currentFolderId', $otherFolder->id)
+            ->assertSet('selectedFolderIds', [$otherFolder->id]); // descendantsAndSelf includes the folder itself
+    }
+
+    #[Test]
+    public function it_renders_page_summary_when_multiple_pages_exist()
+    {
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'PagedContent-A']),
+        ]);
+        Ledger::factory()->create([
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'content' => $this->ledgerDefine->normalizeByColumnDefine([0 => 'PagedContent-B']),
+        ]);
+
+        Livewire::withQueryParams([
+            'l' => [$this->ledgerDefine->id],
+            'cf' => $this->subFolder->id,
+            'f' => [$this->subFolder->id],
+            'pp' => 1,
+        ])->test(IndexManager::class)
+            ->assertSee('1 / 2')
+            ->assertSee(__('ledger.records'));
+    }
+}

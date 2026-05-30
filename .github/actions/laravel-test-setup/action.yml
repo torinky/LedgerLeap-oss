@@ -1,0 +1,110 @@
+name: 'Laravel Test Setup'
+description: 'PHP/Node/Composer/npm インストール + Laravel 初期設定 + DB準備 + テナント作成'
+
+inputs:
+  db_password:
+    description: 'MySQL password (DB_PASSWORD secret)'
+    required: true
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.4'
+        extensions: dom, curl, libxml, mbstring, zip, pcntl, pdo, sqlite, pdo_sqlite, bcmath, soap, intl, gd, exif, iconv, pdo_mysql
+        tools: composer:v2
+
+    - name: Cache Vendor
+      id: cache-vendor
+      uses: actions/cache@v4
+      with:
+        path: vendor
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Install Composer dependencies
+      if: steps.cache-vendor.outputs.cache-hit != 'true'
+      shell: bash
+      run: composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Cache npm
+      uses: actions/cache@v4
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: ${{ runner.os }}-node-
+
+    - name: Install Frontend Dependencies
+      shell: bash
+      run: npm ci
+
+    - name: Build Frontend Assets
+      shell: bash
+      run: npm run build
+
+    - name: Laravel Setting
+      shell: bash
+      run: |
+        cp .env.example .env
+        sed -i 's/^CACHE_DRIVER=.*/CACHE_DRIVER=array/' .env
+        sed -i 's/^SESSION_DRIVER=.*/SESSION_DRIVER=array/' .env
+        sed -i 's/^QUEUE_CONNECTION=.*/QUEUE_CONNECTION=sync/' .env
+        sed -i 's/^DB_HOST=.*/DB_HOST=127.0.0.1/' .env
+        sed -i 's/^DB_DATABASE=.*/DB_DATABASE=ledgerleap_test/' .env
+        sed -i 's/^DB_USERNAME=.*/DB_USERNAME=sail/' .env
+        sed -i 's/^DB_PASSWORD=.*/DB_PASSWORD=/' .env
+        php artisan optimize:clear
+        php artisan config:clear
+        php artisan view:clear
+        php artisan route:clear
+        chmod -R 777 storage bootstrap/cache
+
+    - name: Generate key
+      shell: bash
+      run: php artisan key:generate --env=testing
+
+    - name: Grant database privileges
+      shell: bash
+      env:
+        MYSQL_PWD: ${{ inputs.db_password }}
+      run: |
+        WORKER_COUNT=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 8)
+
+        mysql -h 127.0.0.1 -u root --force -e "CREATE DATABASE IF NOT EXISTS ledgerleap_test;"
+        mysql -h 127.0.0.1 -u root --force -e "GRANT ALL PRIVILEGES ON ledgerleap_test.* TO 'sail'@'%';"
+        mysql -h 127.0.0.1 -u root --force -e "GRANT ALL PRIVILEGES ON \`tenant%\`.* TO 'sail'@'%';"
+
+        for i in $(seq 1 "$WORKER_COUNT"); do
+          mysql -h 127.0.0.1 -u root --force -e "CREATE DATABASE IF NOT EXISTS \`ledgerleap_test_test_${i}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;"
+          mysql -h 127.0.0.1 -u root --force -e "GRANT ALL PRIVILEGES ON \`ledgerleap_test_test_${i}\`.* TO 'sail'@'%';"
+        done
+
+        mysql -h 127.0.0.1 -u root --force -e "FLUSH PRIVILEGES;"
+
+    - name: Migrate database
+      shell: bash
+      run: php artisan migrate --force
+
+    - name: Setup test tenant
+      shell: bash
+      run: |
+        php artisan tinker --no-interaction <<'PHP'
+        $t = \App\Models\Tenant::firstOrCreate(['id' => 'ci-test-tenant']);
+        tenancy()->initialize($t);
+        \Artisan::call('tenants:migrate', ['--force' => true]);
+        echo "Tenant ready: " . $t->id . PHP_EOL;
+        PHP
+
+    - name: Restore wnjpn.db from split zips
+      shell: bash
+      run: |
+        cat database/wordnet_data/wnjpn.db.zip.aa \
+            database/wordnet_data/wnjpn.db.zip.ab > /tmp/wnjpn.db.zip
+        unzip -o /tmp/wnjpn.db.zip -d database/wordnet_data/
