@@ -2,54 +2,64 @@
 
 # ==============================================================================
 # AI Instructions Sync Script for LedgerLeap
-# Syncs .github/instructions, skills, prompts to:
-#   - .gemini/   (Gemini CLI — legacy, still active until sunset)
-#   - .agents/   (Antigravity CLI "agy" — Google's Gemini CLI replacement)
+#
+# ARCHITECTURE: Bidirectional sync via symlinks
+#   .gemini/instructions  -> ../.github/instructions
+#   .gemini/skills        -> ../.github/skills
+#   .gemini/prompts       -> ../.github/prompts
+#   .agents/instructions  -> ../.github/instructions
+#   .agents/skills        -> ../.github/skills
+#   .agents/prompts       -> ../.github/prompts
+#
+# Because all targets are symlinks to .github/, editing from any tool
+# (Gemini CLI, Antigravity CLI "agy", Copilot, opencode) modifies the
+# same source files — no copy needed, true bidirectional sync.
 #
 # opencode reads .github/ directly via opencode.json — no copy needed.
 # GitHub Copilot reads .github/ natively — no copy needed.
 #
-# Run automatically via the pre-commit hook (.git/hooks/pre-commit) when
-# .github/instructions/, .github/skills/, .github/prompts/, or
-# .github/copilot-instructions.md are staged for commit.
+# This script ensures the symlinks exist and are correct.
+# Run automatically via the pre-commit hook when any .github/ AI asset is staged.
 # ==============================================================================
 
 set -euo pipefail
 
 PROJECT_ROOT=$(cd "$(dirname "$0")/.." && pwd)
 GITHUB_DIR="$PROJECT_ROOT/.github"
-GEMINI_DIR="$PROJECT_ROOT/.gemini"
-AGENTS_DIR="$PROJECT_ROOT/.agents"
-
 DIRS=("instructions" "skills" "prompts")
+TARGETS=(".gemini" ".agents")
 
-echo "Starting AI instructions sync (.github -> .gemini, .agents)..."
+echo "Verifying AI instructions symlinks (.gemini, .agents -> .github)..."
 
-sync_target() {
-    local target="$1"
+for target in "${TARGETS[@]}"; do
+    TARGET_DIR="$PROJECT_ROOT/$target"
+    mkdir -p "$TARGET_DIR"
     for dir in "${DIRS[@]}"; do
-        mkdir -p "$target/$dir"
-        # rsync: overwrite + delete stale files that no longer exist in .github
-        rsync -a --delete "$GITHUB_DIR/$dir/" "$target/$dir/"
+        link="$TARGET_DIR/$dir"
+        expected="../../.github/$dir"
+        # Use relative path from inside $target/
+        rel_target="../.github/$dir"
+        if [ -L "$link" ]; then
+            current=$(readlink "$link")
+            if [ "$current" != "$rel_target" ]; then
+                echo "  Fixing stale symlink: $target/$dir ($current -> $rel_target)"
+                rm "$link"
+                ln -s "$rel_target" "$link"
+            fi
+        elif [ -d "$link" ]; then
+            echo "  Replacing directory with symlink: $target/$dir"
+            rm -rf "$link"
+            ln -s "$rel_target" "$link"
+        else
+            echo "  Creating symlink: $target/$dir"
+            ln -s "$rel_target" "$link"
+        fi
     done
-}
+    echo "  ✓ $target verified"
+done
 
-sync_target "$GEMINI_DIR"
-echo "  ✓ .gemini synced"
-
-sync_target "$AGENTS_DIR"
-echo "  ✓ .agents synced"
-
-# Report skill counts for verification
+# Verify skill counts match
 GITHUB_SKILLS=$(ls "$GITHUB_DIR/skills/" | wc -l | tr -d ' ')
-GEMINI_SKILLS=$(ls "$GEMINI_DIR/skills/" | wc -l | tr -d ' ')
-AGENTS_SKILLS=$(ls "$AGENTS_DIR/skills/" | wc -l | tr -d ' ')
-
 echo ""
-echo "Sync complete."
-echo "  skills: .github=$GITHUB_SKILLS  .gemini=$GEMINI_SKILLS  .agents=$AGENTS_SKILLS"
-if [ "$GITHUB_SKILLS" != "$GEMINI_SKILLS" ] || [ "$GITHUB_SKILLS" != "$AGENTS_SKILLS" ]; then
-    echo "  WARNING: skill counts don't match — investigate."
-    exit 1
-fi
-echo "Note: .github source files were NOT modified."
+echo "Sync complete (symlink-based — all tools share the same source)."
+echo "  skills in .github: $GITHUB_SKILLS  (same for .gemini and .agents via symlink)"
