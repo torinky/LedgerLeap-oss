@@ -15,8 +15,7 @@ class LedgerAttachmentResourceService
         Ledger $ledger,
         AttachedFile $attachedFile,
         ?string $inlineVisualBase64 = null
-    ): array
-    {
+    ): array {
         $ledger->loadMissing([
             'attachedFiles' => fn ($query) => $query->orderBy('column_id')->orderBy('id'),
         ]);

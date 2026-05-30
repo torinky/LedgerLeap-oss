@@ -27,8 +27,8 @@ use Throwable;
  * Each transition creates a LedgerDiff record, updates the ledger's latest_diff_id,
  * and sends workflow notifications to the affected users.
  *
- * @see \App\Enums\WorkflowStatus
- * @see \App\Models\LedgerDiff
+ * @see WorkflowStatus
+ * @see LedgerDiff
  */
 class WorkflowService
 {

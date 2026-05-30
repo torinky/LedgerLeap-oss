@@ -247,7 +247,7 @@ class FileInspector extends BaseLivewireComponent
      * Accepts an event payload that may contain a file ID, search keyword,
      * and column context for highlighting.
      *
-     * @param array|null $payload Event payload with optional file ID, search query, and column info
+     * @param  array|null  $payload  Event payload with optional file ID, search query, and column info
      */
     #[On('open-file-inspector')]
     public function openInspector($payload = null): void

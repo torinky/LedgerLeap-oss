@@ -73,8 +73,6 @@ class AdminAnnouncement extends Model
 
     /**
      * Whether the announcement is published and within its time window.
-     *
-     * @return bool
      */
     public function isCurrentlyVisible(?CarbonImmutable $now = null): bool
     {
@@ -119,8 +117,6 @@ class AdminAnnouncement extends Model
      * The revision hash is used to construct the dismiss_storage_key.
      * When content changes, the key changes and previously dismissed
      * users see the updated banner again.
-     *
-     * @return void
      */
     public function refreshRevision(): void
     {

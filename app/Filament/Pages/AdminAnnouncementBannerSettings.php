@@ -300,8 +300,6 @@ class AdminAnnouncementBannerSettings extends Page implements HasForms
 
     /**
      * Saves the current form state as a draft.
-     *
-     * @return void
      */
     public function saveDraft(): void
     {
@@ -319,8 +317,6 @@ class AdminAnnouncementBannerSettings extends Page implements HasForms
      *
      * Enforces required fields (title, body, level, scope, starts_at, ends_at)
      * and that ends_at is after starts_at.
-     *
-     * @return void
      */
     public function publishAnnouncement(): void
     {
@@ -336,8 +332,6 @@ class AdminAnnouncementBannerSettings extends Page implements HasForms
 
     /**
      * Archives the current announcement.
-     *
-     * @return void
      */
     public function archiveAnnouncement(): void
     {

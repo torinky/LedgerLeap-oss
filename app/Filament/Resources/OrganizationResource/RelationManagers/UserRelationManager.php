@@ -17,7 +17,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
- // 追加
+// 追加
 
 class UserRelationManager extends RelationManager
 {

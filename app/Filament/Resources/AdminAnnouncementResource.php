@@ -405,7 +405,6 @@ class AdminAnnouncementResource extends Resource
      * are filled; returns an empty array otherwise.
      *
      * @param  array  $data  Form data containing cta_label and cta_url
-     * @return array
      */
     public static function toLinksPayload(array $data): array
     {
