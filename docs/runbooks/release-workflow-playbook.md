@@ -24,6 +24,18 @@ v2026.1.1            バグ修正
 v2027.1.0            年跨ぎ（MINOR リセット）
 ```
 
+### OSS タグ同期判断
+
+| 段階 | `push origin` (private) | `push staging` (OSS) | 備考 |
+|------|------------------------|---------------------|------|
+| Alpha | ✅ | ❌ | クローズドテスト。OSS はまだ private |
+| Beta | ✅ | ✅ | OSS public 化後に実行 |
+| RC | ✅ | ✅ | |
+| Stable | ✅ | ✅ | |
+| MINOR bump | ✅ | ✅ | 初回 Stable 以降 |
+| PATCH bump | ✅ | ✅ | 初回 Stable 以降 |
+| Year transition | ✅ | ✅ | |
+
 ---
 
 ## 2. Alpha リリース手順
@@ -91,9 +103,16 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && ./vendor/bin/sail tes
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && \
   git tag -a v2026.1.0-rc.1 -m 'v2026.1.0-rc.1: Release Candidate'"
 
-# 4. プッシュ
+# 4. private リポジトリにプッシュ
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin develop"
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2026.1.0-rc.1"
+
+# 5. OSS リポジトリにタグ同期
+bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push staging v2026.1.0-rc.1"
+
+# 6. 両リポジトリの Release を確認
+gh release view v2026.1.0-rc.1 -R torinky/LedgerLeap
+gh release view v2026.1.0-rc.1 -R torinky/LedgerLeap-oss
 ```
 
 ---
@@ -145,9 +164,15 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git checkout develop"
 
 ```bash
 # v2026.2.0, v2026.3.0, ...
+# 1. タグ作成
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && \
   git tag -a v2026.2.0 -m 'v2026.2.0: New feature release'"
+
+# 2. private リポジトリにプッシュ
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2026.2.0"
+
+# 3. OSS リポジトリにタグ同期（初回 Stable 以降は必須）
+bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push staging v2026.2.0"
 ```
 
 ---
@@ -157,9 +182,15 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2026
 ```bash
 # v2026.1.1, v2026.1.2, ...
 # hotfix は main からブランチを切り、修正後 main にマージ → タグ
+# 1. タグ作成
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && \
   git tag -a v2026.1.1 -m 'v2026.1.1: Bug fix release'"
+
+# 2. private リポジトリにプッシュ
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2026.1.1"
+
+# 3. OSS リポジトリにタグ同期（初回 Stable 以降は必須）
+bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push staging v2026.1.1"
 ```
 
 ---
@@ -168,9 +199,15 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2026
 
 ```bash
 # 新年最初のリリース: YYYY を当年に、MINOR を 1 にリセット
+# 1. タグ作成
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && \
   git tag -a v2027.1.0 -m 'v2027.1.0: First release of 2027'"
+
+# 2. private リポジトリにプッシュ
 bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2027.1.0"
+
+# 3. OSS リポジトリにタグ同期
+bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push staging v2027.1.0"
 ```
 
 ---
@@ -191,8 +228,25 @@ bash -c "cd /Users/kazutaka/PhpstormProjects/LedgerLeap && git push origin v2027
 | `torinky/LedgerLeap` | 開発主軸（private） | `origin` |
 | `torinky/LedgerLeap-oss` | OSS 公開窓口（private → 計画完了後 public） | `staging` |
 
-- コミット同期: `main` への push で `sync-to-public.yml` が自動実行
-- タグ同期: 自動化されない。必要に応じて手動で `git push staging <tag>` を実行
-- Alpha リリース: private リポジトリのみ
-- Beta/RC: 公開リポジトリの public 化後にタグを同期
-- Stable: 両リポジトリで Release を作成
+### 同期の仕組み
+
+```
+private repo (origin)                    OSS repo (staging)
+       │                                        │
+       │ main push → sync-to-public.yml         │
+       │ コミットが cherry-pick される ─────────→ │ main にコミット反映
+       │                                        │
+       │ .github/workflows/release.yml          │ .github/workflows/release.yml
+       │ （sync-excludes 対象外のため           │ （コミット同期で自動反映）
+       │   自動で OSS に同期される）             │
+       │                                        │
+       │ git push origin <tag>                  │ git push staging <tag>
+       │ → release.yml 起動                     │ → release.yml 起動
+       │ → private repo に Release 作成        │ → OSS repo に Release 作成
+```
+
+- **コミット同期**: `main` への push で `sync-to-public.yml` が自動実行。`release.yml` も同期対象（`sync-excludes.txt` の除外対象外）
+- **タグ同期**: 自動化されない。各リリース段階に応じて手動で `git push staging <tag>` を実行
+- **Alpha リリース**: private リポジトリのみ。OSS にタグは流さない
+- **Beta/RC**: 公開リポジトリの public 化後にタグを同期
+- **Stable 以降**: 両リポジトリで Release を作成（`push origin` + `push staging`）

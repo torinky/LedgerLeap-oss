@@ -1,16 +1,28 @@
 ---
-description: LedgerLeap release workflow — create CalVer tags, update CHANGELOG, publish GitHub Releases. Run `/release-workflow` before every release.
+description: LedgerLeap release workflow — create CalVer tags, update CHANGELOG, publish GitHub Releases on both private and OSS repositories. Run `/release-workflow` before every release.
 ---
 
 # release-workflow
+
+## Repository Model
+
+```
+private repo (torinky/LedgerLeap, origin)  ← タグ作成・CHANGELOG 更新はここ
+       │
+       │ git push staging <tag>
+       ▼
+OSS repo (torinky/LedgerLeap-oss, staging)  ← 公開 Release が必要な場合のみタグ同期
+```
+
+常に private リポジトリでタグを作成し、必要に応じて OSS に同期する。Alpha は private のみ。
+
+詳細: `.github/skills/release-workflow/SKILL.md`
 
 ## Version Format (CalVer)
 
 ```
 vYYYY.MINOR.PATCH[-alpha.N|-beta.N|-rc.N]
 ```
-
-詳細: `.github/skills/release-workflow/SKILL.md`
 
 ## Release Flow
 
@@ -26,29 +38,43 @@ vYYYY.MINOR.PATCH[-alpha.N|-beta.N|-rc.N]
   ドキュメントのみ → スキップ
 ```
 
-### 2. Update CHANGELOG
+### 2. Determine if OSS tag sync is needed
+
+| Stage | OSS tag sync? |
+|-------|---------------|
+| Alpha | ❌（private のみ） |
+| Beta  | ✅（public 化後に `git push staging <tag>`） |
+| RC    | ✅ |
+| Stable | ✅ |
+
+### 3. Update CHANGELOG
 
 `CHANGELOG.md` の `[Unreleased]` セクションを確認し、リリース時に確定する。
 
-### 3. Create annotated tag
+### 4. Create and push tag (always on private repo)
 
 ```bash
 git tag -a vYYYY.MINOR.PATCH -m "vYYYY.MINOR.PATCH: summary"
-git push origin vYYYY.MINOR.PATCH
+git push origin vYYYY.MINOR.PATCH     # private repo → Release 生成
+git push staging vYYYY.MINOR.PATCH    # OSS repo → Release 生成（必要な場合）
 ```
 
-### 4. Verify
+### 5. Verify
 
-- GitHub Actions が Release を作成したか確認
-- `gh release view vYYYY.MINOR.PATCH -R torinky/LedgerLeap`
+```bash
+# private repo
+gh release view vYYYY.MINOR.PATCH -R torinky/LedgerLeap
+# OSS repo（タグ同期時）
+gh release view vYYYY.MINOR.PATCH -R torinky/LedgerLeap-oss
+```
 
 ## Pre-release Checklist
 
-| Stage | `SECURITY.md` | `CHANGELOG.md` | 公開範囲 |
-|-------|---------------|----------------|----------|
-| Alpha | エントリ追加 | `[Unreleased]` に追記 | 非公開/クローズド |
-| Beta | エントリ更新 | 同上 | OSS private staging |
-| RC | エントリ更新 | 同上 | OSS private staging |
-| Stable | Supported にマーク | セクション確定 | public リリース |
+| Stage | `SECURITY.md` | `CHANGELOG.md` | `push origin` | `push staging` |
+|-------|---------------|----------------|---------------|----------------|
+| Alpha | エントリ追加 | `[Unreleased]` に追記 | ✅ | ❌ |
+| Beta | エントリ更新 | 同上 | ✅ | ✅（公開化後） |
+| RC | エントリ更新 | 同上 | ✅ | ✅ |
+| Stable | Supported にマーク | セクション確定 | ✅ | ✅ |
 
 See `docs/runbooks/release-workflow-playbook.md` for step-by-step procedures.

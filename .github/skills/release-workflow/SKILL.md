@@ -1,77 +1,92 @@
 ---
 name: release-workflow
-description: LedgerLeap の CalVer リリースフロー。タグ作成、CHANGELOG 更新、GitHub Release、OSS 同期の一連の手順を管理する。Use when creating a release tag, publishing a pre-release (alpha/beta/rc), or managing the release lifecycle.
-compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap, CalVer YYYY.MINOR.PATCH)"
+description: LedgerLeap の CalVer リリースフロー。プライベートリポジトリ (torinky/LedgerLeap) と OSS 公開リポジトリ (torinky/LedgerLeap-oss) の両方を考慮したタグ作成、CHANGELOG 更新、GitHub Release、OSS 同期の一連の手順を管理する。Use when creating a release tag, publishing a pre-release (alpha/beta/rc), or managing the release lifecycle.
+compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap, OSS: LedgerLeap-oss, CalVer YYYY.MINOR.PATCH)"
 ---
 
 # release-workflow
+
+## Dual Repository Model
+
+| リポジトリ | Remote | 用途 | 現在の visibility |
+|-----------|--------|------|------------------|
+| `torinky/LedgerLeap` | `origin` | 開発主軸。タグ・Release の起点 | private |
+| `torinky/LedgerLeap-oss` | `staging` | OSS 公開窓口 | private（計画完了後に public） |
+
+**鉄則: タグ作成・CHANGELOG 更新は常に private リポジトリで行う。**
+
+```
+private repo でタグ作成 → git push origin <tag>
+  ├─ release.yml が private repo に Release を作成
+  └─ 必要に応じて git push staging <tag> → OSS repo にも Release 生成
+```
 
 ## Version Format
 
 **CalVer `YYYY.MINOR.PATCH`** — 年.MINOR.パッチ
 
 ```
-v2026.1.0-alpha.1    Alpha プレリリース
-v2026.1.0-beta.1     Beta プレリリース
-v2026.1.0-rc.1       RC プレリリース
-v2026.1.0            正式版
-v2026.2.0            機能追加リリース
-v2026.1.1            バグ修正リリース
-v2027.1.0            年跨ぎリリース（MINOR リセット）
+v2026.1.0-alpha.1    Alpha（private のみ）
+v2026.1.0-beta.1     Beta（OSS にもタグ同期）
+v2026.1.0-rc.1       RC（OSS にもタグ同期）
+v2026.1.0            Stable（OSS にもタグ同期）
+v2026.2.0            機能追加
+v2026.1.1            バグ修正
+v2027.1.0            年跨ぎ（MINOR リセット）
 ```
 
-詳細: `docs/work/2026-05-30_versioning-strategy.md`
+## OSS Tag Sync Decision
 
-## Pre-release Stage Decision
-
-| 段階 | タグ例 | 用途 | 対象者 |
-|------|--------|------|--------|
-| Alpha | `v2026.1.0-alpha.N` | 内部動作確認、DB/API 変更可 | 開発チーム |
-| Beta | `v2026.1.0-beta.N` | 公開テスト、Issue 受付開始 | アーリーアダプター |
-| RC | `v2026.1.0-rc.N` | 最終確認、リリース判定 | 全ユーザー |
-| Stable | `v2026.1.0` | 正式版 | 全ユーザー |
-
-## Release Creation Command
+| 段階 | private にタグ | OSS にタグ同期 | 理由 |
+|------|--------------|-------------|------|
+| Alpha | ✅ | ❌ | クローズドテスト。OSS repo はまだ private |
+| Beta | ✅ | ✅（公開化後） | 公開テスト。public 化後にタグを push staging |
+| RC | ✅ | ✅ | リリース候補。OSS 側でも確認可能に |
+| Stable | ✅ | ✅ | 正式版。両リポジトリで Release 生成 |
 
 ```bash
-# 1. CHANGELOG を更新（[Unreleased] → バージョン確定）
-# 2. コミット
-git add CHANGELOG.md
-git commit -m "chore(release): prepare v2026.1.0-alpha.1"
+# OSS にタグを同期する場合
+git push staging v2026.1.0-beta.1
+# → OSS リポジトリの release.yml が動作し、torinky/LedgerLeap-oss に Release を作成
+```
 
-# 3. タグ作成（annotated tag 必須）
-git tag -a v2026.1.0-alpha.1 -m "v2026.1.0-alpha.1: リリース説明"
+**OSS リポジトリ側の release.yml はコミット同期で自動反映される**（sync-excludes 対象外のため）。
 
-# 4. プッシュ
-git push origin develop          # develop ブランチ
-git push origin v2026.1.0-alpha.1  # タグ
+## Release Workflow (private repo)
+
+```bash
+# 1. develop ブランチで作業（Stable 以外）
+# 2. CHANGELOG 更新、SECURITY.md 更新
+# 3. コミット
+git add CHANGELOG.md SECURITY.md
+git commit -m "chore(release): prepare v2026.1.0"
+
+# 4. タグ作成（annotated tag 必須）
+git tag -a v2026.1.0 -m "v2026.1.0: Stable release"
+
+# 5. プッシュ
+git push origin develop          # ブランチ
+git push origin v2026.1.0         # タグ → release.yml 起動
+
+# 6. OSS 同期（Stable/Beta/RC の場合）
+git push staging v2026.1.0       # OSS リポジトリにもタグ → Release 生成
+```
+
+## Stable Release (main マージ)
+
+Stable リリース時のみ `develop → main` にマージ:
+
+```bash
+git checkout main && git merge develop && git push origin main
+# → main への push で sync-to-public.yml が OSS にコミット同期
+# → タグは別途 push staging
 ```
 
 ## GitHub Release 自動化
 
-`.github/workflows/release.yml` がタグプッシュを検知し、以下を自動実行:
-- プレリリース判定: タグに `alpha`/`beta`/`rc` を含む → `prerelease: true`
-- リリースノート: 前回タグからのコミットログを収集
-
-## Stable リリースチェックリスト
-
-1. `CHANGELOG.md` の `[Unreleased]` → `[YYYY.MINOR.PATCH] - YYYY-MM-DD` に確定
-2. `SECURITY.md` の Supported Versions を Stable として更新
-3. annotated tag を作成しプッシュ
-4. Release を確認 → アナウンス
-
-## Year Transition
-
-新年最初のリリース時:
-```bash
-git tag v2027.1.0  # YYYY を当年に、MINOR を 1 にリセット
-```
-
-## OSS 同期
-
-- タグは `sync-to-public.yml` の同期対象外。公開リポジトリに Release が必要な場合は別途タグをプッシュ
-- 公開リポジトリ: `torinky/LedgerLeap-oss`（staging remote）
-- 詳細: `docs/runbooks/oss-sync-runbook.md`
+`release.yml` はタグプッシュを検知し、プッシュ先のリポジトリに Release を作成:
+- private repo に push → `torinky/LedgerLeap` に Release
+- OSS repo に push → `torinky/LedgerLeap-oss` に Release
 
 ## Reference
 
