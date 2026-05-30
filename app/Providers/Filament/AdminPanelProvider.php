@@ -14,6 +14,7 @@ use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
 use Filament\Support\Enums\Width;
 use Filament\View\PanelsRenderHook;
+use Illuminate\Contracts\View\View;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -37,6 +38,9 @@ class AdminPanelProvider extends PanelProvider
             ->id('admin')
             ->path('app')
             ->maxContentWidth(Width::Full)
+            ->brandName(config('ledgerleap.branding.app_name', config('app.name')))
+            ->brandLogo(config('ledgerleap.branding.logo') ? asset(config('ledgerleap.branding.logo')) : null)
+            ->favicon(asset(config('ledgerleap.branding.favicon', 'favicon.ico')))
             ->colors([
                 'primary' => Color::Amber,
             ])
@@ -131,6 +135,10 @@ class AdminPanelProvider extends PanelProvider
             ->renderHook(
                 PanelsRenderHook::GLOBAL_SEARCH_AFTER,
                 fn (): string => view('livewire.filament-topbar')->render(),
+            )
+            ->renderHook(
+                PanelsRenderHook::FOOTER,
+                fn (): View => view('partials.app-footer'),
             );
     }
 }

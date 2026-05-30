@@ -1,6 +1,27 @@
 <?php
 
 return [
+    /*
+    |--------------------------------------------------------------------------
+    | Branding Configuration
+    |--------------------------------------------------------------------------
+    | システムのブランディング設定。.env で上書き可能。
+    */
+    'branding' => [
+        'app_name' => env('APP_NAME', 'LedgerLeap'),
+        'short_name' => env('APP_SHORT_NAME', null),
+        'logo' => env('APP_LOGO', 'images/icon.svg'),
+        'logo_dark' => env('APP_LOGO_DARK', null),
+        'logo_height' => '1.75rem',
+        'favicon' => env('APP_FAVICON', 'favicon.ico'),
+        'copyright_owner' => env('APP_COPYRIGHT_OWNER', env('APP_NAME', 'LedgerLeap')),
+        'copyright_year_start' => (int) env('APP_COPYRIGHT_YEAR', date('Y')),
+        'tagline' => env('APP_TAGLINE', null),
+        'support_url' => env('APP_SUPPORT_URL', null),
+        'support_email' => env('APP_SUPPORT_EMAIL', null),
+        'forum_url' => env('APP_FORUM_URL', null),
+    ],
+
     'announcement_banner' => [
         'current' => null,
         'feed' => [],

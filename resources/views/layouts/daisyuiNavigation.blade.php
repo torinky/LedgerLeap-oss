@@ -27,12 +27,27 @@
             {{-- アプリロゴ/名称 (マイポータルへのリンク) --}}
             <a href="{{ tenant() ? route('my-portal', ['tenant' => tenant()->id]) : route('global.my-portal') }}"
                 data-tip="{{ __('ledger.navigation.go_to_my_portal') }}" @class([
-                    'btn btn-ghost tooltip tooltip-bottom text-xl',
+                    'btn btn-ghost tooltip tooltip-bottom flex items-center gap-2',
                     'btn-active' =>
                         request()->routeIs('my-portal') ||
                         request()->routeIs('global.my-portal'),
                 ])>
-                {{ config('app.name', 'Laravel') }}
+                @php
+                    $logo      = config('ledgerleap.branding.logo');
+                    $appName   = config('ledgerleap.branding.app_name', config('app.name', 'LedgerLeap'));
+                    $shortName = config('ledgerleap.branding.short_name') ?: mb_substr($appName, 0, 2);
+                @endphp
+
+                @if ($logo)
+                    <img src="{{ asset($logo) }}"
+                         alt="{{ $appName }}"
+                         style="height: {{ config('ledgerleap.branding.logo_height', '1.75rem') }}"
+                         class="object-contain">
+                    <span class="hidden sm:inline text-xl font-semibold">{{ $appName }}</span>
+                @else
+                    <span class="hidden sm:inline text-xl font-semibold">{{ $appName }}</span>
+                    <span class="sm:hidden text-xl font-semibold" aria-hidden="true">{{ $shortName }}</span>
+                @endif
             </a>
 
             {{-- 主要メニュー (lg以上でアイコンのみ表示) --}}

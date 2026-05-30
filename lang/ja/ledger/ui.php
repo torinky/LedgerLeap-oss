@@ -415,4 +415,12 @@ return [
     'action_bar_open' => 'アクションを開く',
     'action_bar_close' => 'アクションを閉じる',
     'export_csv_download' => 'CSVをダウンロード',
+
+    'footer' => [
+        'contact'       => '連絡先',
+        'support'       => 'サポート',
+        'support_email' => 'メールで問い合わせ',
+        'forum'         => 'フォーラム',
+        'all_rights_reserved' => 'All rights reserved.',
+    ],
 ];

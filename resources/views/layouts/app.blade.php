@@ -6,7 +6,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? ($attributes->get('title') ?? 'page') }} | {{ config('app.name', 'Laravel') }}</title>
+    <title>{{ $title ?? ($attributes->get('title') ?? 'page') }} | {{ config('ledgerleap.branding.app_name', config('app.name', 'LedgerLeap')) }}</title>
+
+    <link rel="icon" href="{{ asset(config('ledgerleap.branding.favicon', 'favicon.ico')) }}">
 
     <script>
         // On page load or when changing themes, best to add inline in `head` to avoid FOUC.
@@ -73,9 +75,7 @@
             {{ $slot }}
         </main>
     </div>
-    <fooer>
-        {{ $footer ?? '' }}
-    </fooer>
+    @include('partials.app-footer')
     @livewireScriptConfig
     @vite(['resources/js/app.js'])
     @stack('scripts')
