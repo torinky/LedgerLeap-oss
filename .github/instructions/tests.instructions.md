@@ -82,6 +82,43 @@ $ledger = $ledger->fresh();
 - Test data must fill all indices 0..maxColumnId (no gaps)
 - `content_attached` requires `[0 => []]` sentinel at index 0
 
+## Config / Env Value Testing
+
+```
+Testing a config value that depends on env() or shell_exec()?
+├─ putenv('KEY=val') in test?
+│   → Does NOT re-evaluate config after bootstrap. Config PHP files are parsed once.
+│   FIX: Extract resolution logic to a helper (e.g. App\Helpers\Version) and test that directly.
+├─ config()->offsetUnset('key') then re-access?
+│   → Removes from Repository::$items but does NOT trigger file re-parse. Returns null.
+│   FIX: Same as above — extract to helper and unit-test the helper.
+└─ Need to verify config key exists and returns correct TYPE?
+    → Direct config('key') read is fine. Only env-dependent logic needs extraction.
+```
+
+**Pattern — testing extracted helpers:**
+```php
+class VersionResolutionTest extends TestCase
+{
+    public function test_app_version_env_takes_priority(): void
+    {
+        putenv('APP_VERSION=v2026.3.0');
+        $this->assertSame('v2026.3.0', Version::resolve());
+        putenv('APP_VERSION');
+    }
+
+    public function test_version_file_is_used_when_env_not_set(): void
+    {
+        putenv('APP_VERSION');
+        file_put_contents(base_path('.version'), 'v2025.1.0');
+        $this->assertSame('v2025.1.0', Version::resolve());
+        unlink(base_path('.version'));
+    }
+}
+```
+
+**Reference:** `tests/Unit/Config/VersionResolutionTest.php`, `app/Helpers/Version.php`
+
 ## Responsibility on Change
 
 - **Any change (Logic, Config, or Views) MUST be validated with relevant tests.**

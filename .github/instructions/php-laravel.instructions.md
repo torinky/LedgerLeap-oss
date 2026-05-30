@@ -73,6 +73,32 @@ APPROVED ──rollback()──► DRAFT
 
 - Use `$model->update([...])` not `touch()` in event-driven tests
 
+## Config Value Resolution
+
+```
+config value depends on env / shell / file?
+├─ Inline in config PHP file?
+│   → EXTRACT to dedicated helper/service for testability.
+│   Reason: config files are parsed once at bootstrap; offsetUnset() does not
+│   re-trigger evaluation. Unit-test the helper directly with putenv() / temp files.
+├─ Multi-tier fallback needed?
+│   → Priority: env override > committed file > shell command > hardcoded default.
+│   → Each tier tested independently in the helper's unit test.
+└─ Production env has no .git?
+    → Add a CI step (e.g. release.yml) to commit a version/sentinel file at tag time.
+```
+
+**Example (from #232):**
+```php
+// ❌ inline in config — untestable after bootstrap
+'version' => env('APP_VERSION') ?: shell_exec('git describe ...'),
+
+// ✅ extracted helper — fully unit-testable
+'version' => \App\Helpers\Version::resolve(),
+```
+
+**Reference:** `tests/Unit/Config/VersionResolutionTest.php` for the test pattern.
+
 See `.github/skills/ledger-content-data-structure/SKILL.md` for content array details.
 See `.github/skills/permission-model/SKILL.md` for ACL cache patterns.
 See `.github/skills/workflow-status-machine/SKILL.md` for WorkflowService API.
