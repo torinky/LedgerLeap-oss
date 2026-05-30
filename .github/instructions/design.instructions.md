@@ -137,6 +137,28 @@ Before adding new markup, decide whether the page is a new surface or a revision
 - Run the relevant Feature test or rendering check for the affected page.
 - Report the verification result together with the change.
 
+## 10.1 Frontend error detection via browser.log
+
+1. **ユーザーに画面操作を促す**: Blade/JS/CSS 変更後、以下の文言でユーザーにブラウザでの確認を依頼する:
+   ```
+   フロントエンドの変更を適用しました。以下の画面をブラウザで開いて操作し、browser.log へのエラー出力を確認します:
+   - [変更した画面のURL]
+   - 操作内容: [グループ開閉 / フォーム送信 / ページ遷移 など]
+   
+   操作後に「完了」とお知らせください。
+   ```
+2. **browser.log を確認**: ユーザーの操作完了後、以下を実行:
+   ```bash
+   grep -i -E "Alpine Expression Error|ReferenceError|TypeError|Script error" storage/logs/browser.log | tail -30
+   ```
+3. Key error patterns and their typical causes:
+   - `Alpine Expression Error: Can't find variable: X` → X is undefined at `x-data` evaluation time. Check script loading order: `@stack('scripts')` must be before `@livewireScriptConfig`.
+   - `Script error.` (repeated) → cascading failure from an earlier script error. Trace to the first error in the log.
+   - `ReferenceError` / `TypeError` → missing JS function or property access on undefined. Verify module imports and global function registration.
+4. Backend tests passing does NOT guarantee frontend is healthy — a misordered `<script>` tag or missing Alpine registration can silently break all interactivity.
+5. If browser.log errors are present, fix the frontend loading/integration issue first before considering backend changes.
+6. Clear `storage/logs/browser.log` after verifying fixes so subsequent runs have a clean baseline.
+
 ## 11. Evidence and maintenance
 
 - If a pattern is reusable across more than one page, capture it in `docs/work/ui-ux/*` first.
