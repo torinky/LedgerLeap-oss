@@ -42,7 +42,7 @@
 
 </head>
 
-<body class="font-sans antialiased {{ $attributes->get('class') ?? 'bg-base-200' }} pb-20">
+<body class="font-sans antialiased {{ $attributes->get('class') ?? 'bg-base-200' }}">
 
     {{-- Tier 0: Global Progress Bar (Livewire通信中のみ表示) --}}
     <x-mary-loading wire:loading.delay class="text-primary fixed top-0 w-full h-1 z-110" />
