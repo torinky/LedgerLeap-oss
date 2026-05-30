@@ -14,6 +14,7 @@ LedgerLeap の標準運用手順への入口です。
 - [Browser HAR Analysis Playbook](./browser-har-analysis-playbook.md): HAR 比較 → repeated request 切り分け → 証跡化
 - [UI Migration Playbook](./ui-migration-playbook.md): プロジェクト全画面を統一ルール（Mary UI / daisyUI）に準拠させるためのUI置き換え手順
 - [Local LLM MCP Setup Guide](./local-llm-mcp-setup.md): LM Studio / Ollama での LedgerLeap MCP 利用設定手順（コンテキスト最適化・クラッシュ対策）
+- [Git Branch Workflow](./git-branch-workflow.md): ブランチ命名規則・ライフサイクル・マージ後削除ルール（全 AI エージェント共通）
 
 ## Recommended Flow
 1. 不具合対応は [Bug Response Playbook](./bug-response-playbook.md) を起点に進める

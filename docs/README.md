@@ -193,7 +193,8 @@ LedgerLeap APIの利用方法や主要なエンドポイントについては、
 開発を進める上でのコーディング規約やGitの運用ルールについては、以下のドキュメントを参照してください。
 
 *   [コーディング規約](/docs/development/coding_standards.md)
-*   [Gitブランチ戦略とコミット規約](/docs/development/branch_strategy.md)
+*   [Gitブランチ戦略と開発フロー](/docs/development/branch_strategy.md) - 命名規則、日々の開発手順、コミット規約。新規参加者はまずここを読んでください。
+    *   [Gitブランチ操作の詳細手順（Runbook）](/docs/runbooks/git-branch-workflow.md) - コマンドを含む完全な操作マニュアル
 *   [テストのベストプラクティス](/docs/development/testing/README.md)（旧: [Testing-Best-Practices.md](/docs/development/Testing-Best-Practices.md)）
     * テスト実行は **Laravel Sail / Docker-based PhpStorm interpreter 必須**
 *   [ユーティリティコマンド](/docs/development/utility-commands.md)
@@ -391,9 +392,9 @@ LedgerLeap の公開ドキュメントは、実装済み機能の技術仕様・
 
 ## 貢献方法
 
-バグ報告や機能提案は GitHub Issues へお願いします。プルリクエストを送る際は、事前に Issue
-で議論するか、開発ブランチからトピックブランチを作成してください。コードスタイルは `laravel/pint` に準拠してください (
-`./vendor/bin/sail pint` でチェック可能)。
+バグ報告や機能提案は GitHub Issues へお願いします。プルリクエストを送る際は、事前に Issue で議論してください。
+ブランチの命名規則や開発フローは [Gitブランチ戦略と開発フロー](/docs/development/branch_strategy.md) に従ってください。
+コードスタイルは `laravel/pint` に準拠してください（`./vendor/bin/sail pint` でチェック可能）。
 
 ## ライセンス
 

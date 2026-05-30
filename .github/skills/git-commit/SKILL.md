@@ -69,9 +69,30 @@ See [references/conventional-commits.md](references/conventional-commits.md) for
 
 **Common types**: `feat` `fix` `test` `refactor` `docs` `ci` `chore`
 
+## Pre-flight: Branch Health Check
+
+**Before every commit session**, scan for stale merged branches:
+
+```bash
+bash -c "cd /path && git branch --merged develop | grep -v 'develop\|main'"
+```
+
+If any output appears, **proactively offer to delete them**:
+- "マージ済みのブランチが N 本あります。削除しますか？"
+- User confirms → run `git branch -d <each>` + `git push origin --delete <each>`
+- Also prune remote tracking: `git remote prune origin`
+
+This check MUST run at:
+- Start of any coding session
+- Before `/git-commit`
+- After merge to develop (verify branch was deleted)
+- When user says "done" / "完了" / "マージした"
+
 ## Full Workflow (Sail-safe, Japanese body)
 
 ```bash
+# 0. Pre-flight: check for stale merged branches
+bash -c "cd /path && git branch --merged develop | grep -v 'develop\|main'"
 # 1. Stage
 bash -c "cd /path && git add <files> && git status --short"
 # 2. Write message with create_file tool → /tmp/msg_input.txt, then:
@@ -83,3 +104,18 @@ bash -c "cd /path && git log --oneline origin/main..HEAD"
 # 5. Push
 bash -c "cd /path && git push origin <branch>"
 ```
+
+## After Merge — Delete Branch (MANDATORY)
+
+Once the PR is merged, delete the branch **immediately**:
+
+```bash
+# Delete local branch
+bash -c "cd /path && git branch -d <branch>"
+# Delete remote branch
+bash -c "cd /path && git push origin --delete <branch>"
+# Prune stale remote tracking refs
+bash -c "cd /path && git remote prune origin"
+```
+
+**Merged branches are dead.** Never keep them "just in case" — Git history preserves everything. See `docs/runbooks/git-branch-workflow.md` for the full lifecycle.

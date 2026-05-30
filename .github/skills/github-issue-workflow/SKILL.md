@@ -32,7 +32,16 @@ compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap)"
 2. add_issue_comment               — progress reports, sprint summaries
 3. issue_write(update, body)       — checklist updates (replace entire body)
 4. issue_write(update, closed)     — when all acceptance criteria met
+5. branch cleanup check            — verify associated branch was deleted
 ```
+
+**Step 5 — Branch Cleanup on Close**: When closing an issue, check if the associated branch still exists:
+
+```bash
+bash -c "cd /path && git branch -a | grep '#<issue-number>'"
+```
+
+If the branch exists and is merged to develop, delete it immediately (local + remote). If unmerged, ask the user. This is mandatory before marking the issue workflow complete.
 
 ## Body Sync Rule
 
@@ -61,6 +70,16 @@ compatibility: "LedgerLeap (owner: torinky, repo: LedgerLeap)"
 7. Before creating a new issue, confirm whether an existing issue already covers the same work.
 8. Keep issue body in Japanese unless user explicitly asks otherwise.
 9. If the owner must click through GitHub manually, add a dedicated `Owner manual steps` section to the canonical issue body with the UI path, required permission, expected result, and confirmation evidence.
+
+## Branch Creation Convention
+
+When starting work on an issue, create the branch from `develop`:
+- `feature/#<issue-number>-<kebab-desc>` — features (e.g. `feature/#230-search-improvement`)
+- `fix/#<issue-number>-<kebab-desc>` — bug fixes (e.g. `fix/#208-folder-tree-indent`)
+- `chore/<kebab-desc>` — CI, docs, deps (e.g. `chore/update-laravel-11`)
+- Hotfixes branch from `main`.
+
+**Delete the branch immediately after PR merge.** Full lifecycle: `docs/runbooks/git-branch-workflow.md`.
 
 ## Checklist Update Rule
 
