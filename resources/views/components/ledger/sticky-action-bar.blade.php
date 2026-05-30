@@ -16,22 +16,12 @@
      x-data="{
         expanded: false,
         isLg: window.matchMedia('(min-width: 1024px)').matches,
-        footerOffset: 0,
-        updateFooterOffset() {
-            const footer = document.getElementById('app-footer');
-            if (!footer) return;
-            const overlap = window.innerHeight - footer.getBoundingClientRect().top;
-            this.footerOffset = overlap > 0 ? Math.ceil(overlap) : 0;
-        },
         init() {
             let mql = window.matchMedia('(min-width: 1024px)');
             mql.addEventListener('change', (e) => { this.isLg = e.matches; });
-            window.addEventListener('scroll', () => this.updateFooterOffset(), { passive: true });
-            window.addEventListener('resize', () => this.updateFooterOffset(), { passive: true });
-            this.updateFooterOffset();
         }
      }"
-     :style="`bottom: ${(isLg ? 16 : 0) + footerOffset}px; transform: ${(!isLg && !expanded) ? 'translateY(calc(100% - 3.5rem))' : 'translateY(0)'};`"
+     :style="{ bottom: (isLg ? '16px' : '0'), transform: (!isLg && !expanded) ? 'translateY(calc(100% - 3.5rem))' : 'translateY(0)' }"
      @click.outside="if(!isLg) expanded = false"
 >
     <div class="shadow-[0_-10px_40px_rgba(0,0,0,0.1)] lg:shadow-md bg-base-300 transition-opacity duration-300 opacity-100 lg:opacity-[0.65] lg:hover:opacity-100 rounded-t-3xl lg:rounded-box border-t border-base-200 lg:border-none overflow-hidden flex flex-col">
@@ -72,3 +62,11 @@
         @endif
     </div>
 </div>
+
+{{--
+    body末尾スペーサー: sticky-action-bar がフッターを覆わないよう body 下端に余白を確保する。
+    x-teleport により body の末尾に追加されるため @push 制約を回避できる。
+--}}
+<template x-teleport="body">
+    <div class="h-32 shrink-0 pointer-events-none" aria-hidden="true"></div>
+</template>
