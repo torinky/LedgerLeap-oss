@@ -12,6 +12,7 @@
 .ai/
 .aiassistant/
 .gemini/
+.agents/
 .serena/
 .tmp/
 AGENTS.md

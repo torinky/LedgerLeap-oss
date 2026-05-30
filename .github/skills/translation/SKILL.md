@@ -1,3 +1,9 @@
+---
+name: translation
+description: Manages LedgerLeap UI text and translation keys. Use when adding, updating, or reviewing ledger translation keys, running translations:compare, or diagnosing missing/duplicate labels in Blade views.
+compatibility: LedgerLeap (lang/ja/ledger/*.php, lang/ja.json, artisan translations:compare)
+---
+
 # Translation and Localization Management
 
 Use this skill when adding, updating, or reviewing LedgerLeap UI text and technical labels.

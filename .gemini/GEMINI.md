@@ -2,7 +2,8 @@
 
 > **Single Source of Truth (SSOT) Policy**
 > 全ての技術スタック知識、規約、および制約は `.github/` 内の資産を「正」とします。
-> Gemini CLI は、同期された `.gemini/` 配下のファイルを通じて、Copilot と全く同じコンテキストを共有します。
+> Gemini CLI は `.gemini/`、Antigravity CLI (`agy`) は `.agents/` を通じて、Copilot と全く同じコンテキストを共有します。
+> `bin/sync-ai-instructions.sh` が `.github/` → `.gemini/` と `.agents/` を両方更新します（pre-commit hook で自動実行）。
 
 ---
 
