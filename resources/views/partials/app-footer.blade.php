@@ -13,8 +13,8 @@
     <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2 max-w-7xl mx-auto">
         <span>© {{ $yearRange }} {{ $owner }}. {{ __('ledger.footer.all_rights_reserved') }}</span>
 
-        @if ($hasLinks)
-            <div class="flex flex-wrap gap-4 items-center">
+        <div class="flex flex-wrap gap-4 items-center">
+            @if ($hasLinks)
                 <span class="font-medium text-base-content/50">{{ __('ledger.footer.contact') }}:</span>
 
                 @if ($supportUrl)
@@ -39,7 +39,15 @@
                         <span>{{ __('ledger.footer.forum') }}</span>
                     </a>
                 @endif
-            </div>
-        @endif
+            @endif
+
+            <span>
+                <a href="https://github.com/torinky/LedgerLeap-oss/blob/main/CHANGELOG.md"
+                   target="_blank" rel="noopener noreferrer"
+                   class="link link-hover">
+                    {{ __('ledger.footer.version') }} {{ config('ledgerleap.version') }}
+                </a>
+            </span>
+        </div>
     </div>
 </footer>

@@ -91,6 +91,25 @@ git checkout main && git merge develop && git push origin main
 - private repo に push → `torinky/LedgerLeap` に Release
 - OSS repo に push → `torinky/LedgerLeap-oss` に Release
 
+## CHANGELOG Writing Conventions
+
+CHANGELOG.md は #232 によりフッター・プロフィールメニューのバージョンクリックで到達するランディングページである。各エントリは変更を記録するだけでなく、ペルソナに応じた次の導線を確保する。
+
+| ペルソナ | 関心 | CHANGELOG に含める導線 |
+|---------|------|----------------------|
+| **operator** (実務担当者) | 操作変更・新機能 | 該当するユーザーマニュアルへのリンク |
+| **administrator** (管理者) | 設定変更・セキュリティ・監査 | 管理マニュアル・設定リファレンスへのリンク |
+| **field-leader** (現場リーダー) | ワークフロー変更・権限 | ワークフロー説明・ロール権限ドキュメントへのリンク |
+| **developer** (全レイヤー) | API・DB変更・依存関係 | マイグレーションガイド・関連 Issue/PR へのリンク |
+
+**エントリ必須要素:**
+- 変更内容の簡潔な説明
+- 影響を受けるペルソナの明示
+- 詳細ドキュメント・Issue 番号へのリンク（存在する場合）
+- 破壊的変更には `**BREAKING:**` プレフィックス
+
+詳細なテンプレートと記述例は `docs/runbooks/release-workflow-playbook.md` を参照。
+
 ## Reference
 
 - 戦略文書: `docs/work/2026-05-30_versioning-strategy.md`

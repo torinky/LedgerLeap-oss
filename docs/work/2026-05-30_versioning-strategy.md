@@ -232,6 +232,7 @@ feature/xxx ──PR──→ develop ──PR──→ main
 - 機能ブランチの PR マージ時に、PR 作成者が CHANGELOG 更新を推奨
 - Stable リリース時に `[Unreleased]` をバージョン日付付きセクションに昇格
 - このファイルは公開リポジトリ同期対象に含める（§5.1 参照）
+- **#232 により、CHANGELOG.md はフッターとメニューのバージョンリンクから到達するランディングページとなっている。** 各エントリはペルソナ別の導線（マニュアル、Issue、移行手順等）を意識して記述する。詳細は `.agents/skills/release-workflow/SKILL.md` および `docs/runbooks/release-workflow-playbook.md` §11 を参照。
 
 ---
 
@@ -276,10 +277,44 @@ docs: READMEにインストール手順を追加
 
 `SECURITY.md` の Supported Versions セクションは、本戦略のバージョニングに基づいて最新の Stable バージョンを明記する。
 
+### 7.4 UI バージョン表示との連動（#232）
+
+バージョン表示は Issue #232 で実装する。本戦略の git tag をソースオブトゥルースとし、アプリケーション画面への表示は自動連動させる。
+
+**解決方式:**
+```php
+// config/ledgerleap.php の version キー
+'version' => env('APP_VERSION')
+    ?: (file_exists(base_path('.version')) ? trim(file_get_contents(base_path('.version'))) : null)
+    ?: trim(shell_exec('git -C '.base_path().' describe --tags --abbrev=0 2>/dev/null') ?: '0.0.0'),
+```
+
+**優先順位:**
+1. `APP_VERSION` env var — 本番デプロイ時の手動オーバーライド
+2. `.version` ファイル — release.yml が自動コミット（.git なし環境用）
+3. `git describe --tags --abbrev=0` — 開発環境での動的解決
+4. `'0.0.0'` — フォールバック
+
+**表示箇所:**
+- **フッター** (`resources/views/partials/app-footer.blade.php`): コピーライト右側
+- **プロフィールメニュー** (`resources/views/layouts/daisyuiNavigation.blade.php`): ドロップダウン最下部
+
+いずれもクリックで `https://github.com/torinky/LedgerLeap-oss/blob/main/CHANGELOG.md` へ遷移。
+
+**デプロイフロー:**
+```
+git tag v2026.2.0 → git push
+  ├─ release.yml: .version ファイルを自動コミット（オプション）
+  └─ デプロイ時: php artisan config:cache
+       → config('ledgerleap.version') が更新 → UI に自動反映
+```
+
 ---
 
 ## 8. 更新履歴
 
 | 日付 | 変更内容 |
 |------|---------|
+| 2026-05-31 | §5.3 更新: CHANGELOG ランディングページとしての役割とペルソナ別導線の参照追加。`release-workflow` スキル・ランブックに CHANGELOG 記述規則を追加 |
+| 2026-05-31 | §7.4 追加: UI バージョン表示との連動（#232）、git describe による動的解決方式 |
 | 2026-05-30 | 初版作成 |

@@ -1,5 +1,7 @@
 <?php
 
+use App\Helpers\Version;
+
 return [
     /*
     |--------------------------------------------------------------------------
@@ -21,6 +23,15 @@ return [
         'support_email' => env('APP_SUPPORT_EMAIL', null),
         'forum_url' => env('APP_FORUM_URL', null),
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Application Version
+    |--------------------------------------------------------------------------
+    | バージョン文字列。優先順位: APP_VERSION env > .version ファイル > git describe > '0.0.0'
+    | #231 の git tag 運用と自動連動し、config:cache 時に解決される。
+    */
+    'version' => Version::resolve(),
 
     'announcement_banner' => [
         'current' => null,

@@ -134,6 +134,14 @@
                             </x-daisyui-nav-link>
                         </li>
                     </form>
+
+                    <li class="menu-title mt-1">
+                        <a href="https://github.com/torinky/LedgerLeap-oss/blob/main/CHANGELOG.md"
+                           target="_blank" rel="noopener noreferrer"
+                           class="text-xs text-base-content/30 link link-hover">
+                            {{ config('ledgerleap.version', '0.0.0') }}
+                        </a>
+                    </li>
                 </ul>
             </div>
 
