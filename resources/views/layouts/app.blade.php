@@ -76,9 +76,9 @@
         </main>
     </div>
     @include('partials.app-footer')
+    @stack('scripts')
     @livewireScriptConfig
     @vite(['resources/js/app.js'])
-    @stack('scripts')
     <script>
         // テーマを適用する関数
         function applyTheme() {
