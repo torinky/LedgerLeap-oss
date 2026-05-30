@@ -11,8 +11,10 @@
 .github/sync-excludes.txt
 .ai/
 .aiassistant/
+.continue/
 .gemini/
 .agents/
+.opencode/
 .serena/
 .tmp/
 AGENTS.md
