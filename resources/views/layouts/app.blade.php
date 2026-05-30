@@ -75,6 +75,8 @@
             {{ $slot }}
         </main>
     </div>
+    {{-- sticky-action-bar が存在するページはここにスペーサーを push する --}}
+    @stack('body-end-pad')
     @include('partials.app-footer')
     @livewireScriptConfig
     @vite(['resources/js/app.js'])

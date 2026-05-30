@@ -110,6 +110,8 @@
     {{-- グローバルモーダル --}}
     @livewire('attached-file.text-preview-modal')
 
+    @include('partials.app-footer')
+
     @livewireScriptConfig
     @vite(['resources/js/app.js'])
     <script>
