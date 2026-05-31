@@ -26,6 +26,15 @@ class AttachedFileDownloadController extends Controller
             'is_original' => $request->boolean('original'),
         ]);
 
+        if ($request->filled('hash') && $request->query('hash') !== $attachedFile->hashedbasename) {
+            Log::warning('[DownloadController@download] hashedbasename mismatch.', [
+                'attached_file_id' => $attachedFile->id,
+                'url_hash' => $request->query('hash'),
+                'db_hash' => $attachedFile->hashedbasename,
+            ]);
+            abort(404, 'File Not Found');
+        }
+
         // 1. 認可チェック
         try {
             Gate::authorize('view', $attachedFile->ledger);

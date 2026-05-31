@@ -2,6 +2,7 @@
 
 namespace App\Helpers;
 
+use App\Models\AttachedFile;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Storage;
@@ -86,5 +87,33 @@ class AttachedFilePathHelper
 
         // publicディスク内の相対パスを返す
         return $directory.'/'.$hashedBasename;
+    }
+
+    public static function cleanupOrphanedThumbnails(int $tenantId): int
+    {
+        $thumbDir = 'tenants/'.$tenantId.'/Ledger/thumbs';
+        $disk = Storage::disk('public');
+
+        if (! $disk->exists($thumbDir)) {
+            return 0;
+        }
+
+        $dbHashedBasenames = AttachedFile::where('tenant_id', $tenantId)
+            ->pluck('hashedbasename')
+            ->toArray();
+        $lookup = array_flip($dbHashedBasenames);
+
+        $deleted = 0;
+        $files = $disk->files($thumbDir);
+
+        foreach ($files as $file) {
+            $basename = basename($file);
+            if (! isset($lookup[$basename])) {
+                $disk->delete($file);
+                $deleted++;
+            }
+        }
+
+        return $deleted;
     }
 }
