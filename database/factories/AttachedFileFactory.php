@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
+use App\Helpers\HashedBasenameGenerator;
 use App\Models\AttachedFile;
 use App\Models\Folder;
 use App\Models\Ledger;
@@ -11,7 +12,6 @@ use App\Models\LedgerDefine;
 use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
-use Illuminate\Support\Str;
 
 /**
  * @extends Factory<AttachedFile>
@@ -38,7 +38,9 @@ class AttachedFileFactory extends Factory
         $user = User::factory()->create();
 
         $filename = $this->faker->word().'.pdf';
-        $hashedbasename = Str::random(40).'.pdf';
+        $size = $this->faker->numberBetween(1000, 50000);
+        $generator = app(HashedBasenameGenerator::class);
+        $hashedbasename = $generator->generateRaw($filename, 'pdf', $size);
         $path = AttachedFilePathHelper::getAttachmentPath($ledgerDefine->id, $hashedbasename);
 
         return [
@@ -49,7 +51,7 @@ class AttachedFileFactory extends Factory
             'column_id' => $this->faker->randomNumber(2),
             'mime' => 'application/pdf',
             'path' => $path,
-            'size' => $this->faker->numberBetween(1000, 50000),
+            'size' => $size,
             'status' => AttachedFileStatus::COMPLETED->value,
             'contain_content' => $this->faker->boolean(),
             'optimized' => $this->faker->boolean(),
@@ -65,7 +67,8 @@ class AttachedFileFactory extends Factory
     {
         return $this->state(function (array $attributes) {
             $filename = $this->faker->word().'.jpg';
-            $hashedbasename = Str::random(40).'.jpg';
+            $generator = app(HashedBasenameGenerator::class);
+            $hashedbasename = $generator->generateRaw($filename, 'jpg', 0);
             $path = AttachedFilePathHelper::getAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [
@@ -82,7 +85,8 @@ class AttachedFileFactory extends Factory
         return $this->state(function (array $attributes) {
             $originalFilename = $this->faker->word().'.png';
             $originalMimeType = 'image/png';
-            $hashedbasename = Str::random(40).'.png';
+            $generator = app(HashedBasenameGenerator::class);
+            $hashedbasename = $generator->generateRaw($originalFilename, 'png', 0);
             $originalPath = AttachedFilePathHelper::getOriginalAttachmentPath($attributes['ledger_define_id'], $hashedbasename);
 
             return [

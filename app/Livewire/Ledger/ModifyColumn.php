@@ -164,12 +164,14 @@ class ModifyColumn extends CreateColumn
         }
 
         // 既存ファイルの取得 (DBのレコードを正とする)
+        // バックグラウンドジョブ（ProcessAttachedFile）が content_attached を更新している可能性があるため、
+        // マージ前に最新のDB状態を再取得する
+        $this->ledgerRecord->refresh();
         $originalLedgerContentForColumn = $this->ledgerRecord->content[$column->id] ?? [];
         $originalLedgerContentAttachedForColumn = $this->ledgerRecord->content_attached[$column->id] ?? [];
 
         // 画面の最新状態 (TemporaryUploadedFile を含む可能性あり)
         $currentContentForColumn = $this->content[$column->id] ?? [];
-        $currentContentAttachedForColumn = $this->contentAttached[$column->id] ?? [];
 
         // 削除指定されたファイルを処理
         $deletedBaseFilenames = $this->deletedContent[$column->id] ?? [];
@@ -196,10 +198,9 @@ class ModifyColumn extends CreateColumn
             })
             ->all();
 
-        $remainingFilesAttached = collect($currentContentAttachedForColumn)
+        $remainingFilesAttached = collect($originalLedgerContentAttachedForColumn)
             ->filter(function ($value, $hashedBasename) use ($deletedBaseFilenames) {
-                return ! ($value instanceof TemporaryUploadedFile) &&
-                    ! in_array($hashedBasename, $deletedBaseFilenames, true);
+                return ! in_array($hashedBasename, $deletedBaseFilenames, true);
             })
             ->all();
 
