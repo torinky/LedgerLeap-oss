@@ -127,12 +127,12 @@ class AttachedFileDownloadController extends Controller
 
         $mimeType = $this->attachmentBinaryResourceService->resolveAttachmentMimeType($attachedFile, $filePath);
 
-        // original=trueの場合は必ずダウンロード（attachment）
-        if ($isOriginalRequest) {
+        // MIME種別に基づいてContent-Dispositionを決定
+        $inlineMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+
+        if ($isOriginalRequest && ! in_array($mimeType, $inlineMimeTypes, true)) {
             $disposition = 'attachment';
         } else {
-            // 通常のダウンロード: PDFや画像はinline、その他はattachment
-            $inlineMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
             $disposition = in_array($mimeType, $inlineMimeTypes, true) ? 'inline' : 'attachment';
         }
 

@@ -533,6 +533,7 @@ class FileInspector extends BaseLivewireComponent
         $parameters = array_merge([
             'tenant' => $tenantId,
             'attachedFile' => $this->file->id,
+            'original' => true,
         ], $extraQuery);
 
         if ($forceDownload) {

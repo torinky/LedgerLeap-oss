@@ -30,9 +30,11 @@ class LedgerAttachmentBinaryResourceService
 
     public function resolveAttachmentMimeType(AttachedFile $attachedFile, ?string $path = null): string
     {
-        $mimeType = $attachedFile->original_mime_type
+        $mimeType = $path !== null ? (Storage::disk('public')->mimeType($path) ?: null) : null;
+
+        $mimeType = $mimeType
+            ?? $attachedFile->original_mime_type
             ?? $attachedFile->mime
-            ?? ($path !== null ? Storage::disk('public')->mimeType($path) : null)
             ?? 'application/octet-stream';
 
         return is_string($mimeType) && $mimeType !== '' ? $mimeType : 'application/octet-stream';
