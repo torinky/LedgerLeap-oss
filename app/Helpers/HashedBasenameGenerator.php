@@ -9,7 +9,11 @@ class HashedBasenameGenerator
 {
     public function generate(UploadedFile $file): string
     {
-        $mtime = $file->getMTime();
+        try {
+            $mtime = $file->getMTime();
+        } catch (\RuntimeException $e) {
+            $mtime = now()->timestamp;
+        }
 
         return hash('sha256', implode('|', [
                 $file->getClientOriginalName(),
@@ -23,11 +27,17 @@ class HashedBasenameGenerator
         $basename = $this->generate($file);
         $retries = 0;
 
+        try {
+            $mtime = $file->getMTime();
+        } catch (\RuntimeException $e) {
+            $mtime = now()->timestamp;
+        }
+
         while (AttachedFile::where('hashedbasename', $basename)->exists() && $retries < $maxRetries) {
             $basename = hash('sha256', implode('|', [
                     $file->getClientOriginalName(),
                     $file->getSize(),
-                    (string) $file->getMTime(),
+                    (string) $mtime,
                     (string) microtime(true),
                     (string) $retries,
                 ])).'.'.$file->getClientOriginalExtension();
