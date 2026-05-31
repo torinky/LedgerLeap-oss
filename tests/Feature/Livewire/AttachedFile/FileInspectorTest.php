@@ -299,8 +299,8 @@ class FileInspectorTest extends TestCase
         $this->assertTrue($component->get('isImage'));
         $this->assertFalse($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]);
-        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'original' => true]);
+        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'hash' => $file->hashedbasename]);
+        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'hash' => $file->hashedbasename, 'original' => true]);
 
         $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
         $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
@@ -335,8 +335,8 @@ class FileInspectorTest extends TestCase
         $this->assertFalse($component->get('isImage'));
         $this->assertTrue($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]);
-        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'original' => true]);
+        $expectedPreviewUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'hash' => $file->hashedbasename]);
+        $expectedDownloadUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'hash' => $file->hashedbasename, 'original' => true]);
 
         $this->assertEquals($expectedPreviewUrl, $component->get('previewUrl'));
         $this->assertEquals($expectedPreviewUrl, $component->get('originalUrl'));
@@ -534,7 +534,7 @@ class FileInspectorTest extends TestCase
 
         $this->assertTrue($component->get('isPdf'));
         $this->assertTrue($component->get('showPreview'));
-        $this->assertEquals(route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id]), $component->get('previewUrl'));
+        $this->assertEquals(route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'hash' => $file->hashedbasename]), $component->get('previewUrl'));
     }
 
     #[Test]
@@ -567,7 +567,7 @@ class FileInspectorTest extends TestCase
             ->call('openInspector', ['id' => $file->id])
             ->assertSet('open', true);
 
-        $expectedThumbnailUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'thumbnail' => true]);
+        $expectedThumbnailUrl = route('file.download', ['tenant' => $this->tenant->id, 'attachedFile' => $file->id, 'hash' => $file->hashedbasename, 'thumbnail' => true]);
 
         $this->assertEquals($expectedThumbnailUrl, $component->get('thumbnailUrl'));
         $this->assertEquals($expectedThumbnailUrl, $component->get('previewUrl'));
