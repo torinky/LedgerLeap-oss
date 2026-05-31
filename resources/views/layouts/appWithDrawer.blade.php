@@ -81,7 +81,7 @@
             xl: 256px (w-64) / 2xl: 288px (w-72) / 3xl+: 320px (w-80)
             コンテンツ領域 (pl) も同じ幅を確保する。
         --}}
-        <main class="drawer-content h-screen xl:pl-64 2xl:pl-72">
+        <main class="drawer-content min-h-screen xl:pl-64 2xl:pl-72">
             {{ $slot }}
         </main>
         {{--
@@ -110,7 +110,7 @@
     {{-- グローバルモーダル --}}
     @livewire('attached-file.text-preview-modal')
 
-    <div class="xl:pl-64 2xl:pl-72">
+    <div class="xl:pl-64 2xl:pl-72 relative">
         @include('partials.app-footer')
     </div>
 

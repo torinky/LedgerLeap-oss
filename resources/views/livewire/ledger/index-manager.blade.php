@@ -111,7 +111,7 @@
         </x-slot:drawer>
 
         {{-- Always visible search section moved from RecordsTable --}}
-        <div class="sticky top-0 z-10 bg-base-100/80 backdrop-blur-sm px-4 pt-2 pb-2">
+        <div class="sticky top-16 z-10 bg-base-100/80 backdrop-blur-sm px-4 pt-2 pb-2">
             <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel"
                              :useSemanticSearch="$useSemanticSearch"
                              :defaultSortColumns="$defaultSortColumns" :search="$search" :perPage="$perPage"
@@ -125,7 +125,7 @@
             {{-- ★★★ Info & Results Section (常に表示、Loading 時に透過) ★★★ --}}
             <div class="px-4" wire:loading.class="opacity-50" wire:target="{{ $allLoadingTargets }}">
                 <div
-                        class="info-block sticky top-24 z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6 items-center">
+                        class="info-block sticky top-[11rem] z-10 space-y-2 py-2 bg-base-200/50 backdrop-blur-sm rounded-box px-4 shadow-sm border border-base-300/30 mb-6 items-center">
 
                     @php
                         $hasSearchKeywords = ! empty($this->highlights);
