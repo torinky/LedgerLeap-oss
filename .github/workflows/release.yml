@@ -56,3 +56,20 @@ jobs:
             ${{ steps.meta.outputs.flag }}
         env:
           GH_TOKEN: ${{ github.token }}
+
+      - name: Update .version file
+        run: |
+          TAG="${{ github.ref_name }}"
+          # Determine the base branch from the tag
+          BRANCH=$(git branch -r --contains "refs/tags/${TAG}" | grep -v 'HEAD' | head -1 | sed 's/.*origin\///')
+          if [ -z "$BRANCH" ]; then
+            echo "Could not determine base branch for tag ${TAG}, skipping .version update"
+            exit 0
+          fi
+          echo "Updating .version to ${TAG} on branch ${BRANCH}"
+          git checkout "$BRANCH"
+          git pull origin "$BRANCH" --ff-only
+          echo "${TAG}" > .version
+          git add .version
+          git commit -m "chore: bump version to ${TAG}"
+          git push origin "$BRANCH"

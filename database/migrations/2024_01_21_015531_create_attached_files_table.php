@@ -19,7 +19,7 @@ return new class extends Migration
             $table->unsignedBigInteger('ledger_define_id')->index();
             $table->unsignedInteger('column_id')->index();
             $table->string('filename', 500)->index();
-            $table->string('hashedbasename', 500)->index();
+            $table->string('hashedbasename', 500)->unique();
             $table->string('status', 50)->index();
             $table->boolean('contain_content')->index();
             $table->boolean('optimized')->index();

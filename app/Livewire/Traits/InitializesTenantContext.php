@@ -26,7 +26,6 @@ trait InitializesTenantContext
      * 主に Blade テンプレートや URL 生成のコンテキストで使用する。
      *
      * @param  string|int|null  $fallbackTenantId  上位で判明している場合の最終フォールバック値
-     * @return string|int|null
      */
     public function resolveTenantId(string|int|null $fallbackTenantId = null): string|int|null
     {

@@ -262,9 +262,13 @@ class Phase26DemoSeeder extends Seeder
     private function createAttachedFile(Ledger $ledger, array $fileData): void
     {
         $mime = $this->getMimeType($fileData['type']);
-        $hashedName = hash('sha256', $fileData['name'].microtime());
         $extension = pathinfo($fileData['name'], PATHINFO_EXTENSION);
-        $hashedBasename = $hashedName.'.'.$extension;
+        $generator = app(\App\Helpers\HashedBasenameGenerator::class);
+        $hashedBasename = $generator->generateForSeeder(
+            $fileData['name'],
+            $extension,
+            strlen($fileData['content'])
+        );
 
         // AttachedFilePathHelperを使って正しいパスを生成
         $path = AttachedFilePathHelper::getAttachmentPath(

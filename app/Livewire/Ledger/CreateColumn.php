@@ -4,6 +4,7 @@ namespace App\Livewire\Ledger;
 
 use App\Enums\AttachedFileStatus;
 use App\Helpers\AttachedFilePathHelper;
+use App\Helpers\HashedBasenameGenerator;
 use App\Jobs\Ledger\ProcessAttachedFile;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HandlesFormGroups;
@@ -28,7 +29,6 @@ use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
-use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Livewire\Attributes\On;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -319,7 +319,8 @@ class CreateColumn extends BaseLivewireComponent
      */
     public function storeFile(TemporaryUploadedFile $file, $columnId = 0): object
     {
-        $hashedBasename = Str::random(40).'.'.$file->getClientOriginalExtension();
+        $generator = app(HashedBasenameGenerator::class);
+        $hashedBasename = $generator->generateWithRetry($file);
         $fullPath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefineId, $hashedBasename);
 
         Storage::disk('public')->put($fullPath, file_get_contents($file->getRealPath()));

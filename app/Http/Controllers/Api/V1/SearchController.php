@@ -6,6 +6,8 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\V1\SearchRequest;
 use App\Http\Resources\Api\V1\LedgerResource;
 use App\Services\LedgerService;
+use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use OpenApi\Annotations as OA;
 
 /**
@@ -19,9 +21,9 @@ class SearchController extends Controller
     /**
      * Search ledgers for API consumers.
      *
-     * @param \App\Http\Requests\Api\V1\SearchRequest $request Validated search parameters
-     * @param \App\Services\LedgerService $ledgerService Service that performs ledger search logic
-     * @return \Illuminate\Http\Resources\Json\AnonymousResourceCollection|\Illuminate\Http\JsonResponse
+     * @param  SearchRequest  $request  Validated search parameters
+     * @param  LedgerService  $ledgerService  Service that performs ledger search logic
+     * @return AnonymousResourceCollection|JsonResponse
      *
      * @OA\Get(
      *     path="/api/v1/search",

@@ -20,7 +20,7 @@ use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
 use Tests\Traits\RefreshDatabaseWithTenant;
 
- // ColumnDefine をインポート
+// ColumnDefine をインポート
 
 class CreateColumnTest extends TestCase
 {

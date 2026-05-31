@@ -105,10 +105,11 @@ class LedgerAttachmentResourceTest extends TestCase
         $this->assertStringContainsString('MCP resource URI', $payload['access_guide']['instructions'][0]);
         $this->assertStringContainsString('resources/read', $payload['access_guide']['instructions'][1]);
         $this->assertStringContainsString('resources/read(uri="ledgerleap://ledger/{tenant}/{ledger}/attachments/{attachment}")', $payload['access_guide']['instructions'][1]);
-        $this->assertStringContainsString('routes.download', $payload['access_guide']['instructions'][2]);
-        $this->assertStringContainsString('認証済みセッション前提', $payload['access_guide']['instructions'][3]);
-        $this->assertStringContainsString('ログイン HTML', $payload['access_guide']['instructions'][3]);
-        $this->assertSame(4, count($payload['access_guide']['instructions']));
+        $this->assertStringContainsString('MCP トークン', $payload['access_guide']['instructions'][2]);
+        $this->assertStringContainsString('routes.download', $payload['access_guide']['instructions'][5]);
+        $this->assertStringContainsString('認証済みセッション前提', $payload['access_guide']['instructions'][6]);
+        $this->assertStringContainsString('ログイン HTML', $payload['access_guide']['instructions'][6]);
+        $this->assertSame(7, count($payload['access_guide']['instructions']));
         $this->assertSame($attachment->id, $payload['attachment_id']);
         $this->assertSame('invoice.json', $payload['filename']);
         $this->assertSame('primary', $payload['role']);

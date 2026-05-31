@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Tenant;
 use App\Models\User;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Cache;
@@ -21,7 +22,7 @@ class TenantAccessService
      * 結果は24時間キャッシュされます。
      *
      * @param  User  $user  対象ユーザー
-     * @return Collection<int, \App\Models\Tenant>
+     * @return Collection<int, Tenant>
      */
     public function getAccessibleTenants(User $user): Collection
     {
@@ -65,7 +66,7 @@ class TenantAccessService
      * キャッシュキーを生成します。
      *
      * @param  User  $user  対象ユーザー
-     * @return string  ユーザー単位のキャッシュキー
+     * @return string ユーザー単位のキャッシュキー
      */
     protected function getCacheKey(User $user): string
     {

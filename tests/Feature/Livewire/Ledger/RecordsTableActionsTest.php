@@ -272,7 +272,7 @@ class RecordsTableActionsTest extends TestCase
     }
 
     #[Test]
-    public function testRecordsTableRowRendersExpandableContentFromLongTextCell(): void
+    public function test_records_table_row_renders_expandable_content_from_long_text_cell(): void
     {
         $ledgerDefine = LedgerDefine::factory()->create([
             'folder_id' => $this->folder->id,

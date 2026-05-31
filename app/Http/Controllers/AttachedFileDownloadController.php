@@ -26,6 +26,15 @@ class AttachedFileDownloadController extends Controller
             'is_original' => $request->boolean('original'),
         ]);
 
+        if ($request->filled('hash') && $request->query('hash') !== $attachedFile->hashedbasename) {
+            Log::warning('[DownloadController@download] hashedbasename mismatch.', [
+                'attached_file_id' => $attachedFile->id,
+                'url_hash' => $request->query('hash'),
+                'db_hash' => $attachedFile->hashedbasename,
+            ]);
+            abort(404, 'File Not Found');
+        }
+
         // 1. 認可チェック
         try {
             Gate::authorize('view', $attachedFile->ledger);
@@ -127,12 +136,12 @@ class AttachedFileDownloadController extends Controller
 
         $mimeType = $this->attachmentBinaryResourceService->resolveAttachmentMimeType($attachedFile, $filePath);
 
-        // original=trueの場合は必ずダウンロード（attachment）
-        if ($isOriginalRequest) {
+        // MIME種別に基づいてContent-Dispositionを決定
+        $inlineMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
+
+        if ($isOriginalRequest && ! in_array($mimeType, $inlineMimeTypes, true)) {
             $disposition = 'attachment';
         } else {
-            // 通常のダウンロード: PDFや画像はinline、その他はattachment
-            $inlineMimeTypes = ['application/pdf', 'image/jpeg', 'image/png', 'image/gif'];
             $disposition = in_array($mimeType, $inlineMimeTypes, true) ? 'inline' : 'attachment';
         }
 

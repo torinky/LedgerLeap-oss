@@ -3,6 +3,10 @@
 本プロジェクトは [CalVer](https://calver.org/) に準拠します。
 このフォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に従っています。
 
+- **License:** [MIT](LICENSE)
+- **Issues:** https://github.com/torinky/LedgerLeap-oss/issues
+- **Releases:** https://github.com/torinky/LedgerLeap-oss/releases
+
 ## [Unreleased]
 
 ### Added

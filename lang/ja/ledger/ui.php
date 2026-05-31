@@ -417,10 +417,11 @@ return [
     'export_csv_download' => 'CSVをダウンロード',
 
     'footer' => [
-        'contact'       => '連絡先',
-        'support'       => 'サポート',
+        'contact' => '連絡先',
+        'support' => 'サポート',
         'support_email' => 'メールで問い合わせ',
-        'forum'         => 'フォーラム',
+        'forum' => 'フォーラム',
         'all_rights_reserved' => 'All rights reserved.',
+        'version' => 'バージョン',
     ],
 ];

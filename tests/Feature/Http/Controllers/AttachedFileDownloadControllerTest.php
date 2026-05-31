@@ -3,6 +3,7 @@
 namespace Tests\Feature\Http\Controllers;
 
 use App\Enums\AttachedFileStatus;
+use App\Helpers\AttachedFilePathHelper;
 use App\Jobs\Ledger\GenerateThumbnail;
 use App\Models\AttachedFile;
 use App\Models\Folder;
@@ -103,5 +104,109 @@ class AttachedFileDownloadControllerTest extends TestCase
         $this->assertSame(AttachedFileStatus::OPTIMIZING->value, $file->fresh()->status->value);
 
         Queue::assertPushed(GenerateThumbnail::class, 1);
+    }
+
+    #[Test]
+    public function download_with_correct_hash_succeeds(): void
+    {
+        Storage::fake('public');
+        Gate::before(fn () => true);
+
+        $filePath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, 'correct_hash.pdf');
+        Storage::disk('public')->put($filePath, 'test content');
+
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->user->id,
+        ]);
+
+        $file = AttachedFile::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'column_id' => 0,
+            'filename' => 'correct.pdf',
+            'hashedbasename' => 'correct_hash.pdf',
+            'path' => $filePath,
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+        ]);
+
+        $response = $this->get(tenant_route_url('file.download', [
+            'attachedFile' => $file->id,
+            'hash' => 'correct_hash.pdf',
+        ]));
+
+        $response->assertOk();
+    }
+
+    #[Test]
+    public function download_with_incorrect_hash_returns_404(): void
+    {
+        Storage::fake('public');
+        Gate::before(fn () => true);
+
+        $filePath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, 'real_hash.pdf');
+        Storage::disk('public')->put($filePath, 'test content');
+
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->user->id,
+        ]);
+
+        $file = AttachedFile::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'column_id' => 0,
+            'filename' => 'real.pdf',
+            'hashedbasename' => 'real_hash.pdf',
+            'path' => $filePath,
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+        ]);
+
+        $response = $this->get(tenant_route_url('file.download', [
+            'attachedFile' => $file->id,
+            'hash' => 'wrong_hash.pdf',
+        ]));
+
+        $response->assertNotFound();
+    }
+
+    #[Test]
+    public function download_without_hash_still_works(): void
+    {
+        Storage::fake('public');
+        Gate::before(fn () => true);
+
+        $filePath = AttachedFilePathHelper::getAttachmentPath($this->ledgerDefine->id, 'no_hash_check.pdf');
+        Storage::disk('public')->put($filePath, 'test content');
+
+        $ledger = Ledger::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'creator_id' => $this->user->id,
+        ]);
+
+        $file = AttachedFile::factory()->create([
+            'tenant_id' => $this->tenant->id,
+            'ledger_id' => $ledger->id,
+            'ledger_define_id' => $this->ledgerDefine->id,
+            'column_id' => 0,
+            'filename' => 'nohash.pdf',
+            'hashedbasename' => 'no_hash_check.pdf',
+            'path' => $filePath,
+            'mime' => 'application/pdf',
+            'status' => AttachedFileStatus::COMPLETED->value,
+        ]);
+
+        $response = $this->get(tenant_route_url('file.download', [
+            'attachedFile' => $file->id,
+        ]));
+
+        $response->assertOk();
     }
 }

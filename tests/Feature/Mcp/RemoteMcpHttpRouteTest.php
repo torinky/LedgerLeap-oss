@@ -217,8 +217,6 @@ class RemoteMcpHttpRouteTest extends TestCase
         $response = $this->withToken('invalid-token-here')
             ->postJson($this->mcpUrl(), $payload);
 
-        dump('Invalid token response', ['status' => $response->status(), 'body' => $response->getContent()]);
-
         $response->assertUnauthorized();
     }
 

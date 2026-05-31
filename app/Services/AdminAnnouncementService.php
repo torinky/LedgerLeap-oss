@@ -19,8 +19,6 @@ class AdminAnnouncementService
 
     /**
      * Returns the highest-priority currently active announcement, or null.
-     *
-     * @return array|null
      */
     public function currentAnnouncement(): ?array
     {
@@ -33,8 +31,6 @@ class AdminAnnouncementService
      * Sorted by priority descending, then start date ascending, then update date descending.
      * Falls back to config keys `ledgerleap.announcement_banner.feed` and
      * `ledgerleap.announcement_banner.current` when no database records exist.
-     *
-     * @return array
      */
     public function notificationCenterAnnouncements(): array
     {
