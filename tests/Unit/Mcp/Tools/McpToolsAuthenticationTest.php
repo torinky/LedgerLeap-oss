@@ -259,8 +259,8 @@ class McpToolsAuthenticationTest extends TestCase
 
         // レスポンスにfolder1の台帳定義のみが含まれることを確認
         $responseData = json_decode($response->content(), true);
-        $this->assertCount(1, $responseData);
-        $this->assertEquals($ledgerDefine1->id, $responseData[0]['id']);
+        $this->assertCount(1, $responseData['ledger_defines']);
+        $this->assertEquals($ledgerDefine1->id, $responseData['ledger_defines'][0]['id']);
     }
 
     #[Test]
