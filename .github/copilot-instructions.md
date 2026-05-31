@@ -15,7 +15,7 @@
 - **Translation Keys**: ALWAYS use translation keys (`__('ledger.xxx')`) for UI text. NEVER hardcode natural language strings. Manage via `lang/ja/ledger/` and sync with `artisan translations:compare --force`.
 - **OSS mirror**: `torinky/LedgerLeap` is the private repo (default). `torinky/LedgerLeap-oss` is the public mirror — only operate on it when explicitly asked. Never apply destructive changes to the private repo when the task is scoped to OSS only.
 - **Remote MCP tenant security**: `mcp:*` token ability alone is insufficient. Web MCP routes must also enforce current-tenant access (for example `EnsureAuthenticatedUserHasCurrentTenantAccess`), and path-based tenant MCP URLs should stay aligned with the app’s normal tenant URL style.
-- **Tests run in Sail**: Run tests via `./vendor/bin/sail test` / `./vendor/bin/sail pest`. Host-side `php artisan test` / `./vendor/bin/pest` is unsupported.
+- **Test DB isolation**: `.env.testing` is required. Never rely on phpunit.xml `<server>` alone — Dotenv resolves `getenv()` > `$_ENV` > `$_SERVER`, so `.env` values always override `<server>` entries. Use `.env.testing` → `<env force="true">` → `--database=mysql_testing` layered defense. Reference: `docs/work/2026-05-31_test-database-isolation.md`
 - **FTS tests**: Use `DatabaseMigrationsOnce`, not `RefreshDatabase`.
 - **Git after Sail**: Always use `bash -c "cd /path && git ..."`.
 - **`#[Lazy]` + tenant**: Use the shared Livewire tenant resolver and fall back to `$model->tenant_id`; never rely only on `tenant()?->id`.

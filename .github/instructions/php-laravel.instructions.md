@@ -84,6 +84,10 @@ config value depends on env / shell / file?
 ├─ Multi-tier fallback needed?
 │   → Priority: env override > committed file > shell command > hardcoded default.
 │   → Each tier tested independently in the helper's unit test.
+├─ Test env override via phpunit.xml?
+│   → <server> is NOT sufficient — Dotenv resolves getenv() > $_ENV > $_SERVER.
+│   → Always use .env.testing as the primary env source in tests.
+│   → Reference: docs/work/2026-05-31_test-database-isolation.md
 └─ Production env has no .git?
     → Add a CI step (e.g. release.yml) to commit a version/sentinel file at tag time.
 ```

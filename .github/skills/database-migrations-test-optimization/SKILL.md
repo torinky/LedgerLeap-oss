@@ -36,6 +36,8 @@ Need tenant context?
 
 **Environment recovery first**: if `composer test:coverage` fails because tables already exist or `migrations` is missing, fix the test DB with `bin/reset-test-db.sh` and the recorded recovery flow before changing traits.
 
+**`.env.testing` is mandatory**: phpunit.xml `<server>` cannot override `.env` values due to Dotenv's adapter chain (`getenv()` > `$_ENV` > `$_SERVER`). Always ensure `.env.testing` has `DB_CONNECTION=mysql_testing` and `DB_DATABASE=ledgerleap_test`. See `docs/work/2026-05-31_test-database-isolation.md`.
+
 ## Performance (measured)
 
 | Before | After |

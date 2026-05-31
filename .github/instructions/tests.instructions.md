@@ -13,6 +13,15 @@ applyTo: "tests/**"
 - Reason: testing DB host resolution (`mysql_testing` → `mysql`) is Docker-network based; host execution causes false-negative infrastructure failures before the actual test logic runs.
 - Laravel parallel testing already derives worker DB names from the base database using `ParallelTesting::token()`. Do **not** manually rewrite `mysql_testing` to `..._test_{token}` in shared bootstrap code; keep CI grants aligned with the actual worker DBs instead.
 
+## Test Environment: `.env.testing` (REQUIRED)
+
+- **`.env.testing` is mandatory for all test execution.** Laravel loads `.env.testing` instead of `.env` when `APP_ENV=testing`.
+- **phpunit.xml `<server>` CANNOT reliably override `.env` values.** Dotenv resolves `getenv()` > `$_ENV` > `$_SERVER`. `<server>` only sets `$_SERVER` (lowest priority), so `.env`'s `putenv()` values always win.
+- **`<env force="true">` is an improvement** (sets `$_ENV` at medium priority) but still insufficient alone — Dotenv's immutable repository may allow `.env` writes to `putenv()`.
+- **Never rely on phpunit.xml alone for DB isolation.** The `.env.testing` → `<env>` → `--database` explicit flag strategy is the required layered defense.
+- When adding new env-dependent features, update `.env.testing` with the test-appropriate value.
+- Reference: `docs/work/2026-05-31_test-database-isolation.md`
+
 ## Database Trait Selection
 
 ```

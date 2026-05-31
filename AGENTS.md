@@ -83,3 +83,4 @@ When any work item finishes — issue, sprint, feature, investigation, documenta
 - Livewire public state must stay plain arrays.
 - `#[Lazy]` tenant-aware components and Livewire URL helpers should follow `.github/skills/livewire-tenant-context/SKILL.md` for the shared tenant resolver and `tenant_id` fallback pattern.
 - All UI composition and styling MUST strictly adhere to `/.github/instructions/design.instructions.md`. Prioritize Mary UI components but style them using daisyUI/Tailwind semantics to match the project's vibe.
+- **Test DB isolation**: `.env.testing` is mandatory for tests. phpunit.xml `<server>` / `<env>` cannot fully override `.env` because Dotenv resolves `getenv()` > `$_ENV` > `$_SERVER`. Always use the `.env.testing` → `<env force="true">` → `--database=mysql_testing` layered defense. Reference: `docs/work/2026-05-31_test-database-isolation.md`.
