@@ -168,7 +168,9 @@ trait RefreshDatabaseWithTenant
         $workerDatabase = $this->currentWorkerDatabaseName() ?: $this->currentTestingDatabaseName();
 
         DB::purge('mysql_testing');
+        config()->set('database.default', 'mysql_testing');
         config()->set('database.connections.mysql_testing.database', $workerDatabase);
+        config()->set('tenancy.database.central_connection', 'mysql_testing');
     }
 
     /**
@@ -308,8 +310,9 @@ trait RefreshDatabaseWithTenant
             return;
         }
 
-        // ローカル直列実行: 従来通り migrate:fresh
+        // ローカル直列実行: 従来通り migrate:fresh（--database で必ずテストDBを対象にする）
         $this->artisan('migrate:fresh', [
+            '--database' => 'mysql_testing',
             '--drop-views' => $this->shouldDropViews(),
             '--drop-types' => $this->shouldDropTypes(),
             '--seed' => $this->shouldSeed(),
