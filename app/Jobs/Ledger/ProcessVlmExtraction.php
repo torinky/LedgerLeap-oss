@@ -13,6 +13,18 @@ use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * VLM（PaddleOCR-VL）による画像/PDFのテキスト抽出を実行するジョブ。
+ *
+ * ProcessAttachedFile から並列ディスパッチされる。
+ * - Markdown 形式のテキストを抽出し、vlm_markdown に保存する
+ * - 失敗時は vlm_failed_at を記録し、リトライポリシーに従う
+ * - processing_finalized_at 設定済みの場合は status を上書きしない
+ *
+ * @see \App\Jobs\Ledger\ProcessAttachedFile
+ * @see \App\Jobs\Ledger\OcrAndOptimizeFile
+ * @see \App\Console\Commands\Ledger\FinalizeAttachedFileProcessing
+ */
 class ProcessVlmExtraction implements ShouldQueue
 {
     use Dispatchable, InteractsWithQueue, Queueable, SerializesModels;
