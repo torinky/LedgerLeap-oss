@@ -22,6 +22,18 @@ use Vaites\ApacheTika\Client;
 
 // ★ 追加
 
+/**
+ * Tika によるテキスト抽出と、VLM/OCR ジョブのディスパッチを担当するジョブ。
+ *
+ * ファイルアップロード直後に実行される最初のジョブ。
+ * - Tika で汎用テキスト抽出を行う
+ * - ファイルタイプに応じて VLM（画像/PDF）や OCR（画像/PDF）を並列ディスパッチする
+ * - OCR 完了後は自身を再実行し、Tika 再抽出を行う
+ *
+ * @see \App\Jobs\Ledger\ProcessVlmExtraction
+ * @see \App\Jobs\Ledger\OcrAndOptimizeFile
+ * @see \App\Console\Commands\Ledger\FinalizeAttachedFileProcessing
+ */
 class ProcessAttachedFile implements ShouldQueue
 {
     use Batchable, Dispatchable, InteractsWithQueue, Queueable, SerializesModels;

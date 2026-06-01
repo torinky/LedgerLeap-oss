@@ -100,5 +100,5 @@ Three caches are involved in the access control system:
 
 - [Users and Organizations](users-and-organizations.md) — User account and organization management
 - [Folders and Access](../features/folders-and-access.md) — End-user view of folder permissions
-- [Permission and Folder Access Model](../architecture/permission-system.md) — Technical architecture details
+- [Permission and Folder Access Model](../architecture/permission-and-folder-access-model.md) — Technical architecture details
 - [Getting Started Overview](../getting-started/overview.md) — End-user concepts

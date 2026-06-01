@@ -29,6 +29,12 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Filament resource for managing roles and their permissions.
+ *
+ * Provides CRUD for roles, system permission assignment, folder permission
+ * management, organization scoping, user assignment, and notification settings.
+ */
 class RoleResource extends Resource
 {
     use HasPermissionMetadata;

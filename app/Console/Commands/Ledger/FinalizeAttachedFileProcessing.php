@@ -10,6 +10,18 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 
+/**
+ * VLM/OCR/Tika の処理結果から最適なテキストを選択し、AttachedFile を最終化するコマンド。
+ *
+ * スケジューラーで5分ごとに実行される。
+ * - processing_finalized_at が未設定のファイルを検索
+ * - VLM > OCR > Tika の優先順位で最適テキストを選択
+ * - content_attached を更新し、finalized_source / processing_finalized_at を設定
+ * - 最終化後は後続ジョブが status を上書きしないようガードする
+ *
+ * @see \App\Jobs\Ledger\ProcessVlmExtraction
+ * @see \App\Jobs\Ledger\ProcessAttachedFile
+ */
 class FinalizeAttachedFileProcessing extends Command
 {
     /**

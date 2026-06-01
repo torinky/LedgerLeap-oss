@@ -9,6 +9,12 @@ use App\Models\User;
 use App\Services\UserService;
 use Illuminate\Support\Facades\Cache;
 
+/**
+ * ユーザーがアクセス可能なフォルダを権限レベルごとに取得するリポジトリ。
+ *
+ * フォルダ権限 (RoleFolderPermission) の判定をキャッシュ付きで提供し、
+ * 継承関係を考慮したアクセス可能フォルダ ID の一覧を返す。
+ */
 class WritableFolderRepository
 {
     public function __construct() {}

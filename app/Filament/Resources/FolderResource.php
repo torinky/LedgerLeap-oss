@@ -6,6 +6,8 @@ use App\Filament\Resources\FolderResource\Pages;
 use App\Filament\Resources\FolderResource\RelationManagers;
 use App\Models\Folder;
 use App\Models\Tenant;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Route;
 use App\Services\ConfidentialityLevelService;
 use CodeWithDennis\FilamentSelectTree\SelectTree;
 use Filament\Actions\Action;
@@ -28,14 +30,14 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
-use Illuminate\Support\Facades\Route;
-use Kalnoy\Nestedset\QueryBuilder;
-use Stancl\Tenancy\Facades\Tenancy;
 
-// 追加
-
+/**
+ * Filament resource for managing folder hierarchy and permissions.
+ *
+ * Provides CRUD for the tenant-scoped folder tree, folder-level permission
+ * assignment, confidentiality level configuration, and parent-child
+ * folder relationship management.
+ */
 class FolderResource extends Resource
 {
     public static bool $shouldRegisterNavigation = false;

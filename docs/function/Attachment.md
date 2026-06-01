@@ -59,7 +59,7 @@ graph TD
 **詳細:**
 - テキスト抽出の技術詳細: `docs/architecture/vlm-ocr-technology-selection.md`
 - 非同期処理のアーキテクチャ: `docs/architecture/QueueProcessing.md`
-- ファイル処理フロー図: `docs/architecture/file-processing-flow.md`
+- ファイル処理パイプライン: `docs/architecture/file-processing-pipeline.md`
 
 ## 3. 機能詳細
 
@@ -277,7 +277,7 @@ if ($file->ocr_processed_at) {
 ### アーキテクチャ
 -   **`docs/architecture/vlm-ocr-technology-selection.md`** - VLM/OCR技術選定理由とエンジン統合アーキテクチャ
 -   **`docs/architecture/QueueProcessing.md`** - 非同期ジョブのアーキテクチャとチェーン戦略
--   **`docs/architecture/file-processing-flow.md`** - ファイル処理フローの詳細（予定）
+-   **`docs/architecture/file-processing-pipeline.md`** - ファイル処理パイプラインのアーキテクチャ
 
 ### データモデル
 -   **`docs/models/AttachedFile.md`** - AttachedFileモデルの詳細（カラム定義、メソッド、リレーション）

@@ -26,8 +26,14 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Hash;
+    use Illuminate\Support\Facades\Hash;
 
+/**
+ * Filament resource for managing user accounts.
+ *
+ * Provides CRUD for users, role assignment, organization membership,
+ * direct permission grants, and token management for API/MCP access.
+ */
 class UserResource extends Resource
 {
     public static bool $shouldRegisterNavigation = false;
