@@ -72,6 +72,7 @@
         .flex-row { display: flex; gap: 32px; width: 100%; align-items: stretch; }
         .flex-col { display: flex; flex-direction: column; gap: 16px; flex: 1; }
         .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; width: 100%; }
+        .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; }
 
         .badge { display: inline-block; padding: 6px 16px; border-radius: 999px; font-size: 1.25rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 20px; }
         .badge-vlm  { background: #fee2e2; color: #991b1b; }
@@ -150,12 +151,80 @@
         .deck-nav a:hover { background: rgba(51, 65, 85, 0.96); transform: translateY(-1px); }
         .deck-nav a.primary { background: linear-gradient(135deg, rgba(59,130,246,0.65), rgba(6,182,212,0.65)); }
         .deck-nav a.github { display: inline-flex; align-items: center; gap: 5px; }
+
+        /* ===== Responsive: Tablet ===== */
+        @media (max-width: 1023px) {
+            body { overflow: auto; }
+            .slide { width: 100%; height: auto; min-height: 100vh; padding: 80px 24px 100px; box-sizing: border-box; justify-content: flex-start; }
+            .container { width: 100%; height: auto; max-width: 100%; padding-top: 20px; display: flex; flex-direction: column; }
+            .container > * { max-width: 100%; }
+            .slide-header { margin-bottom: 20px; padding-bottom: 12px; }
+            .slide-header img { width: 36px; height: 36px; }
+            .slide-header h2 { font-size: 1.6rem; }
+            h1 { font-size: 2.4rem; }
+            h3 { font-size: 1.15rem; }
+            h4 { font-size: 1rem; }
+            p, li { font-size: 0.95rem; }
+            .flex-row { flex-direction: column; gap: 20px; }
+            .flex-col { gap: 12px; }
+            .grid-3 { grid-template-columns: 1fr; gap: 14px; }
+            .grid-4 { grid-template-columns: 1fr; gap: 12px; }
+            .hero-subtitle { font-size: 1.2rem; margin-bottom: 28px; }
+            .card { padding: 18px; }
+            .card-problem, .card-solution { padding: 16px; height: auto; }
+            .badge { font-size: 0.9rem; padding: 4px 12px; }
+            .nav-card { max-width: 100%; }
+            .nav-card .card { padding: 14px; }
+            .nav-card .card h3 { font-size: 0.95rem; }
+            .nav-card .card p { font-size: 0.8rem; }
+            .nav-card .card div:first-child { font-size: 1.5rem; }
+            .placeholder { min-height: 160px; }
+            .footnote { position: static; margin-top: 20px; margin-bottom: 36px; width: 100%; flex-direction: column; align-items: flex-start; gap: 8px; font-size: 0.72rem; left: auto; transform: none; }
+            .footnote-text { flex: auto; width: 100%; }
+            .slide-tag { align-self: flex-end; }
+            .point-box { padding: 10px 14px; }
+            .point-box p { font-size: 0.85rem; }
+            .controls { bottom: 20px; right: 10px; gap: 8px; }
+            .btn-nav { width: 44px; height: 44px; font-size: 1.1rem; }
+            .slide-counter { bottom: 24px; font-size: 0.8rem; left: 10px; transform: none; }
+            .deck-nav { top: auto; bottom: 0; right: 50%; transform: translateX(50%); gap: 6px; padding: 6px; backdrop-filter: blur(12px); }
+            .deck-nav a { font-size: 0.78rem; padding: 8px 12px; }
+            .deck-nav a.github { gap: 4px; }
+            .deck-nav a.github svg { width: 14px; height: 14px; }
+            .phase-row { padding: 10px 14px; gap: 10px; }
+            .phase-title { font-size: 0.9rem; }
+            .phase-desc { font-size: 0.8rem; }
+        }
+
+        /* ===== Responsive: Mobile ===== */
+        @media (max-width: 639px) {
+            .slide { padding: 70px 14px 130px; }
+            .slide-header h2 { font-size: 1.3rem; }
+            h1 { font-size: 1.6rem !important; }
+            h3 { font-size: 1rem; }
+            p, li { font-size: 0.85rem; }
+            .hero-subtitle { font-size: 1rem; margin-bottom: 20px; }
+            .card { padding: 14px; border-radius: 12px; }
+            .card-problem, .card-solution { padding: 12px; border-left-width: 5px; }
+            .badge { font-size: 0.75rem; margin-bottom: 12px; }
+            .nav-card .card div:first-child { font-size: 1.3rem; }
+            .nav-card .card h3 { font-size: 0.85rem; }
+            .nav-card .card p { font-size: 0.72rem; }
+            .controls { bottom: 44px; right: 10px; }
+            .btn-nav { width: 38px; height: 38px; font-size: 1rem; }
+            .slide-counter { bottom: 48px; left: 10px; transform: none; font-size: 0.75rem; }
+            .deck-nav { bottom: 0; padding: 5px; gap: 4px; }
+            .footnote { margin-top: 16px; margin-bottom: 48px; font-size: 0.7rem; gap: 6px; width: 100%; text-align: left; }
+            .container > [style*="flex: 1"] { flex: 1 1 auto !important; min-height: auto !important; }
+            .container > img[src*="icon.svg"] { width: 60px !important; height: 60px !important; margin-bottom: 14px !important; }
+            .deck-nav a { font-size: 0.72rem; padding: 6px 10px; }
+        }
     </style>
 </head>
 <body>
 
     <nav class="deck-nav" aria-label="presentation navigation">
-        <a class="primary" href="../../../documentation.html">ドキュメント</a>
+        <a class="primary" href="../../documentation.html">ドキュメント</a>
 <!--        <a href="./poster.html">ポスター</a>-->
         <a class="github" href="https://github.com/torinky/LedgerLeap-oss" target="_blank" rel="noopener">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/></svg>
@@ -422,7 +491,7 @@
                 <img src="images/icon.svg" alt="Icon">
                 <h2>主な搭載機能</h2>
             </div>
-            <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px; width: 100%;">
+            <div class="grid-3" style="gap: 14px;">
                 <div class="card" style="padding: 16px;">
                     <h3 style="font-size: 1.15rem; margin-bottom: 9px;">🔍 検索・発見</h3>
                     <ul style="font-size: 0.95rem; margin: 0; padding: 0;">
@@ -522,7 +591,7 @@
                 <div style="flex: 1; width: 100%; display: flex; align-items: center; justify-content: center; min-height: 0;">
                     <img src="images/architecture_diagram_v6.png" alt="System Architecture Diagram" style="max-width: 100%; max-height: 100%; object-fit: contain;">
                 </div>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; width: 100%; flex-shrink: 0; padding-bottom: 20px;">
+                <div class="grid-4" style="flex-shrink: 0; padding-bottom: 20px;">
                     <div class="card" style="padding: 16px; border-left: 1px solid rgba(0,0,0,0.05); border-top: 5px solid var(--secondary);">
                         <h4 style="margin-bottom: 8px; font-size: 1.05rem;">🏢 アプリケーション層</h4>
                         <p style="font-size: 0.85rem; margin: 0; line-height: 1.5;">堅牢な5段階のアクセス権限と承認ワークフローを提供します。非同期処理ワーカーにより、重い処理もUIをブロックせず快適に実行できます。</p>

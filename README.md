@@ -15,6 +15,7 @@
 <p align="center">
   <a href="README.md"><strong>日本語</strong></a> |
   <a href="README.en.md">English</a> |
+  <a href="https://torinky.github.io/LedgerLeap-oss/"><strong>🌐 Website </strong></a> |
   <a href="#こんな悩みに向いています">課題</a> |
   <a href="#ペルソナ別にわかる-ledgerleap-の良さ">ペルソナ</a> |
   <a href="#画面イメージ">画面</a> |
@@ -104,6 +105,7 @@ LedgerLeap は、組織内に散在する台帳、業務記録、申請、添付
 
 | 目的 | ドキュメント |
 | --- | --- |
+| プロジェクト紹介ページ (GitHub Pages) | [LedgerLeap AI-Native Platform](https://torinky.github.io/LedgerLeap-oss/) |
 | 開発者向けドキュメントの入口 | [docs/README.md](docs/README.md) |
 | REST API / remote MCP の公開契約 | [docs/api/README.md](docs/api/README.md) |
 | 開発環境のセットアップ詳細 | [docs/development/environment-setup.md](docs/development/environment-setup.md) |
