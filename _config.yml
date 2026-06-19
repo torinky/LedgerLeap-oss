@@ -1,0 +1,14 @@
+# GitHub Pages — Jekyll configuration
+# Renders .md files as HTML without requiring YAML front matter.
+# jekyll-optional-front-matter and jekyll-readme-index are enabled by default.
+
+# Ensure .md files inside docs/ are processed
+include:
+  - "docs/*.md"
+
+# Explicitly set README.md output to avoid conflict with index.html
+defaults:
+  - scope:
+      path: "README.md"
+    values:
+      permalink: /README.html
