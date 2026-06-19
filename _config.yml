@@ -1,0 +1,6 @@
+# Disable jekyll-readme-index plugin.
+# When index.html exists in the same directory as README.md,
+# the plugin skips processing (no README.html output).
+# Disabling it allows normal Jekyll processing: README.md → README.html
+readme_index:
+  enabled: false
