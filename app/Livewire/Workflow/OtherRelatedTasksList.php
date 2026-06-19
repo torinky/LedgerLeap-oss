@@ -304,7 +304,7 @@ class OtherRelatedTasksList extends BaseLivewireComponent
                 'comment' => $this->claimComment,
                 'exception' => $e,
             ]);
-            $this->error(__('ledger.error'), $e->getMessage());
+            $this->error(__('ledger.workflow.task_claim_failed'), $e->getMessage());
             $this->showClaimCommentModal = false;
         }
     }

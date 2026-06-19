@@ -159,9 +159,9 @@ docker run --rm \
 
 ## Technical summary
 
-- **Language / framework**: PHP 8.4, Laravel 12
+- **Language / framework**: PHP 8.4, Laravel 13
 - **Database**: MySQL / MariaDB, Mroonga
-- **Frontend**: Livewire 3, Alpine.js, Tailwind CSS 4, DaisyUI 5, Mary UI, Filament
+- **Frontend**: Livewire 4, Alpine.js, Tailwind CSS 4, DaisyUI 5, Mary UI, Filament
 - **Core foundations**:
   - multi-tenancy: `stancl/tenancy`
   - permissions: `spatie/laravel-permission`

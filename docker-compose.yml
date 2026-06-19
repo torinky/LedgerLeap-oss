@@ -255,21 +255,21 @@ services:
       # Persist PaddleOCR / PaddleOCR-VL caches so startup can reuse downloaded models.
       - ./storage/vlm-cache/paddleocr:/root/.paddleocr
       - ./storage/vlm-cache/paddlex:/root/.paddlex
-      - ./storage/vlm-cache/huggingface:/root/.cache/huggingface
       - .:/var/www/html
     environment:
       - PYTHONUNBUFFERED=1
       - VLM_MODEL=${VLM_MODEL:-paddleocr}
+      - VL_MODEL_ID=${VL_MODEL_ID:-PaddlePaddle/PaddleOCR-VL-1.6}
       - PADDLEOCR_DEVICE=${PADDLEOCR_DEVICE:-cpu}
       - VLM_OFFLINE=${VLM_OFFLINE:-auto}
     deploy:
       resources:
         limits:
           cpus: '4'
-          memory: 10G
+          memory: 12G
         reservations:
           cpus: '2'
-          memory: 4G
+          memory: 8G
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 30s

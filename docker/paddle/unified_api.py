@@ -5,6 +5,7 @@ Provides consistent API interface regardless of underlying VLM model (PaddleOCR,
 from fastapi import FastAPI, File, UploadFile, HTTPException
 from fastapi.responses import JSONResponse
 import logging
+import platform
 import time
 from pathlib import Path
 import tempfile
@@ -35,7 +36,7 @@ def _normalize_mode(value: Optional[str], default: str = "auto") -> str:
 def _get_cache_roots() -> list[Path]:
     """Return candidate cache roots used by PaddleOCR / PaddleOCR-VL."""
     roots: list[Path] = []
-    for env_name in ("VLM_CACHE_DIR", "PADDLEOCR_CACHE_DIR", "PADDLEX_HOME", "PADDLEOCR_HOME"):
+    for env_name in ("VLM_CACHE_DIR", "PADDLEOCR_CACHE_DIR", "PADDLEX_HOME", "PADDLEOCR_HOME", "HF_HOME"):
         env_value = os.environ.get(env_name)
         if env_value:
             roots.append(Path(env_value).expanduser())
@@ -44,6 +45,7 @@ def _get_cache_roots() -> list[Path]:
     roots.extend([
         home / ".paddleocr" / "whl",
         home / ".paddlex" / "official_models",
+        home / ".cache" / "huggingface" / "hub",
     ])
 
     unique_roots: list[Path] = []
@@ -67,6 +69,19 @@ def _backend_cache_marker_groups(vlm_model: str) -> list[list[Path]]:
             Path("PP-LCNet_x1_0_doc_ori/model.safetensors"),
             Path("UVDoc/config.json"),
             Path("UVDoc/model.safetensors"),
+        ]]
+
+    if vlm_model == "paddleocr-vl-cpu":
+        # GGUF model files for llama.cpp (PaddleOCR-VL-1.6-GGUF)
+        return [[
+            Path("PaddleOCR-VL-1.6.gguf"),
+            Path("PaddleOCR-VL-1.6-mmproj.gguf"),
+        ]]
+
+    if vlm_model == "paddleocr-vl-mlx":
+        # MLX-VLM uses HuggingFace cache (safetensors format)
+        return [[
+            Path("models--PaddlePaddle--PaddleOCR-VL"),
         ]]
 
     # PaddleOCR(lang='japan') currently downloads a Japanese PP-OCRv4 recognition model,
@@ -164,10 +179,10 @@ def initialize_paddleocr():
     return engine, "paddleocr"
 
 def initialize_paddleocr_vl():
-    """Initialize PaddleOCR-VL (advanced document understanding) backend"""
+    """Initialize PaddleOCR-VL (GPU) via PaddlePaddle native pipeline"""
     _configure_model_source_check("paddleocr-vl")
     from paddleocr import PaddleOCRVL
-    logger.info("Initializing PaddleOCR-VL backend...")
+    logger.info("Initializing PaddleOCR-VL backend (GPU)...")
     
     device = os.environ.get("PADDLEOCR_DEVICE", "gpu")
     
@@ -181,6 +196,32 @@ def initialize_paddleocr_vl():
     )
     logger.info(f"PaddleOCR-VL initialized successfully (device: {device})")
     return engine, "paddleocr-vl"
+
+def initialize_paddleocr_vl_cpu():
+    """Initialize PaddleOCR-VL-1.6 via PaddlePaddle CPU
+
+    Requires paddlepaddle CPU binary (installed via Dockerfile from official CPU index).
+    Community-confirmed CPU-capable: DEV Community benchmarks, Zenn/tech blogs,
+    Ollama ecosystem (MedAIBase/PaddleOCR-VL).
+
+    Key: PaddlePaddle 公式 CPU バイナリ + device="cpu" で動作。
+    PyTorch/Transformers 経由では不可（FlashAttention/BFloat16 が GPU を自動検出しクラッシュ）。
+    """
+    from paddleocr import PaddleOCRVL
+
+    logger.info('Initializing PaddleOCR-VL-1.6 on CPU...')
+
+    engine = PaddleOCRVL(
+        pipeline_version='v1.6',
+        device='cpu',
+        use_doc_orientation_classify=True,
+        use_layout_detection=True,
+        use_doc_unwarping=True,
+        use_chart_recognition=True,
+        format_block_content=True
+    )
+    logger.info('PaddleOCR-VL-1.6 (CPU) initialized successfully')
+    return engine, 'paddleocr-vl-cpu'
 
 def initialize_marker():
     """Initialize Marker (PDF to Markdown) backend"""
@@ -212,12 +253,74 @@ def initialize_mineru():
     except (subprocess.CalledProcessError, FileNotFoundError, subprocess.TimeoutExpired) as e:
         raise RuntimeError(f"MinerU CLI not available: {e}")
 
+def _is_apple_silicon() -> bool:
+    """Detect whether running on Apple Silicon (Mac M-series)."""
+    return platform.system() == "Darwin" and platform.processor() == "arm"
+
+def _check_mlx_installed() -> Optional[str]:
+    """Check if mlx-vlm is installed and return its version, or None."""
+    try:
+        import mlx_vlm
+        return getattr(mlx_vlm, "__version__", "unknown")
+    except ImportError:
+        return None
+
+def initialize_paddleocr_vl_mlx():
+    """Initialize PaddleOCR-VL-1.6 via MLX-VLM (Apple Silicon, Metal-accelerated)
+
+    Requires: pip install mlx-vlm (Mac host only, NOT Docker-compatible).
+    MLX uses Apple Metal GPU directly — Docker/VM cannot access it.
+
+    Model: PaddlePaddle/PaddleOCR-VL on HuggingFace.
+    First run downloads ~2 GB model weights to ~/.cache/huggingface/hub/.
+
+    Ref: https://github.com/Blaizzy/mlx-vlm (PaddleOCR-VL supported natively)
+    Ref: PaddleOCR FAQ #16823 recommends MLX-VLM for macOS deployment.
+    """
+    from mlx_vlm import load
+    from mlx_vlm.prompt_utils import apply_chat_template
+
+    mlx_version = _check_mlx_installed()
+    if mlx_version is None:
+        raise RuntimeError(
+            "mlx-vlm is not installed. Install with: pip install mlx-vlm\n"
+            "Or run: ./scripts/start-vlm-mlx.sh --install"
+        )
+
+    logger.info(f"MLX-VLM version: {mlx_version}")
+    logger.info("Initializing PaddleOCR-VL (MLX-VLM) backend for Apple Silicon...")
+
+    model_path = os.environ.get("MLX_MODEL_PATH", "PaddlePaddle/PaddleOCR-VL")
+    logger.info(f"Loading model: {model_path} (first run downloads ~2 GB)")
+
+    model, processor = load(model_path)
+
+    engine = {
+        "model": model,
+        "processor": processor,
+    }
+    logger.info("PaddleOCR-VL (MLX-VLM) initialized successfully (device: Metal/ANE)")
+    return engine, "paddleocr-vl-mlx"
+
 @app.on_event("startup")
 async def startup_event():
-    """Initialize the appropriate VLM backend based on environment variable"""
+    """Initialize the appropriate VLM backend based on environment variable
+    
+    On Apple Silicon Mac, VLM_MODEL=auto will automatically select paddleocr-vl-mlx.
+    """
     global model_engine, model_type, initialization_error
     
     vlm_model = os.environ.get("VLM_MODEL", "paddleocr").lower()
+
+    # Auto-detect: use MLX-VLM on Apple Silicon when VLM_MODEL=auto
+    if vlm_model == "auto":
+        if _is_apple_silicon():
+            logger.info("Auto-detected Apple Silicon — selecting paddleocr-vl-mlx backend")
+            vlm_model = "paddleocr-vl-mlx"
+        else:
+            logger.info("Auto-detected non-Mac — selecting paddleocr backend")
+            vlm_model = "paddleocr"
+
     logger.info("=" * 80)
     logger.info(f"Initializing VLM backend: {vlm_model}")
     logger.info("=" * 80)
@@ -225,6 +328,10 @@ async def startup_event():
     try:
         if vlm_model == "paddleocr-vl":
             model_engine, model_type = initialize_paddleocr_vl()
+        elif vlm_model == "paddleocr-vl-cpu":
+            model_engine, model_type = initialize_paddleocr_vl_cpu()
+        elif vlm_model == "paddleocr-vl-mlx":
+            model_engine, model_type = initialize_paddleocr_vl_mlx()
         elif vlm_model == "marker":
             model_engine, model_type = initialize_marker()
         elif vlm_model == "mineru":
@@ -260,7 +367,7 @@ async def health_check():
             }
         )
     
-    device = os.environ.get("PADDLEOCR_DEVICE", "cpu")
+    device = "Metal/ANE" if model_type == "paddleocr-vl-mlx" else os.environ.get("PADDLEOCR_DEVICE", "cpu")
     return {
         "status": "healthy",
         "model": model_type,
@@ -760,7 +867,7 @@ def process_with_mineru(file_path: str) -> Dict[str, Any]:
             shutil.rmtree(tmp_out_dir)
 
 def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
-    """Process document with PaddleOCR-VL backend"""
+    """Process document with PaddleOCR-VL backend (GPU)"""
     output = model_engine.predict(file_path)
     
     structured_data = {
@@ -777,7 +884,6 @@ def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
         
         page_data = {"page_index": idx, "elements": []}
         
-        # Layout detection
         if 'layout_det_res' in res and res['layout_det_res']:
             layout_res = res['layout_det_res']
             if 'boxes' in layout_res:
@@ -789,7 +895,6 @@ def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
                     }
                     structured_data["layout_info"].append(layout_info)
         
-        # Table extraction
         if 'table_res_list' in res and res['table_res_list']:
             for table_idx, table in enumerate(res['table_res_list']):
                 table_data = {
@@ -800,7 +905,6 @@ def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
                 }
                 structured_data["tables"].append(table_data)
         
-        # Text blocks
         if 'parsing_res_list' in res:
             for item in res['parsing_res_list']:
                 item_str = str(item)
@@ -829,7 +933,6 @@ def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
                     }
                     structured_data["text_blocks"].append(text_block)
                     
-                    # Extract key-value pairs
                     lines = content.split('\n')
                     for line in lines:
                         if ':' in line or '：' in line:
@@ -846,7 +949,6 @@ def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
         
         structured_data["pages"].append(page_data)
     
-    # Generate markdown and HTML
     markdown_parts = []
     html_parts = ["<html><body>"]
     
@@ -866,6 +968,257 @@ def process_with_paddleocr_vl(file_path: str) -> Dict[str, Any]:
         "markdown": "\n".join(markdown_parts),
         "structured_data": structured_data
     }
+
+def process_with_paddleocr_vl_cpu(file_path: str) -> Dict[str, Any]:
+    """Process document with PaddleOCR-VL-1.6 via PaddlePaddle CPU
+
+    Uses the same PaddleOCRVL.predict() pipeline as the GPU path.
+    """
+    return process_with_paddleocr_vl(file_path)
+
+def _detect_text_tables(lines: list[str]) -> list[dict]:
+    """Detect simple whitespace-separated columnar tables in plain text lines.
+
+    PaddleOCR-VL outputs spatial-preserving plain text where tables appear as
+    consecutive lines with consistent whitespace-separated fields.
+
+    Returns list of table dicts with keys: header, rows, html, line_start, line_end.
+    """
+    tables = []
+    i = 0
+    while i < len(lines):
+        stripped = lines[i].strip()
+        if not stripped or len(stripped) < 2:
+            i += 1
+            continue
+
+        # Detect table-like row: 2+ whitespace-separated fields
+        fields = re.split(r'\s{2,}', stripped)
+        if len(fields) < 2:
+            i += 1
+            continue
+
+        # Collect consecutive table-like rows with same field count
+        group = [fields]
+        start = i
+        j = i + 1
+        while j < len(lines):
+            next_stripped = lines[j].strip()
+            if not next_stripped or len(next_stripped) < 2:
+                j += 1
+                continue
+            next_fields = re.split(r'\s{2,}', next_stripped)
+            if len(next_fields) >= 2:
+                group.append(next_fields)
+                j += 1
+            else:
+                break
+
+        if len(group) >= 2:  # Need at least header + 1 data row
+            # Normalize: use first row as header, rest as data
+            header = group[0]
+            data_rows = group[1:]
+
+            # Build HTML table
+            html = '<table>'
+            if header:
+                html += '<tr>' + ''.join(f'<th>{h}</th>' for h in header) + '</tr>'
+            for row in data_rows:
+                html += '<tr>' + ''.join(f'<td>{c}</td>' for c in row) + '</tr>'
+            html += '</table>'
+
+            tables.append({
+                "header": header,
+                "rows": data_rows,
+                "html": html,
+                "markdown": '\n'.join(lines[start:j]),
+                "line_start": start,
+                "line_end": j - 1,
+                "confidence": 0.90,
+            })
+
+        i = j
+
+    return tables
+
+def _truncate_at_repeating_garbage(text: str, max_repeat: int = 10) -> str:
+    """Truncate text when the same single non-alphanumeric character repeats excessively.
+
+    VLM models (especially when using MLX-VLM) may continue generating filler
+    characters (e.g. '※', '_', '-', '*') after the actual content ends.
+    This function truncates at the first position where a single non-alpha char
+    repeats consecutively for more than max_repeat lines.
+    """
+    lines = text.split('\n')
+    current_char = None
+    count = 0
+    for i, line in enumerate(lines):
+        stripped = line.strip()
+        # Detect single repeating character lines: "___", "***", "   ", "※※※", etc.
+        is_repeating = (
+            len(stripped) >= 1
+            and len(set(stripped)) == 1
+            and not stripped[0].isalpha()
+        )
+        if is_repeating:
+            ch = stripped[0]
+            if ch == current_char:
+                count += 1
+                if count >= max_repeat:
+                    return '\n'.join(lines[:i - max_repeat + 1])
+            else:
+                current_char = ch
+                count = 1
+        else:
+            current_char = None
+            count = 0
+    return text
+
+def process_with_paddleocr_vl_mlx(file_path: str) -> Dict[str, Any]:
+    """Process document with PaddleOCR-VL via MLX-VLM (Apple Silicon, Metal-accelerated)
+
+    Calls MLX-VLM generate() with prompt "OCR:" and parses the plain-text
+    OCR output into the same structured format as other backends.
+
+    MLX-VLM generate() returns a GenerationResult dataclass with .text attribute.
+    The PaddleOCR-VL model with prompt "OCR:" outputs plain text preserving
+    the document's spatial layout (line breaks, spacing).
+
+    PDF files are converted to PNG images first (MLX-VLM only accepts image formats).
+    """
+    from mlx_vlm import generate
+    from mlx_vlm.prompt_utils import apply_chat_template
+
+    engine_data = model_engine
+    model = engine_data["model"]
+    processor = engine_data["processor"]
+
+    prompt = os.environ.get("MLX_OCR_PROMPT", "OCR:")
+    max_tokens = int(os.environ.get("MLX_MAX_TOKENS", "2048"))
+    temperature = float(os.environ.get("MLX_TEMPERATURE", "0.0"))
+
+    # MLX-VLM only accepts image formats. Convert PDF to image if needed.
+    actual_path = file_path
+    tmp_png = None
+    if Path(file_path).suffix.lower() == '.pdf':
+        import fitz
+        import io as io_mod
+        from PIL import Image
+        doc = fitz.open(file_path)
+        page = doc[0]
+        pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
+        img_data = pix.tobytes("png")
+        doc.close()
+        with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp:
+            tmp.write(img_data)
+            tmp_png = tmp.name
+        actual_path = tmp_png
+        logger.info(f"Converted PDF page 1 to PNG for MLX processing: {tmp_png}")
+
+    try:
+        formatted_prompt = apply_chat_template(
+            processor, model.config, prompt, num_images=1
+        )
+
+        logger.info(f"Running MLX-VLM generate with prompt='{prompt}', max_tokens={max_tokens}")
+        output = generate(
+            model, processor, formatted_prompt,
+            image=[actual_path],
+            max_tokens=max_tokens,
+            temperature=temperature,
+            verbose=False,
+        )
+
+        # generate() returns GenerationResult dataclass (mlx-vlm >= 0.6.0)
+        text = output.text if hasattr(output, "text") else str(output)
+
+        # Post-process: truncate at repeating single-character garbage
+        # (VLM may continue generating filler after content ends)
+        text = _truncate_at_repeating_garbage(text)
+
+        logger.info(f"MLX-VLM output ({len(text)} chars)")
+
+        # Parse plain-text OCR output: each non-empty line is a text block.
+        # PaddleOCR-VL outputs spatial-preserving plain text, not markdown.
+        text_lines = []
+        text_blocks = []
+        key_value_pairs = []
+        tables = []
+        html_parts = ["<html><body>"]
+
+        for idx, line in enumerate(text.split('\n')):
+            stripped = line.strip()
+            # Skip empty lines, whitespace-only, and spatial padding (single chars)
+            if not stripped or len(stripped) < 2:
+                continue
+
+            # Skip separator lines (all underscores/dashes)
+            if re.match(r'^[_\-]{3,}$', stripped):
+                continue
+
+            text_lines.append(stripped)
+            html_parts.append(f"<p>{stripped}</p>")
+
+            text_blocks.append({
+                "type": "text",
+                "content": stripped,
+                "confidence": 0.95,
+                "line_index": idx,
+            })
+
+            # Extract key-value pairs from lines containing colons or yen signs
+            if ':' in stripped or '：' in stripped:
+                parts = stripped.replace('：', ':').split(':', 1)
+                if len(parts) == 2:
+                    key = parts[0].strip()
+                    value = parts[1].strip()
+                    if key and value:
+                        key_value_pairs.append({
+                            "key": key,
+                            "value": value,
+                            "confidence": 0.92,
+                            "line_index": idx,
+                        })
+            elif stripped.startswith('¥') or stripped.startswith('\\'):
+                # Currency amounts — treat as kv with context from previous line
+                prev_line = text_lines[-2] if len(text_lines) > 1 else ""
+                key_value_pairs.append({
+                    "key": prev_line if prev_line else "amount",
+                    "value": stripped,
+                    "confidence": 0.90,
+                    "line_index": idx,
+                })
+
+        # Detect text-based tables (whitespace-separated columnar data)
+        tables = _detect_text_tables(text_lines)
+        for tbl in tables:
+            html_parts.append(tbl["html"])
+            text_blocks.append({
+                "type": "table",
+                "content": tbl["markdown"],
+                "confidence": tbl["confidence"],
+                "line_index": tbl["line_start"],
+            })
+
+        html_parts.append("</body></html>")
+
+        return {
+            "html": "\n".join(html_parts),
+            "markdown": "\n\n".join(text_lines),
+            "structured_data": {
+                "pages": [{
+                    "page_index": 0,
+                    "text_lines": text_lines,
+                    "line_count": len(text_lines)
+                }],
+                "text_blocks": text_blocks,
+                "tables": tables,
+                "key_value_pairs": key_value_pairs
+            }
+        }
+    finally:
+        if tmp_png and os.path.exists(tmp_png):
+            os.unlink(tmp_png)
 
 @app.post("/extract/structured")
 async def extract_structured(file: UploadFile = File(...)):
@@ -893,6 +1246,10 @@ async def extract_structured(file: UploadFile = File(...)):
         # Process with appropriate backend
         if model_type == "paddleocr-vl":
             result = process_with_paddleocr_vl(tmp_path)
+        elif model_type == "paddleocr-vl-cpu":
+            result = process_with_paddleocr_vl_cpu(tmp_path)
+        elif model_type == "paddleocr-vl-mlx":
+            result = process_with_paddleocr_vl_mlx(tmp_path)
         elif model_type == "marker":
             result = process_with_marker(tmp_path)
         elif model_type == "mineru":
@@ -911,7 +1268,7 @@ async def extract_structured(file: UploadFile = File(...)):
             "confidence": result.get("confidence"),  # Add confidence to response
             "processing_time_s": processing_time_s,
             "model": model_type,
-            "device": os.environ.get("PADDLEOCR_DEVICE", "cpu")
+            "device": "Metal/ANE" if model_type == "paddleocr-vl-mlx" else os.environ.get("PADDLEOCR_DEVICE", "cpu")
         }
         
     except Exception as e:

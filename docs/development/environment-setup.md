@@ -75,7 +75,9 @@ MySQLコンテナの初期化メカニズムを活用し、`sail`ユーザーへ
 
 3. **`setup.sh`の機能強化**
    - アーキテクチャ自動検出（ARM64/AMD64）
-   - GPU利用の自動判定（`.env`の`PADDLEOCR_DEVICE`を参照）
+   - NVIDIA GPU の自動検出（`nvidia-smi` → `PADDLEOCR_DEVICE=gpu` に自動設定）
+   - x86/AMD64 での VLM バックエンド自動選択（GPU → `paddleocr-vl`、CPU → `paddleocr-vl-cpu`）
+   - Mac Apple Silicon（M1/M2/M3/M4）の自動検出と MLX-VLM セットアップ
    - `-p`オプションで本番環境にも対応
    - 動的な`COMPOSE_FILE`環境変数の構築
 
@@ -88,9 +90,13 @@ MySQLコンテナの初期化メカニズムを活用し、`sail`ユーザーへ
 # 本番環境
 ./bin/setup.sh -p     # または ./prod.sh
 
-# GPU環境
-# .env で PADDLEOCR_DEVICE=gpu に設定してから
-./bin/setup.sh
+# GPU環境（自動検出のため手動設定不要）
+# PADDLEOCR_DEVICE=auto のまま ./bin/setup.sh を実行
+
+# Mac Apple Silicon（自動検出）
+# MLX-VLM が自動セットアップされます
+# セットアップ完了後、別ターミナルで以下を実行:
+./scripts/start-vlm-mlx.sh
 
 # ヘルプ表示
 ./bin/setup.sh -h

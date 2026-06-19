@@ -19,6 +19,14 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\On;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
+/**
+ * Manages the modification of a ledger column, including file handling and workflow state transitions.
+ *
+ * This component provides an interface for editing ledger content, managing attachments, 
+ * and interacting with the workflow system to save changes or request inspections.
+ *
+ * @see \App\Policies\LedgerDefinePolicy  Used for permission checks during initialization.
+ */
 class ModifyColumn extends CreateColumn
 {
     use InitializesTenantContext;
@@ -39,6 +47,14 @@ class ModifyColumn extends CreateColumn
 
     //    public $tenantId='';
 
+    /**
+     * Initialize the component state for modifying a ledger column.
+     *
+     * @param  int  $ledgerId  The ID of the ledger to modify.
+     * @param  LedgerDefinePolicy  $ledgerDefinePolicy  Policy for permission checks.
+     * @param  array  $prefillParams  Prefill parameters (unused in ModifyColumn).
+     * @return void
+     */
     public function mount(int $ledgerId, LedgerDefinePolicy $ledgerDefinePolicy, array $prefillParams = []): void
     {
         // ModifyColumnではprefillParamsは使用しないが、親クラスとの互換性のために引数として受け取る
@@ -102,6 +118,11 @@ class ModifyColumn extends CreateColumn
         }
     }
 
+    /**
+     * Render the component view.
+     *
+     * @return View
+     */
     public function render(): View
     {
         foreach ($this->ledgerDefineRecord->column_define as $column) {
@@ -113,6 +134,11 @@ class ModifyColumn extends CreateColumn
         ]);
     }
 
+    /**
+     * Store a diff snapshot of the current ledger state.
+     *
+     * @return void
+     */
     public function storeLedgerDiff(): void
     {
         $ledgerDiff = new LedgerDiff;
@@ -131,6 +157,12 @@ class ModifyColumn extends CreateColumn
 
     // Modify 用のファイルマージ処理をオーバーライド
 
+    /**
+     * Update column files by merging new uploads with existing files.
+     *
+     * @param  mixed  $column  The column definition object.
+     * @return void
+     */
     public function updateColumnFiles(mixed $column): void
     {
         $columnId = $column->id;
@@ -211,6 +243,8 @@ class ModifyColumn extends CreateColumn
 
     /**
      * 保存ボタンクリック時のアクション (フロー中の編集を考慮)
+     *
+     * @return void
      */
     public function saveChanges(): void
     {
@@ -254,6 +288,8 @@ class ModifyColumn extends CreateColumn
 
     /**
      * 編集確認モーダルで「保存して作成中に戻す」が押された後の処理
+     *
+     * @return void
      */
     public function saveChangesAndReturnToDraft(): void
     {
@@ -297,6 +333,9 @@ class ModifyColumn extends CreateColumn
     /**
      * バリデーションの前に、ファイルが変更されていない場合でも
      * 既存のファイル情報を content プロパティにマージする。
+     *
+     * @param  mixed  $attributes  バリデーション対象の属性
+     * @return mixed
      */
     protected function prepareForValidation($attributes)
     {
@@ -353,6 +392,11 @@ class ModifyColumn extends CreateColumn
     }
 
     // --- 点検依頼ボタンのアクション (親クラスとほぼ同じだが下書き保存は不要) ---
+    /**
+     * Handle the request inspection action.
+     *
+     * @return void
+     */
     public function requestInspection(): void
     {
         // ステータスが DRAFT でなければ依頼できない
@@ -368,6 +412,14 @@ class ModifyColumn extends CreateColumn
         //        $this->openAssigneeModal('inspector');
     }
 
+    /**
+     * Handle a workflow action dispatched with a comment.
+     *
+     * @param  string  $actionType  The workflow action type.
+     * @param  int  $ledgerId  The ledger ID to verify against.
+     * @param  string|null  $comment  The optional comment.
+     * @return void
+     */
     #[On('workflow-action-with-comment')]
     public function handleRequestInspectionWithComment(string $actionType, int $ledgerId, ?string $comment): void
     {
@@ -403,6 +455,11 @@ class ModifyColumn extends CreateColumn
     }
 
     // --- ワークフロー無効時の直接保存 (親クラスのメソッドを呼び出す) ---
+    /**
+     * Save the ledger directly without workflow transitions.
+     *
+     * @return void
+     */
     public function saveDirectly(): void
     {
         // 承認済みチェック
@@ -415,6 +472,11 @@ class ModifyColumn extends CreateColumn
         parent::saveDirectly();
     }
 
+    /**
+     * Prepare initial file data for the FilePond component.
+     *
+     * @return void
+     */
     public function prepareFilePondInitialFiles(): void
     {
         $this->filePondInitialFiles = [];
@@ -517,6 +579,7 @@ class ModifyColumn extends CreateColumn
      *
      * @param  int  $columnId  削除されたファイルが属するカラムのID
      * @param  string  $hashedBasename  削除されたファイルのハッシュ化されたベース名
+     * @return void
      */
     public function handleFileRemoval(int $columnId, string $hashedBasename): void
     {

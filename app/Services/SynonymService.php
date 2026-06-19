@@ -158,6 +158,195 @@ class SynonymService
     }
 
     /**
+     * テキストから英数字記号列（部品番号・製造番号等）を抽出します。
+     *
+     * Igo の IPA 辞書は "AAA-VVVV-1234B" のような英数字記号列を
+     * 適切に扱えないため、形態素解析の前に事前抽出します。
+     *
+     * @return string[]
+     */
+    public static function extractAlphanumericTokens(string $text): array
+    {
+        $tokens = [];
+
+        // 英数字記号列: アルファベット・数字・ハイフン・アンダースコアの連続
+        if (preg_match_all('/[A-Za-z0-9][A-Za-z0-9\-_]*[A-Za-z0-9]|[A-Za-z0-9]/u', $text, $matches)) {
+            foreach ($matches[0] as $match) {
+                $tokens[] = $match;
+            }
+        }
+
+        return $tokens;
+    }
+
+    /**
+     * テキストを形態素解析し、品詞情報付きでキーワードのリストを返します。
+     *
+     * 処理フロー:
+     * 1. 英数字記号列を正規表現で事前抽出
+     * 2. 残りの日本語部分を Igo で形態素解析
+     * 3. 連続する名詞を結合（wakati と同様のロジック）
+     * 4. 英数字トークンと形態素解析結果をマージ
+     *
+     * @return array<int, array{surface: string, pos: string, pos_sub: string, is_proper_noun: bool}>
+     */
+    public static function analyze(string $text): array
+    {
+        $alphanumericTokens = self::extractAlphanumericTokens($text);
+
+        // 英数字列を除去したテキストを作成
+        $cleanText = $text;
+        foreach ($alphanumericTokens as $token) {
+            $cleanText = str_replace($token, '', $cleanText);
+        }
+        $cleanText = trim(preg_replace('/\s+/', '', $cleanText));
+
+        $results = [];
+
+        // 日本語部分を Igo で形態素解析
+        if ($cleanText !== '') {
+            $igo = new Tagger([
+                'dict_dir' => base_path('vendor/logue/igo-php/ipadic'),
+            ]);
+            try {
+                $morphemes = $igo->parse($cleanText);
+            } catch (\ValueError $e) {
+                // Igo PHP (vendor/logue/igo-php) の mb_detect_encoding strict モードで
+                // エンコーディング判定が false になる既知の問題。Sprint 2 で CI 失敗を
+                // 観測 (Issue #246, 2026-06-14)。Igo の語幹解析なしでアルファ数字
+                // トークンだけでも返す。
+                \Illuminate\Support\Facades\Log::warning(
+                    'Igo parse() failed for input',
+                    ['input' => $cleanText, 'error' => $e->getMessage()]
+                );
+                $morphemes = [];
+            }
+
+            $noun = '';
+            $nounPos = '';
+            $nounPosSub = '';
+            $nounIsProperNoun = false;
+
+            foreach ($morphemes as $morpheme) {
+                $pos = $morpheme->feature[0] ?? '';
+                $posSub = $morpheme->feature[1] ?? '';
+
+                if ($pos === '名詞') {
+                    $noun .= $morpheme->surface;
+                    if ($nounPos === '') {
+                        $nounPos = $pos;
+                    }
+                    if ($posSub !== '' && $nounPosSub === '') {
+                        $nounPosSub = $posSub;
+                    }
+                    if ($posSub === '固有名詞') {
+                        $nounIsProperNoun = true;
+                    }
+                } else {
+                    if (mb_strlen($noun) > 0) {
+                        $results[] = [
+                            'surface' => $noun,
+                            'pos' => $nounPos ?: '名詞',
+                            'pos_sub' => $nounPosSub ?: '',
+                            'is_proper_noun' => $nounIsProperNoun,
+                        ];
+                    }
+                    $noun = '';
+                    $nounPos = '';
+                    $nounPosSub = '';
+                    $nounIsProperNoun = false;
+                }
+            }
+
+            if (mb_strlen($noun) > 0) {
+                $results[] = [
+                    'surface' => $noun,
+                    'pos' => $nounPos ?: '名詞',
+                    'pos_sub' => $nounPosSub ?: '',
+                    'is_proper_noun' => $nounIsProperNoun,
+                ];
+            }
+        }
+
+        // 英数字トークンを追加
+        foreach ($alphanumericTokens as $token) {
+            $results[] = [
+                'surface' => $token,
+                'pos' => '記号',
+                'pos_sub' => 'アルファベット',
+                'is_proper_noun' => true,
+            ];
+        }
+
+        return $results;
+    }
+
+    /**
+     * テキストを単語トークンに分割します。
+     *
+     * analyze() は連続する名詞を 1 トークンに結合しますが、
+     * このメソッドは品詞境界で個別の単語トークンを返します。
+     * search_query_words の逆引きインデックスに単語単位で登録するために使います。
+     *
+     * @param  string  $mode  'a' = 品詞='名詞' のみ (Igo 生 token 境界), 'b' = 入力キーワードそのまま (空白分割)
+     * @return array<int, string>
+     */
+    public static function analyzeAsWordTokens(string $text, string $mode = 'a'): array
+    {
+        if ($mode === 'b') {
+            $parts = preg_split('/[\s　]+/u', trim($text));
+
+            return array_values(array_filter(array_map(
+                static fn (string $p) => trim($p),
+                $parts ?: []
+            ), static fn (string $p) => $p !== ''));
+        }
+
+        // Mode 'a': 品詞='名詞' のみ (Igo 生 token 境界)
+        $alphanumericTokens = self::extractAlphanumericTokens($text);
+
+        $cleanText = $text;
+        foreach ($alphanumericTokens as $token) {
+            $cleanText = str_replace($token, '', $cleanText);
+        }
+        $cleanText = trim(preg_replace('/\s+/', '', $cleanText));
+
+        $results = [];
+
+        if ($cleanText !== '') {
+            $igo = new Tagger([
+                'dict_dir' => base_path('vendor/logue/igo-php/ipadic'),
+            ]);
+            try {
+                $morphemes = $igo->parse($cleanText);
+            } catch (\ValueError $e) {
+                \Illuminate\Support\Facades\Log::warning(
+                    'Igo parse() failed for input in analyzeAsWordTokens',
+                    ['input' => $cleanText, 'error' => $e->getMessage()]
+                );
+                $morphemes = [];
+            }
+
+            foreach ($morphemes as $morpheme) {
+                $pos = $morpheme->feature[0] ?? '';
+
+                if ($pos === '名詞') {
+                    $surface = $morpheme->surface;
+                    if ($surface !== '') {
+                        $results[] = $surface;
+                    }
+                }
+            }
+        }
+
+        foreach ($alphanumericTokens as $token) {
+            $results[] = $token;
+        }
+
+        return array_values(array_unique($results));
+    }
+
+    /**
      * 文章の類似度をコサイン類似度を用いて求めます
      * https://tech.excite.co.jp/entry/2021/11/29/175826
      *

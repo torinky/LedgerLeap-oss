@@ -111,14 +111,15 @@
         </x-slot:drawer>
 
         {{-- Always visible search section moved from RecordsTable --}}
-        <div class="sticky top-16 z-10 bg-base-100/80 backdrop-blur-sm px-4 pt-2 pb-2">
+        <div class="sticky top-16 z-40 bg-base-100/80 backdrop-blur-sm px-4 pt-2 pb-2">
             <x-ledger.search :hasWorkflowEnabled="$hasWorkflowEnabled" :orderBy="$orderBy" :orderByLabel="$orderByLabel"
                              :useSemanticSearch="$useSemanticSearch"
                              :defaultSortColumns="$defaultSortColumns" :search="$search" :perPage="$perPage"
                              :displayLevel="$displayLevel"
                              :totalRecords="$this->totalRecords" :totalRecordsLoaded="$this->totalRecordsLoaded"
                              :useSynonym="$useSynonym"
-                             :useTechnicalTerm="$useTechnicalTerm" :orderAsc="$orderAsc" :filterStatus="$filterStatus"/>
+                             :useTechnicalTerm="$useTechnicalTerm" :orderAsc="$orderAsc" :filterStatus="$filterStatus"
+                              :recentSearches="$recentSearches" :popularKeywords="$popularKeywords" :showSearchSuggestions="$showSearchSuggestions"/>
         </div>
 
         <div class="container max-w-full px-0 md:px-4 mt-4">

@@ -137,6 +137,7 @@ return [
             'pending_inspection' => '点検待ち',
         ],
         'summary_notification_message' => '未処理の点検依頼が :inspection_count 件、承認依頼が :approval_count 件あります。',
+        'task_claim_failed' => 'タスクの引き継ぎに失敗しました。',
         'task_claimed_successfully' => 'タスクを引き継ぎました。',
         'task_claimed_successfully_with_details' => ':task_typeを:assigneeが引き継ぎました',
         'task_not_found' => 'タスクが見つかりませんでした。',

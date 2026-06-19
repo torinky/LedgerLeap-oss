@@ -10,8 +10,12 @@
 --}}
 <div class="flex flex-wrap items-center gap-3"
      x-data="{
-         localKeywords: @json($keywords ?? []),
-         localFilter:   @json($filter ?? [])
+         localKeywords: null,
+         localFilter: null,
+         init() {
+             this.localKeywords = @js($keywords ?? []);
+             this.localFilter = @js($filter ?? []);
+         }
      }"
      x-on:refresh-children.window="
          if ($event.detail && $event.detail.data) {

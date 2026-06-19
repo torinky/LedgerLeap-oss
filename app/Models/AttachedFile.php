@@ -18,6 +18,15 @@ use Illuminate\Support\Facades\Bus;
 use Illuminate\Support\Facades\Storage;
 use Spatie\Activitylog\Models\Activity;
 
+/**
+ * Represents an attached file associated with a ledger record.
+ *
+ * Handles file metadata, processing status tracking (Tika, OCR, VLM),
+ * thumbnail generation, and activity logging for file operations.
+ *
+ * @see \App\Models\Ledger  The parent ledger record.
+ * @see \App\Jobs\Ledger\ProcessAttachedFile  Job that processes the attached file.
+ */
 class AttachedFile extends Model
 {
     use HasFactory, SoftDeletes, \Stancl\Tenancy\Database\Concerns\BelongsToTenant;
@@ -43,6 +52,11 @@ class AttachedFile extends Model
         'processing_finalized_at' => 'datetime',
     ];
 
+    /**
+     * Get the original filename from the ledger content.
+     *
+     * @return string|null
+     */
     public function getOriginalFilenameAttribute(): ?string
     {
         if ($this->ledger && $this->ledger->content) {
@@ -59,6 +73,8 @@ class AttachedFile extends Model
 
     /**
      * Tikaから抽出されたメタデータを取得
+     *
+     * @return array
      */
     public function getTikaMetadataAttribute(): array
     {
@@ -89,6 +105,8 @@ class AttachedFile extends Model
 
     /**
      * メタデータから作成日時を取得
+     *
+     * @return Carbon|null
      */
     public function getMetadataDateAttribute(): ?Carbon
     {
@@ -126,6 +144,8 @@ class AttachedFile extends Model
 
     /**
      * ファイルをアップロードしたユーザー
+     *
+     * @return BelongsTo
      */
     public function creator(): BelongsTo
     {
@@ -134,6 +154,8 @@ class AttachedFile extends Model
 
     /**
      * ファイルを最後に更新したユーザー
+     *
+     * @return BelongsTo
      */
     public function modifier(): BelongsTo
     {
@@ -143,6 +165,8 @@ class AttachedFile extends Model
     /**
      * ファイルに関連するアクティビティログ
      * (アップロード、ダウンロード、処理ステップ等)
+     *
+     * @return MorphMany
      */
     public function activities(): MorphMany
     {
@@ -152,6 +176,8 @@ class AttachedFile extends Model
 
     /**
      * システム処理イベントのタイムラインを取得
+     *
+     * @return Collection
      */
     public function getSystemTimelineAttribute(): Collection
     {
@@ -261,6 +287,8 @@ class AttachedFile extends Model
 
     /**
      * ユーザー操作のタイムラインを取得
+     *
+     * @return Collection
      */
     public function getUserTimelineAttribute(): Collection
     {
@@ -301,6 +329,11 @@ class AttachedFile extends Model
             });
     }
 
+    /**
+     * Mark the attached file as optimized.
+     *
+     * @return void
+     */
     public function optimize()
     {
         //        $this->status = AttachedFileStatus::OPTIMIZING->value;
@@ -308,6 +341,11 @@ class AttachedFile extends Model
         $this->status = AttachedFileStatus::OPTIMIZED->value;
     }
 
+    /**
+     * Mark the attached file as having extracted metadata.
+     *
+     * @return void
+     */
     public function extractMetadata()
     {
         //        $this->status = AttachedFileStatus::EXTRACTING->value;
@@ -315,6 +353,11 @@ class AttachedFile extends Model
         $this->status = AttachedFileStatus::EXTRACTED_AND_SAVED->value;
     }
 
+    /**
+     * Reset processing state and re-dispatch processing jobs.
+     *
+     * @return void
+     */
     public function retryProcessing(): void
     {
         $thumbnailFailed = ($this->status === AttachedFileStatus::THUMBNAIL_FAILED);
@@ -362,6 +405,11 @@ class AttachedFile extends Model
         return number_format($this->vlm_confidence * 100, 1).'%';
     }
 
+    /**
+     * Get the full physical path to the file on disk.
+     *
+     * @return string|null
+     */
     public function getPhysicalPath(): ?string
     {
         if (empty($this->path)) {
@@ -375,6 +423,11 @@ class AttachedFile extends Model
         return null;
     }
 
+    /**
+     * Get the current processing phase status.
+     *
+     * @return string
+     */
     public function getProcessingStatusAttribute(): string
     {
         if ($this->processing_finalized_at) {
@@ -398,6 +451,11 @@ class AttachedFile extends Model
         return 'initial_processing';
     }
 
+    /**
+     * Determine if all parallel processing steps have completed.
+     *
+     * @return bool
+     */
     public function isReadyForFinalization(): bool
     {
         if ($this->processing_finalized_at) {
@@ -414,6 +472,11 @@ class AttachedFile extends Model
         return $vlmDone && $ocrDone;
     }
 
+    /**
+     * Determine if the file is a target for VLM or OCR processing.
+     *
+     * @return bool
+     */
     public function isVlmOrOcrTarget(): bool
     {
         if (! $this->mime) {
@@ -430,6 +493,8 @@ class AttachedFile extends Model
      * Phase5並列処理において、最終化前は個別の失敗ステータス（OCR_FAILED等）を
      * 処理中ステータス（PARALLEL_PROCESSING）に変換する。
      * これにより、VLM処理が進行中の場合でもエラーアイコンではなく処理中アイコンが表示される。
+     *
+     * @return AttachedFileStatus
      */
     public function getDisplayStatus(): AttachedFileStatus
     {
@@ -457,6 +522,8 @@ class AttachedFile extends Model
 
     /**
      * テキスト抽出に失敗したか判定
+     *
+     * @return bool
      */
     public function hasExtractionError(): bool
     {
@@ -478,6 +545,8 @@ class AttachedFile extends Model
 
     /**
      * 一般ユーザーが再処理をリクエストできるか
+     *
+     * @return bool
      */
     public function canUserRequestRetry(): bool
     {
@@ -486,6 +555,8 @@ class AttachedFile extends Model
 
     /**
      * 管理者が再処理を実行できるか
+     *
+     * @return bool
      */
     public function canAdminRetry(): bool
     {
@@ -498,6 +569,8 @@ class AttachedFile extends Model
 
     /**
      * VLMによる高精度抽出が完了したか
+     *
+     * @return bool
      */
     public function isHighQualityExtraction(): bool
     {
@@ -508,6 +581,8 @@ class AttachedFile extends Model
 
     /**
      * フォールバック処理で完了したか
+     *
+     * @return bool
      */
     public function isFallbackExtraction(): bool
     {
@@ -517,6 +592,8 @@ class AttachedFile extends Model
 
     /**
      * プレビュー可能なテキストが存在するかを判定
+     *
+     * @return bool
      */
     public function hasPreviewableText(): bool
     {
@@ -556,6 +633,8 @@ class AttachedFile extends Model
 
     /**
      * プレビュー用のテキストを取得（アクセサ）
+     *
+     * @return string|null
      */
     public function getPreviewableTextAttribute(): ?string
     {
@@ -574,6 +653,7 @@ class AttachedFile extends Model
      * OCRまたはTikaの抽出テキストを取得
      *
      * @param  string|null  $source  指定のソース ('ocr' または 'tika')。省略時は finalized_source を使用。
+     * @return string|null
      */
     public function getOcrTikaFormattedText(?string $source = null): ?string
     {
@@ -609,6 +689,11 @@ class AttachedFile extends Model
         return $text ? "```\n{$text}\n```" : null;
     }
 
+    /**
+     * Get badge display information for the processing confidence level.
+     *
+     * @return array|null
+     */
     public function getConfidenceBadgeInfo(): ?array
     {
         if (! $this->processing_finalized_at || ! $this->finalized_source) {
@@ -801,10 +886,10 @@ class AttachedFile extends Model
     }
 
     /**
-     * 処理時間を計算（ヘルパーメソッド）
-     */
-    /**
      * 各処理ステップの所要時間を計算（ミリ秒）
+     *
+     * @param  string  $step  処理ステップ名
+     * @return int|null
      */
     public function calculateProcessingDuration(string $step): ?int
     {
@@ -823,6 +908,8 @@ class AttachedFile extends Model
 
     /**
      * VLMエラー詳細を取得（ヘルパーメソッド）
+     *
+     * @return array|null
      */
     private function getVlmErrorDetails(): ?array
     {
@@ -842,6 +929,8 @@ class AttachedFile extends Model
 
     /**
      * OCRエラー詳細を取得（ヘルパーメソッド）
+     *
+     * @return array|null
      */
     private function getOcrErrorDetails(): ?array
     {

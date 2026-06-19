@@ -29,18 +29,48 @@ LedgerLeapは、添付ファイルからのテキスト抽出に3つのエンジ
 
 ## 2. 開発環境のセットアップ
 
-### 2.1. 環境変数の設定
+### 2.1. 環境変数の設定（自動）
 
-`.env`ファイルに以下を設定：
+`bin/setup.sh` が環境を自動判定し、最適な VLM 設定を `.env` に書き込みます。  
+特別な要件がない限り、手動設定は不要です。
+
+```bash
+./bin/setup.sh
+```
+
+自動設定される値:
+
+| 環境 | `PADDLEOCR_DEVICE` | `VLM_MODEL` | `VLM_URL` |
+|------|-------------------|-------------|-----------|
+| x86 + NVIDIA GPU | `gpu` | `paddleocr-vl` | `http://vlm:8000` |
+| x86 + CPU | `cpu` | `paddleocr-vl-cpu` | `http://vlm:8000` |
+| Mac Apple Silicon (MLX成功) | `cpu` | `auto` | `http://host.docker.internal:8000` |
+| Mac Apple Silicon (MLX失敗) | `cpu` | `paddleocr` | `http://vlm:8000` |
+| ARM64 Linux | `cpu` | `paddleocr` | `http://vlm:8000` |
+
+### 2.2. 環境変数の設定（手動）
+
+自動設定を使用せず手動で設定する場合:
 
 ```env
 # VLM設定
 VLM_ENABLED=true
 VLM_URL=http://vlm:8000
-VLM_DEFAULT_MODEL=PaddleOCR-VL-0.9B
+VLM_DEFAULT_MODEL=PaddleOCR-VL-1.6
 VLM_TIMEOUT=600
 VLM_RETRY_TIMES=2
 VLM_RETRY_BACKOFF=300
+
+# VLMバックエンド選択
+#   paddleocr (デフォルト、OCRのみ)
+#   paddleocr-vl (GPU加速、最高品質)
+#   paddleocr-vl-cpu (CPU最適化)
+#   paddleocr-vl-mlx (Mac Apple Silicon、Metal加速)
+#   auto (環境自動判定)
+VLM_MODEL=paddleocr
+
+# デバイス選択（auto = NVIDIA GPU 自動検出）
+PADDLEOCR_DEVICE=auto
 
 # OCR設定
 OCR_ENABLED=true
@@ -50,10 +80,10 @@ TIKA_ENABLED=true
 TIKA_URL=http://tika:9998
 ```
 
-### 2.2. VLMコンテナの起動
+### 2.3. VLMコンテナの起動
 
 ```bash
-# VLMコンテナの起動
+# VLMコンテナの起動（Docker）
 docker-compose up -d vlm
 
 # ヘルスチェック
@@ -64,17 +94,33 @@ curl http://localhost:8001/health | jq .
 ```json
 {
   "status": "healthy",
-  "model": "PaddleOCR-VL-0.9B",
-  "version": "2.8.1"
+  "model": "paddleocr-vl",
+  "device": "gpu"
 }
 ```
 
-### 2.3. GPU環境のセットアップ
+### 2.4. Mac Apple Silicon (MLX-VLM)
 
-GPU環境で実行する場合：
+Mac M1/M2/M3/M4 では、MLX-VLM をホスト上で直接実行します（Docker 非対応）。
 
 ```bash
-# .envでGPUを有効化
+# 依存関係のインストールと起動
+./scripts/start-vlm-mlx.sh
+
+# ヘルスチェック（Mac ホスト上のサーバー）
+curl http://localhost:8000/health | jq .
+# {"status": "healthy", "model": "paddleocr-vl-mlx", "device": "Metal/ANE"}
+```
+
+MLX-VLM は Apple Metal GPU を直接使用するため、Docker 内では動作しません。  
+Laravel (Sail) からは `host.docker.internal:8000` 経由で接続します。
+
+### 2.5. GPU環境のセットアップ
+
+GPU環境で実行する場合（自動検出されるため通常は手動設定不要）:
+
+```bash
+# .envでGPUを有効化（自動検出時は不要）
 PADDLEOCR_DEVICE=gpu
 
 # GPU用コンテナの起動
@@ -387,11 +433,20 @@ docker stats ledgerleap_vlm --no-stream
 
 ### 8.1. 利用可能なモデル
 
-| モデル | 特徴 | 用途 |
-|--------|------|------|
-| PaddleOCR-VL 0.9B | 高精度、Markdown生成 | 本番環境推奨 |
-| PaddleOCR 2.7.3 | 軽量、安定 | 開発環境、リソース制限時 |
-| Marker | PDF特化 | PDF→Markdown変換 |
+| モデル | 対象環境 | 出力形式 | 特徴 |
+|--------|---------|---------|------|
+| `paddleocr` | 汎用 | テキスト+BBox | 安定、軽量、本番環境推奨 |
+| `paddleocr-vl` | x86 + GPU | **構造化** (table HTML, layout, labeled blocks) | 最高品質、GPU 加速 |
+| `paddleocr-vl-cpu` | x86 + CPU | **構造化** (table HTML, layout, labeled blocks) | CPU 最適化 VL モデル |
+| `paddleocr-vl-mlx` | Mac M1-4 | **プレーンテキストのみ** | Metal GPU ホスト直接実行 |
+| `marker` | 汎用 | Markdown | PDF → Markdown 特化 |
+| `mineru` | 汎用 | Markdown | PDF → Markdown 特化 |
+| `auto` | **推奨** | 環境自動判定 | |
+
+> **構造化出力の制限:** `paddleocr-vl` / `paddleocr-vl-cpu` はネイティブ PaddlePaddle の後処理パイプライン（レイアウト検出・テーブル認識・ラベル付与）により構造化データを出力します。  
+> **`paddleocr-vl-mlx` (MLX-VLM) はテキストのみ** 出力します。MLX-VLM は推論エンジンのみで PaddlePaddle の後処理パイプラインを移植していないためです。  
+> MLX-VLM 側の構造化出力対応予定はありません（GitHub Issues 検索結果: 0件、2026-06-15 確認）。  
+> Mac では自前のパイプライン（`_detect_text_tables()` + KV抽出 + garbage除去）で構造化を行います。
 
 ### 8.2. 切り替え手順
 

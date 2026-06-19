@@ -1,0 +1,11 @@
+# docker/paddle/requirements-mlx.txt
+# Optional: Mac Apple Silicon MLX-VLM backend dependencies
+# Install with: pip install -r docker/paddle/requirements-mlx.txt
+#
+# These are NOT installed in Docker (MLX requires Metal GPU, unavailable in VM).
+# Use scripts/start-vlm-mlx.sh for automated Mac host setup.
+
+mlx-vlm>=0.6.0
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6

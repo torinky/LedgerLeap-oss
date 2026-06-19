@@ -33,6 +33,12 @@ use Mary\Traits\Toast;
 use Psr\Container\ContainerExceptionInterface;
 use Psr\Container\NotFoundExceptionInterface;
 
+/**
+ * Manages the records table UI for displaying and interacting with ledger records.
+ *
+ * Handles search, filtering, sorting, pagination, and file inspector integration
+ * for the ledger records list view. Supports both semantic and keyword search modes.
+ */
 #[Lazy(isolate: false)]
 class RecordsTable extends BaseLivewireComponent
 {
@@ -146,9 +152,7 @@ class RecordsTable extends BaseLivewireComponent
     public bool $isFileInspectorOpen = false;
 
     /**
-     * #[Lazy] プレースホルダー
-     * フォルダ切替時は IndexManager の応答（~100ms）にこのスケルトンが含まれる。
-     * 実コンテンツは別リクエストで非同期レンダリングされる。
+     * Renders the #[Lazy] placeholder during async loading.
      */
     public function placeholder(): View
     {
@@ -156,7 +160,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * コンポーネントが初めてリクエストされた時に実行される初期化処理
+     * Initializes the component on first request.
      *
      * @return void
      *
@@ -202,6 +206,9 @@ class RecordsTable extends BaseLivewireComponent
         ]);
     }
 
+    /**
+     * Synchronizes the file inspector selection state and dispatches events.
+     */
     #[On('file-inspector-selection-changed')]
     public function syncFileInspectorSelection(
         ?int $selectedFileId = null,
@@ -244,10 +251,9 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 検索コンテキストを初期化
+     * Initializes the search context with current keyword, tag, and filter state.
      *
-     * 親から Reactive プロパティとして受け取るため、ここではインスタンスの作成のみ行い、
-     * 計算済みの値をセットする。重い再計算（類義語展開など）は行わない。
+     * @return void
      */
     protected function initSearchContext()
     {
@@ -262,6 +268,9 @@ class RecordsTable extends BaseLivewireComponent
         $this->searchContext->filter = $this->filter ?? [];
     }
 
+    /**
+     * Returns the performance context for logging.
+     */
     protected function getPerformanceContext(): array
     {
         $selectedFolderCount = is_countable($this->selectedFolderIds)
@@ -283,12 +292,18 @@ class RecordsTable extends BaseLivewireComponent
         ];
     }
 
+    /**
+     * Clears the total records count cache.
+     */
     protected function clearTotalRecordsCache(): void
     {
         $this->totalRecordsLoaded = false;
         $this->totalRecordsQuerySignature = '';
     }
 
+    /**
+     * Builds a unique query signature for the total records count cache.
+     */
     protected function buildTotalRecordsQuerySignature(array $searchTargetLedgerDefineIds): string
     {
         $payload = [
@@ -318,13 +333,19 @@ class RecordsTable extends BaseLivewireComponent
         return sha1(json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
     }
 
+    /**
+     * Dispatches the total records count changed event.
+     */
     protected function dispatchTotalRecordsChanged(int $totalRecords): void
     {
         $this->dispatch('ledger-records-count-updated', total: $totalRecords);
     }
 
     /**
-     * orderByが変更されたときにorderByLabelを更新するライフサイクルフック
+     * Updates the sort label when orderBy changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedOrderBy($value)
     {
@@ -332,7 +353,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 検索語が変更されたときに実行されるライフサイクルフック
+     * Resets pagination when the search term changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedSearch($value)
     {
@@ -340,7 +364,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * フィルターが変更されたときに実行されるライフサイクルフック
+     * Resets pagination when the filter changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedFilter($value)
     {
@@ -348,7 +375,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 表示フォルダが変更されたときに実行されるライフサイクルフック
+     * Resets pagination and reloads folder assets when the current folder changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedCurrentFolderId($value)
     {
@@ -357,7 +387,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 選択フォルダが変更されたときに実行されるライフサイクルフック
+     * Resets pagination when selected folders change.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedSelectedFolderIds($value)
     {
@@ -365,7 +398,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 選択台帳が変更されたときに実行されるライフサイクルフック
+     * Resets pagination when selected ledger defines change.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedSelectedLedgerDefineIds($value)
     {
@@ -373,16 +409,21 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * ソート順が変更された際に SearchContext を再初期化
+     * Resets pagination when the sort direction changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedOrderAsc($value)
     {
-        // ページのリセットのみ
         $this->resetPage();
     }
 
     /**
-     * セマンティック検索トグルが変更されたときに実行されるライフサイクルフック
+     * Resets pagination when the semantic search toggle changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedUseSemanticSearch($value)
     {
@@ -390,7 +431,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 同義語トグルが変更された際に SearchContext を再初期化
+     * Resets pagination when the synonym toggle changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedUseSynonym($value)
     {
@@ -398,7 +442,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 専門用語トグルが変更された際に SearchContext を再初期化
+     * Resets pagination when the technical term toggle changes.
+     *
+     * @param  mixed  $value
+     * @return void
      */
     public function updatedUseTechnicalTerm($value)
     {
@@ -406,7 +453,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * コレクションに対してソートを適用する
+     * Applies sorting to a collection by the given field and direction.
      *
      * @param  Collection  $collection
      * @param  string  $sortBy
@@ -419,11 +466,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * ページネーションのリセット（親側での変更を検知してリセットが必要な場合に使用する hooks があれば）
-     */
-
-    /**
-     * 表示レベルを設定する
+     * Sets the display level for column visibility.
      */
     public function setDisplayLevel(int $level): void
     {
@@ -431,7 +474,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * コンポーネントの表示を更新する
+     * Refreshes the component state when a ledger is stored or permissions change.
      */
     #[On('ledgerStored')]
     #[On('permissions-changed')]
@@ -441,18 +484,29 @@ class RecordsTable extends BaseLivewireComponent
         $this->prepareFolderAsset();
     }
 
+    /**
+     * Handles the event to open the permission modal for a resource.
+     */
     #[On('openPermissionModalRequested')]
     public function handleOpenPermissionModal(string $resourceType, int $resourceId, string $title): void
     {
         $this->openPermissionModal($resourceType, $resourceId, $title);
     }
 
+    /**
+     * Handles the event to open the activity modal for a resource.
+     */
     #[On('openActivityModalRequested')]
     public function handleOpenActivityModal(string $resourceType, int $resourceId, string $title): void
     {
         $this->openActivityModal($resourceType, $resourceId, $title);
     }
 
+    /**
+     * Renders the records table view with search results, pagination, and grouping.
+     *
+     * @return View
+     */
     public function render()
     {
         $startedAt = microtime(true);
@@ -830,6 +884,11 @@ class RecordsTable extends BaseLivewireComponent
         ]);
     }
 
+    /**
+     * Refreshes total records cache when permissions change, then re-renders.
+     *
+     * @return void
+     */
     #[On('permissions-changed')]
     public function refreshDueToPermissionChange()
     {
@@ -839,7 +898,11 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 列のソートを行う
+     * Dispatches a sort request to the parent index manager.
+     *
+     * @param  string  $columnName
+     * @param  string|null  $columnLabel
+     * @return void
      */
     public function sort($columnName, $columnLabel = null)
     {
@@ -847,13 +910,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * フィルターを更新する (IndexManager側で処理されるため、このメソッドは基本呼ばれない想定だが整理のために残す、または削除)
-     * 現在、Viewからは $parent.updateFilterFromChild が呼ばれている。
-     */
-    // 削除
-
-    /**
-     * 現在のフォルダーを変更する
+     * Dispatches a folder change request to the parent index manager.
+     *
+     * @param  mixed  $newFolderId
+     * @return void
      */
     public function changeCurrentFolder($newFolderId)
     {
@@ -861,7 +921,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * フォルダの選択状態をトグルする
+     * Dispatches a folder toggle request to the parent index manager.
+     *
+     * @param  mixed  $folderId
+     * @return void
      */
     public function toggleFolderId($folderId)
     {
@@ -869,7 +932,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 台帳の選択状態をトグルする
+     * Dispatches a ledger define toggle request to the parent index manager.
+     *
+     * @param  mixed  $ledgerDefineId
+     * @return void
      */
     public function toggleLedgerDefineId($ledgerDefineId)
     {
@@ -877,7 +943,10 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 選択する台帳を1つにする
+     * Dispatches a focus request for a single ledger define.
+     *
+     * @param  mixed  $defineId
+     * @return void
      */
     public function focusLedgerDefine($defineId)
     {
@@ -885,7 +954,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * フォルダーアセットを準備する
+     * Prepares folder assets including breadcrumbs, child folders, and ledger defines.
      */
     public function prepareFolderAsset(): void
     {
@@ -928,7 +997,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * ページネーションの総ページ数を計算する
+     * Calculates the last page number for pagination.
      *
      * @return int
      */
@@ -942,7 +1011,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * ページサイズが変更された際に、現在のページをリセットする
+     * Resets the current page when the page size changes.
      *
      * @return void
      */
@@ -952,6 +1021,9 @@ class RecordsTable extends BaseLivewireComponent
         $this->resetPage();
     }
 
+    /**
+     * Opens the permission modal for a given resource.
+     */
     public function openPermissionModal(string $resourceType, int $resourceId, string $title): void
     {
         $this->modalResourceType = $resourceType;
@@ -960,6 +1032,9 @@ class RecordsTable extends BaseLivewireComponent
         $this->showPermissionModal = true;
     }
 
+    /**
+     * Opens the activity modal for a given resource.
+     */
     public function openActivityModal(string $resourceType, int $resourceId, string $title): void
     {
         $this->modalResourceType = $resourceType;
@@ -968,6 +1043,9 @@ class RecordsTable extends BaseLivewireComponent
         $this->showActivityModal = true;
     }
 
+    /**
+     * Retries processing for a failed attached file.
+     */
     #[On('retryProcessingEvent')]
     public function retryProcessing(int $attachedFileId): void
     {
@@ -989,7 +1067,7 @@ class RecordsTable extends BaseLivewireComponent
     }
 
     /**
-     * 自動採番型が純粋な数値のみ（プレフィックスやリビジョンなし）であるか判定
+     * Determines whether an auto-number column is purely numeric (no prefix or revision).
      */
     private function isPurelyNumericAutoNumber(array $column): bool
     {

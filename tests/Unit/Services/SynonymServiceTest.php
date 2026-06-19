@@ -154,4 +154,153 @@ class SynonymServiceTest extends TestCase
             collect($result)->contains(fn ($w) => mb_strlen($w) > 1)
         );
     }
+
+    // ----------------------------------------------------------------
+    // extractAlphanumericTokens (static)
+    // ----------------------------------------------------------------
+
+    public function test_extract_alphanumeric_extracts_part_number(): void
+    {
+        $result = SynonymService::extractAlphanumericTokens('AAA-VVVV-1234B');
+
+        $this->assertContains('AAA-VVVV-1234B', $result);
+    }
+
+    public function test_extract_alphanumeric_extracts_multiple_tokens(): void
+    {
+        $result = SynonymService::extractAlphanumericTokens('部品 ABC-123 と XYZ-456');
+
+        $this->assertContains('ABC-123', $result);
+        $this->assertContains('XYZ-456', $result);
+    }
+
+    public function test_extract_alphanumeric_handles_no_match(): void
+    {
+        $result = SynonymService::extractAlphanumericTokens('これはテストです');
+
+        $this->assertEmpty($result);
+    }
+
+    public function test_extract_alphanumeric_extracts_single_letter(): void
+    {
+        $result = SynonymService::extractAlphanumericTokens('A');
+
+        $this->assertContains('A', $result);
+    }
+
+    // ----------------------------------------------------------------
+    // analyze (static) — Igo\Tagger 辞書ファイルが必要
+    // ----------------------------------------------------------------
+
+    public function test_analyze_returns_array_of_token_info(): void
+    {
+        $result = SynonymService::analyze('東京 部品');
+
+        $this->assertIsArray($result);
+        $this->assertNotEmpty($result);
+
+        foreach ($result as $token) {
+            $this->assertArrayHasKey('surface', $token);
+            $this->assertArrayHasKey('pos', $token);
+            $this->assertArrayHasKey('pos_sub', $token);
+            $this->assertArrayHasKey('is_proper_noun', $token);
+        }
+    }
+
+    public function test_analyze_extracts_alphanumeric_tokens(): void
+    {
+        $result = SynonymService::analyze('部品 ABC-123');
+
+        $alphanumericTokens = array_filter($result, fn ($t) => $t['pos'] === '記号');
+        $this->assertNotEmpty($alphanumericTokens);
+        $this->assertTrue(
+            collect($alphanumericTokens)->contains(fn ($t) => $t['surface'] === 'ABC-123')
+        );
+    }
+
+    public function test_analyze_detects_proper_noun(): void
+    {
+        $result = SynonymService::analyze('東京');
+
+        $properNouns = array_filter($result, fn ($t) => $t['is_proper_noun'] === true);
+        // 固有名詞が少なくとも1つ検出されること
+        $this->assertNotEmpty($properNouns);
+    }
+
+    public function test_analyze_empty_string_returns_empty_array(): void
+    {
+        $result = SynonymService::analyze('');
+
+        $this->assertIsArray($result);
+        $this->assertEmpty($result);
+    }
+
+    // ----------------------------------------------------------------
+    // analyzeAsWordTokens (static) — Phase B 単語境界インデックス
+    // ----------------------------------------------------------------
+
+    public function test_analyze_as_word_tokens_mode_a_nouns_only(): void
+    {
+        // 連続名詞を個別トークンに分割し、助詞は除外する
+        $result = SynonymService::analyzeAsWordTokens('部品 を 修理', 'a');
+
+        $this->assertIsArray($result);
+        $this->assertContains('部品', $result);
+        $this->assertContains('修理', $result);
+        // 助詞 "を" は名詞ではないので含まれない
+        $this->assertNotContains('を', $result);
+    }
+
+    public function test_analyze_as_word_tokens_mode_a_consecutive_nouns_split(): void
+    {
+        // 連続する名詞 "作業" "部品" "修理" が結合されず個別に返る
+        $result = SynonymService::analyzeAsWordTokens('作業 部品 修理', 'a');
+
+        $this->assertContains('作業', $result);
+        $this->assertContains('部品', $result);
+        $this->assertContains('修理', $result);
+        // analyze() なら "作業部品修理" に結合されるが、analyzeAsWordTokens は個別
+        $this->assertNotContains('作業部品修理', $result);
+    }
+
+    public function test_analyze_as_word_tokens_mode_b_simple_split(): void
+    {
+        // 空白区切りで単純分割、助詞も含む
+        $result = SynonymService::analyzeAsWordTokens('部品 を 修理', 'b');
+
+        $this->assertIsArray($result);
+        $this->assertSame(['部品', 'を', '修理'], $result);
+    }
+
+    public function test_analyze_as_word_tokens_mode_b_includes_particles(): void
+    {
+        $result = SynonymService::analyzeAsWordTokens('部品 を 交換', 'b');
+
+        // mode 'b' は助詞も含む
+        $this->assertContains('を', $result);
+    }
+
+    public function test_analyze_as_word_tokens_empty_string(): void
+    {
+        $this->assertSame([], SynonymService::analyzeAsWordTokens('', 'a'));
+        $this->assertSame([], SynonymService::analyzeAsWordTokens('', 'b'));
+    }
+
+    public function test_analyze_as_word_tokens_default_mode_is_a(): void
+    {
+        $result = SynonymService::analyzeAsWordTokens('部品 在庫');
+
+        // デフォルト mode='a' で助詞なし、名詞のみ
+        $this->assertContains('部品', $result);
+        $this->assertContains('在庫', $result);
+    }
+
+    public function test_analyze_as_word_tokens_with_alphanumeric(): void
+    {
+        $result = SynonymService::analyzeAsWordTokens('部品 ABC-123 点検', 'a');
+
+        $this->assertContains('部品', $result);
+        $this->assertContains('ABC-123', $result);
+        $this->assertContains('点検', $result);
+    }
 }

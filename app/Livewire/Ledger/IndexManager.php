@@ -2,7 +2,8 @@
 
 namespace App\Livewire\Ledger;
 
-use App\Http\Requests\Ledger\SearchRequest; // 追加
+use App\Helpers\SearchHelper; // 追加
+use App\Http\Requests\Ledger\SearchRequest;
 use App\Livewire\BaseLivewireComponent;
 use App\Livewire\Traits\HasSortingLabels;
 use App\Livewire\Traits\InitializesTenantContext;
@@ -12,7 +13,9 @@ use App\Models\LedgerDefine;
 use App\Services\ConfidentialityLevelService;
 use App\Services\Config\SynonymServiceConfig;
 use App\Services\Ledger\SearchContext;
-use App\Services\PermissionService; // 追加
+use App\Services\Ledger\SearchHistoryService; // 追加
+use App\Services\Ledger\SearchKeywordService;
+use App\Services\PermissionService;
 use App\Services\SynonymService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Schema as FacadesSchema;
@@ -85,6 +88,16 @@ class IndexManager extends BaseLivewireComponent
     public int $recordsTableMountKey = 0;
 
     public $highlights = [];
+
+    public bool $showSearchSuggestions = false;
+
+    public array $recentSearches = [];
+
+    public array $popularKeywords = [];
+
+    public array $querySuggestions = [];
+
+    private ?SearchContext $searchContext = null;
 
     // フォルダーアセット関連
     #[Computed]
@@ -216,6 +229,10 @@ class IndexManager extends BaseLivewireComponent
         $this->updateSearchMetadata();
         $this->initSearchContext();
 
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = $this->loadQuerySuggestions();
+
         $this->logPerformance('ledger_index_mount', (microtime(true) - $startedAt) * 1000, [
             'selected_folder_count' => $selectedFolderCount,
             'selected_ledger_define_count' => $selectedLedgerDefineCount,
@@ -230,15 +247,15 @@ class IndexManager extends BaseLivewireComponent
             'useTechnicalTerm' => $this->useTechnicalTerm,
         ]);
         $synonymService = new SynonymService($synonymServiceConfig);
-        $searchContext = new SearchContext($synonymService);
+        $this->searchContext = new SearchContext($synonymService);
 
-        $searchContext->setSearch($this->search);
-        $searchContext->setFilter($this->filter);
+        $this->searchContext->setSearch($this->search);
+        $this->searchContext->setFilter($this->filter);
 
-        $this->keywords = $searchContext->keywords ?? [];
-        $this->tags = $searchContext->tags ?? [];
-        $this->highlights = $searchContext->highlights ?? [];
-        $this->synonyms = $searchContext->synonyms ?? [];
+        $this->keywords = $this->searchContext->keywords ?? [];
+        $this->tags = $this->searchContext->tags ?? [];
+        $this->highlights = $this->searchContext->highlights ?? [];
+        $this->synonyms = $this->searchContext->synonyms ?? [];
     }
 
     public function updateSearchMetadata()
@@ -290,9 +307,103 @@ class IndexManager extends BaseLivewireComponent
         $this->orderByLabel = $this->getStandardSortLabel($this->orderBy);
     }
 
+    /**
+     * クリアボタン押下時。search を空にし、RecordsTable の再描画のみを行う。
+     */
+    public function clearSearch(): void
+    {
+        $this->search = '';
+        $this->initSearchContext();
+        $this->recordsTableMountKey++;
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = [];
+    }
+
+    /**
+     * サジェスト更新用の軽量メソッド。台帳検索は走らせず、
+     * サジェスト候補・人気キーワード・最近の検索のみを更新します。
+     * Alpine の 250ms idle タイマから呼ばれます。
+     *
+     * $this->search は更新しない (RecordsTable の再検索を防ぐため)。
+     */
+    public function updateSuggestions(string $value): void
+    {
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = $this->loadQuerySuggestionsFor($value);
+    }
+
+    /**
+     * Enter キー確定時の検索実行メソッド。台帳検索を含む全処理を実行します。
+     * Alpine の sendSearchRequest() から呼ばれます。
+     */
+    public function executeSearch(string $value): void
+    {
+        $this->search = SearchHelper::normalizeQuery($value);
+        $this->recordsTableMountKey++;
+        $this->initSearchContext();
+        $this->recordSearchHistory();
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = $this->loadQuerySuggestions();
+    }
+
     public function updatedSearch()
     {
+        Log::info('updatedSearch called', ['search' => $this->search]);
+        $this->search = SearchHelper::normalizeQuery((string) $this->search);
         $this->initSearchContext();
+        $this->recordSearchHistory();
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = $this->loadQuerySuggestions();
+    }
+
+    /**
+     * 検索入力の文字種をサーバ側で正規化する (SearchHelper::normalizeQuery への薄いラッパー)。
+     * 末尾/先頭スペースは保持する (単語区切り文字を壊さないため)。
+     */
+    protected function normalizeSearchInput(string $value): string
+    {
+        return SearchHelper::normalizeQuery($value);
+    }
+
+    protected function recordSearchHistory(): void
+    {
+        if (! auth()->check()) {
+            return;
+        }
+
+        $hasMeaningfulSearch = ! empty($this->search)
+            || ! empty($this->filterStatus)
+            || ! empty($this->filter);
+
+        if (! $hasMeaningfulSearch) {
+            return;
+        }
+
+        $conditions = [
+            'q' => $this->search,
+            'sort' => $this->orderBy,
+            'dir' => $this->orderAsc ? 'asc' : 'desc',
+            'status' => $this->filterStatus,
+            'filter' => $this->filter,
+            'l' => $this->selectedLedgerDefineIds,
+            'f' => $this->selectedFolderIds,
+            'cf' => $this->currentFolderId,
+            'dl' => $this->displayLevel,
+            'pp' => $this->perPage,
+            'sem' => $this->useSemanticSearch,
+            'syn' => $this->useSynonym,
+            'tt' => $this->useTechnicalTerm,
+        ];
+
+        app(SearchHistoryService::class)->record(
+            conditions: $conditions,
+            resultCount: (int) ($this->totalRecords ?? 0),
+            searchTrace: $this->searchContext?->getTrace() ?? [],
+        );
     }
 
     public function updatedFilter()
@@ -498,6 +609,20 @@ class IndexManager extends BaseLivewireComponent
     }
 
     /**
+     * 子 RecordsTable から dispatch される検索結果件数を受け取り、
+     * 検索履歴 (ActivityLog) 記録時の result_count に使用する。
+     *
+     * Sprint 2 で search-blade.php 内の recent バッジが常に 0 を表示していた
+     * のは、このリスナーが欠落していたため totalRecords が初期値 0 のまま
+     * 固定されていたのが原因。
+     */
+    #[On('ledger-records-count-updated')]
+    public function receiveRecordsCount(int $total): void
+    {
+        $this->updateRecordCount($total);
+    }
+
+    /**
      * 子コンポーネントからフィルタを直接更新する (パフォーマンス向上のため $parent.method() で呼ばれる)
      */
     public function updateFilterFromChild($columnId, $value, $defineId = null)
@@ -521,6 +646,164 @@ class IndexManager extends BaseLivewireComponent
             'selected_ledger_define_count' => $selectedLedgerDefineCount,
             'has_workflow_enabled' => $this->hasWorkflowEnabled,
         ];
+    }
+
+    public function toggleSearchSuggestions(): void
+    {
+        $this->showSearchSuggestions = ! $this->showSearchSuggestions;
+    }
+
+    public function applySearch(array $conditions): void
+    {
+        if (! app(SearchHistoryService::class)->canRestore($conditions)) {
+            $this->error(__('ledger.search_suggest.cannot_restore'));
+
+            return;
+        }
+
+        // 履歴からの復元は確定値とみなすので trim する
+        $this->search = SearchHelper::trimSearch(
+            SearchHelper::normalizeQuery($conditions['q'] ?? '')
+        );
+        $this->orderBy = $conditions['sort'] ?? 'composite_score';
+        $this->orderAsc = ($conditions['dir'] ?? 'desc') === 'asc';
+        $this->filterStatus = $conditions['status'] ?? '';
+        $this->filter = $conditions['filter'] ?? [];
+        $this->selectedLedgerDefineIds = $conditions['l'] ?? [];
+        $this->selectedFolderIds = $conditions['f'] ?? [];
+        $this->currentFolderId = $conditions['cf'] ?? null;
+        $this->displayLevel = (int) ($conditions['dl'] ?? 1);
+        $this->perPage = $conditions['pp'] ?? 100;
+        $this->useSemanticSearch = (bool) ($conditions['sem'] ?? false);
+        $this->useSynonym = $conditions['syn'] ?? true;
+        $this->useTechnicalTerm = $conditions['tt'] ?? true;
+
+        $this->updateSearchMetadata();
+        $this->initSearchContext();
+
+        $this->showSearchSuggestions = false;
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = $this->loadQuerySuggestions();
+    }
+
+    public function applyKeywordSearch(string $keyword): void
+    {
+        // サジェスト/人気キーワードからの選択は確定値として扱う (trim する)
+        $this->search = SearchHelper::trimSearch($this->normalizeSearchInput($keyword));
+        $this->recordsTableMountKey++;
+        $this->initSearchContext();
+        $this->recordSearchHistory();
+        $this->showSearchSuggestions = false;
+        $this->recentSearches = $this->loadRecentSearches();
+        $this->popularKeywords = $this->loadPopularKeywords();
+        $this->querySuggestions = $this->loadQuerySuggestions();
+    }
+
+    /**
+     * クエリ全文サジェスト候補を適用します。applyKeywordSearch() と同じ置換型挙動で
+     * 入力欄をクエリ全文で上書きし、検索を実行します。
+     */
+    public function applyQuerySuggestion(string $queryText): void
+    {
+        $this->applyKeywordSearch($queryText);
+    }
+
+    public function deleteSearchHistory(int $activityId): void
+    {
+        $deleted = app(SearchHistoryService::class)->delete(auth()->user(), $activityId);
+        if ($deleted) {
+            $this->recentSearches = $this->loadRecentSearches();
+        }
+    }
+
+    public function loadRecentSearches(): array
+    {
+        $user = auth()->user();
+        if (! $user) {
+            return [];
+        }
+
+        return app(SearchHistoryService::class)
+            ->getRecent($user, tenant()?->id, 5)
+            ->map(fn ($activity) => [
+                'id' => $activity->id,
+                'label' => $activity->description,
+                'conditions' => $activity->properties['conditions'] ?? [],
+                'result_count' => $activity->properties['result_count'] ?? 0,
+                'created_at' => $activity->created_at?->toIso8601String(),
+            ])
+            ->toArray();
+    }
+
+    public function loadPopularKeywords(): array
+    {
+        $tenantId = tenant()?->id;
+        if (! $tenantId) {
+            return [];
+        }
+
+        $keywords = app(SearchKeywordService::class)
+            ->getPopularKeywords($tenantId, 10);
+
+        // 現在の検索入力に含まれる単語を除外
+        $currentWords = $this->currentSearchWords();
+
+        if ($currentWords !== []) {
+            $keywords = array_values(array_filter($keywords, function (array $kw) use ($currentWords) {
+                return ! in_array(mb_strtolower($kw['keyword']), $currentWords, true);
+            }));
+        }
+
+        return $keywords;
+    }
+
+    /**
+     * 入力中のクエリから search_query_words 経由で search_queries を逆引き検索し、
+     * マッチ率スコア + log₂(search_count+1) 重みで並べた候補を返します。
+     *
+     * 空入力時は空配列 (空入力は popularKeywords / recentSearches セクションで
+     * カバーされる)。フォールバック判定は Blade 側 (querySuggestions.length) で行う。
+     *
+     * @return array<int, array{query_text: string, search_count: int, match_rate: float, score: float}>
+     */
+    public function loadQuerySuggestions(): array
+    {
+        return $this->loadQuerySuggestionsFor((string) $this->search);
+    }
+
+    private function loadQuerySuggestionsFor(string $search): array
+    {
+        $tenantId = tenant()?->id;
+
+        if (! $tenantId || $search === '') {
+            return [];
+        }
+
+        $result = app(SearchKeywordService::class)
+            ->suggestQueries($search, $tenantId, 8);
+
+        Log::info('loadQuerySuggestions', [
+            'search' => $search,
+            'tenantId' => $tenantId,
+            'count' => count($result),
+            'sample' => array_slice(array_column($result, 'query_text'), 0, 3),
+        ]);
+
+        return $result;
+    }
+
+    private function currentSearchWords(): array
+    {
+        $search = (string) $this->search;
+        if ($search === '') {
+            return [];
+        }
+
+        return array_values(array_unique(array_filter(
+            preg_split('/[\s　]+/u', (string) $this->search),
+            static fn (string $w) => $w !== ''
+        )));
     }
 
     public function render()
@@ -558,6 +841,10 @@ class IndexManager extends BaseLivewireComponent
             'currentUserPermissionForFolder' => $this->currentUserPermissionForFolder,
             'confidentiality' => $folderConfidentiality,
             'canEditConfidentiality' => $canEditFolderConfidentiality,
+            'recentSearches' => $this->recentSearches,
+            'popularKeywords' => $this->popularKeywords,
+            'querySuggestions' => $this->querySuggestions,
+            'showSearchSuggestions' => $this->showSearchSuggestions,
         ])->layout('layouts.appWithDrawer', ['title' => __('ledger.records_title')]);
     }
 }

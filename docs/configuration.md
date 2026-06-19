@@ -2,6 +2,80 @@
 
 LedgerLeap の主要な設定項目は `.env` ファイルで管理します。以下にカテゴリ別の設定一覧とデフォルト値を示します。
 
+## VLM/OCR 設定
+
+> **自動検出**: `bin/setup.sh` が環境を自動判定し、最適な設定を適用します。  
+> 特別な要件がない限り、`.env.example` のデフォルト値のままで動作します。
+
+### バックエンド選択
+
+`VLM_MODEL` で使用する VLM バックエンドを指定します。
+
+| 値 | 対象環境 | 説明 |
+|---|---|---|
+| `paddleocr` | 汎用 | 従来の PaddleOCR（OCR のみ、安定） |
+| `paddleocr-vl` | x86 + NVIDIA GPU | PaddleOCR-VL（GPU 加速、最高品質） |
+| `paddleocr-vl-cpu` | x86 + CPU | PaddleOCR-VL-1.6（CPU 最適化） |
+| `paddleocr-vl-mlx` | Mac Apple Silicon | MLX-VLM 経由（Metal GPU ホスト直接実行） |
+| `marker` | 汎用 | Marker（PDF → Markdown） |
+| `mineru` | 汎用 | MinerU（PDF → Markdown） |
+| `auto` | **推奨** | 環境を自動判定（Mac → MLX、x86+GPU → VL、x86+CPU → VL-CPU） |
+
+> `auto` は `bin/setup.sh` が自動設定します。手動設定する場合は、上記の値を直接指定してください。
+
+### デバイス選択
+
+| 変数名 | 既定値 | 説明 |
+|---|---|---|
+| `PADDLEOCR_DEVICE` | `auto` | `auto` → ホスト上の NVIDIA GPU を自動検出。手動指定は `gpu` / `cpu` |
+
+> `auto` の場合、`nvidia-smi` が利用可能であれば自動的に `gpu` に設定されます。
+
+### VLM 接続設定
+
+| 変数名 | 既定値 | 説明 |
+|---|---|---|
+| `VLM_ENABLED` | `true` | VLM 機能の有効/無効 |
+| `VLM_URL` | `http://vlm:8000` | VLM API の URL。Mac MLX 時は `http://host.docker.internal:8000` に自動設定 |
+| `VLM_DEFAULT_MODEL` | `PaddleOCR-VL-1.6` | 使用するデフォルトモデル名 |
+| `VLM_TIMEOUT` | `300` | VLM 処理のタイムアウト（秒） |
+| `VLM_MAX_FILE_SIZE` | `10485760` | 処理可能な最大ファイルサイズ（バイト、デフォルト 10MB） |
+
+### Mac Apple Silicon (MLX-VLM)
+
+Mac M1/M2/M3/M4 の場合、`bin/setup.sh` が自動的に MLX-VLM をセットアップします。
+
+```bash
+# セットアップ完了後、別ターミナルで MLX サーバーを起動
+./scripts/start-vlm-mlx.sh
+
+# 環境チェックのみ
+./scripts/start-vlm-mlx.sh --check
+
+# 依存関係のインストールのみ
+./scripts/start-vlm-mlx.sh --install
+```
+
+MLX-VLM は Docker 内では動作しません（Apple Metal GPU に直接アクセスする必要があるため）。  
+Mac ホスト上で `unified_api.py` が起動し、Laravel (Sail) は `host.docker.internal:8000` 経由で接続します。
+
+### 環境変数の自動設定フロー
+
+```
+bin/setup.sh 実行
+  ├── PADDLEOCR_DEVICE=auto → nvidia-smi 検出 → gpu/cpu に自動設定
+  ├── x86_64 + GPU → VLM_MODEL=paddleocr-vl
+  ├── x86_64 + CPU → VLM_MODEL=paddleocr-vl-cpu
+  ├── Mac + arm64   → MLX-VLM 導入試行
+  │     ├── 成功 → VLM_MODEL=auto, VLM_URL=host.docker.internal:8000
+  │     └── 失敗 → Docker vlm にフォールバック
+  └── ARM64 Linux   → VLM_MODEL=paddleocr
+```
+
+ユーザーが `.env` で明示的に値を設定している場合は、自動検出をスキップしてその値が優先されます。
+
+---
+
 ## アプリケーション基本設定
 
 | 変数名 | 既定値 | 説明 |

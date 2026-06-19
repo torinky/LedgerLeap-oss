@@ -24,6 +24,13 @@ error() {
     echo "ERROR: $1" >&2
 }
 
+# macOS (BSD sed) requires empty backup extension; GNU sed (Linux) does not
+if [[ "$(uname)" == "Darwin" ]]; then
+    sed_i() { sed -i '' "$@"; }
+else
+    sed_i() { sed -i "$@"; }
+fi
+
 print_usage() {
     echo "Usage: $0 [-p] [-n] [-h]"
     echo ""
@@ -34,7 +41,8 @@ print_usage() {
     echo ""
     echo "Environment detection:"
     echo "  - Architecture: Automatically detected (ARM64/AMD64)"
-    echo "  - GPU support: Based on PADDLEOCR_DEVICE in .env"
+    echo "  - GPU:          Automatically detected (NVIDIA GPU → paddleocr-vl)"
+    echo "  - Mac MLX:      Apple Silicon → MLX-VLM (Metal-accelerated)"
     echo ""
     echo "Examples:"
     echo "  $0      # Development environment"
@@ -46,6 +54,7 @@ print_usage() {
 ENV="development"
 NO_CACHE=false
 COMPOSE_FILES_ARRAY=()
+MLX_ENABLED=false  # Track whether MLX-VLM backend is active
 
 # 0. .env ファイルの存在確認
 if [ ! -f .env ]; then
@@ -116,10 +125,41 @@ else
     exit 1
 fi
 
-# 4. GPU利用の判定
-if [ "$PADDLEOCR_DEVICE" = "gpu" ]; then
+# 4. GPU利用の自動判定
+#    PADDLEOCR_DEVICE=auto ならホスト上のGPUを検出して自動設定する
+detect_gpu() {
+    # NVIDIA GPU: check nvidia-smi
+    if command -v nvidia-smi &>/dev/null && nvidia-smi &>/dev/null 2>&1; then
+        return 0
+    fi
+    # Fallback: check /proc/driver/nvidia (Linux)
+    if [[ -c /dev/nvidia0 ]] 2>/dev/null; then
+        return 0
+    fi
+    return 1
+}
+
+GPU_ENABLED=false
+PADDLEOCR_DEVICE_CURRENT="${PADDLEOCR_DEVICE:-auto}"
+
+if [[ "$PADDLEOCR_DEVICE_CURRENT" == "auto" ]]; then
+    if detect_gpu; then
+        info "NVIDIA GPU detected on host — setting PADDLEOCR_DEVICE=gpu"
+        sed_i "s|^PADDLEOCR_DEVICE=.*|PADDLEOCR_DEVICE=gpu|" .env 2>/dev/null || echo "PADDLEOCR_DEVICE=gpu" >> .env
+        export PADDLEOCR_DEVICE=gpu
+        PADDLEOCR_DEVICE_CURRENT=gpu
+    else
+        info "No NVIDIA GPU detected — using CPU mode"
+        sed_i "s|^PADDLEOCR_DEVICE=.*|PADDLEOCR_DEVICE=cpu|" .env 2>/dev/null || echo "PADDLEOCR_DEVICE=cpu" >> .env
+        export PADDLEOCR_DEVICE=cpu
+        PADDLEOCR_DEVICE_CURRENT=cpu
+    fi
+fi
+
+if [ "$PADDLEOCR_DEVICE_CURRENT" = "gpu" ]; then
     if [ -f "docker-compose.gpu.yml" ]; then
         COMPOSE_FILES_ARRAY+=("docker-compose.gpu.yml")
+        GPU_ENABLED=true
         info "GPU support enabled"
     else
         error "docker-compose.gpu.yml not found, but PADDLEOCR_DEVICE=gpu is set"
@@ -127,7 +167,103 @@ if [ "$PADDLEOCR_DEVICE" = "gpu" ]; then
     fi
 fi
 
-# 5. COMPOSE_FILE環境変数を構築
+# 5. x86/AMD64 VLM バックエンド自動選択
+#    GPU → paddleocr-vl (最良品質), CPU → paddleocr-vl-cpu (CPU向けVLモデル)
+if [[ "$ARCH" == "x86_64" ]]; then
+    VLM_MODEL_CURRENT="${VLM_MODEL:-}"
+    # 自動設定値（paddleocr / paddleocr-vl / paddleocr-vl-cpu）なら再評価する
+    # ユーザーが marker/mineru 等の別の値を設定している場合はスキップ
+    case "$VLM_MODEL_CURRENT" in
+        ""|paddleocr|paddleocr-vl|paddleocr-vl-cpu)
+            if [[ "$GPU_ENABLED" == "true" ]]; then
+                info "x86 + GPU — selecting paddleocr-vl (GPU-accelerated Vision-Language model)"
+                sed_i "s|^VLM_MODEL=.*|VLM_MODEL=paddleocr-vl|" .env 2>/dev/null || echo "VLM_MODEL=paddleocr-vl" >> .env
+                export VLM_MODEL=paddleocr-vl
+            else
+                info "x86 + CPU — selecting paddleocr-vl-cpu (CPU-optimized Vision-Language model)"
+                sed_i "s|^VLM_MODEL=.*|VLM_MODEL=paddleocr-vl-cpu|" .env 2>/dev/null || echo "VLM_MODEL=paddleocr-vl-cpu" >> .env
+                export VLM_MODEL=paddleocr-vl-cpu
+            fi
+            ;;
+        *)
+            info "VLM_MODEL is set to '$VLM_MODEL_CURRENT' — skipping auto-detection"
+            ;;
+    esac
+fi
+
+# 6. Mac Apple Silicon VLM バックエンド自動選択
+#    MLX-VLM を Mac ホスト上で直接実行し、Docker の vlm コンテナを迂回する
+#    mlx-vlm のインストールに失敗した場合は Docker vlm にフォールバックする
+if [[ "$(uname)" == "Darwin" && "$(uname -m)" == "arm64" ]]; then
+    VLM_MODEL_CURRENT="${VLM_MODEL:-}"
+    VLM_URL_CURRENT="${VLM_URL:-http://vlm:8000}"
+
+    # 自動設定値（paddleocr / paddleocr-vl-mlx / auto）なら再評価する
+    # ユーザーが marker/mineru 等の別の値を設定している場合はスキップ
+    case "$VLM_MODEL_CURRENT" in
+        ""|paddleocr|paddleocr-vl-mlx|auto)
+            info "Mac Apple Silicon detected — checking MLX-VLM availability..."
+
+            MLX_READY=false
+            MIN_MLX_VERSION="0.6.0"
+
+            # Step 1: install mlx-vlm via the setup script
+            if [ -f "./scripts/start-vlm-mlx.sh" ]; then
+                if bash ./scripts/start-vlm-mlx.sh --install; then
+                    # Step 2: verify installed version from venv
+                    if [ -f ".venv-mlx/bin/python" ]; then
+                        MLX_VER=$(.venv-mlx/bin/python -c "import mlx_vlm; print(mlx_vlm.__version__)" 2>/dev/null) || MLX_VER=""
+                    else
+                        MLX_VER=""
+                    fi
+
+                    if [[ -n "$MLX_VER" ]]; then
+                        # Semver comparison: check $MLX_VER >= $MIN_MLX_VERSION
+                        VER_CHECK=$(printf '%s\n%s\n' "$MIN_MLX_VERSION" "$MLX_VER" | sort -V | tail -1)
+                        if [[ "$VER_CHECK" == "$MLX_VER" ]]; then
+                            info "mlx-vlm $MLX_VER installed (>= $MIN_MLX_VERSION required) — OK"
+                            MLX_READY=true
+                        else
+                            info "mlx-vlm $MLX_VER is too old (need >= $MIN_MLX_VERSION)"
+                        fi
+                    else
+                        info "mlx-vlm installation could not be verified"
+                    fi
+                else
+                    info "mlx-vlm installation failed or was skipped"
+                fi
+            else
+                info "scripts/start-vlm-mlx.sh not found — skipping MLX setup"
+            fi
+
+            # Step 3: configure .env based on availability
+            if [[ "$MLX_READY" == "true" ]]; then
+                info "MLX-VLM is ready — enabling Mac-native MLX backend"
+
+                sed_i "s|^VLM_MODEL=.*|VLM_MODEL=auto|" .env 2>/dev/null || echo "VLM_MODEL=auto" >> .env
+                sed_i "s|^VLM_URL=.*|VLM_URL=http://host.docker.internal:8000|" .env 2>/dev/null || echo "VLM_URL=http://host.docker.internal:8000" >> .env
+
+                export VLM_MODEL=auto
+                export VLM_URL=http://host.docker.internal:8000
+                MLX_ENABLED=true
+
+                info "VLM_MODEL=auto (auto-detect → paddleocr-vl-mlx on Mac)"
+                info "VLM_URL=http://host.docker.internal:8000 (Mac host MLX server)"
+            else
+                warn() { echo "WARN: $1"; }
+                warn "MLX-VLM not available — falling back to Docker vlm service"
+                warn "To enable MLX later, run: ./scripts/start-vlm-mlx.sh --install"
+
+                # Keep existing Docker-based settings (VLM_MODEL=paddleocr, VLM_URL=http://vlm:8000)
+            fi
+            ;;
+        *)
+            info "VLM_MODEL is set to '$VLM_MODEL_CURRENT' — skipping auto-detection"
+            ;;
+    esac
+fi
+
+# 7. COMPOSE_FILE環境変数を構築
 export COMPOSE_FILE=$(IFS=: ; echo "${COMPOSE_FILES_ARRAY[*]}")
 info "Using COMPOSE_FILE: $COMPOSE_FILE"
 
@@ -175,3 +311,24 @@ rm -rf node_modules package-lock.json
 
 info "Setup complete! The application should be running at http://localhost"
 echo "You can now create a tenant using 'sail artisan tinker'."
+
+# Mac Apple Silicon の場合、MLX-VLM サーバーの起動手順を表示
+if [[ "$MLX_ENABLED" == "true" ]]; then
+    echo ""
+    echo "=========================================="
+    echo "  Mac Apple Silicon VLM Setup"
+    echo "=========================================="
+    echo ""
+    echo "MLX-VLM is configured for OCR on this Mac."
+    echo "Start the MLX-VLM server in a separate terminal:"
+    echo ""
+    echo "  ./scripts/start-vlm-mlx.sh"
+    echo ""
+    echo "First run downloads ~2 GB model (one-time)."
+    echo "Health check: http://localhost:8000/health"
+    echo "API docs:     http://localhost:8000/docs"
+    echo ""
+    echo "The Docker vlm service is still running but not used"
+    echo "(VLM_URL points to the Mac host)."
+    echo "=========================================="
+fi

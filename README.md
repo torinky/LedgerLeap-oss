@@ -158,9 +158,9 @@ docker run --rm \
 
 ## 技術概要
 
-- **言語 / フレームワーク**: PHP 8.4, Laravel 12
+- **言語 / フレームワーク**: PHP 8.4, Laravel 13
 - **データベース**: MySQL / MariaDB, Mroonga
-- **フロントエンド**: Livewire 3, Alpine.js, Tailwind CSS 4, DaisyUI 5, Mary UI, Filament
+- **フロントエンド**: Livewire 4, Alpine.js, Tailwind CSS 4, DaisyUI 5, Mary UI, Filament
 - **主要機能基盤**:
   - マルチテナント: `stancl/tenancy`
   - 権限管理: `spatie/laravel-permission`

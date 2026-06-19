@@ -22,7 +22,7 @@
                             <span class="relative inline-flex items-center justify-center text-3xl w-[1.25em] h-[1.25em]">
                                 <i
                                     class="fa-solid {{ in_array($folderRecord->id, $selectedFolderIds) ? 'fa-folder-open' : 'fa-folder' }} "></i>
-                                <span class="absolute text-[0.4em] text-secondary font-black mt-2">{{ $folderRecord->descendantCount() }}</span>
+                                <span class="absolute text-[0.55em] text-base-100 font-black {{ in_array($folderRecord->id, $selectedFolderIds) ? 'mt-2' : 'inset-0 flex items-center justify-center' }}">{{ $folderRecord->descendantCount() }}</span>
                             </span>
                         </button>
                         {{-- 階層移動ボタン --}}

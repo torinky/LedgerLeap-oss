@@ -2,14 +2,12 @@ fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
 
-# PaddleOCR with stable version (CPU compatible)
-paddlepaddle==2.6.2
-paddleocr==2.8.1
+# PaddleOCR (PP-OCR + PaddleOCRVL doc-parser pipeline)
+# paddlepaddle CPU版は Dockerfile で別途インストール済み
+# [doc-parser] extras: PaddleOCRVL に必要な追加依存（layout detection, table 等）
+paddleocr[doc-parser]>=3.6.0
 
-# Force numpy to compatible version
-numpy<2
-
-# Other dependencies
+# Image/PDF processing
 PyMuPDF==1.19.0
 opencv-python-headless
 Pillow==10.1.0

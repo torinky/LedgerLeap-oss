@@ -5,6 +5,58 @@ namespace App\Helpers;
 class SearchHelper
 {
     /**
+     * 検索クエリ文字列をサーバ側で正規化する (文字種のみ)。
+     *
+     *  - 全角英数字 (U+FF10-U+FF19, U+FF21-U+FF3A, U+FF41-U+FF5A)
+     *  - 全角スペース (U+3000)
+     *  - 全角記号 (ハイフン・スラッシュ・ドット・括弧 など)
+     * を mb_convert_kana で半角へ統一する。
+     *
+     * ユーザ要望: 「数字、アルファベット、記号はサーバで強制半角変換していい」
+     * → フラグ `as` (全角英数 → 半角英数, 全角スペース → 半角スペース) のみ使用。
+     * `k` (カタカナ) や `h` (ひらがな) は変換対象外 — ひらがな `を` を
+     * 半角カタカナ `ｦ` に破壊的変換しないため。
+     *
+     * 追加で:
+     *  - 全角スペース (U+3000) → 半角スペース (U+0020)
+     *  - 全角ハイフン (U+FF0D), 全角スラッシュ (U+FF0F), 全角ドット (U+FF0E) 等
+     *    については 'r' フラグで全角 → 半角記号へ変換
+     *
+     * **重要**: この関数では trim() を行わない。
+     * ユーザが単語区切りの意図で末尾にスペース (例: 「部品 」) を
+     * 入力した場合に、それを保存してサジェスト/検索条件として
+     * 保持する必要があるため。
+     * 末尾/先頭スペースを捨てたい呼び出し側は `trimSearch()` を併用する。
+     */
+    public static function normalizeQuery(?string $value): string
+    {
+        if ($value === null || $value === '') {
+            return '';
+        }
+
+        $normalized = mb_convert_kana($value, 'asr', 'UTF-8');
+        $normalized = str_replace("\u{3000}", ' ', $normalized);
+
+        return $normalized;
+    }
+
+    /**
+     * 検索クエリ文字列の両端の空白を取り除く。
+     *
+     * `normalizeQuery()` は文字種のみ正規化し、trim() しない設計のため、
+     * 末尾/先頭のスペース削除は明示的にこのメソッドを呼ぶ。
+     * 検索条件として永続化する場合など、空白が意味を持たない文脈で使用する。
+     *
+     * 削除対象: 半角スペース, タブ, 改行, 復帰, NULL, 垂直タブ, **全角スペース (U+3000)**
+     * 後半の全角スペースが重要 — normalizeQuery() は U+3000 → ' ' に変換するため、
+     * 既に半角スペースになった状態でも trim() で取り除ける必要がある。
+     */
+    public static function trimSearch(string $value): string
+    {
+        return trim($value, " \t\n\r\0\x0B\u{3000}");
+    }
+
+    /**
      * Mroonga の検索クエリから実質的なキーワードを抽出する
      *
      * @param  string|null  $query  検索クエリ

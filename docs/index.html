@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LedgerLeap AI-Native Platform 2026</title>
+    <style>
+        :root {
+            --primary: #3b82f6;
+            --accent: #0ea5e9;
+            --text-main: #ffffff;
+            --text-sub: #cbd5e1;
+            --glass-bg: rgba(15, 23, 42, 0.45);
+            --glass-border: rgba(255, 255, 255, 0.2);
+        }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: "Helvetica Neue", Arial, "Hiragino Kaku Gothic ProN", "Hiragino Sans", Meiryo, sans-serif;
+            background-image: url('presentations/2026-02-24_introduction_slides/images/title_bg.png');
+            background-size: cover;
+            background-position: center;
+            color: var(--text-main);
+            min-height: 100vh;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .poster-container {
+            width: min(1800px, calc(100vw - 48px));
+            min-height: min(980px, calc(100vh - 48px));
+            display: flex;
+            flex-direction: row;
+            gap: 60px;
+            align-items: center;
+            padding: 32px 40px;
+        }
+        .left-col {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .brand-header {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 28px;
+        }
+        .brand-logo {
+            width: 80px;
+            height: 80px;
+            filter: drop-shadow(0 4px 6px rgba(0,0,0,0.3));
+        }
+        .brand-name {
+            font-size: 2.5rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            text-shadow: 0 4px 10px rgba(0,0,0,0.5);
+        }
+        .badge-core {
+            display: inline-block;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            padding: 8px 20px;
+            border-radius: 999px;
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(59, 130, 246, 0.4);
+            align-self: flex-start;
+        }
+        h1 {
+            font-size: clamp(3rem, 5vw, 5rem);
+            line-height: 1.1;
+            font-weight: 800;
+            margin: 0 0 26px 0;
+            text-shadow: 0 5px 15px rgba(0,0,0,0.6);
+            letter-spacing: -0.02em;
+        }
+        .highlight { color: var(--accent); }
+        .subtitle {
+            font-size: clamp(1.4rem, 2vw, 2rem);
+            line-height: 1.6;
+            color: var(--text-sub);
+            margin-bottom: 56px;
+            font-weight: 500;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+        }
+        .features { display: grid; gap: 22px; }
+        .feature-card {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--glass-border);
+            padding: 22px 24px;
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            gap: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+        }
+        .feature-icon { font-size: 2.6rem; }
+        .feature-content h2 { margin: 0 0 4px 0; font-size: 1.45rem; }
+        .feature-content p { margin: 0; font-size: 1rem; color: var(--text-sub); line-height: 1.65; }
+        .right-col {
+            flex: 1.05;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .visual {
+            width: min(100%, 900px);
+            background: rgba(15, 23, 42, 0.35);
+            border: 1px solid rgba(255,255,255,0.16);
+            border-radius: 28px;
+            padding: 26px;
+            box-shadow: 0 24px 70px rgba(0, 0, 0, 0.32);
+            backdrop-filter: blur(8px);
+        }
+        .visual img { width: 100%; display: block; border-radius: 18px; box-shadow: 0 18px 48px rgba(0,0,0,0.28); }
+        .actions {
+            margin-top: 26px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 14px;
+        }
+        .actions a {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 220px;
+            padding: 14px 18px;
+            border-radius: 14px;
+            text-decoration: none;
+            color: #f8fafc;
+            border: 1px solid rgba(255,255,255,0.18);
+            background: rgba(30, 41, 59, 0.92);
+            font-weight: 700;
+        }
+        .actions a.primary { background: linear-gradient(135deg, rgba(59,130,246,0.72), rgba(6,182,212,0.72)); }
+        .note {
+            margin-top: 18px;
+            font-size: 0.95rem;
+            color: var(--text-sub);
+        }
+        @media (max-width: 1100px) {
+            body { overflow: auto; }
+            .poster-container { flex-direction: column; min-height: auto; gap: 32px; }
+            .right-col { width: 100%; }
+        }
+    </style>
+</head>
+<body>
+<main class="poster-container">
+    <section class="left-col">
+        <div class="brand-header">
+            <img src="presentations/2026-02-24_introduction_slides/images/icon.svg" alt="LedgerLeap" class="brand-logo">
+            <div class="brand-name">LedgerLeap</div>
+        </div>
+
+        <div class="badge-core">Landing Poster</div>
+
+        <h1>組織の「記憶」を<br><span class="highlight">「知能」</span>に変える。</h1>
+
+        <p class="subtitle">
+            現場のムダをなくし、確かなデータで組織を動かす<br>
+            次世代 AI 台帳プラットフォーム
+        </p>
+
+        <div class="features">
+            <div class="feature-card">
+                <div class="feature-icon">🔍</div>
+                <div class="feature-content">
+                    <h2>直感的なハイブリッド検索</h2>
+                    <p>「完全一致」×「意味理解」。ファイル名が分からなくても、中身で一発検索。探す時間をゼロへ。</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">⚡</div>
+                <div class="feature-content">
+                    <h2>現場特化の AI 入力支援</h2>
+                    <p>帳票構造を維持したまま、データと文字列座標を正確に抽出。目視確認や転記の手間を減らします。</p>
+                </div>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon">🛡️</div>
+                <div class="feature-content">
+                    <h2>監査に耐えるガバナンス</h2>
+                    <p>更新履歴と承認フローで、情報漏洩を防ぎながら内部統制を支えます。</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="actions">
+            <a class="primary" href="./presentations/2026-02-24_introduction_slides/slides.html">スライドへ</a>
+            <a href="./README.md">ドキュメントへ</a>
+        </div>
+
+        <div class="note">ドキュメントボタンは docs 直下の README に移動します。</div>
+    </section>
+
+    <section class="right-col" aria-label="poster visual">
+        <div class="visual">
+            <img src="presentations/2026-02-24_introduction_slides/images/ui_mockup.png" alt="LedgerLeap UI mockup">
+        </div>
+    </section>
+</main>
+</body>
+</html>
+
+
+
+

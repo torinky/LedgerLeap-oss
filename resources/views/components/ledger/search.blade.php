@@ -12,10 +12,14 @@
     'useTechnicalTerm' => false,
     'orderAsc' => true,
     'filterStatus' => '',
+    'recentSearches' => [],
+    'popularKeywords' => [],
+    'querySuggestions' => [],
+    'showSearchSuggestions' => false,
 ])
 
 <div class="mt-15 pb-0">
-    <x-mary-card shadow="sm" class="w-full min-w-0 overflow-hidden border border-base-300 bg-base-100 py-0"
+    <x-mary-card shadow="sm" class="w-full min-w-0 border border-base-300 bg-base-100 py-0"
                  body-class="p-0">
         <div class="space-y-2 py-2">
             @php
@@ -47,9 +51,106 @@
             --}}
 
             <div class="grid grid-cols-1 gap-2.5 lg:grid-cols-[minmax(0,1.3fr)_minmax(19.5rem,19.5rem)] xl:grid-cols-[minmax(0,1.5fr)_minmax(20.5rem,20.5rem)] items-center">
-                <x-mary-input wire:model.live.change="search" type="search" icon="o-magnifying-glass"
-                              class="input-primary input-lg shadow-md" placeholder="{{ __('ledger.search_message') }}"
-                              clearable/>
+                {{-- TODO(#243-follow-up): ActivityLog は監査証跡として残す必要があるため、履歴削除ボタンは一時非表示。SearchHistoryService::delete() / IndexManager::deleteSearchHistory() は実装済みで、今後「非表示化」または「管理画面からの削除」設計時に再利用予定。 --}}
+                <div class="relative z-40 w-full"
+                     x-data="ledgerSearchSuggest()"
+                     @click.away="open = false; commitSuggestions()">
+                    <x-mary-input type="search" icon="o-magnifying-glass"
+                                   class="input-primary input-lg shadow-md" placeholder="{{ __('ledger.search_message') }}"
+                                   autocomplete="off"
+                                   x-model="localSearch"
+                                   @focus="open = true; selectedIndex = -1; syncLocalFromInput()"
+                                   @input="onLocalInput()"
+                                   @blur="commitSuggestions()"
+                                   @keydown.space="onSpaceKey($event)"
+                                   @keydown.arrow-down.prevent="if (open && hasItems) navigateDown()"
+                                   @keydown.arrow-up.prevent="if (open && hasItems) navigateUp()"
+                    />
+                    {{-- クリアボタン (Mary UI clearable 非使用: wire:model 依存のため独自実装) --}}
+                    <svg x-show="localSearch !== ''" @click="localSearch = ''; open = false; selectedIndex = -1; commitSuggestions(); $wire.clearSearch()"
+                         class="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 cursor-pointer text-base-content/40 hover:text-base-content/70"
+                         xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M6 18 18 6M6 6l12 12" />
+                    </svg>
+
+                    <div x-show="open && hasItems"
+                         class="absolute top-full left-0 right-0 z-40 mt-1 rounded-box bg-base-100 p-2 shadow-lg border border-base-300"
+                         x-cloak
+                         wire:ignore>
+                        <ul class="menu menu-sm w-full">
+                            {{-- Issue #254 Phase A-9: Alpine.js x-for の「単一ルート要素」仕様
+                                 (https://alpinejs.dev/directives/for) に従い、recent / related /
+                                 popular をそれぞれ独立した x-for で描画する。
+                                 旧実装は 1 つの unifiedSuggestions 配列を単一 x-for で回し、
+                                 その中に <li> + <template x-if> + <a> の複数要素を置いていたため、
+                                 スコープが壊れて `Can't find variable: item` 大量発生していた。 --}}
+
+                            {{-- Recent section --}}
+                            <template x-if="showRecent && recentItems.length > 0">
+                                <li class="menu-title" x-text="@js(__('ledger.search_suggest.recent'))"></li>
+                            </template>
+                            <template x-for="(item, idx) in recentItems" :key="item.key">
+                                <li :class="{ 'bg-base-200': selectedIndex === idx }"
+                                    @mouseenter="selectedIndex = idx">
+                                    <a @click="selectUnified(item); open = false; selectedIndex = -1"
+                                       class="flex justify-between">
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                            <span x-text="item.label" class="truncate"></span>
+                                        </span>
+                                        <span class="flex items-center gap-2 shrink-0">
+                                            <span class="badge badge-ghost badge-xs"
+                                                  x-text="item.searchCount"></span>
+                                        </span>
+                                    </a>
+                                </li>
+                            </template>
+
+                            {{-- Related section --}}
+                            <template x-if="relatedItems.length > 0">
+                                <li class="menu-title" x-text="@js(__('ledger.search_suggest.related'))"></li>
+                            </template>
+                            <template x-for="(item, idx) in relatedItems" :key="item.key">
+                                <li :class="{ 'bg-base-200': selectedIndex === recentItems.length + idx }"
+                                    @mouseenter="selectedIndex = recentItems.length + idx">
+                                    <a @click="selectUnified(item); open = false; selectedIndex = -1"
+                                       class="flex justify-between">
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="m21 21-5.197-5.197m0 0A7.5 7.5 0 1 0 5.196 5.196a7.5 7.5 0 0 0 10.607 10.607Z" /></svg>
+                                            <span class="truncate" x-html="highlight(item.label)"></span>
+                                        </span>
+                                        <span class="flex items-center gap-2 shrink-0">
+                                            <span class="badge badge-ghost badge-xs"
+                                                  x-text="item.searchCount"></span>
+                                        </span>
+                                    </a>
+                                </li>
+                            </template>
+
+                            {{-- Popular section --}}
+                            <template x-if="popularItems.length > 0">
+                                <li class="menu-title"
+                                    x-text="showPopularFallback ? @js(__('ledger.search_suggest.popular_fallback')) : @js(__('ledger.search_suggest.popular'))"></li>
+                            </template>
+                            <template x-for="(item, idx) in popularItems" :key="item.key">
+                                <li :class="{ 'bg-base-200': selectedIndex === recentItems.length + relatedItems.length + idx }"
+                                    @mouseenter="selectedIndex = recentItems.length + relatedItems.length + idx">
+                                    <a @click="selectUnified(item); open = false; selectedIndex = -1"
+                                       class="flex justify-between">
+                                        <span class="flex items-center gap-2 min-w-0">
+                                            <svg class="h-4 w-4 shrink-0" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" d="M15.362 5.214A8.252 8.252 0 0 1 12 21 8.25 8.25 0 0 1 6.038 7.047 8.287 8.287 0 0 0 9 9.601a8.983 8.983 0 0 1 3.361-6.867 8.21 8.21 0 0 0 3 2.48Z" /></svg>
+                                            <span x-text="item.label" class="truncate"></span>
+                                        </span>
+                                        <span class="flex items-center gap-2 shrink-0">
+                                            <span class="badge badge-ghost badge-xs"
+                                                  x-text="item.searchCount"></span>
+                                        </span>
+                                    </a>
+                                </li>
+                            </template>
+                        </ul>
+                    </div>
+                </div>
 
                 <div class="grid grid-cols-1 gap-1.5 md:grid-cols-2 ">
                     <label class="form-control rounded-xl border border-base-300/70 bg-base-200/50 px-3 py-2">
@@ -133,27 +234,27 @@
                                           icon="o-view-columns"
                                           class="badge-info badge-sm hidden sm:inline-flex whitespace-nowrap shadow-xs"/>
                         </div>
-                        <?php if ($useSemanticSearch) : ?>
+                        <?php if ($useSemanticSearch) { ?>
                             <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.semantic_search_requires_query') }}">
                                 <x-mary-badge :value="__('ledger.semantic_search')"
                                               icon="o-sparkles"
                                               class="badge-secondary badge-sm hidden sm:inline-flex shadow-xs"/>
                             </div>
-                        <?php endif; ?>
-                        <?php if ($useTechnicalTerm) : ?>
+                        <?php } ?>
+                        <?php if ($useTechnicalTerm) { ?>
                             <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.search_technical_term_hint') }}">
                                 <x-mary-badge :value="__('ledger.search_technical_term')"
                                               icon="o-book-open"
                                               class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
                             </div>
-                        <?php endif; ?>
-                        <?php if ($useSynonym) : ?>
+                        <?php } ?>
+                        <?php if ($useSynonym) { ?>
                             <div class="tooltip tooltip-bottom" data-tip="{{ $useSemanticSearch ? __('ledger.synonym_disabled_in_semantic_search') : __('ledger.search_synonym_hint') }}">
                                 <x-mary-badge :value="__('ledger.search_synonym')"
                                               icon="o-chat-bubble-left-right"
                                               class="badge-neutral badge-sm hidden sm:inline-flex shadow-xs"/>
                             </div>
-                        <?php endif; ?>
+                        <?php } ?>
 
                         @if (!empty($workflowStatusLabel))
                         <div class="tooltip tooltip-bottom" data-tip="{{ __('ledger.workflow.status.label') }}">

@@ -7,15 +7,18 @@ import intersect from '@alpinejs/intersect';
 import expandableContent from './components/expandable-content.js';
 import ledgerInitOverlay from './components/ledger-init-overlay.js';
 import confidentialityScrollTracker from './components/confidentiality-scroll-tracker.js';
+import ledgerSearchSuggest from './components/ledger-search-suggest.js';
 
 globalThis.expandableContent ??= expandableContent;
 globalThis.ledgerInitOverlay ??= ledgerInitOverlay;
 globalThis.confidentialityScrollTracker ??= confidentialityScrollTracker;
+globalThis.ledgerSearchSuggest ??= ledgerSearchSuggest;
 
 const alpineRegistrations = globalThis.__ledgerLeapAlpineRegistrations ??= {
     expandableContent: false,
     ledgerInitOverlay: false,
     confidentialityScrollTracker: false,
+    ledgerSearchSuggest: false,
     intersect: false,
 };
 
@@ -33,6 +36,11 @@ const registerAlpineData = (alpine) => {
     if (!alpineRegistrations.confidentialityScrollTracker) {
         alpine.data('confidentialityScrollTracker', confidentialityScrollTracker);
         alpineRegistrations.confidentialityScrollTracker = true;
+    }
+
+    if (!alpineRegistrations.ledgerSearchSuggest) {
+        alpine.data('ledgerSearchSuggest', ledgerSearchSuggest);
+        alpineRegistrations.ledgerSearchSuggest = true;
     }
 };
 
