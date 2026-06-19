@@ -1,28 +1,24 @@
 # VLM/OCR並列処理統合アーキテクチャ
 
-**作成日:** 2025年11月8日  
-**ステータス:** ✅ **Phase5 実装完了**  
-**ドキュメント種別:** 公式アーキテクチャ文書  
+**ドキュメント種別:** 公式アーキテクチャ文書
 
 **関連ドキュメント:**
-- [並列処理提案書](../work/vlm-rag-integration/2025-11-08_parallel-processing-proposal.md)
-- [Phase4実装完了レポート](../work/vlm-rag-integration/2025-11-08_phase4-id3-implementation-report.md)
 - [VLM-OCR技術調査](./vlm-ocr-technology-selection.md)
 
 ---
 
-## 📋 エグゼクティブサマリー
+## 目的
 
 本文書は、VLM（Visual Language Model）とOCRの**並列処理統合アーキテクチャ**を定義します。
 
-### 🎯 設計方針
+### 設計方針
 
-**✅ 並列処理**: VLMとOCRを同時実行し、処理時間を最大50%削減  
-**✅ スケジュール最終化**: 1分ごとの定期処理でインデックス空白期間を最小化  
-**✅ 結果優先順位**: VLM > OCR > Tika の順で最高品質データを自動選択  
-**✅ 冗長性**: 片方が失敗しても他方で補完可能
+**並列処理**: VLMとOCRを同時実行し、処理時間を最大50%削減
+**スケジュール最終化**: 1分ごとの定期処理でインデックス空白期間を最小化
+**結果優先順位**: VLM > OCR > Tika の順で最高品質データを自動選択
+**冗長性**: 片方が失敗しても他方で補完可能
 
-### 🔄 アーキテクチャ概要
+### アーキテクチャ概要
 
 ```
 ファイルアップロード
@@ -32,7 +28,7 @@ Tika処理（基本メタデータ・テキスト抽出）
 並列ディスパッチ（画像/PDF対象）
   ├─ VLM処理（構造化・Markdown生成）
   └─ OCR処理（テキストレイヤー追加）
-  
+
 ★スケジューラー（1分ごと）
   ↓
 FinalizeProcessing コマンド
@@ -44,8 +40,15 @@ FinalizeProcessing コマンド
 
 ---
 
-## 1. 処理フロー詳細設計
-## 1.1. 全体フローチャート
+## 対象範囲
+
+本アーキテクチャは、LedgerLeapにおける添付ファイル（画像・PDF・Office文書）のテキスト抽出処理全体を対象とします。ファイルアップロードからTika基本処理、VLM/OCR並列処理、最終化、RAGインデックス構築までの全フェーズをカバーします。
+
+---
+
+## 処理フロー詳細設計
+
+### 全体フローチャート
 
 ```mermaid
 graph TD
@@ -54,7 +57,7 @@ graph TD
     C --> D[tika_processed_at設定]
     D --> E[VectorizeAttachedFile<br/> Tika結果 ]
     D --> F{画像/PDF対象?}
-    
+
     E --> J[ProcessLedgerForRagJob<br/> チャンク/Embedding生成 ]
     G --> J
     H --> J
@@ -62,10 +65,10 @@ graph TD
 
     F -->|Yes| K[並列ディスパッチ]
     F -->|No| L[FINALIZED_BY_TIKA<br/> 非VLM/OCR対象 ]
-    
+
     K --> G[ProcessVlmExtraction<br/>★キュー: vlm]
     K --> H[OcrAndOptimizeFile<br/>★キュー: ocr]
-    
+
     G --> M{VLM処理}
     M -->|成功| N[vlm_processed_at設定<br/>vlm_markdown保存]
     M -->|失敗| O[vlm_failed_at設定]
@@ -86,9 +89,7 @@ graph TD
     V --> W[検索可能]
 ```
 
-### 1.2. 各フェーズの詳細
-
-#### フェーズ1: 基本処理（Tika）
+### フェーズ1: 基本処理（Tika）
 
 **目的:** メタデータ抽出と基本テキスト抽出。ファイルアップロード後、RAGチャンクが即座に生成されるFast Pathをトリガーする。
 
@@ -114,7 +115,7 @@ $ledger->content_attached[$columnId][$filename] = [
 ];
 ```
 
-#### フェーズ2a: VLM処理（並列）
+### フェーズ2a: VLM処理（並列）
 
 **目的:** 高品質Markdown生成、構造化データ抽出。VLM処理後、RAGチャンクをVLM結果で上書き更新する。
 
@@ -144,7 +145,7 @@ $attachedFile->update([
 - 専用ワーカー: 2プロセス
 - タイムアウト: 300秒
 
-#### フェーズ2b: OCR処理（並列）
+### フェーズ2b: OCR処理（並列）
 
 **目的:** テキストレイヤー追加、PDF最適化。OCR処理後、RAGチャンクをOCR結果で上書き更新する。
 
@@ -171,7 +172,7 @@ $attachedFile->update([
 - 専用ワーカー: 2プロセス
 - タイムアウト: 600秒
 
-#### フェーズ2c: VectorizeAttachedFileジョブ（Fast Path）
+### フェーズ2c: VectorizeAttachedFileジョブ（Fast Path）
 
 **目的:** 各OCR/VLM処理完了時にRAGチャンク/Embeddingを即座に更新
 
@@ -187,7 +188,7 @@ $attachedFile->update([
 **キュー設定:**
 - キュー名: `default` (ProcessLedgerForRagJobが使用)
 
-#### フェーズ3: 最終化処理（スケジュール）
+### フェーズ3: 最終化処理（スケジュール）
 
 **目的:** VLM/OCR処理がタイムアウトした場合のフォールバックと、最適な結果の選択を保証
 
@@ -212,25 +213,26 @@ $schedule->command('ledger:finalize-processing')
 5. **RAGジョブディスパッチ**: `ProcessLedgerForRagJob` をディスパッチし、RAGチャンク/Embeddingを更新。
 
 ---
-### 1.3. ファイルタイプ別処理フロー一覧
 
-**重要:** Phase5並列処理アーキテクチャでは、ファイルタイプによって処理フローが異なります。
+### ファイルタイプ別処理フロー一覧
+
+ファイルタイプによって処理フローが異なります。
 
 | ファイルタイプ | MIME | Tika | VLM | OCR | ファイル名変更 | 最終source | 備考 |
 |--------------|------|------|-----|-----|---------------|-----------|------|
-| **画像（JPG/PNG/GIF）** | image/* | 空（メタデータのみ） | ✅ Markdown生成 | ✅ PDF化+テキスト抽出 | ✅ image.jpg→image.pdf | vlm > ocr > tika | VLM優先、OCRはフォールバック |
-| **テキスト付きPDF** | application/pdf | ✅ テキスト抽出 | ✅ Markdown生成 | ✅ 最適化のみ（skip-text） | ❌ document.pdf→document.pdf | vlm > tika | OCRは最適化のみ、テキスト抽出なし |
-| **画像のみPDF（スキャン）** | application/pdf | 空（メタデータのみ） | ✅ Markdown生成 | ✅ PDF化+テキスト抽出 | ❌ scan.pdf→scan.pdf | vlm > ocr > tika | OCRがテキスト抽出を実行 |
-| **Office文書（DOCX/XLSX/PPTX）** | application/vnd.* | ✅ テキスト抽出 | ❌ 非対象 | ❌ 非対象 | ❌ | tika | VLM/OCR非対象、Tikaのみ |
-| **テキストファイル（TXT/CSV）** | text/* | ✅ テキスト抽出 | ❌ 非対象 | ❌ 非対象 | ❌ | tika | VLM/OCR非対象、即座に最終化 |
-| **バイナリファイル（ZIP/EXE）** | application/zip等 | メタデータのみ | ❌ 非対象 | ❌ 非対象 | ❌ | | テキスト抽出なし |
+| **画像（JPG/PNG/GIF）** | image/* | 空（メタデータのみ） | Markdown生成 | PDF化+テキスト抽出 | image.jpg→image.pdf | vlm > ocr > tika | VLM優先、OCRはフォールバック |
+| **テキスト付きPDF** | application/pdf | テキスト抽出 | Markdown生成 | 最適化のみ（skip-text） | document.pdf→document.pdf | vlm > tika | OCRは最適化のみ、テキスト抽出なし |
+| **画像のみPDF（スキャン）** | application/pdf | 空（メタデータのみ） | Markdown生成 | PDF化+テキスト抽出 | scan.pdf→scan.pdf | vlm > ocr > tika | OCRがテキスト抽出を実行 |
+| **Office文書（DOCX/XLSX/PPTX）** | application/vnd.* | テキスト抽出 | 非対象 | 非対象 | - | tika | VLM/OCR非対象、Tikaのみ |
+| **テキストファイル（TXT/CSV）** | text/* | テキスト抽出 | 非対象 | 非対象 | - | tika | VLM/OCR非対象、即座に最終化 |
+| **バイナリファイル（ZIP/EXE）** | application/zip等 | メタデータのみ | 非対象 | 非対象 | - | - | テキスト抽出なし |
 
 **処理フローの分岐条件:**
 ```php
 // app/Models/AttachedFile.php
 public function isVlmOrOcrTarget(): bool
 {
-    return str_starts_with($this->mime, 'image/') 
+    return str_starts_with($this->mime, 'image/')
         || str_starts_with($this->mime, 'application/pdf');
 }
 ```
@@ -244,9 +246,9 @@ public function isVlmOrOcrTarget(): bool
 
 ---
 
-## 2. データベース設計
+## データベース設計
 
-### 2.1. 新規カラム
+### 新規カラム
 
 ```sql
 ALTER TABLE attached_files
@@ -257,7 +259,7 @@ ALTER TABLE attached_files
   ADD COLUMN ocr_failed_at TIMESTAMP NULL COMMENT 'OCR処理失敗日時',
   ADD COLUMN processing_finalized_at TIMESTAMP NULL COMMENT '最終化完了日時',
   ADD COLUMN finalized_source VARCHAR(10) NULL COMMENT '最終的に採用された抽出ソース (vlm/ocr/tika)';
-  
+
   ADD INDEX idx_finalization (
     tika_processed_at,
     processing_finalized_at,
@@ -268,7 +270,7 @@ ALTER TABLE attached_files
   );
 ```
 
-### 2.2. 処理状態の判定
+### 処理状態の判定
 
 ```php
 // AttachedFile モデル
@@ -290,26 +292,26 @@ public function isReadyForFinalization(): bool
     if (!$this->isVlmOrOcrTarget()) {
         return $this->tika_processed_at !== null;
     }
-    
+
     // 両方完了（成功/失敗問わず）
     $vlmDone = $this->vlm_processed_at || $this->vlm_failed_at;
     $ocrDone = $this->ocr_processed_at || $this->ocr_failed_at;
-    
+
     return $this->tika_processed_at && $vlmDone && $ocrDone;
 }
 
 public function isVlmOrOcrTarget(): bool
 {
-    return str_starts_with($this->mime, 'image/') 
+    return str_starts_with($this->mime, 'image/')
         || str_starts_with($this->mime, 'application/pdf');
 }
 ```
 
 ---
 
-## 3. キュー設定
+## キュー設定
 
-### 3.1. キュー構成
+### キュー構成
 
 ```
 default (4 workers)
@@ -324,7 +326,7 @@ ocr (2 workers)
   - OcrAndOptimizeFile
 ```
 
-### 3.2. Supervisor設定
+### Supervisor設定
 
 ```ini
 [program:ledgerleap-queue-default]
@@ -351,9 +353,9 @@ autorestart=true
 
 ---
 
-## 4. RAG統合
+## RAG統合
 
-### 4.1. Chunking処理
+### Chunking処理
 
 **タイミング:** FinalizeProcessing完了後、ProcessLedgerForRagJobがディスパッチ
 
@@ -367,12 +369,12 @@ autorestart=true
 // ChunkingService::createChunksFromLedger()
 foreach ($ledger->attachedFiles as $file) {
     // VLM結果優先
-    $content = $file->vlm_markdown 
+    $content = $file->vlm_markdown
              ?? $ledger->content_attached[$file->column_id][$file->filename]['meta']['content']
              ?? '';
-    
+
     $chunks = $this->splitIntoChunks($content);
-    
+
     foreach ($chunks as $index => $text) {
         LedgerChunk::create([
             'ledger_id' => $ledger->id,
@@ -385,7 +387,7 @@ foreach ($ledger->attachedFiles as $file) {
 }
 ```
 
-### 4.2. Embedding生成
+### Embedding生成
 
 **タイミング:** Chunk作成後、GenerateEmbeddingJobがディスパッチ
 
@@ -396,37 +398,37 @@ foreach ($ledger->attachedFiles as $file) {
 
 ---
 
-## 5. UI/UX設計
+## UI/UX設計
 
-### 5.1. ステータス表示
+### ステータス表示
 
 **処理中の表示例:**
 ```
 📄 file.png
-  ├─ Tika処理: ✅ 完了
-  ├─ VLM処理: 🔄 処理中
-  └─ OCR処理: 🔄 処理中
+  ├─ Tika処理: 完了
+  ├─ VLM処理: 処理中
+  └─ OCR処理: 処理中
 ```
 
 **完了後の表示例:**
 ```
-📄 file.png ✅ 完了
+📄 file.png 完了
   ├─ 使用結果: VLM (高品質)
   ├─ VLM信頼度: 95.3%
   └─ 最終化: 1分前
 ```
 
-### 5.2. プレビュー機能
+### プレビュー機能
 
-- VLM結果プレビューボタン（Phase4実装済み）
+- VLM結果プレビューボタン
 - Markdown表示モーダル
 - ダウンロード機能（Markdown/JSON）
 
 ---
 
-## 6. 運用・監視
+## 運用・監視
 
-### 6.1. ログ確認
+### ログ確認
 
 ```bash
 # 最終化処理のログ
@@ -439,7 +441,7 @@ tail -f storage/logs/queue.log | grep "\[VLM\]"
 tail -f storage/logs/queue.log | grep "\[OCR\]"
 ```
 
-### 6.2. 手動最終化
+### 手動最終化
 
 ```bash
 # 通常実行
@@ -452,7 +454,7 @@ php artisan ledger:finalize-processing --timeout=300
 php artisan ledger:finalize-processing --limit=100
 ```
 
-### 6.3. 監視ポイント
+### 監視ポイント
 
 - 最終化待ちファイル数
 - VLM/OCR処理時間
@@ -461,34 +463,28 @@ php artisan ledger:finalize-processing --limit=100
 
 ---
 
-## 7. メリットとトレードオフ
+## メリットとトレードオフ
 
-### 7.1. メリット
+### メリット
 
-✅ **処理時間50%削減**: 並列実行により待ち時間を大幅短縮  
-✅ **インデックス空白最大1分**: スケジュール方式で確実に更新  
-✅ **結果の冗長性**: VLM/OCR片方失敗しても補完可能  
-✅ **最高品質データ**: VLM優先で自動選択  
-✅ **タイムアウト処理**: スケジューラーで確実に処理  
-✅ **システム安定性**: キュー詰まりに影響されない  
+**処理時間削減**: 並列実行により待ち時間を大幅短縮
+**インデックス空白最小化**: スケジュール方式で確実に更新（最大1分）
+**結果の冗長性**: VLM/OCR片方失敗しても補完可能
+**最高品質データ**: VLM優先で自動選択
+**タイムアウト処理**: スケジューラーで確実に処理
+**システム安定性**: キュー詰まりに影響されない
 
-### 7.2. トレードオフ
+### トレードオフ
 
-⚠️ **複雑性増加**: 処理フローが増加（スケジューラーで吸収）  
-⚠️ **リソース消費**: 並列実行により同時リソース使用（専用キューで制限）  
-⚠️ **デバッグ難易度**: 非同期処理の追跡（詳細ログで対応）  
-
----
-
-## 8. 移行計画
-
-Phase5として実装します。詳細は別途WBSドキュメントを参照してください。
+**複雑性増加**: 処理フローが増加（スケジューラーで吸収）
+**リソース消費**: 並列実行により同時リソース使用（専用キューで制限）
+**デバッグ難易度**: 非同期処理の追跡（詳細ログで対応）
 
 ---
 
-## 9. 重要な実装上の注意事項（Phase5/6で判明）
+## エッジケースと実装上の注意事項
 
-### 9.1. ファイル名変更とキー管理
+### ファイル名変更とキー管理
 
 **OCR処理によるファイル名変更:**
 ```php
@@ -505,9 +501,9 @@ $outputFileName = pathinfo($this->attachedFile->hashedbasename, PATHINFO_FILENAM
 | `image.jpg` | `image.pdf` | `content_attached[1]['image.pdf']` | 新しいキー作成、元のキー削除 |
 | `document.pdf` | `document.pdf` | `content_attached[2]['document.pdf']` | 元のキー上書き |
 
-**重要:** PDFファイルの場合、OCR処理は最適化のみで新しいテキスト抽出は行われません（`--skip-text`オプション使用）。
+PDFファイルの場合、OCR処理は最適化のみで新しいテキスト抽出は行われません（`--skip-text`オプション使用）。
 
-### 9.2. 最終化処理の結果選択ロジック
+### 最終化処理の結果選択ロジック
 
 **VLM > OCR > Tikaの優先順位:**
 
@@ -519,26 +515,26 @@ private function selectBestContent(AttachedFile $file): array
     if ($file->vlm_processed_at && !empty($file->vlm_markdown)) {
         return ['source' => 'vlm', 'text' => $file->vlm_markdown];
     }
-    
+
     // 2. OCR結果の厳密確認
     if ($file->ocr_processed_at) {
         $originalExt = pathinfo($file->hashedbasename, PATHINFO_EXTENSION);
         $isImageFile = str_starts_with($file->original_mime_type ?? '', 'image/');
-        
+
         // 画像ファイルの場合のみ .pdf キーをチェック
         if ($isImageFile && $originalExt !== 'pdf') {
             $pdfHashedbasename = pathinfo($file->hashedbasename, PATHINFO_FILENAME) . '.pdf';
             $ocrText = $file->ledger?->content_attached[$file->column_id][$pdfHashedbasename]['meta']['content'] ?? null;
-            
+
             if (!empty($ocrText)) {
                 return ['source' => 'ocr', 'text' => $ocrText];
             }
         }
-        
+
         // PDFファイルの場合は元のキーをチェック
         // OCRは最適化のみなので、Tika再処理で更新されたテキストを使用
     }
-    
+
     // 3. Tika結果（フォールバック）
     $tikaText = $this->extractTikaTextFromContentAttached($file);
     return ['source' => 'tika', 'text' => $tikaText ?? ''];
@@ -549,7 +545,7 @@ private function selectBestContent(AttachedFile $file): array
 - **画像ファイル:** OCRで`.pdf`に変換されるため、新しいキーを探す
 - **PDFファイル:** OCRは最適化のみ（`--skip-text`）で、元のキーが上書きされる。Tikaが再処理したテキストを使用
 
-### 9.3. プレビュー機能の実装（Phase6）
+### プレビュー機能の実装
 
 **hasPreviewableText()の実装:**
 ```php
@@ -559,33 +555,33 @@ public function hasPreviewableText(): bool
     if (!$this->processing_finalized_at || !$this->finalized_source) {
         return false;
     }
-    
+
     // VLMの場合
     if ($this->finalized_source === 'vlm') {
         return !empty($this->vlm_markdown);
     }
-    
+
     if (!$this->relationLoaded('ledger') || !$this->ledger) {
         return false;
     }
-    
+
     $contentAttached = $this->ledger->content_attached;
     $columnId = $this->column_id;
     $hashedbasename = $this->hashedbasename;
-    
+
     // OCRの場合: .pdf付きと元の両方のキーをチェック
     if ($this->finalized_source === 'ocr') {
         $pdfHashedbasename = pathinfo($hashedbasename, PATHINFO_FILENAME) . '.pdf';
-        
+
         return isset($contentAttached[$columnId][$pdfHashedbasename]['meta']['content'])
             || isset($contentAttached[$columnId][$hashedbasename]['meta']['content']);
     }
-    
+
     // Tikaの場合: 元のキーのみをチェック
     if ($this->finalized_source === 'tika') {
         return isset($contentAttached[$columnId][$hashedbasename]['meta']['content']);
     }
-    
+
     return false;
 }
 ```
@@ -598,10 +594,10 @@ private function getOcrTikaFormattedText(): ?string
     if (!$this->relationLoaded('ledger') || !$this->ledger) {
         return null;
     }
-    
+
     $columnId = $this->column_id;
     $hashedbasename = $this->hashedbasename;
-    
+
     // OCRの場合は .pdf キーもチェック
     if ($this->finalized_source === 'ocr') {
         $originalExt = pathinfo($hashedbasename, PATHINFO_EXTENSION);
@@ -613,16 +609,16 @@ private function getOcrTikaFormattedText(): ?string
             }
         }
     }
-    
+
     // 元のキーをチェック
     $text = $this->ledger->content_attached[$columnId][$hashedbasename]['meta']['content'] ?? null;
     return $text ? "```\n{$text}\n```" : null;
 }
 ```
 
-**重要:** AsColumnArrayJsonキャストの制約により、`data_get()`は使用できません。直接配列アクセス（`$ledger->content_attached[$columnId][$key]`）を使用してください。
+AsColumnArrayJsonキャストの制約により、`data_get()`は使用できません。直接配列アクセス（`$ledger->content_attached[$columnId][$key]`）を使用してください。
 
-### 9.4. ファイルタイプ別の最適な処理戦略
+### ファイルタイプ別の最適な処理戦略
 
 | ファイルタイプ | 推奨処理 | 理由 |
 |--------------|---------|------|
@@ -634,6 +630,9 @@ private function getOcrTikaFormattedText(): ?string
 
 ---
 
-**作成者:** GitHub Copilot CLI  
-**最終更新:** 2025年11月15日（Phase6実装反映）  
-**バージョン:** 3.1（ファイルタイプ別処理フロー明記版）
+## エビデンス
+
+- 実装: `app/Jobs/Ledger/ProcessAttachedFile.php`, `app/Jobs/Ledger/ProcessVlmExtraction.php`, `app/Jobs/Ledger/OcrAndOptimizeFile.php`, `app/Jobs/Embedding/VectorizeAttachedFile.php`, `app/Console/Commands/Ledger/FinalizeAttachedFileProcessing.php`
+- モデル: `app/Models/AttachedFile.php`
+- キュー設定: `app/Console/Kernel.php`, Supervisor設定ファイル
+- 関連ドキュメント: [VLM-OCR技術調査](./vlm-ocr-technology-selection.md)

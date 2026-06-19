@@ -1,128 +1,144 @@
-# 環境構築スクリプト検討と実装記録
+# 開発環境のセットアップ
 
-**日付:** 2025年8月24日
+## 目的
 
-## 1. 背景と目的
+LedgerLeap の開発環境をローカルマシン上に構築する手順です。Docker と 1 つのセットアップスクリプトで、依存関係のインストールからデータベースマイグレーションまでを自動化します。
 
-本プロジェクトの開発環境セットアップは、これまで手動でのDB権限付与など、再現性に課題がありました。特に、`sail`ユーザーへの`CREATE DATABASE`権限の付与は、新規環境構築時に毎回手動で行う必要があり、開発者のオンボーディングコストとなっていました。
+## 対象範囲
 
-本作業の目的は、この手動プロセスを自動化し、**「誰が実行しても」「いつでも同じ開発環境が」「コマンド一つで構築できる」**ように、セットアップ手順の再現性を確立することです。
+- Docker / Laravel Sail を使った開発環境の初回セットアップ
+- アーキテクチャ別の注意点（Intel/AMD, ARM, Apple Silicon, GPU）
+- セットアップ後の基本的な動作確認
 
-## 2. 検討プロセスと課題解決
+### 対象外
 
-### 2.1. DB権限の自動化
+- デモ用サンプルデータの投入 → [デモ環境構築ガイド](demo-environment-setup.md)
+- 本番環境へのデプロイ → `./bin/setup.sh -p` で対応（本番設定は別途 `.env` で調整）
+- CI/CD パイプラインの構築
 
-MySQLコンテナの初期化メカニズムを活用し、`sail`ユーザーへの権限付与を自動化しました。
+## 前提条件
 
--   **初期アイデア:** `GRANT ALL PRIVILEGES ON *.* TO 'sail'@'%' WITH GRANT OPTION;` というSQL文を、MySQLコンテナ起動時に自動実行させる。
--   **メカニズム:** Dockerの公式MySQLイメージが提供する`/docker-entrypoint-initdb.d`ディレクトリにSQLスクリプトを配置すると、コンテナ初回起動時に自動実行される機能を利用。
--   **実装:**
-    1.  `docker/mysql/init`ディレクトリを新規作成。
-    2.  `docker/mysql/init/01-init-grants.sql`ファイルを作成し、上記の`GRANT`文を記述。
-    3.  `docker-compose.yml`の`mysql`サービス定義に、`./docker/mysql/init:/docker-entrypoint-initdb.d`のボリュームマウントを追加。
+| ツール | 最低バージョン | 確認方法 |
+|---|---|---|
+| Docker | 24.0+ | `docker --version` |
+| Docker Compose | v2+ | `docker compose version` |
+| Git | 2.40+ | `git --version` |
 
-### 2.2. `DockerfileQueue`のビルドエラーと解決
+Docker が未インストールの場合は [Docker Desktop](https://www.docker.com/products/docker-desktop/) をインストールしてください。Linux の場合は `docker` と `docker compose` プラグインを別途セットアップしてください。
 
-セットアップスクリプト実行時に、`queue`サービスのDockerイメージビルドが失敗する問題が発生しました。
-
--   **問題:** `docker/app/DockerfileQueue`の`FROM`句が`sail-8.4/app`を参照していたため、ビルドが失敗。
--   **原因:** `sail-8.4/app`は`laravel`サービスがビルドするローカルイメージであり、`queue`サービスがこれをベースイメージとして参照しようとすると、ビルド順序やイメージ解決の仕組みによりエラーが発生していました。
--   **解決策:** `vendor/laravel/sail/runtimes/8.4/Dockerfile`の内容を確認し、`laravel`サービスが`ubuntu:24.04`をベースにしていることを特定。`docker/app/DockerfileQueue`の`FROM`句を`FROM ubuntu:24.04`に変更することで、ビルドエラーを解消しました。
-
-### 2.3. `DockerfileQueue`における`sail`ユーザーの作成問題と解決
-
-`DockerfileQueue`の修正後も、`queue`サービスのビルド中に`usermod: user 'sail' does not exist`というエラーが発生しました。
-
--   **問題:** `DockerfileQueue`内で`sail`ユーザーを`docker`グループに追加しようとした際に、`sail`ユーザーが存在しないというエラー。
--   **原因:** `DockerfileQueue`が`ubuntu:24.04`をベースにしているため、デフォルトでは`sail`ユーザーが存在しませんでした。`sail`ユーザーは、`laravel`サービスのベースイメージ（`vendor/laravel/sail/runtimes/8.4/Dockerfile`）内で作成されています。
--   **解決策:** `DockerfileQueue`内に、`sail`ユーザーを作成するコマンド（`groupadd --force -g $WWWGROUP sail`と`useradd -ms /bin/bash --no-user-group -g $WWWGROUP -u 1337 sail`）を、`usermod`コマンドの前に追記しました。これにより、`queue`サービスイメージのビルド時に`sail`ユーザーが正しく作成されるようになりました。
-
-## 3. セットアップスクリプトの実装と改善 (2025年11月2日更新)
-
-プロジェクトの初期セットアップを完全に自動化するシェルスクリプト`bin/setup.sh`を作成し、その後Docker Compose構成のリファクタリングを実施しました。
-
-### 3.1. 初期実装 (2025年8月24日)
-
--   **目的:** 新しい開発者がプロジェクトをクローンした後、このスクリプトを一度実行するだけで、開発を開始できる状態にする。
--   **内容:**
-    1.  `.env.example`から`.env`ファイルをコピー（存在しない場合）。
-    2.  `sail build --no-cache`でDockerイメージをビルドし、`sail up -d`でコンテナを起動。
-    3.  `sail composer install`でComposer依存関係をインストール。
-    4.  `sail artisan key:generate`でアプリケーションキーを生成。
-    5.  データベースが利用可能になるまで待機。
-    6.  `sail artisan migrate`で中央DBのマイグレーションを実行。
-    7.  `sail npm install`でNPM依存関係をインストール。
-    8.  `sail npm run dev`でフロントエンドアセットをビルド。
--   **実行権限:** `chmod +x bin/setup.sh`で実行権限を付与。
-
-### 3.2. Docker Compose構成のリファクタリング (2025年11月2日)
-
-環境構築の複雑性を解消するため、Docker Compose構成の大規模なリファクタリングを実施しました。
-
-**主な改善点:**
-
-1. **責務の明確化**
-   - `docker-compose.yml`: 全環境共通のベース定義
-   - `docker-compose.override.yml`: 開発環境専用設定（自動読み込み）
-   - `docker-compose.prod.yml`: 本番環境用オーバーライド
-   - `docker-compose.gpu.yml`: GPU利用時の設定
-   - `docker-compose.arm64.yml` / `docker-compose.amd64.yml`: アーキテクチャ別設定（新規追加）
-
-2. **設定の一元化**
-   - `.env`ファイルを環境設定の唯一の情報源（Single Source of Truth）とする
-   - `switch-*.sh`スクリプトは`.env`のみを編集（`docker-compose.yml`には触らない）
-   - `EMBEDDING_MODEL`, `PADDLEOCR_DEVICE`など、動作に影響する設定を`.env`で管理
-
-3. **`setup.sh`の機能強化**
-   - アーキテクチャ自動検出（ARM64/AMD64）
-   - NVIDIA GPU の自動検出（`nvidia-smi` → `PADDLEOCR_DEVICE=gpu` に自動設定）
-   - x86/AMD64 での VLM バックエンド自動選択（GPU → `paddleocr-vl`、CPU → `paddleocr-vl-cpu`）
-   - Mac Apple Silicon（M1/M2/M3/M4）の自動検出と MLX-VLM セットアップ
-   - `-p`オプションで本番環境にも対応
-   - 動的な`COMPOSE_FILE`環境変数の構築
-
-**使用方法:**
+## セットアップ手順
 
 ```bash
-# 開発環境
-./bin/setup.sh        # または ./dev.sh
+# 1. リポジトリをクローン
+git clone https://github.com/torinky/LedgerLeap-oss.git
+cd LedgerLeap
 
-# 本番環境
-./bin/setup.sh -p     # または ./prod.sh
-
-# GPU環境（自動検出のため手動設定不要）
-# PADDLEOCR_DEVICE=auto のまま ./bin/setup.sh を実行
-
-# Mac Apple Silicon（自動検出）
-# MLX-VLM が自動セットアップされます
-# セットアップ完了後、別ターミナルで以下を実行:
-./scripts/start-vlm-mlx.sh
-
-# ヘルプ表示
-./bin/setup.sh -h
+# 2. セットアップスクリプトを実行
+./bin/setup.sh
 ```
 
-**詳細な設計と実装記録:**
-- [Docker Compose構成のリファクタリング計画](../work/environment/2025-11-02_docker-compose-refactoring-plan.md)
+`./bin/setup.sh` は以下の処理を順に実行します：
 
-## 4. ドキュメントの更新
+1. `.env` ファイルの生成（`.env.example` からコピー、初回のみ）
+2. アーキテクチャの自動検出（ARM64 / AMD64）
+3. GPU の自動検出（NVIDIA → `PADDLEOCR_DEVICE=gpu` を自動設定）
+4. Docker イメージのビルド（`./vendor/bin/sail build`）
+5. Docker コンテナの起動
+6. Composer 依存パッケージのインストール
+7. アプリケーションキーの生成（`artisan key:generate`）
+8. データベースマイグレーションの実行（`artisan migrate`）
+9. npm 依存パッケージのインストール
+10. フロントエンドアセットのビルド（`npm run build`）
 
-新しいセットアップ手順を反映するため、以下のドキュメントを更新しました。
+セットアップ完了後、`http://localhost` でアプリケーションにアクセスできます。
 
--   **`README.md` (ルート):** 一般ユーザー向けのため、元の概要に戻しました。
--   **`docs/README.md`:** 開発者向けドキュメントとして、新しい`./bin/setup.sh`スクリプトを利用する簡素化されたセットアップ手順を記載しました。
+## 環境別のセットアップ
 
-## 5. 検証
+### 本番環境
 
-作成したセットアップスクリプトの再現性を検証するため、以下の手順でクリーンな環境からのセットアップを試みました。
+```bash
+./bin/setup.sh -p
+```
 
--   **手順:**
-    1.  `./vendor/bin/sail down --volumes --rmi all`で、既存のDockerコンテナ、ボリューム、イメージを全て削除し、完全にクリーンな状態にする。
-    2.  `./bin/setup.sh`スクリプトを実行する。
--   **現在の状況:**
-    *   `./bin/setup.sh`スクリプトは、Dockerイメージのビルドまでは成功するものの、その後の`composer install`のステップで停止してしまいます。この問題は現在調査中です。
+### GPU 環境（NVIDIA）
 
-## 6. 今後の課題
+GPU が利用可能な場合、セットアップスクリプトが自動検出して AI 処理（PaddleOCR）の設定を最適化します。手動設定は不要です。
 
--   `bin/setup.sh`スクリプトが`composer install`ステップで停止する問題を特定し、解決する。
--   スクリプトが最後まで正常に動作し、アプリケーションが完全にセットアップされることを確認する。
+```bash
+# GPU 自動検出あり（通常はこれで十分）
+./bin/setup.sh
+```
+
+### Apple Silicon（M1/M2/M3/M4）
+
+Mac の場合、アーキテクチャが自動検出されます。VLM（Vision Language Model）を使用する場合は、セットアップ完了後に別ターミナルで以下を実行してください：
+
+```bash
+./scripts/start-vlm-mlx.sh
+```
+
+## 動作確認
+
+セットアップ後、以下のコマンドでアプリケーションの状態を確認できます：
+
+```bash
+# コンテナの状態確認
+./vendor/bin/sail ps
+
+# データベース接続確認
+./vendor/bin/sail artisan db:show
+
+# テストの実行
+./vendor/bin/sail test
+```
+
+## トラブルシューティング
+
+### セットアップを最初からやり直す
+
+```bash
+# コンテナ・ボリューム・イメージをすべて削除
+./vendor/bin/sail down --volumes --rmi all
+
+# 再セットアップ
+./bin/setup.sh
+```
+
+### Docker が起動しない
+
+- macOS / Windows: Docker Desktop が起動していることを確認
+- Linux: `sudo systemctl start docker` で Docker サービスを起動
+
+### ポートが競合する
+
+デフォルトではポート 80 を使用します。既存のサービスと競合する場合は `.env` の `APP_PORT` を変更してください：
+
+```bash
+APP_PORT=8080
+```
+
+変更後、コンテナを再起動します：
+
+```bash
+./vendor/bin/sail down && ./vendor/bin/sail up -d
+```
+
+### データベース接続エラー
+
+```bash
+# マイグレーションを再実行
+./vendor/bin/sail artisan migrate:fresh
+```
+
+## 制約と注意点
+
+- Windows 環境では WSL2 の使用を推奨します。WSL2 内にリポジトリをクローンし、WSL2 上で Docker を実行してください。
+- Mroonga 全文検索エンジンを使用するため、MySQL のストレージエンジンとして Mroonga が有効である必要があります（セットアップスクリプトが自動設定します）。
+- `.env.testing` はテスト実行時に必須です。自動生成されないため、`.env.testing.example` から手動でコピーしてください。
+
+## エビデンス
+
+- セットアップスクリプト: [`bin/setup.sh`](../../bin/setup.sh)
+- 依存インストールスクリプト: [`bin/install_dependencies_and_migrate.sh`](../../bin/install_dependencies_and_migrate.sh)
+- Docker Compose 設定: [`docker-compose.yml`](../../docker-compose.yml)
+- 設計経緯: [`docs/work/environment/`](../work/environment/)

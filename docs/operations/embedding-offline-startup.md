@@ -226,5 +226,5 @@ rm -rf ./storage/app/embedding/models--cl-nagoya--ruri-v3-310m/
 ## 関連ドキュメント
 
 - [RAG Embedding Model Switching Guide](./model-switching-guide.md)
-- [環境構築スクリプト](../development/environment-setup.md)
+- [開発環境のセットアップ](../development/environment-setup.md)
 - [AI・検索機能ガイド](../ai-and-search-guide.md)

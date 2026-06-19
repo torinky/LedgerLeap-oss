@@ -223,7 +223,7 @@ chore: Laravel 11.x → 12.x アップグレード
 |-------------|------|
 | [Git Branch Workflow（詳細手順）](/docs/runbooks/git-branch-workflow.md) | コマンドを含む完全な操作手順と禁止事項 |
 | [コーディング規約](/docs/development/coding_standards.md) | PHP/Livewire/Blade の命名規則とスタイル |
-| [環境構築](/docs/development/environment-setup.md) | Docker/Sail による開発環境のセットアップ |
+| [環境構築](environment-setup.md) | Docker/Sail による開発環境のセットアップ |
 | [テストのベストプラクティス](/docs/development/testing/README.md) | テストの書き方と実行方法 |
 | [GitHub Issue Body Sync Playbook](/docs/runbooks/github-issue-body-sync-playbook.md) | Issue 本文の同期手順 |
 

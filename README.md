@@ -103,14 +103,14 @@ LedgerLeap は、組織内に散在する台帳、業務記録、申請、添付
 
 ## ドキュメント案内
 
-| 目的 | ドキュメント |
-| --- | --- |
-| プロジェクト紹介ページ (GitHub Pages) | [LedgerLeap AI-Native Platform](https://torinky.github.io/LedgerLeap-oss/) |
-| 開発者向けドキュメントの入口 | [docs/README.md](docs/README.md) |
-| REST API / remote MCP の公開契約 | [docs/api/README.md](docs/api/README.md) |
+| 目的 | ドキュメント                                                                         |
+| --- |--------------------------------------------------------------------------------|
+| プロジェクト紹介ページ (GitHub Pages) | [LedgerLeap AI-Native Platform](https://torinky.github.io/LedgerLeap-oss/)     |
+| 開発者向けドキュメントの入口 | [docs/documentation.md](docs/documentation.md)                                            |
+| REST API / remote MCP の公開契約 | [docs/api/README.md](docs/api/README.md)                                       |
 | 開発環境のセットアップ詳細 | [docs/development/environment-setup.md](docs/development/environment-setup.md) |
-| 画面利用イメージの入口 | [My Portal とナビゲーション](docs/getting-started/portal-and-navigation.md) |
-| 検索機能の公開契約 | [Search API](docs/api/search-api.md) |
+| 画面利用イメージの入口 | [My Portal とナビゲーション](docs/getting-started/portal-and-navigation.md)            |
+| 検索機能の公開契約 | [Search API](docs/api/search-api.md)                                           |
 
 > AI / automation client 向けの公開導線は **`docs/api/` 配下の API / MCP 公開契約** に集約しています。
 
@@ -120,7 +120,7 @@ LedgerLeap は、組織内に散在する台帳、業務記録、申請、添付
 
 詳細は以下を参照してください。
 
-- [Developer Documentation (`docs/README.md`)](docs/README.md)
+- [Developer Documentation](docs/documentation.md)
 - [Environment Setup Details (`docs/development/environment-setup.md`)](docs/development/environment-setup.md)
 
 **クイックセットアップ:**
@@ -171,7 +171,7 @@ docker run --rm \
   - API 認証: Laravel Sanctum
 - **開発環境**: Laravel Sail (Docker)
 
-システム全体像や API / MCP の技術詳細は、[docs/README.md](docs/README.md) と [docs/api/README.md](docs/api/README.md) を参照してください。
+システム全体像や API / MCP の技術詳細は、ドキュメントの [docs/documentation.md](docs/documentation.md) と [docs/api/README.md](docs/api/README.md) を参照してください。
 
 ## License
 
