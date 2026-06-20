@@ -22,6 +22,10 @@
   <a href="#quick-start">Quick Start</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/sponsors/torinky"><img src="https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#EA4AAA" alt="GitHub Sponsors"></a>
+</p>
+
 LedgerLeap は、組織内に散在する台帳、業務記録、申請、添付ファイルを一元管理し、**必要なときに探せる・権限に応じて安全に共有できる・証跡を残せる** Web ベースの台帳 / ドキュメント管理システムです。
 
 紙、共有フォルダ、Excel、メールに分散した情報を、**検索性・統制・現場運用のしやすさ**を両立しながらまとめたい日本の業務現場を想定しています。

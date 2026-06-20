@@ -15,6 +15,7 @@ LedgerLeap の標準運用手順への入口です。
 - [UI Migration Playbook](./ui-migration-playbook.md): プロジェクト全画面を統一ルール（Mary UI / daisyUI）に準拠させるためのUI置き換え手順
 - [Local LLM MCP Setup Guide](./local-llm-mcp-setup.md): LM Studio / Ollama での LedgerLeap MCP 利用設定手順（コンテキスト最適化・クラッシュ対策）
 - [Git Branch Workflow](./git-branch-workflow.md): ブランチ命名規則・ライフサイクル・マージ後削除ルール（全 AI エージェント共通）
+- [Context-Mode Health Check](./context-mode-health-check.md): `ctx_fetch_and_index` / `ctx_index` / `ctx_search` の `disk I/O error` 診断・修復手順
 
 ## Recommended Flow
 1. 不具合対応は [Bug Response Playbook](./bug-response-playbook.md) を起点に進める

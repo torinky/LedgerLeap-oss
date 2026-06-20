@@ -21,6 +21,10 @@
   <a href="#quick-start">Quick Start</a>
 </p>
 
+<p align="center">
+  <a href="https://github.com/sponsors/torinky"><img src="https://img.shields.io/badge/sponsor-30363D?style=for-the-badge&logo=GitHub-Sponsors&logoColor=#EA4AAA" alt="GitHub Sponsors"></a>
+</p>
+
 LedgerLeap is a web-based ledger and document management system for teams that need to **find records quickly, share them safely, and keep a clear audit trail**.
 
 It is designed for organizations that want to move beyond paper, shared folders, spreadsheets, and email-driven operations without losing governance or day-to-day usability.
